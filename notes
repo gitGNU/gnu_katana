@@ -1,6 +1,6 @@
 -*- mode:org; -*-
 
-
+* confusion I have
 * issues I see
 ** exception handling
    issue mentioned in "A Runtime Code Modification Method for
@@ -39,7 +39,20 @@
    generally requires compiling with -rdynamic
 * references:
 **misc
-*** http://www.phiral.net/phrack/phrack/63/p63-0x09_Embedded_Elf_Debugging.txt
+*** ELFsh/ERESI papers
+**** http://phrack.org/issues.html?issue=61&id=8&mode=txt
+     Paper on ALTPLT technique, ET_REL injection, and more
+**** http://www.phiral.net/phrack/phrack/63/p63-0x09_Embedded_Elf_Debugging.txt
+     Long, useful paper on various binary manipulation
+     techniques. Talks about rewriting ELF files to allow calls to
+     previously unused functions in dynamic libraries. Unfortunately,
+     I'm not sure  this will work at runtime (although I should check to
+     find out how the address of the GOT and PLT tables is being
+     determined. Check out .dynamic). Around DUMP 29 in the article it
+     appears that they might actually be doing this, read in more
+     depth. Also consider the section entitled 
+     "Runtime section injection algorithm in memory". It talks about
+     injecting things at runtime
 *** http://artofhacking.com/files/phrack/phrack61/live/aoh_p61-0x08.htm
 *** http://www.ibm.com/developerworks/power/library/pa-spec12/
 *** http://developers.sun.com/solaris/articles/elf.html
@@ -60,7 +73,9 @@
     of a system they built called Ginseng
     Disadvantage: seems to require the currently running software to
     be built supporting it. Handles type transformation in a way that is perhaps not as
-    nice as using the DWARF information
+    nice as using the DWARF information. Seems to allocate fixed
+    padding for types to expand, cannot expand beyond that although
+    they discuss some possible techniques for removing this limitation
 
     Features loop extraction (p. 4) which is pretty nifty
 
@@ -75,7 +90,11 @@
     not already loaded and has some issues with static variables
 *** POLUS http://portal.acm.org/citation.cfm?id=1248820.1248860
     robus/developed patching system that allows patching tainted state
-    and rolling back updates
+    and rolling back updates. Has code available at http://sourceforge.net/projects/polus/files/
+*** ELF format references
+    http://www.skyfree.org/linux/references/ELF_Format.pdf
+*** Phrack on runtime code injection
+    http://phrack.org/issues.html?issue=59&id=8#article
 **call frame info/DWARF/Exception Handling
 *** dwarf standard http://dwarfstd.org/Dwarf3.pdf
 **** Call frame information in section 6.4 (p. 120 in the pdf, marked as p.108)
@@ -156,7 +175,11 @@
     discusses some of the implementation details of exception handling. Probably not
     terribly useful but could have a bit of interesting information or two
 * existing software:
-** livepatch: doesn't look very sophisticated
+** livepatch
+   doesn't look very sophisticated. Doesn't make sure target in a safe
+   state. Can only patch integral values or pointers, can't patch
+   changes to other global data.
+   
 ** pannus
 *** should look into it more to see exactly what it can do
 *** requires writing out commands file (apparently by hand, I think)
@@ -169,6 +192,9 @@
 ** Ginseng
    http://www.cs.umd.edu/projects/PL/dsu/software.shtml
    discussino about it above in the references section
+** Polus
+   http://sourceforge.net/projects/polus/files/
+   discussion in references section
 * helpful tools and libraries
 ** Radare http://www.radare.org
    general framework for binary manipulation with an aim towards
@@ -188,7 +214,27 @@
    it is much faster than ptrace, etc). More docs on elfsh than ERESI
    I think, perhaps read old phrack articles on elfsh to figure our
    etrace usage
+   
+   Reading
+   http://s.eresi-project.org/inc/articles/p63-0x09_Embedded_Elf_Debugging.txt
+   indicates that actually getting it into running code is a bit of a
+   PITA. It requires either modifying the binary or setting LD_PRELOAD
+   and restarting the (unmodified) binary. This is not ideal. What we
+   want to do is get it into running code without halting the
+   code. etrace has two advantages over ptrace. It is faster and it
+   may work in places where ptrace is disabled for security
+   reasons. Since we are not hacking anything, we shouldn't need to
+   care about the security restrictions. Faster is nice, however. We
+   could potentially use ptrace to embed etrace in the application and
+   move from there. If ERESI doesn't include support for embedding
+   etrace in currently running code, it might just be easier to write
+   things ourselves.
 
+   Playing around:
+   I could not get the ERESI etrel_memory test in the
+   testsuite/debugging directory to work. I fear I don't understand
+   the reladd command properly. The included .esh script seems to be
+   somewhat specific to the memory layout of the system it was tested on
 ** libelf
    Tutorial at
    http://people.freebsd.org/~jkoshy/download/libelf/article.html
@@ -230,3 +276,7 @@
     Note that at this point the original call location of the
     exception has been wiped off the stack.
 *** After the code in the catch block has executed, it makes a call to __cxa_end_catch
+
+* definitions
+** ET_REL
+   ELF file type recognized by linux. Denotes relocatable object
