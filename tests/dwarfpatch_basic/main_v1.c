@@ -7,18 +7,29 @@
                main_v0.c is the same thing with one less field in the Foo type
 */
 #include <stdio.h>
-typedef struct
+#include <unistd.h>
+typedef struct _Foo
 {
   int field1;
   int field_extra;
   int field2;
+  int field3;
 } Foo;
 
-Foo bar={42,0,66};
+Foo bar={42,0,66,111};
 
-int main(int argc,char** argv)
+void printThings()
 {
   printf("Foo: %i,%i\n",bar.field1,bar.field2);
   printf("field 1 at addr: %x, field 2 at addr: %x\n",(unsigned int)&bar.field1,(unsigned int)&bar.field2);
+}
+
+int main(int argc,char** argv)
+{
+  while(1)
+  {
+    printThings();
+    sleep(5);
+  }
   return 0;
 }

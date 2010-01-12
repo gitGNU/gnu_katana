@@ -37,6 +37,7 @@
    is possible using the backtrace call
    http://www.gnu.org/software/libtool/manual/libc/Backtraces.html
    generally requires compiling with -rdynamic
+** it appears that ld does not write all symbols from the symbol table into the hash table
 * references:
 **misc
 *** ELFsh/ERESI papers
@@ -239,7 +240,8 @@
    Tutorial at
    http://people.freebsd.org/~jkoshy/download/libelf/article.html
    Sun also has a brief tutorial at http://developers.sun.com/solaris/articles/elf.html
-
+   
+   LGPL
 * understandings
 ** C++ Exception Handling Process
    A good overview of the process is found at
