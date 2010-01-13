@@ -12,13 +12,17 @@
 
 #include <string.h> //for memset in BZERO
 #include <stdio.h> //for fprintf
-
+#include <stdlib.h>
 
 typedef struct _List
 {
   void* value;
   struct _List* next;
 } List;
+
+
+//malloc, check return value, and zero
+void* zmalloc(size_t size);
 
 #define min(x,y)   ((x)>(y))?(y):(x)
 

@@ -26,6 +26,7 @@ void printThings()
 
 int main(int argc,char** argv)
 {
+  printf("has pid %i\n",getpid());
   while(1)
   {
     printThings();

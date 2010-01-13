@@ -1,5 +1,15 @@
 -*- mode:org; -*-
 
+* notes from meeting
+need to understand dwarf CIEs better, sergey thinks that format might
+already describe the kinds of offsets that we need in order to patch. This
+might be useful in the PO format. Stack frame is similar to a struct
+
+offsets with info on what you expect to find at each.
+
+read more on frame description in unwinding process
+possible that poking of bytes in unwinding process can also go into patching
+
 * confusion I have
 * issues I see
 ** exception handling
@@ -90,8 +100,17 @@
     hot-patching systems. Their system can't handle shared libraries
     not already loaded and has some issues with static variables
 *** POLUS http://portal.acm.org/citation.cfm?id=1248820.1248860
+    dates from 2007
     robus/developed patching system that allows patching tainted state
     and rolling back updates. Has code available at http://sourceforge.net/projects/polus/files/
+    
+    POLUS and Ginseg both rely on the CIL framework
+    (http://www.eecs.berkeley.edu/~necula/Papers/cil_cc02.pdf). This
+    gives them a disadvantage in that they are tied to C. We could
+    theoretically work on any language that compiles to ELF files with
+    DWARF information. TODO: demonstrate patching an objective C
+    program if possible.
+
 *** ELF format references
     http://www.skyfree.org/linux/references/ELF_Format.pdf
 *** Phrack on runtime code injection
@@ -208,6 +227,9 @@
    Requires hastle with changing compiler toolchain.
    Focuses on link-time optimization.
    I'm not sure it has a great deal of bearing on the Katana project 
+
+   todo: look at exactly what Diablo requires to be kept in the
+         object files, why it requires 
 ** ERESI
    General ELF rewriting framework. Formerly elfsh. The etrace program
    (and corresponding libetrace) allow tracing (and I believe
@@ -282,3 +304,14 @@
 * definitions
 ** ET_REL
    ELF file type recognized by linux. Denotes relocatable object
+
+* plans
+** basic type-patching process
+   read in the old type definition from DWARF information. Construct
+   for each type a bijection between field name and field offset (from
+   the starting address of any variable of that type). Then do the
+   same for the new type definion. This allows us to construct a
+   map from old offset and new offset (old offset -> field name -> new
+   offset) unless of course the given variable has been eliminated. 
+
+
