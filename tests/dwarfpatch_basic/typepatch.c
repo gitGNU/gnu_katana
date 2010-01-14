@@ -32,6 +32,7 @@
 #include "types.h"
 #include "target.h"
 #include "elfparse.h"
+#include "hotpatch.h"
 int pid;//pid of running process
 
 //test relocation of the variable bar
@@ -126,6 +127,89 @@ void testManualRelocateAndTransformBar()
   //todo: free memory
 }
 
+void diffAndFixTypes(DwarfInfo* diPatchee,DwarfInfo* diPatched)
+{
+  //todo: this assumes both have the same number of compilation units
+  //and that their order corresponds. This is not a good assumption to make
+  List* cuLi1=diPatchee->compilationUnits;
+  List* cuLi2=diPatched->compilationUnits;
+  for(;cuLi1 && cuLi2;cuLi1=cuLi1->next,cuLi2=cuLi2->next)
+  {
+    TransformationInfo* trans=zmalloc(sizeof(TransformationInfo));
+    trans->typeTransformers=dictCreate(100);//todo: get rid of magic # 100
+    CompilationUnit* cu1=cuLi1->value;
+    CompilationUnit* cu2=cuLi2->value;
+    printf("Examining compilation unit %s\n",cu1->name);
+    VarInfo** vars1=(VarInfo**)dictValues(cu1->tv->globalVars);
+    //todo: handle addition of variables in the patch
+    VarInfo* var=vars1[0];
+    Dictionary* patchVars=cu2->tv->globalVars;
+    for(int i=0;var;i++,var=vars1[i])
+    {
+      printf("Found variable %s \n",var->name);
+      VarInfo* patchedVar=dictGet(patchVars,var->name);
+      if(!patchedVar)
+      {
+        //todo: do we need to do anything special to handle removal of variables in the patch?
+        printf("warning: var %s seems to have been removed in the patch\n",var->name);
+        continue;
+      }
+      TypeInfo* ti1=var->type;
+      TypeInfo* ti2=patchedVar->type;
+      bool needsTransform=false;
+      if(dictExists(trans->typeTransformers,ti1->name))
+      {
+        needsTransform=true;
+      }
+      else
+      {
+        //todo: should have some sort of caching for types we've already
+        //determined to be equal
+        TypeTransform* transform=NULL;
+        if(!compareTypes(ti1,ti2,&transform))
+        {
+          if(!transform)
+          {
+            //todo: may not want to actually abort, may just want to issue
+            //an error
+            fprintf(stderr,"Error, cannot generate type transformation for variable %s\n",var->name);
+            abort();
+          }
+          printf("generated type transformation for type %s\n",ti1->name);
+          dictInsert(trans->typeTransformers,ti1->name,transform);
+          needsTransform=true;
+        }
+      }
+      if(needsTransform)
+      {
+        List* li=zmalloc(sizeof(List));
+        li->value=var;
+        if(trans->varsToTransform)
+        {
+          trans->varsToTransformEnd->next=li;
+        }
+        else
+        {
+          trans->varsToTransform=li;
+        }
+        trans->varsToTransformEnd=li;
+      }
+    }
+    //now actually transform the variables
+    List* li=trans->varsToTransform;
+    for(;li;li=li->next)
+    {
+      VarInfo* var=(VarInfo*)li->value;
+      printf("fixing variable %s\n",var->name);
+      fixupVariable(*var,trans,pid);
+    }
+    printf("completed all transformations for compilation unit %s\n",cu1->name);
+    freeTransformationInfo(trans);
+    free(vars1);
+    
+  }
+}
+
 int main(int argc,char** argv)
 {
   if(argc<2)
@@ -139,17 +223,23 @@ int main(int argc,char** argv)
     fprintf(stderr,"Failed to init ELF library\n");
     exit(1);
   }
-  Elf* e=openELFFile("patchee");
-
-  readDWARFTypes(e);
-  
+  Elf* e=openELFFile("patched");
+  DwarfInfo* diPatched=readDWARFTypes(e);
+  endELF(e);
+  e=openELFFile("patchee");
   findELFSections();
+  DwarfInfo* diPatchee=readDWARFTypes(e);
+
+  startPtrace();
+  diffAndFixTypes(diPatchee,diPatched);
+  
+
 
   //printSymTab();
   
-  startPtrace();
+
   //testManualRelocateBar();
-  testManualRelocateAndTransformBar();
+  //testManualRelocateAndTransformBar();
   endPtrace();
 
   //flush modifications to disk

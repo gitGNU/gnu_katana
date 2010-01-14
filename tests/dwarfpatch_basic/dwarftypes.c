@@ -13,179 +13,397 @@
 #include <libelf.h>
 #include <stdbool.h>
 #include "types.h"
-#include "target.h"
-#include "elfparse.h"
 
-void getFreeSpaceForTransformation(TransformationInfo* trans,uint howMuch)
+#include <dwarf.h>
+
+TypeInfo* getTypeInfoFromATType(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu);
+void walkDieTree(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu,bool siblings);
+
+
+
+void dwarfErrorHandler(Dwarf_Error err,Dwarf_Ptr arg)
 {
-  if(howMuch<=trans->freeSpaceLeft)
-  {
-    return;
-  }
-  trans->addrFreeSpace=mmapTarget(sysconf(_SC_PAGE_SIZE),PROT_READ|PROT_WRITE);
-  trans->freeSpaceLeft=sysconf(_SC_PAGE_SIZE);
-  //todo: if there's a little bit of free space left,
-  //we just discard it. This is wasteful
+  fprintf(stderr,"Dwarf error: %s\n",dwarf_errmsg(err));
+  abort();
 }
 
-//return false if the two types are not
-//identical in all regards
-//if the types are not identical, return
-//transformation information necessary
-//to convert from type a to type b
-//todo: add in this transformation info
-bool compareTypes(TypeInfo* a,TypeInfo* b)
+//the returned pointer should be freed
+char* getNameForDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
 {
-  if(strcmp(a->name,b->name) ||
-     a->numFields!=b->numFields)
+  char* name=NULL;
+  char* retname=NULL;
+  Dwarf_Error err;
+  int res=dwarf_diename(die,&name,&err);
+  if(res==DW_DLV_NO_ENTRY)
   {
-    return false;
-  }
-  for(int i=0;i<a->numFields;i++)
-  {
-    //todo: do we need to update if just the name changes?
-    //certainly won't need to relocate
-    if(a->fieldLengths[i]!=b->fieldLengths[i] ||
-       strcmp(a->fieldTypes[i],b->fieldTypes[i]))
+    //anonymous. Now it matters what type we have
+    Dwarf_Half tag = 0;
+    dwarf_tag(die,&tag,&err);
+    Dwarf_Off offset;
+    dwarf_dieoffset(die,&offset,&err);
+    char buf[2048];
+    switch(tag)
     {
-      return false;
+    case DW_TAG_base_type:
+      snprintf(buf,64,"banon_%i\n",(int)offset);
+    case DW_TAG_member:
+      snprintf(buf,64,"manon_%i\n",(int)offset);
+    case DW_TAG_variable:
+      snprintf(buf,64,"vanon_%i\n",(int)offset);
+      break;
+    case DW_TAG_structure_type:
+      snprintf(buf,64,"anon_%u\n",(uint)offset);
+      break;
+    case DW_TAG_const_type:
+      {
+        TypeInfo* type=getTypeInfoFromATType(dbg,die,cu);
+        if(!type)
+        {
+          fprintf(stderr,"the type that DW_TAG_const_type references does not exist\n");
+          abort();
+        }
+        snprintf(buf,2048,"const %s",type->name);
+      }
+      break;
+    case DW_TAG_pointer_type:
+      {
+        TypeInfo* type=getTypeInfoFromATType(dbg,die,cu);
+        if(!type)
+        {
+          fprintf(stderr,"the type that DW_TAG_pointer_type references does not exist\n");
+          abort();
+        }
+        snprintf(buf,2048,"%s*",type->name);
+      }
+      break;
+    default:
+      snprintf(buf,64,"unknown_type_anon_%u\n",(uint)offset);
     }
-    //todo: what if a field stays the same type, but that type changes
-    //need to be able to support that
+    retname=strdup(buf);
   }
-  return true;
+  else if(DW_DLV_OK==res)
+  {
+    retname=strdup(name);
+    dwarf_dealloc(dbg,(void*)name,DW_DLA_STRING);
+  }
+  else
+  {
+    dwarfErrorHandler(err,NULL);
+  }
+  return retname;
 }
 
-//returns true if it was able to transform the variable
-bool fixupVariable(VarInfo var,TransformationInfo* trans,int pid)
+//gets the TypeInfo corresponding to the type
+//referred to by the DW_AT_type attribute of the die in question
+//returns NULL if the type doesn't exist
+//or if the die doesn't have DW_AT_type
+TypeInfo* getTypeInfoFromATType(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
 {
-  TypeTransform* transform=(TypeTransform*)dictGet(trans->typeTransformers,var.type->name);
-  if(!transform)
+  Dwarf_Attribute attr;
+  Dwarf_Error err;
+  int res=dwarf_attr(die,DW_AT_type,&attr,&err);
+  if(res!=DW_DLV_OK)
   {
-    fprintf(stderr,"the transformation information for that variable doesn't exist\n");
-    return false;
+    fprintf(stderr,"can't get type from die without type\n");
+    return NULL;
   }
-  int newLength=transform->to->length;
-  int oldLength=transform->from->length;
-  TypeInfo* oldType=transform->from;
-  //first we have to get the current value of the variable
-  int idx=getSymtabIdx(var.name);
-  long addr=getSymAddress(idx);//todo: deal with scope issues
-  long newAddr=0;
-  char* data=NULL;
-  if(newLength > oldLength)
+  Dwarf_Half form;
+  Dwarf_Off offsetOfType;
+  Dwarf_Die dieOfType;
+  dwarf_whatform(attr,&form,&err);
+  //the returned form should be either local or global reference to a type
+  if(form==DW_FORM_ref_addr)
   {
-    printf("new version of type is larger than old version of type\n");
-    //we'll have to allocate new space for the variable
-    getFreeSpaceForTransformation(trans,newLength);
-    newAddr=trans->addrFreeSpace;
-    trans->addrFreeSpace+=newLength;
-    trans->freeSpaceLeft-=newLength;
-    //now zero it out
-    char* zeros=zmalloc(newLength);
-    memcpyToTarget(newAddr,zeros,newLength);
-    free(zeros);
-    //now put in the fields that we know about
-    data=malloc(oldLength);
-    MALLOC_CHECK(data);
-    memcpyFromTarget(data,addr,oldLength);
+        
+    dwarf_global_formref(attr,&offsetOfType,&err);
+    printf("global offset is %i\n",(int)offsetOfType);
+    dwarf_offdie(dbg,offsetOfType,&dieOfType,&err);
+    if(DW_DLV_ERROR==res)
+    {
+      dwarfErrorHandler(err,NULL);
+    }
 
   }
   else
   {
-    printf("new version of type is not larger than old version of type\n");
-    
-    //we can put the variable in the same space (possibly wasting a little)
-    //we just have to copy it all out first and then zero the space out before
-    //copying things in (opposite order of above case)
-    
-    
-    //put in the fields that we know about
-    data=malloc(oldLength);
-    MALLOC_CHECK(data);
-    memcpyFromTarget(data,addr,oldLength);
-    char* zeros=zmalloc(oldLength);
-    newAddr=addr;
-    memcpyToTarget(newAddr,zeros,newLength);
-    free(zeros);
-  }
-  int oldOffsetSoFar=0;
-  for(int i=0;i<oldType->numFields;i++)
-  {
-    if(FIELD_DELETED==transform->fieldOffsets[i])
+    //printf("form is %x\n",form);
+    dwarf_formref(attr,&offsetOfType,&err);
+    //printf("cu-relative offset is %i\n",(int)offsetOfType);
+    Dwarf_Off offsetOfCu;
+    Dwarf_Off off1,off2;
+    //dwarf_CU_dieoffset_given_die(die,&offsetOfCu,&err);//doesn't work for some reason
+    dwarf_dieoffset(die,&off1,&err);
+    dwarf_die_CU_offset(die,&off2,&err);
+    offsetOfCu=off1-off2;
+    //printf("offset of cu is %i\n",(int)offsetOfCu);
+    int res=dwarf_offdie(dbg,offsetOfCu+offsetOfType,&dieOfType,&err);
+    if(DW_DLV_ERROR==res)
     {
-      continue;
+      dwarfErrorHandler(err,NULL);
     }
-    printf("copying data from offset %i to offset %i\n",oldOffsetSoFar,transform->fieldOffsets[i]);
-    memcpyToTarget(newAddr+transform->fieldOffsets[i],data+oldOffsetSoFar,oldType->fieldLengths[i]);
-    oldOffsetSoFar+=oldType->fieldLengths[i];
+    if(DW_DLV_NO_ENTRY==res)
+    {
+      fprintf(stderr,"no die at offset %i\n",(int)(offsetOfCu+offsetOfType));
+      abort();
+    }
   }
 
-  //cool, the variable is all nicely relocated and whatnot. But if the variable
-  //did change, we may have to relocate references to it.
-  List* relocItems=getRelocationItemsFor(idx);
-  for(List* li=relocItems;li;li=li->next)
+  char* name=getNameForDie(dbg,dieOfType,cu);
+  //todo: scoping? vars other than global?
+  TypeInfo* result=dictGet(cu->tv->globalTypes,name);
+  if(!result)
   {
-    GElf_Rel* rel=li->value;
-    printf("relocation for %s at %x with type %i\n",var.name,(unsigned int)rel->r_offset,(unsigned int)ELF64_R_TYPE(rel->r_info));
-    //modify the data to shift things over 4 bytes just to see if we can do it
-    word_t oldAddrAccessed=getTextAtRelOffset(rel->r_offset);
-    printf("old addr is ox%x\n",(uint)oldAddrAccessed);
-    uint offset=oldAddrAccessed-addr;//recall, addr is the address of the symbol
-    
-    
-    //from the offset we can figure out which field we were accessing.
-    //todo: this is only a guess, not really accurate. In the final version, just rely on the code accessing the variable being recompiled
-    //don't make guesses like this
-    //if we aren't making those guesses we just assume the offset stays the same and relocate accordingly
-    int fieldIdx=0;
-    int offsetSoFar=0;
-    for(int i=0;i<oldType->numFields;i++)
-    {
-      if(offsetSoFar+oldType->fieldLengths[i] > offset)
-      {
-        fieldIdx=i;
-        break;
-      }
-      offsetSoFar+=oldType->fieldLengths[i];
-    }
-    printf("transformed offset %i to offset %i for variable %s\n",offset,transform->fieldOffsets[fieldIdx],var.name);
-    offset=transform->fieldOffsets[fieldIdx];
-    
-    uint newAddrAccessed=newAddr+offset;//newAddr is new address of the symbol
-    
-    modifyTarget(rel->r_offset,newAddrAccessed);//now the access is fully relocated
+    //it's possible we haven't read this die yet
+    walkDieTree(dbg,dieOfType,cu,false);
   }
-  return true;
+  result=dictGet(cu->tv->globalTypes,name);
+  if(!result)
+  {
+    fprintf(stderr,"Type for die of name %s does not seem to exist\n",name);
+  }
+  return result;
+}
+
+void addBaseTypeFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
+{
+  TypeInfo* type=zmalloc(sizeof(TypeInfo));
+  type->type=TT_BASE;
+  Dwarf_Error err=0;
+
+  type->name=getNameForDie(dbg,die,cu);
+  Dwarf_Unsigned byteSize;
+  int res=dwarf_bytesize(die,&byteSize,&err);
+  if(DW_DLV_NO_ENTRY==res)
+  {
+    fprintf(stderr,"structure %s has no byte length, we can't read it\n",type->name);
+    freeTypeInfo(type);
+    return;
+  }
+  type->length=byteSize;
+  dictInsert(cu->tv->globalTypes,type->name,type);
+  printf("added base type of name %s\n",type->name);
+}
+
+//read in the type definition of a structure
+void addStructureFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
+{
+  printf("reading structure\n");
+  TypeInfo* type=zmalloc(sizeof(TypeInfo));
+  type->type=TT_STRUCT;
+  Dwarf_Error err=0;
+
+  type->name=getNameForDie(dbg,die,cu);
+  Dwarf_Unsigned byteSize;
+  int res=dwarf_bytesize(die,&byteSize,&err);
+  if(DW_DLV_NO_ENTRY==res)
+  {
+    fprintf(stderr,"structure %s has no byte length, we can't read it\n",type->name);
+    freeTypeInfo(type);
+    return;
+  }
+  type->length=byteSize;
+  Dwarf_Die child;
+  res=dwarf_child(die,&child,&err);
+  if(res==DW_DLV_OK)
+  {
+    int idx=0;
+    do
+    {
+      //iterate through each field of the structure
+      Dwarf_Half tag = 0;
+      dwarf_tag(child,&tag,&err);
+      if(tag!=DW_TAG_member)
+      {
+        fprintf(stderr,"within structure found tag not a member, this is bizarre\n");
+        continue;
+      }
+      type->numFields++;
+      type->fields=realloc(type->fields,type->numFields);
+      MALLOC_CHECK(type->fields);
+      type->fieldLengths=realloc(type->fieldLengths,type->numFields);
+      MALLOC_CHECK(type->fieldLengths);
+      type->fieldTypes=realloc(type->fieldTypes,type->numFields);
+      MALLOC_CHECK(type->fieldTypes);
+
+      type->fields[idx]=getNameForDie(dbg,child,cu);
+
+      TypeInfo* typeOfField=getTypeInfoFromATType(dbg,child,cu);
+      if(!typeOfField)
+      {
+        fprintf(stderr,"error, field type doesn't seem to exist, cannot create type %s\n",type->name);
+        freeTypeInfo(type);
+        return;
+      }
+      type->fieldTypes[idx]=typeOfField->name;
+      //todo: perhaps use DW_AT_location instead of this?
+      type->fieldLengths[idx]=typeOfField->length;
+      
+      idx++;
+    }while(DW_DLV_OK==dwarf_siblingof(dbg,child,&child,&err));
+  }
+  else
+  {
+    fprintf(stderr,"structure %s with no members, this is odd\n",type->name);
+    freeTypeInfo(type);
+    return;
+  }
+  dictInsert(cu->tv->globalTypes,type->name,type);
+  printf("added structure type %s\n",type->name);
+}
+
+void addPointerTypeFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
+{
+  TypeInfo* type=zmalloc(sizeof(TypeInfo));
+  type->type=TT_POINTER;
+  Dwarf_Error err=0;
+
+  type->name=getNameForDie(dbg,die,cu);
+  Dwarf_Unsigned byteSize;
+  int res=dwarf_bytesize(die,&byteSize,&err);
+  if(DW_DLV_NO_ENTRY==res)
+  {
+    fprintf(stderr,"structure %s has no byte length, we can't read it\n",type->name);
+    freeTypeInfo(type);
+    return;
+  }
+  type->length=byteSize;
+  TypeInfo* pointedType=getTypeInfoFromATType(dbg,die,cu);
+  if(!pointedType)
+  {
+    fprintf(stderr,"Cannot add pointer type when the type it points to does not exist\n");
+    abort();
+  }
+  type->pointedType=pointedType->name;
+  dictInsert(cu->tv->globalTypes,type->name,type);
+  printf("added pointer type of name %s\n",type->name);
 }
   
 
-void dwarfErrorHandler(Dwarf_Error err,Dwarf_Ptr arg)
+void addTypedefFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
 {
-  fprintf(stderr,"Dwarf error\n");
-  exit(1);
+  char* name=getNameForDie(dbg,die,cu);
+  TypeInfo* type=getTypeInfoFromATType(dbg,die,cu);
+  if(type)
+  {
+    dictInsert(cu->tv->globalTypes,name,type);
+    printf("added typedef for name %s\n",name);
+  }
+  else
+  {
+    fprintf(stderr,"Unable to resolve typedef for %s\n",name);
+  }
+  free(name);
 }
 
-void walkDieTree(Dwarf_Debug dbg,Dwarf_Die die)
+void addVarFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
+{
+  VarInfo* var=zmalloc(sizeof(VarInfo));
+  var->name=getNameForDie(dbg,die,cu);
+  var->type=getTypeInfoFromATType(dbg,die,cu);
+  if(!var->type)
+  {
+    fprintf(stderr,"Cannot create var %s when its type cannot be determined\n",var->name);
+    free(var->name);
+    return;
+  }
+  dictInsert(cu->tv->globalVars,var->name,var);
+  printf("added variable %s\n",var->name);
+}
+
+void parseCompileUnit(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
+{
+  cu->name=getNameForDie(dbg,die,cu);
+  printf("compilation unit has name %s\n",cu->name);
+}
+                     
+void parseDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu,bool* parseChildren)
+{
+  Dwarf_Off off;
+  Dwarf_Error err;
+  dwarf_dieoffset(die,&off,&err);
+  if(mapExists(cu->tv->parsedDies,&off))
+  {
+    //we've already parsed this die
+    *parseChildren=false;//already will have parsed children too
+    return;
+  }
+  *parseChildren=true;
+  Dwarf_Half tag = 0;
+  dwarf_tag(die,&tag,&err);
+  switch(tag)
+  {
+  case DW_TAG_compile_unit:
+    parseCompileUnit(dbg,die,cu);
+    break;
+  case DW_TAG_base_type:
+    addBaseTypeFromDie(dbg,die,cu);
+    break;
+  case DW_TAG_pointer_type:
+    addPointerTypeFromDie(dbg,die,cu);
+    break;
+  case DW_TAG_structure_type:
+    addStructureFromDie(dbg,die,cu);
+    *parseChildren=false;//reading the structure will have taken care of that
+    break;
+  case DW_TAG_typedef:
+  case DW_TAG_const_type://const only changes program semantics, not memory layout, so we don't care about it really, just treat it as a typedef
+    addTypedefFromDie(dbg,die,cu);
+    break;
+  case DW_TAG_variable:
+    addVarFromDie(dbg,die,cu);
+  case DW_TAG_subprogram://todo: will need to add in subprogram processing for scoping reasons
+  case DW_TAG_formal_parameter: //ignore because if a function change will be recompiled and won't modify function while executing it
+    break;
+  default:
+    fprintf(stderr,"Unknown die type 0x%x. Ignoring it but this may not be what you want\n",tag);
+    
+  }
+  //map requires memory allocated for the key
+  int* key=zmalloc(sizeof(int));
+  *key=off;
+  //insert the key as its value too because all we
+  //care about is its existance, not its value
+  mapInsert(cu->tv->parsedDies,key,key);
+}
+
+ void walkDieTree(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu,bool siblings)
 {
   //code inspired by David Anderson's simplereader.c
   //distributed with libdwarf
   char* name=NULL;
   Dwarf_Error err=0;
   dwarf_diename(die,&name,&err);
-  printf("found die with name %s\n",name);
-  dwarf_dealloc(dbg,name,DW_DLA_STRING);
-  Dwarf_Die childOrSibling;
-  int res=dwarf_child(die,&childOrSibling,&err);
-  if(res==DW_DLV_OK)
+  if(name)
   {
-    //if result was error our callback will have been called
-    //if however there simply is no child it won't be an error
-    //but the return value won't be ok
-    walkDieTree(dbg,childOrSibling);
-    dwarf_dealloc(dbg,childOrSibling,DW_DLA_DIE);
+    //printf("found die with name %s\n",name);
   }
-  res=dwarf_siblingof(dbg,die,&childOrSibling,&err);
+  else
+  {
+    //printf("found die with no name\n");
+  }
+  dwarf_dealloc(dbg,name,DW_DLA_STRING);
+  bool parseChildren=true;
+  parseDie(dbg,die,cu,&parseChildren);
+  Dwarf_Die childOrSibling;
+  if(parseChildren)
+  {
+    
+    int res=dwarf_child(die,&childOrSibling,&err);
+    if(res==DW_DLV_OK)
+    {
+      //if result was error our callback will have been called
+      //if however there simply is no child it won't be an error
+      //but the return value won't be ok
+      //printf("walking child\n");
+      walkDieTree(dbg,childOrSibling,cu,true);
+      dwarf_dealloc(dbg,childOrSibling,DW_DLA_DIE);
+    }
+  }
+  if(!siblings)
+  {
+    return;
+  }
+  int res=dwarf_siblingof(dbg,die,&childOrSibling,&err);
   if(res==DW_DLV_ERROR)
   {
     dwarfErrorHandler(err,NULL);
@@ -193,15 +411,20 @@ void walkDieTree(Dwarf_Debug dbg,Dwarf_Die die)
   if(res==DW_DLV_NO_ENTRY)
   {
     //no sibling
+    //printf("no sibling\n");
     return;
   }
-  walkDieTree(dbg,childOrSibling);
+  //printf("walking sibling\n");
+  walkDieTree(dbg,childOrSibling,cu,true);
   dwarf_dealloc(dbg,childOrSibling,DW_DLA_DIE);
 
 }
 
-void readDWARFTypes(Elf* elf)
+//the returned structure should be freed
+//when the caller is finished with it
+DwarfInfo* readDWARFTypes(Elf* elf)
 {
+  DwarfInfo* di=zmalloc(sizeof(DwarfInfo));
   Dwarf_Error err;
   Dwarf_Debug dbg;
   if(DW_DLV_OK!=dwarf_elf_init(elf,DW_DLC_READ,&dwarfErrorHandler,NULL,&dbg,&err))
@@ -213,8 +436,27 @@ void readDWARFTypes(Elf* elf)
   Dwarf_Unsigned nextCUHeader=0;//todo: does this need to be initialized outside
                                 //the loop, doees dwarf_next_cu_header read it,
                                 //or does it keep its own state and only set it?
+  
   while(1)
   {
+    CompilationUnit* cu=zmalloc(sizeof(CompilationUnit));
+    List* cuLi=zmalloc(sizeof(List));
+    cuLi->value=cu;
+    if(di->compilationUnits)
+    {
+      di->lastCompilationUnit->next=cuLi;
+    }
+    else
+    {
+      di->compilationUnits=cuLi;
+    }
+    di->lastCompilationUnit=cuLi;
+          
+    TypeAndVarInfo* tv=zmalloc(sizeof(TypeAndVarInfo));
+    cu->tv=tv;
+    tv->globalTypes=dictCreate(100);//todo: get rid of magic number 100 and base it on smth
+    tv->globalVars=dictCreate(100);//todo: get rid of magic number 100 and base it on smth
+    tv->parsedDies=integerMapCreate(100);//todo: get rid of magic number 100 and base it on smth
     printf("iterating compilation units\n");
     Dwarf_Unsigned cuHeaderLength=0;
     Dwarf_Half version=0;
@@ -244,7 +486,7 @@ void readDWARFTypes(Elf* elf)
       fprintf(stderr,"no entry! in dwarf_siblingof on CU die. This should never happen. Something is terribly wrong \n");
       exit(1);
     }
-    walkDieTree(dbg,cu_die);
+    walkDieTree(dbg,cu_die,cu,true);
     dwarf_dealloc(dbg,cu_die,DW_DLA_DIE);
   }
   
@@ -252,6 +494,7 @@ void readDWARFTypes(Elf* elf)
   {
     dwarfErrorHandler(err,NULL);
   }
+  return di;
 }
 
 

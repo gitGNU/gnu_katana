@@ -206,3 +206,18 @@ char** dictKeys(const Dictionary* dict)
   keys[dict->size]=0;
   return keys;
 }
+
+//null-terminated array of all values in dictionary
+//memory for array has been malloced, should be freed when you're finished with it
+//don't free elements
+void** dictValues(const Dictionary* dict)
+{
+  void** vals=malloc(sizeof(char*)*(dict->size+1));
+  DNODE* node=dict->start;
+  for(int i=0;node;node=node->next,i++)
+  {
+    vals[i]=node->data;
+  }
+  vals[dict->size]=0;
+  return vals;
+}

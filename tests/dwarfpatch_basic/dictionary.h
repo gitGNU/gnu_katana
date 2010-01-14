@@ -1,13 +1,10 @@
 /*
 
   FILE: dictionary.h
-
   Author: James Oakley
-
-  Data: February, 2008
-
+  Date: February, 2008
+  Modified: Jan, 2010
   Description: structure and prototypes for a general-purpose string-keyed dictionary
-
 */
 
 #ifndef DICTIONARY_H
@@ -72,5 +69,10 @@ void dictPrint(const Dictionary* dict,void (*pfunc)(void*));
 //memory for array has been malloced, should be freed when you're finished with it
 //don't free elements
 char** dictKeys(const Dictionary* dict);
+
+//null-terminated array of all values in dictionary
+//memory for array has been malloced, should be freed when you're finished with it
+//don't free elements
+void** dictValues(const Dictionary* dict);
 
 #endif

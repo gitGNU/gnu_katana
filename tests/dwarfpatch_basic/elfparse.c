@@ -228,7 +228,7 @@ void findELFSections()
   //todo: this is deprecated but the non deprecated version
   //(elf_getshdrstrndx) isn't linking on my system. This may betray some
   //more important screw-up somewhere)
-  elf_getshstrndx (e, &sectionHdrStrTblIdx);
+  elf_getshdrstrndx (e, &sectionHdrStrTblIdx);
   
   for(Elf_Scn* scn=elf_nextscn (e, NULL);scn;scn=elf_nextscn(e,scn))
   {
@@ -260,8 +260,8 @@ void findELFSections()
     {
       dataData=elf_getdata(scn,NULL);
       dataStart=shdr.sh_addr;
-      printf("data size if 0x%x at offset 0x%x\n",dataData->d_size,(uint)dataData->d_off);
-      printf("data section starts at address 0x%x\n",dataStart);
+      //printf("data size is 0x%x at offset 0x%x\n",dataData->d_size,(uint)dataData->d_off);
+      //printf("data section starts at address 0x%x\n",dataStart);
     }
     else if(!strcmp(".text",name))
     {

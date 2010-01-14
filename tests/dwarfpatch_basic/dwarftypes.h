@@ -10,7 +10,8 @@
 #ifndef dwarftypes_h
 #define dwarftypes_h
 #include "elfparse.h"
-void readDWARFTypes(Elf* elf);
+//caller should free info when no longer needs it
+DwarfInfo* readDWARFTypes(Elf* elf);
 
-void fixupVariable(VarInfo var,TransformationInfo* trans,int pid);
+
 #endif

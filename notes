@@ -1,15 +1,7 @@
 -*- mode:org; -*-
 
 * notes from meeting
-need to understand dwarf CIEs better, sergey thinks that format might
-already describe the kinds of offsets that we need in order to patch. This
-might be useful in the PO format. Stack frame is similar to a struct
-
-offsets with info on what you expect to find at each.
-
-read more on frame description in unwinding process
-possible that poking of bytes in unwinding process can also go into patching
-
+see "DWARF Call Frame information" under "understandings"
 * confusion I have
 * issues I see
 ** exception handling
@@ -205,10 +197,12 @@ possible that poking of bytes in unwinding process can also go into patching
 *** requires writing out commands file (apparently by hand, I think)
 
 ** ksplice
+a grep of its source code seems to indicate that it does not use dwarf
+for type patching, but the paper does not seem to make it clear what
+it does use
 *** kernel live patching
 *** fairly developed system, one reviewer who rejected Katana suggested looking at it more
 *** http://www.ksplice.com/doc/ksplice.pdf
-
 ** Ginseng
    http://www.cs.umd.edu/projects/PL/dsu/software.shtml
    discussino about it above in the references section
@@ -300,6 +294,17 @@ possible that poking of bytes in unwinding process can also go into patching
     Note that at this point the original call location of the
     exception has been wiped off the stack.
 *** After the code in the catch block has executed, it makes a call to __cxa_end_catch
+
+** DWARF Call Frame information
+*** from meeting
+need to understand dwarf CIEs better, sergey thinks that format might
+already describe the kinds of offsets that we need in order to patch. This
+might be useful in the PO format. Stack frame is similar to a struct
+
+offsets with info on what you expect to find at each.
+
+read more on frame description in unwinding process
+possible that poking of bytes in unwinding process can also go into patching
 
 * definitions
 ** ET_REL
