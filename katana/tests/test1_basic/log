@@ -1,0 +1,5 @@
+has pid 5908
+Foo: 42,66
+field 1 at addr: 804a020, field 2 at addr: 804a024
+Foo: 42,66
+field 1 at addr: 40027000, field 2 at addr: 40027008
