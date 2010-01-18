@@ -2,7 +2,15 @@
 
 * notes from meeting
 see "DWARF Call Frame information" under "understandings"
+
+todo: figure out ERESI thing
+todo: write up prototype of using CFIs/FDEs
+todo: prepare to walk Sergey through unwinding of call frame on Wednesday at 3:00
 * confusion I have
+** pointer to type only declared
+what to do about cases where there's a global variable of pointer type
+to a struct which has only a declaration. We don't actually know what
+type that pointer is, we can't really patch it
 * issues I see
 ** exception handling
    issue mentioned in "A Runtime Code Modification Method for
@@ -40,6 +48,8 @@ see "DWARF Call Frame information" under "understandings"
    http://www.gnu.org/software/libtool/manual/libc/Backtraces.html
    generally requires compiling with -rdynamic
 ** it appears that ld does not write all symbols from the symbol table into the hash table
+** 32-bit vs 64-bit
+   look into dwarf_get_address_size for some help on at least addresses
 * references:
 **misc
 *** ELFsh/ERESI papers
@@ -352,6 +362,14 @@ addition of extra functionality should it be needed). We could certainly use it 
 inspiration yes, but I'm not sure where the gain would be in actually
 using the format. I suppose the only real advantage would be in trying
 to promote a standard patch object format, since Dwarf is already a standard.
+*** using it for PO format
+**** no really good way to specify "mem location yet to be determined"
+     Need this because don't know where we're going to be able to mmap in things. No
+     good way to indicate the high level operation of "mmap in a
+     block". Might be able to do this with DW_OP_call[24] and
+     friends. Of course, these supposedly have no meaning in the
+     .debug_frame section, however we're not interpreting the call
+     frame information in the normal way.
 * definitions
 ** ET_REL
    ELF file type recognized by linux. Denotes relocatable object

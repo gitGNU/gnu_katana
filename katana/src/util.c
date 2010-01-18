@@ -15,3 +15,19 @@ void* zmalloc(size_t size)
   memset(result,0,size);
   return result;
 }
+
+void die(char* reason)
+{
+  if(reason)
+  {
+    fprintf(stderr,"%s",reason);
+  }
+  fflush(stderr);
+  fflush(stdout);
+  abort();
+}
+
+void death(char* reason)
+{
+  die(reason);
+}

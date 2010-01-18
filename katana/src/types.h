@@ -28,9 +28,14 @@ typedef struct
   //todo: in the future, may separate things out
   //by compilation unit
   //only dealing with global variable for now
-  Dictionary* globalTypes; //maps type names to TypeInfo structs
+  Dictionary* types; //maps type names to TypeInfo structs
   //List* globalTypesList;//exists to give a unique listing of types, as the dictionary contains typedefs, etc //todo: support this
-  Dictionary* globalVars;  //maps var names to VarInfo structs
+  Dictionary* globalVars;  /*maps var names to VarInfo structs. Note
+                             that this dictionary is the same for all
+                             CUs, as in C all global variables must be
+                             unique across the program. TODO: add in a
+                             CU-local variables section if we ever
+                             support any languages that require it */
   Map* parsedDies; //contains global offsets of dwarf dies we've parsed so far
                           //this is necessary because we don't necessarily parse them
                           //in order because a die can refer to a die that comes later
@@ -58,7 +63,9 @@ typedef enum
 {
   TT_STRUCT=1,
   TT_BASE,
-  TT_POINTER
+  TT_POINTER,
+  TT_ARRAY,
+  TT_VOID //the void type
 } TYPE_TYPE;
 
 //struct to hold information about a type in the target program
@@ -68,13 +75,23 @@ typedef struct
   char* name;
   TYPE_TYPE type;
   int length;//overall length in bytes of the type
+  bool incomplete;/*if true indicates that this type is in the process
+                    of being read. Necessary if for instance a struct
+                    has a field which is a pointer to another of the
+                    same struct, reading the struct members will
+                    reference this type which is only half read
+                    itself*/
   //the following members are only applicable to structs
   int numFields;
   char** fields;
   int* fieldLengths;
   char** fieldTypes;
-  //the following members are only applicable to pointers
-  char* pointedType;
+  //the following are relevant only to pointers or arrays
+  char* pointedType;//could also be called arrayType
+  //the following are relevant only to arrays
+  int lowerBound;
+  int upperBound;
+
 } TypeInfo;
 
 void freeTypeInfo(TypeInfo* t);
@@ -101,9 +118,15 @@ typedef struct
   char* name;
   TypeInfo* type;
   //location can be gotten from the symbol table
+  bool declaration;//true for example for a variable declared extern.
+                   //The declaration copy is discarded if a real copy is found
 } VarInfo;
 
+
 void freeVarInfo(VarInfo* v);
+
+//wrapper
+void freeVarInfoVoid(void* v);
 
 //structure to hold information about transformation
 //necessary to hotpatch types

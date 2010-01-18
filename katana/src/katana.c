@@ -1,8 +1,8 @@
 /*
   File: typepatch.c
   Author: James Oakley
-  Project: Katana (preliminary work)
-  Date: January 10
+  Project: Katana
+  Date: January, 2010
   Description: Preliminary patching program just for patching main_v0.c's structure Foo to have an extra field
                The first version of this program is going to be very simple. It will perform the following steps
                1. Load main_v0 with dwarfdump and determine where the variable bar is stored
@@ -11,8 +11,8 @@
                4. Make the process execute mmap to allocate space for a new data segment
                5. Copy over field1 and field2 from Foo bar into the new memory area and zero the added field
                6. Fixup all locations referring to the old address of bar with the new address and set the offset accordingly (should be able to get information for fixups from the rel.text section)
-  Usage: typepatch PID
-         PID is expected to be a running process build from main_v0.c
+  Usage: katana OLD_BINARY NEW_BINARY PID
+         PID is expected to be a pid of a running process build from OLD_BINARY
 */
 #include <errno.h>
 #include <stdio.h>
@@ -128,6 +128,7 @@ void testManualRelocateAndTransformBar()
 }
 
 void diffAndFixTypes(DwarfInfo* diPatchee,DwarfInfo* diPatched)
+
 {
   //todo: this assumes both have the same number of compilation units
   //and that their order corresponds. This is not a good assumption to make
@@ -173,6 +174,7 @@ void diffAndFixTypes(DwarfInfo* diPatchee,DwarfInfo* diPatched)
             //todo: may not want to actually abort, may just want to issue
             //an error
             fprintf(stderr,"Error, cannot generate type transformation for variable %s\n",var->name);
+            fflush(stderr);
             abort();
           }
           printf("generated type transformation for type %s\n",ti1->name);
@@ -212,22 +214,24 @@ void diffAndFixTypes(DwarfInfo* diPatchee,DwarfInfo* diPatched)
 
 int main(int argc,char** argv)
 {
-  if(argc<2)
+  if(argc<4)
   {
-    fprintf(stderr,"must specify pid to attach to\n");
-    exit(1);
+    die("Usage: katana OLD_BINARY NEW_BINARY PID");
   }
-  pid=atoi(argv[1]);
+  char* oldBinary=argv[1];
+  char* newBinary=argv[2];
+  pid=atoi(argv[3]);
   if(elf_version(EV_CURRENT)==EV_NONE)
   {
-    fprintf(stderr,"Failed to init ELF library\n");
-    exit(1);
+    die("Failed to init ELF library\n");
   }
-  Elf* e=openELFFile("patched");
+  Elf* e=openELFFile(newBinary);
+  printf("reading dwarf types from new binary\n############################################\n");
   DwarfInfo* diPatched=readDWARFTypes(e);
   endELF(e);
-  e=openELFFile("patchee");
+  e=openELFFile(oldBinary);
   findELFSections();
+  printf("reading dwarf types from old binary\n#############################################\n");
   DwarfInfo* diPatchee=readDWARFTypes(e);
 
   startPtrace();
