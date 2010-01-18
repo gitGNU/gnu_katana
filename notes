@@ -305,7 +305,53 @@ offsets with info on what you expect to find at each.
 
 read more on frame description in unwinding process
 possible that poking of bytes in unwinding process can also go into patching
+*** my understanding
+(from the Dwarf spec)
+DWARF call frame information (stored in .debug_frame) basically
+provides the means to build a large table with a row for each possible
+address of the program counter. Each row contains expressions allowing
+the stack to be unwound to the previous frame by defining columns for
+1. the Call Frame Address (stack pointer at call site in previous
+   frame)
+2. the return address, i.e. the address where execution will resume
+   when the current function returns
+3. the values of all registers in the previous frame at the return
+   address
+The values of these columns are obviously not generally columns. They
+are computed from other registers, etc (computation against the
+stack pointer register allows retrieving values on the
+stack). Dwarf defines an expression language, which includes
+stack-based computation (i.e. a stack similar to RPN calculators,
+ not the stack in use by the executing program).
 
+Interestingly, while all of the columns except for the CFA are
+supposedly defining registers, the register number defined is given by
+a LEB128 number. This allows an arbitrarily large number of
+"registers". Note again that some of these "registers" may be
+specified in terms of calculations involving other "registers". An
+appropriate interpreter of this information could treat register
+numbers instead as memory addresses/offsets from the start of a
+file/etc. If the initial row were taken to be the image of the
+original binary, a following row would define all changes that were
+made to the binary by a patch. Because columns may be specified by
+expressions in terms of other columns, this could theoretically provide a means of
+specifying the transformation of a running program into a patched
+program based on the state  of the running program.
+
+That said, while it's an interesting idea, I'm not sure I really see
+the point (perhaps I'm missing something). As it doesn't actually
+serve the same purpose as the contents of .debug_frame (or .eh_frame)
+and requires reinterpretation of register numbers as addresses, it
+would hardly be able to use existing code written for dealing with
+Dwarf. For example, while the Dwarf standard calls for  LEB128 values
+for the register numbers, libdwarf reads them as shorts, since no
+existing architecture actually has 2^16 registers. So making the patch
+information in patch objects formatted in the manner of DWARF FDEs
+seems to me as though it would just be a hassle (and restrict the
+addition of extra functionality should it be needed). We could certainly use it for
+inspiration yes, but I'm not sure where the gain would be in actually
+using the format. I suppose the only real advantage would be in trying
+to promote a standard patch object format, since Dwarf is already a standard.
 * definitions
 ** ET_REL
    ELF file type recognized by linux. Denotes relocatable object

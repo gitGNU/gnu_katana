@@ -92,7 +92,6 @@ typedef struct
   //the value FIELD_DELETED indicates that the field is no longer
   //present in the structure
   int* fieldOffsets;
-  //todo: support fixups of field types within structures
 } TypeTransform;
 
 void freeTypeTransform(TypeTransform* t);

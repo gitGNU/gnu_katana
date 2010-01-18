@@ -25,6 +25,18 @@ int getOffsetForField(TypeInfo* type,char* name)
   return FIELD_DELETED;
 }
 
+int getIdxForField(TypeInfo* type,char* name)
+{
+  for(int i=0;i<type->numFields;i++)
+  {
+    if(!strcmp(name,type->fields[i]))
+    {
+      return i;
+    }
+  }
+  return FIELD_DELETED;
+}
+
 //return false if the two types are not
 //identical in all regards
 //if the types are not identical, return
@@ -112,6 +124,59 @@ void getFreeSpaceForTransformation(TransformationInfo* trans,uint howMuch)
 }
 
 
+//takes the structure stored in datap
+//of type indicated by transform->to
+//and transforms it to transform->from
+//and stores the result back in datap
+//the original contents of datap may be freed
+void fixupStructure(char** datap,TypeTransform* transform,TransformationInfo* trans)
+{
+  char* data=*datap;
+  TypeInfo* oldType=transform->from;
+  TypeInfo* newType=transform->to;
+  char* newData=zmalloc(newType->length);
+  //now fix up the internals of the variable
+  int oldOffsetSoFar=0;
+  for(int i=0;i<oldType->numFields;i++)
+  {
+    if(FIELD_DELETED==transform->fieldOffsets[i])
+    {
+      continue;
+    }
+    printf("copying data from offset %i to offset %i\n",oldOffsetSoFar,transform->fieldOffsets[i]);
+    int idxOfFieldInNew=getIdxForField(newType,oldType->fields[i]);
+    TypeTransform* transformField=(TypeTransform*)dictGet(trans->typeTransformers,oldType->fieldTypes[i]);
+    if(!transformField)
+    {
+      int cpLength=0;
+      if(FIELD_DELETED!=idxOfFieldInNew)
+      {
+        cpLength=min(newType->fieldLengths[idxOfFieldInNew],oldType->fieldLengths[i]);
+        if(newType->fieldLengths[idxOfFieldInNew]!=oldType->fieldLengths[i])
+        {
+          fprintf(stderr,"Warning: information loss: struct field changed size between versions\n");
+        }
+      }
+      else
+      {
+        fprintf(stderr,"Warning: information loss: struct field was removed in patch");
+      }
+      memcpy(newData+transform->fieldOffsets[i],data+oldOffsetSoFar,cpLength);
+    }
+    else
+    {
+      //we can't just copy the data verbatim, its structure has changed
+      char* fieldData=zmalloc(oldType->fieldLengths[i]);
+      memcpy(fieldData,data+oldOffsetSoFar,oldType->fieldLengths[i]);
+      fixupStructure(&fieldData,transformField,trans);
+      memcpy(newData+transform->fieldOffsets[i],fieldData,newType->fieldLengths[idxOfFieldInNew]);
+      
+    }
+    oldOffsetSoFar+=oldType->fieldLengths[i];
+  }
+  free(*datap);
+  *datap=newData;
+}
 
 //returns true if it was able to transform the variable
 //todo: I don't think this will work on extern variables or
@@ -169,17 +234,9 @@ bool fixupVariable(VarInfo var,TransformationInfo* trans,int pid)
     memcpyToTarget(newAddr,zeros,newLength);
     free(zeros);
   }
-  int oldOffsetSoFar=0;
-  for(int i=0;i<oldType->numFields;i++)
-  {
-    if(FIELD_DELETED==transform->fieldOffsets[i])
-    {
-      continue;
-    }
-    printf("copying data from offset %i to offset %i\n",oldOffsetSoFar,transform->fieldOffsets[i]);
-    memcpyToTarget(newAddr+transform->fieldOffsets[i],data+oldOffsetSoFar,oldType->fieldLengths[i]);
-    oldOffsetSoFar+=oldType->fieldLengths[i];
-  }
+
+  fixupStructure(&data,transform,trans);
+  memcpyToTarget(newAddr,data,newLength);
 
   //cool, the variable is all nicely relocated and whatnot. But if the variable
   //did change, we may have to relocate references to it.
