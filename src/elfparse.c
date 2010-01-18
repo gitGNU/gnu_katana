@@ -33,14 +33,13 @@ Elf* openELFFile(char* fname)
   fd=open(fname,O_RDONLY);
   if(fd < 0)
   {
-    fprintf(stderr,"Failed to open binary to be patched\n");
-    exit(1);
+    die("Failed to open binary to be patched\n");
   }
   e=elf_begin(fd,ELF_C_READ,NULL);
   if(!e)
   {
     fprintf(stderr,"Failed to open as an ELF file %s\n",elf_errmsg(-1));
-    exit(1);
+    die(NULL);
   }
   return e;
 }

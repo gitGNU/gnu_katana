@@ -24,6 +24,11 @@ typedef struct _List
 //malloc, check return value, and zero
 void* zmalloc(size_t size);
 
+
+void die(char* reason);
+//just an alias
+void death(char* reason);
+
 #define min(x,y)   ((x)>(y))?(y):(x)
 
 //! \brief Check whether \a s is NULL or not on a memory allocation. Quit this program if it is NULL.

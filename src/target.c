@@ -31,14 +31,14 @@ void startPtrace()
   if(ptrace(PTRACE_ATTACH,pid,NULL,NULL)<0)
   {
     fprintf(stderr,"ptrace failed to attach to process\n");
-    exit(1);
+    die(NULL);
   }
   //kill(pid,SIGSTOP);
   /*if(ptrace(PTRACE_CONT,pid,NULL,SIGSTOP)<0)
   {
     //just make sure the process is running
     perror("failed to continue process\n");
-    exit(1);
+    die(NULL);
     }*/
 
   //this line included on recommendation of phrack
@@ -72,7 +72,7 @@ void endPtrace()
   if(ptrace(PTRACE_DETACH,pid,NULL,NULL)<0)
   {
     fprintf(stderr,"ptrace failed to detach\n");
-    exit(1);
+    die(NULL);
   }
   kill(pid,SIGCONT);
 }
@@ -83,7 +83,7 @@ void modifyTarget(addr_t addr,uint value)
   if(ptrace(PTRACE_POKEDATA,pid,addr,value)<0)
   {
     perror("ptrace POKEDATA failed\n");
-    exit(1);
+    die(NULL);
   }
 }
 
@@ -120,7 +120,7 @@ void memcpyFromTarget(char* data,long addr,int numBytes)
     if(errno)
     {
       perror("ptrace PEEKDATA failed\n");
-      exit(1);
+      die(NULL);
     }
     if(i+PTRACE_WORD_SIZE<=numBytes)
     {
@@ -153,7 +153,7 @@ long mmapTarget(int size,int prot)
   if(ptrace(PTRACE_GETREGS,pid,NULL,&oldRegs) < 0)
   {
     perror("ptrace getregs failed\n");
-    exit(1);
+    die(NULL);
   }
   newRegs=oldRegs;
   //we're going to throw the parameters to this syscall
@@ -188,7 +188,7 @@ long mmapTarget(int size,int prot)
   if(ptrace(PTRACE_SETREGS,pid,NULL,&newRegs)<0)
   {
     perror("ptrace setregs failed\n");
-    exit(1);
+    die(NULL);
   }
   //and run the code
   continuePtrace();
@@ -196,19 +196,19 @@ long mmapTarget(int size,int prot)
   if(ptrace(PTRACE_GETREGS,pid,NULL,&newRegs) < 0)
   {
     perror("ptrace getregs failed (getting regs after mmap syscall)\n");
-    exit(1);
+    die(NULL);
   }
   int retval=newRegs.eax;
   if((void*)retval==MAP_FAILED)
   {
     fprintf(stderr,"mmap in target failed\n");
-    exit(1);
+    die(NULL);
   }
   //restore the old registers
   if(ptrace(PTRACE_SETREGS,pid,NULL,&oldRegs)<0)
   {
     perror("ptrace setregs failed (when trying to resotre old registers)\n");
-    exit(1);
+    die(NULL);
   }
   return retval;
 }

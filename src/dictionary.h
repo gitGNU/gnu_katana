@@ -33,6 +33,7 @@ typedef struct _DICTIONARY {
   DNODE *start;
   DNODE *end;
   int size; //number of elements in the dictionary
+  int refcount;
 } __DICTIONARY;
 
 typedef struct _DICTIONARY DICTIONARY;
@@ -74,5 +75,12 @@ char** dictKeys(const Dictionary* dict);
 //memory for array has been malloced, should be freed when you're finished with it
 //don't free elements
 void** dictValues(const Dictionary* dict);
+
+//refcounting functions
+//both return the reference count
+//release DOES NOT FREE ANY MEMORY
+//you must call dictDelete yourself
+int dictGrab(Dictionary* dict);
+int dictRelease(Dictionary* dict);
 
 #endif
