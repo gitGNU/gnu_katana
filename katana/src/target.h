@@ -18,6 +18,8 @@
 #endif
 #include <sys/syscall.h>
 #include "types.h"
+//#include <sys/user.h>
+
 void startPtrace();
 void continuePtrace();
 void endPtrace();
@@ -26,7 +28,8 @@ void modifyTarget(addr_t addr,uint value);
 void memcpyToTarget(long addr,char* data,int numBytes);
 //copies numBytes to data from addr in target
 void memcpyFromTarget(char* data,long addr,int numBytes);
-
+struct user_regs_struct getTargetRegs();
+void setTargetRegs(struct user_regs_struct regs);
 //allocate a region of memory in the target
 //return the address (in the target) of the region
 //or NULL if the operation failed

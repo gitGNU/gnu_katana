@@ -66,6 +66,8 @@ type that pointer is, we can't really patch it
      depth. Also consider the section entitled 
      "Runtime section injection algorithm in memory". It talks about
      injecting things at runtime
+
+***** note: use the command flist instead of list to show working files
 *** http://artofhacking.com/files/phrack/phrack61/live/aoh_p61-0x08.htm
 *** http://www.ibm.com/developerworks/power/library/pa-spec12/
 *** http://developers.sun.com/solaris/articles/elf.html
@@ -304,7 +306,6 @@ it does use
     Note that at this point the original call location of the
     exception has been wiped off the stack.
 *** After the code in the catch block has executed, it makes a call to __cxa_end_catch
-
 ** DWARF Call Frame information
 *** from meeting
 need to understand dwarf CIEs better, sergey thinks that format might
@@ -369,7 +370,14 @@ to promote a standard patch object format, since Dwarf is already a standard.
      block". Might be able to do this with DW_OP_call[24] and
      friends. Of course, these supposedly have no meaning in the
      .debug_frame section, however we're not interpreting the call
-     frame information in the normal way.
+     frame information in the normal way. Could also view a new memory
+     block as the CFA and not actually define the CFA. This gets in
+     the way of an algebra of patches, however, because too many
+     unknown quantities get introduced.
+**** register interpretations
+     Generally interpret "registers" as addresses into the
+     binary. Could, however, have some special register values which
+     are defined to mean special things (free page in memory
 * definitions
 ** ET_REL
    ELF file type recognized by linux. Denotes relocatable object

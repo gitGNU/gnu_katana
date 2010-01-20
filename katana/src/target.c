@@ -134,6 +134,27 @@ void memcpyFromTarget(char* data,long addr,int numBytes)
   }
 }
 
+struct user_regs_struct getTargetRegs()
+{
+  struct user_regs_struct regs;
+  if(ptrace(PTRACE_GETREGS,pid,NULL,&regs) < 0)
+  {
+    perror("ptrace getregs failed\n");
+    die(NULL);
+  }
+  return regs;
+}
+
+void setTargetRegs(struct user_regs_struct regs)
+{
+  if(ptrace(PTRACE_SETREGS,pid,NULL,&regs)<0)
+  {
+    perror("ptrace setregs failed\n");
+    die(NULL);
+  }
+}
+  
+
 //allocate a region of memory in the target
 //return the address (in the target) of the region
 //or NULL if the operation failed
@@ -150,11 +171,7 @@ long mmapTarget(int size,int prot)
   char code[]={0xcd,0x80,0xcc,0x00};
 
   struct user_regs_struct oldRegs,newRegs;
-  if(ptrace(PTRACE_GETREGS,pid,NULL,&oldRegs) < 0)
-  {
-    perror("ptrace getregs failed\n");
-    die(NULL);
-  }
+  oldRegs=getTargetRegs();
   newRegs=oldRegs;
   //we're going to throw the parameters to this syscall
   //as well as the code itself on the stack
@@ -185,11 +202,7 @@ long mmapTarget(int size,int prot)
   newRegs.eax=SYS_mmap;//syscall number to identify that this is an mmap call
   
   //now actually tell the process about these registers
-  if(ptrace(PTRACE_SETREGS,pid,NULL,&newRegs)<0)
-  {
-    perror("ptrace setregs failed\n");
-    die(NULL);
-  }
+  setTargetRegs(newRegs);
   //and run the code
   continuePtrace();
   wait(NULL);

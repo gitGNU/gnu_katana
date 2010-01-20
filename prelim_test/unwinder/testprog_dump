@@ -1,0 +1,1068 @@
+
+.debug_info
+
+COMPILE_UNIT<header overall offset = 0>:
+<0><   11>	DW_TAG_compile_unit
+		DW_AT_stmt_list             0
+		DW_AT_low_pc                0x8048410
+		DW_AT_high_pc               0x8048432
+		DW_AT_name                  ../sysdeps/i386/elf/start.S
+		DW_AT_comp_dir              /build/buildd/glibc-2.9/csu
+		DW_AT_producer              GNU AS 2.19.1
+		DW_AT_language              DW_LANG_Mips_Assembler
+
+.debug_line: line number info for a single cu
+Source lines (from CU-DIE at .debug_info offset 11):
+<source>	[row,column]	<pc>	//<new statement or basic block
+/build/buildd/glibc-2.9/csu/../sysdeps/i386/elf/start.S:	[ 65,-1]	0x8048410	// new statement
+/build/buildd/glibc-2.9/csu/../sysdeps/i386/elf/start.S:	[ 70,-1]	0x8048412	// new statement
+/build/buildd/glibc-2.9/csu/../sysdeps/i386/elf/start.S:	[ 71,-1]	0x8048413	// new statement
+/build/buildd/glibc-2.9/csu/../sysdeps/i386/elf/start.S:	[ 77,-1]	0x8048415	// new statement
+/build/buildd/glibc-2.9/csu/../sysdeps/i386/elf/start.S:	[ 78,-1]	0x8048418	// new statement
+/build/buildd/glibc-2.9/csu/../sysdeps/i386/elf/start.S:	[ 83,-1]	0x8048419	// new statement
+/build/buildd/glibc-2.9/csu/../sysdeps/i386/elf/start.S:	[ 85,-1]	0x804841a	// new statement
+/build/buildd/glibc-2.9/csu/../sysdeps/i386/elf/start.S:	[109,-1]	0x804841b	// new statement
+/build/buildd/glibc-2.9/csu/../sysdeps/i386/elf/start.S:	[110,-1]	0x8048420	// new statement
+/build/buildd/glibc-2.9/csu/../sysdeps/i386/elf/start.S:	[112,-1]	0x8048425	// new statement
+/build/buildd/glibc-2.9/csu/../sysdeps/i386/elf/start.S:	[113,-1]	0x8048426	// new statement
+/build/buildd/glibc-2.9/csu/../sysdeps/i386/elf/start.S:	[115,-1]	0x8048427	// new statement
+/build/buildd/glibc-2.9/csu/../sysdeps/i386/elf/start.S:	[119,-1]	0x804842c	// new statement
+/build/buildd/glibc-2.9/csu/../sysdeps/i386/elf/start.S:	[122,-1]	0x8048431	// new statement
+/build/buildd/glibc-2.9/csu/../sysdeps/i386/elf/start.S:	[122,-1]	0x8048432	// new statement	// end of text sequence
+
+COMPILE_UNIT<header overall offset = 96>:
+<0><   11>	DW_TAG_compile_unit
+		DW_AT_producer              GNU C 4.3.3
+		DW_AT_language              DW_LANG_C89
+		DW_AT_name                  init.c
+		DW_AT_comp_dir              /build/buildd/glibc-2.9/csu
+		DW_AT_low_pc                0x8048434
+		DW_AT_high_pc               0x8048434
+		DW_AT_stmt_list             91
+
+LOCAL_SYMBOLS:
+<1><   37>	DW_TAG_base_type
+		DW_AT_byte_size             1
+		DW_AT_encoding              DW_ATE_unsigned_char
+		DW_AT_name                  unsigned char
+<1><   44>	DW_TAG_base_type
+		DW_AT_byte_size             2
+		DW_AT_encoding              DW_ATE_unsigned
+		DW_AT_name                  short unsigned int
+<1><   51>	DW_TAG_base_type
+		DW_AT_byte_size             4
+		DW_AT_encoding              DW_ATE_unsigned
+		DW_AT_name                  unsigned int
+<1><   58>	DW_TAG_base_type
+		DW_AT_byte_size             4
+		DW_AT_encoding              DW_ATE_unsigned
+		DW_AT_name                  long unsigned int
+<1><   65>	DW_TAG_base_type
+		DW_AT_byte_size             1
+		DW_AT_encoding              DW_ATE_signed_char
+		DW_AT_name                  signed char
+<1><   72>	DW_TAG_base_type
+		DW_AT_byte_size             2
+		DW_AT_encoding              DW_ATE_signed
+		DW_AT_name                  short int
+<1><   79>	DW_TAG_base_type
+		DW_AT_byte_size             4
+		DW_AT_encoding              DW_ATE_signed
+		DW_AT_name                  int
+<1><   86>	DW_TAG_base_type
+		DW_AT_byte_size             8
+		DW_AT_encoding              DW_ATE_signed
+		DW_AT_name                  long long int
+<1><   93>	DW_TAG_base_type
+		DW_AT_byte_size             8
+		DW_AT_encoding              DW_ATE_unsigned
+		DW_AT_name                  long long unsigned int
+<1><  100>	DW_TAG_base_type
+		DW_AT_byte_size             4
+		DW_AT_encoding              DW_ATE_signed
+		DW_AT_name                  long int
+<1><  107>	DW_TAG_base_type
+		DW_AT_byte_size             4
+		DW_AT_encoding              DW_ATE_unsigned
+<1><  110>	DW_TAG_base_type
+		DW_AT_byte_size             1
+		DW_AT_encoding              DW_ATE_signed_char
+		DW_AT_name                  char
+<1><  117>	DW_TAG_variable
+		DW_AT_name                  _IO_stdin_used
+		DW_AT_decl_file             1 /build/buildd/glibc-2.9/csu/init.c
+		DW_AT_decl_line             25
+		DW_AT_type                  <135>
+		DW_AT_external              yes(1)
+		DW_AT_location              DW_OP_addr 0x80487ec
+<1><  135>	DW_TAG_const_type
+		DW_AT_type                  <79>
+
+.debug_line: line number info for a single cu
+Source lines (from CU-DIE at .debug_info offset 107):
+<source>	[row,column]	<pc>	//<new statement or basic block
+
+COMPILE_UNIT<header overall offset = 237>:
+<0><   11>	DW_TAG_compile_unit
+		DW_AT_stmt_list             130
+		DW_AT_ranges                0
+		DW_AT_name                  /build/buildd/glibc-2.9/build-tree/i386-libc/csu/crti.S
+		DW_AT_comp_dir              /build/buildd/glibc-2.9/csu
+		DW_AT_producer              GNU AS 2.19.1
+		DW_AT_language              DW_LANG_Mips_Assembler
+
+.debug_line: line number info for a single cu
+Source lines (from CU-DIE at .debug_info offset 248):
+<source>	[row,column]	<pc>	//<new statement or basic block
+/build/buildd/glibc-2.9/build-tree/i386-libc/csu/crti.S:	[ 15,-1]	0x8048354	// new statement
+/build/buildd/glibc-2.9/build-tree/i386-libc/csu/crti.S:	[ 16,-1]	0x8048355	// new statement
+/build/buildd/glibc-2.9/build-tree/i386-libc/csu/crti.S:	[ 17,-1]	0x8048357	// new statement
+/build/buildd/glibc-2.9/build-tree/i386-libc/csu/crti.S:	[ 18,-1]	0x8048358	// new statement
+/build/buildd/glibc-2.9/build-tree/i386-libc/csu/crti.S:	[ 19,-1]	0x804835b	// new statement
+/build/buildd/glibc-2.9/build-tree/i386-libc/csu/crti.S:	[ 21,-1]	0x8048360	// new statement
+/build/buildd/glibc-2.9/build-tree/i386-libc/csu/crti.S:	[ 22,-1]	0x8048361	// new statement
+/build/buildd/glibc-2.9/build-tree/i386-libc/csu/crti.S:	[ 23,-1]	0x8048367	// new statement
+/build/buildd/glibc-2.9/build-tree/i386-libc/csu/crti.S:	[ 24,-1]	0x804836d	// new statement
+/build/buildd/glibc-2.9/build-tree/i386-libc/csu/crti.S:	[ 25,-1]	0x804836f	// new statement
+/build/buildd/glibc-2.9/build-tree/i386-libc/csu/crti.S:	[ 26,-1]	0x8048371	// new statement
+/build/buildd/glibc-2.9/build-tree/i386-libc/csu/crti.S:	[ 26,-1]	0x8048376	// new statement	// end of text sequence
+/build/buildd/glibc-2.9/csu/../sysdeps/generic/initfini.c:	[109,-1]	0x80487cc	// new statement
+/build/buildd/glibc-2.9/csu/../sysdeps/generic/initfini.c:	[110,-1]	0x80487cd	// new statement
+/build/buildd/glibc-2.9/csu/../sysdeps/generic/initfini.c:	[111,-1]	0x80487cf	// new statement
+/build/buildd/glibc-2.9/csu/../sysdeps/generic/initfini.c:	[112,-1]	0x80487d0	// new statement
+/build/buildd/glibc-2.9/csu/../sysdeps/generic/initfini.c:	[113,-1]	0x80487d3	// new statement
+/build/buildd/glibc-2.9/csu/../sysdeps/generic/initfini.c:	[115,-1]	0x80487d8	// new statement
+/build/buildd/glibc-2.9/csu/../sysdeps/generic/initfini.c:	[116,-1]	0x80487d9	// new statement
+/build/buildd/glibc-2.9/csu/../sysdeps/generic/initfini.c:	[116,-1]	0x80487df	// new statement	// end of text sequence
+
+COMPILE_UNIT<header overall offset = 357>:
+<0><   11>	DW_TAG_compile_unit
+		DW_AT_producer              GNU C 4.3.3
+		DW_AT_language              DW_LANG_C89
+		DW_AT_name                  testprog.c
+		DW_AT_comp_dir              /home/james/school/katana/prelim_test/unwinder
+		DW_AT_low_pc                0x80484c4
+		DW_AT_high_pc               0x8048727
+		DW_AT_stmt_list             300
+
+LOCAL_SYMBOLS:
+<1><   37>	DW_TAG_typedef
+		DW_AT_name                  size_t
+		DW_AT_decl_file             2 /usr/lib/gcc/i486-linux-gnu/4.3.3/include/stddef.h
+		DW_AT_decl_line             214
+		DW_AT_type                  <48>
+<1><   48>	DW_TAG_base_type
+		DW_AT_byte_size             4
+		DW_AT_encoding              DW_ATE_unsigned
+		DW_AT_name                  unsigned int
+<1><   55>	DW_TAG_base_type
+		DW_AT_byte_size             1
+		DW_AT_encoding              DW_ATE_unsigned_char
+		DW_AT_name                  unsigned char
+<1><   62>	DW_TAG_base_type
+		DW_AT_byte_size             2
+		DW_AT_encoding              DW_ATE_unsigned
+		DW_AT_name                  short unsigned int
+<1><   69>	DW_TAG_base_type
+		DW_AT_byte_size             4
+		DW_AT_encoding              DW_ATE_unsigned
+		DW_AT_name                  long unsigned int
+<1><   76>	DW_TAG_base_type
+		DW_AT_byte_size             1
+		DW_AT_encoding              DW_ATE_signed_char
+		DW_AT_name                  signed char
+<1><   83>	DW_TAG_base_type
+		DW_AT_byte_size             2
+		DW_AT_encoding              DW_ATE_signed
+		DW_AT_name                  short int
+<1><   90>	DW_TAG_base_type
+		DW_AT_byte_size             4
+		DW_AT_encoding              DW_ATE_signed
+		DW_AT_name                  int
+<1><   97>	DW_TAG_base_type
+		DW_AT_byte_size             8
+		DW_AT_encoding              DW_ATE_signed
+		DW_AT_name                  long long int
+<1><  104>	DW_TAG_base_type
+		DW_AT_byte_size             8
+		DW_AT_encoding              DW_ATE_unsigned
+		DW_AT_name                  long long unsigned int
+<1><  111>	DW_TAG_typedef
+		DW_AT_name                  __quad_t
+		DW_AT_decl_file             3 /usr/include/bits/types.h
+		DW_AT_decl_line             56
+		DW_AT_type                  <97>
+<1><  122>	DW_TAG_typedef
+		DW_AT_name                  __off_t
+		DW_AT_decl_file             3 /usr/include/bits/types.h
+		DW_AT_decl_line             141
+		DW_AT_type                  <133>
+<1><  133>	DW_TAG_base_type
+		DW_AT_byte_size             4
+		DW_AT_encoding              DW_ATE_signed
+		DW_AT_name                  long int
+<1><  140>	DW_TAG_typedef
+		DW_AT_name                  __off64_t
+		DW_AT_decl_file             3 /usr/include/bits/types.h
+		DW_AT_decl_line             142
+		DW_AT_type                  <111>
+<1><  151>	DW_TAG_base_type
+		DW_AT_byte_size             4
+		DW_AT_encoding              DW_ATE_unsigned
+<1><  154>	DW_TAG_pointer_type
+		DW_AT_byte_size             4
+<1><  156>	DW_TAG_pointer_type
+		DW_AT_byte_size             4
+		DW_AT_type                  <162>
+<1><  162>	DW_TAG_base_type
+		DW_AT_byte_size             1
+		DW_AT_encoding              DW_ATE_signed_char
+		DW_AT_name                  char
+<1><  169>	DW_TAG_structure_type
+		DW_AT_name                  _IO_FILE
+		DW_AT_byte_size             148
+		DW_AT_decl_file             5 /usr/include/stdio.h
+		DW_AT_decl_line             45
+		DW_AT_sibling               <617>
+<2><  181>	DW_TAG_member
+		DW_AT_name                  _flags
+		DW_AT_decl_file             4 /usr/include/libio.h
+		DW_AT_decl_line             272
+		DW_AT_type                  <90>
+		DW_AT_data_member_location  DW_OP_plus_uconst 0
+<2><  196>	DW_TAG_member
+		DW_AT_name                  _IO_read_ptr
+		DW_AT_decl_file             4 /usr/include/libio.h
+		DW_AT_decl_line             277
+		DW_AT_type                  <156>
+		DW_AT_data_member_location  DW_OP_plus_uconst 4
+<2><  211>	DW_TAG_member
+		DW_AT_name                  _IO_read_end
+		DW_AT_decl_file             4 /usr/include/libio.h
+		DW_AT_decl_line             278
+		DW_AT_type                  <156>
+		DW_AT_data_member_location  DW_OP_plus_uconst 8
+<2><  226>	DW_TAG_member
+		DW_AT_name                  _IO_read_base
+		DW_AT_decl_file             4 /usr/include/libio.h
+		DW_AT_decl_line             279
+		DW_AT_type                  <156>
+		DW_AT_data_member_location  DW_OP_plus_uconst 12
+<2><  241>	DW_TAG_member
+		DW_AT_name                  _IO_write_base
+		DW_AT_decl_file             4 /usr/include/libio.h
+		DW_AT_decl_line             280
+		DW_AT_type                  <156>
+		DW_AT_data_member_location  DW_OP_plus_uconst 16
+<2><  256>	DW_TAG_member
+		DW_AT_name                  _IO_write_ptr
+		DW_AT_decl_file             4 /usr/include/libio.h
+		DW_AT_decl_line             281
+		DW_AT_type                  <156>
+		DW_AT_data_member_location  DW_OP_plus_uconst 20
+<2><  271>	DW_TAG_member
+		DW_AT_name                  _IO_write_end
+		DW_AT_decl_file             4 /usr/include/libio.h
+		DW_AT_decl_line             282
+		DW_AT_type                  <156>
+		DW_AT_data_member_location  DW_OP_plus_uconst 24
+<2><  286>	DW_TAG_member
+		DW_AT_name                  _IO_buf_base
+		DW_AT_decl_file             4 /usr/include/libio.h
+		DW_AT_decl_line             283
+		DW_AT_type                  <156>
+		DW_AT_data_member_location  DW_OP_plus_uconst 28
+<2><  301>	DW_TAG_member
+		DW_AT_name                  _IO_buf_end
+		DW_AT_decl_file             4 /usr/include/libio.h
+		DW_AT_decl_line             284
+		DW_AT_type                  <156>
+		DW_AT_data_member_location  DW_OP_plus_uconst 32
+<2><  316>	DW_TAG_member
+		DW_AT_name                  _IO_save_base
+		DW_AT_decl_file             4 /usr/include/libio.h
+		DW_AT_decl_line             286
+		DW_AT_type                  <156>
+		DW_AT_data_member_location  DW_OP_plus_uconst 36
+<2><  331>	DW_TAG_member
+		DW_AT_name                  _IO_backup_base
+		DW_AT_decl_file             4 /usr/include/libio.h
+		DW_AT_decl_line             287
+		DW_AT_type                  <156>
+		DW_AT_data_member_location  DW_OP_plus_uconst 40
+<2><  346>	DW_TAG_member
+		DW_AT_name                  _IO_save_end
+		DW_AT_decl_file             4 /usr/include/libio.h
+		DW_AT_decl_line             288
+		DW_AT_type                  <156>
+		DW_AT_data_member_location  DW_OP_plus_uconst 44
+<2><  361>	DW_TAG_member
+		DW_AT_name                  _markers
+		DW_AT_decl_file             4 /usr/include/libio.h
+		DW_AT_decl_line             290
+		DW_AT_type                  <679>
+		DW_AT_data_member_location  DW_OP_plus_uconst 48
+<2><  376>	DW_TAG_member
+		DW_AT_name                  _chain
+		DW_AT_decl_file             4 /usr/include/libio.h
+		DW_AT_decl_line             292
+		DW_AT_type                  <685>
+		DW_AT_data_member_location  DW_OP_plus_uconst 52
+<2><  391>	DW_TAG_member
+		DW_AT_name                  _fileno
+		DW_AT_decl_file             4 /usr/include/libio.h
+		DW_AT_decl_line             294
+		DW_AT_type                  <90>
+		DW_AT_data_member_location  DW_OP_plus_uconst 56
+<2><  406>	DW_TAG_member
+		DW_AT_name                  _flags2
+		DW_AT_decl_file             4 /usr/include/libio.h
+		DW_AT_decl_line             298
+		DW_AT_type                  <90>
+		DW_AT_data_member_location  DW_OP_plus_uconst 60
+<2><  421>	DW_TAG_member
+		DW_AT_name                  _old_offset
+		DW_AT_decl_file             4 /usr/include/libio.h
+		DW_AT_decl_line             300
+		DW_AT_type                  <122>
+		DW_AT_data_member_location  DW_OP_plus_uconst 64
+<2><  436>	DW_TAG_member
+		DW_AT_name                  _cur_column
+		DW_AT_decl_file             4 /usr/include/libio.h
+		DW_AT_decl_line             304
+		DW_AT_type                  <62>
+		DW_AT_data_member_location  DW_OP_plus_uconst 68
+<2><  451>	DW_TAG_member
+		DW_AT_name                  _vtable_offset
+		DW_AT_decl_file             4 /usr/include/libio.h
+		DW_AT_decl_line             305
+		DW_AT_type                  <76>
+		DW_AT_data_member_location  DW_OP_plus_uconst 70
+<2><  466>	DW_TAG_member
+		DW_AT_name                  _shortbuf
+		DW_AT_decl_file             4 /usr/include/libio.h
+		DW_AT_decl_line             306
+		DW_AT_type                  <691>
+		DW_AT_data_member_location  DW_OP_plus_uconst 71
+<2><  481>	DW_TAG_member
+		DW_AT_name                  _lock
+		DW_AT_decl_file             4 /usr/include/libio.h
+		DW_AT_decl_line             310
+		DW_AT_type                  <707>
+		DW_AT_data_member_location  DW_OP_plus_uconst 72
+<2><  496>	DW_TAG_member
+		DW_AT_name                  _offset
+		DW_AT_decl_file             4 /usr/include/libio.h
+		DW_AT_decl_line             319
+		DW_AT_type                  <140>
+		DW_AT_data_member_location  DW_OP_plus_uconst 76
+<2><  511>	DW_TAG_member
+		DW_AT_name                  __pad1
+		DW_AT_decl_file             4 /usr/include/libio.h
+		DW_AT_decl_line             328
+		DW_AT_type                  <154>
+		DW_AT_data_member_location  DW_OP_plus_uconst 84
+<2><  526>	DW_TAG_member
+		DW_AT_name                  __pad2
+		DW_AT_decl_file             4 /usr/include/libio.h
+		DW_AT_decl_line             329
+		DW_AT_type                  <154>
+		DW_AT_data_member_location  DW_OP_plus_uconst 88
+<2><  541>	DW_TAG_member
+		DW_AT_name                  __pad3
+		DW_AT_decl_file             4 /usr/include/libio.h
+		DW_AT_decl_line             330
+		DW_AT_type                  <154>
+		DW_AT_data_member_location  DW_OP_plus_uconst 92
+<2><  556>	DW_TAG_member
+		DW_AT_name                  __pad4
+		DW_AT_decl_file             4 /usr/include/libio.h
+		DW_AT_decl_line             331
+		DW_AT_type                  <154>
+		DW_AT_data_member_location  DW_OP_plus_uconst 96
+<2><  571>	DW_TAG_member
+		DW_AT_name                  __pad5
+		DW_AT_decl_file             4 /usr/include/libio.h
+		DW_AT_decl_line             332
+		DW_AT_type                  <37>
+		DW_AT_data_member_location  DW_OP_plus_uconst 100
+<2><  586>	DW_TAG_member
+		DW_AT_name                  _mode
+		DW_AT_decl_file             4 /usr/include/libio.h
+		DW_AT_decl_line             334
+		DW_AT_type                  <90>
+		DW_AT_data_member_location  DW_OP_plus_uconst 104
+<2><  601>	DW_TAG_member
+		DW_AT_name                  _unused2
+		DW_AT_decl_file             4 /usr/include/libio.h
+		DW_AT_decl_line             336
+		DW_AT_type                  <713>
+		DW_AT_data_member_location  DW_OP_plus_uconst 108
+<1><  617>	DW_TAG_typedef
+		DW_AT_name                  _IO_lock_t
+		DW_AT_decl_file             4 /usr/include/libio.h
+		DW_AT_decl_line             180
+<1><  624>	DW_TAG_structure_type
+		DW_AT_name                  _IO_marker
+		DW_AT_byte_size             12
+		DW_AT_decl_file             4 /usr/include/libio.h
+		DW_AT_decl_line             186
+		DW_AT_sibling               <679>
+<2><  636>	DW_TAG_member
+		DW_AT_name                  _next
+		DW_AT_decl_file             4 /usr/include/libio.h
+		DW_AT_decl_line             187
+		DW_AT_type                  <679>
+		DW_AT_data_member_location  DW_OP_plus_uconst 0
+<2><  650>	DW_TAG_member
+		DW_AT_name                  _sbuf
+		DW_AT_decl_file             4 /usr/include/libio.h
+		DW_AT_decl_line             188
+		DW_AT_type                  <685>
+		DW_AT_data_member_location  DW_OP_plus_uconst 4
+<2><  664>	DW_TAG_member
+		DW_AT_name                  _pos
+		DW_AT_decl_file             4 /usr/include/libio.h
+		DW_AT_decl_line             192
+		DW_AT_type                  <90>
+		DW_AT_data_member_location  DW_OP_plus_uconst 8
+<1><  679>	DW_TAG_pointer_type
+		DW_AT_byte_size             4
+		DW_AT_type                  <624>
+<1><  685>	DW_TAG_pointer_type
+		DW_AT_byte_size             4
+		DW_AT_type                  <169>
+<1><  691>	DW_TAG_array_type
+		DW_AT_type                  <162>
+		DW_AT_sibling               <707>
+<2><  700>	DW_TAG_subrange_type
+		DW_AT_type                  <151>
+		DW_AT_upper_bound           0
+<1><  707>	DW_TAG_pointer_type
+		DW_AT_byte_size             4
+		DW_AT_type                  <617>
+<1><  713>	DW_TAG_array_type
+		DW_AT_type                  <162>
+		DW_AT_sibling               <729>
+<2><  722>	DW_TAG_subrange_type
+		DW_AT_type                  <151>
+		DW_AT_upper_bound           39
+<1><  729>	DW_TAG_subprogram
+		DW_AT_external              yes(1)
+		DW_AT_name                  printTabs
+		DW_AT_decl_file             1 /home/james/school/katana/prelim_test/unwinder/testprog.c
+		DW_AT_decl_line             16
+		DW_AT_low_pc                0x80484c4
+		DW_AT_high_pc               0x80484ef
+		DW_AT_frame_base            <loclist with 3 entries follows>
+			[ 0]<lowpc=0x0><highpc=0x1>DW_OP_breg4+4
+			[ 1]<lowpc=0x1><highpc=0x3>DW_OP_breg4+8
+			[ 2]<lowpc=0x3><highpc=0x2b>DW_OP_breg5+8
+		DW_AT_sibling               <776>
+<2><  753>	DW_TAG_lexical_block
+		DW_AT_low_pc                0x80484ca
+		DW_AT_high_pc               0x80484ed
+<3><  762>	DW_TAG_variable
+		DW_AT_name                  i
+		DW_AT_decl_file             1 /home/james/school/katana/prelim_test/unwinder/testprog.c
+		DW_AT_decl_line             17
+		DW_AT_type                  <90>
+		DW_AT_location              DW_OP_fbreg -12
+<1><  776>	DW_TAG_subprogram
+		DW_AT_external              yes(1)
+		DW_AT_name                  foo4
+		DW_AT_decl_file             1 /home/james/school/katana/prelim_test/unwinder/testprog.c
+		DW_AT_decl_line             24
+		DW_AT_prototyped            yes(1)
+		DW_AT_low_pc                0x80484ef
+		DW_AT_high_pc               0x8048529
+		DW_AT_frame_base            <loclist with 3 entries follows>
+			[ 0]<lowpc=0x2b><highpc=0x2c>DW_OP_breg4+4
+			[ 1]<lowpc=0x2c><highpc=0x2e>DW_OP_breg4+8
+			[ 2]<lowpc=0x2e><highpc=0x65>DW_OP_breg5+8
+		DW_AT_sibling               <816>
+<2><  801>	DW_TAG_formal_parameter
+		DW_AT_name                  str
+		DW_AT_decl_file             1 /home/james/school/katana/prelim_test/unwinder/testprog.c
+		DW_AT_decl_line             23
+		DW_AT_type                  <156>
+		DW_AT_location              DW_OP_fbreg 0
+<1><  816>	DW_TAG_subprogram
+		DW_AT_external              yes(1)
+		DW_AT_name                  foo3
+		DW_AT_decl_file             1 /home/james/school/katana/prelim_test/unwinder/testprog.c
+		DW_AT_decl_line             32
+		DW_AT_prototyped            yes(1)
+		DW_AT_low_pc                0x8048529
+		DW_AT_high_pc               0x8048587
+		DW_AT_frame_base            <loclist with 3 entries follows>
+			[ 0]<lowpc=0x65><highpc=0x66>DW_OP_breg4+4
+			[ 1]<lowpc=0x66><highpc=0x68>DW_OP_breg4+8
+			[ 2]<lowpc=0x68><highpc=0xc3>DW_OP_breg5+8
+		DW_AT_sibling               <866>
+<2><  841>	DW_TAG_formal_parameter
+		DW_AT_name                  a
+		DW_AT_decl_file             1 /home/james/school/katana/prelim_test/unwinder/testprog.c
+		DW_AT_decl_line             31
+		DW_AT_type                  <90>
+		DW_AT_location              DW_OP_fbreg 0
+<2><  853>	DW_TAG_formal_parameter
+		DW_AT_name                  b
+		DW_AT_decl_file             1 /home/james/school/katana/prelim_test/unwinder/testprog.c
+		DW_AT_decl_line             31
+		DW_AT_type                  <90>
+		DW_AT_location              DW_OP_fbreg 4
+<1><  866>	DW_TAG_subprogram
+		DW_AT_external              yes(1)
+		DW_AT_name                  foo2
+		DW_AT_decl_file             1 /home/james/school/katana/prelim_test/unwinder/testprog.c
+		DW_AT_decl_line             43
+		DW_AT_low_pc                0x8048587
+		DW_AT_high_pc               0x80485fc
+		DW_AT_frame_base            <loclist with 3 entries follows>
+			[ 0]<lowpc=0xc3><highpc=0xc4>DW_OP_breg4+4
+			[ 1]<lowpc=0xc4><highpc=0xc6>DW_OP_breg4+8
+			[ 2]<lowpc=0xc6><highpc=0x138>DW_OP_breg5+8
+		DW_AT_sibling               <913>
+<2><  890>	DW_TAG_lexical_block
+		DW_AT_low_pc                0x80485ab
+		DW_AT_high_pc               0x80485d0
+<3><  899>	DW_TAG_variable
+		DW_AT_name                  i
+		DW_AT_decl_file             1 /home/james/school/katana/prelim_test/unwinder/testprog.c
+		DW_AT_decl_line             47
+		DW_AT_type                  <90>
+		DW_AT_location              DW_OP_fbreg -12
+<1><  913>	DW_TAG_subprogram
+		DW_AT_external              yes(1)
+		DW_AT_name                  foo1
+		DW_AT_decl_file             1 /home/james/school/katana/prelim_test/unwinder/testprog.c
+		DW_AT_decl_line             58
+		DW_AT_low_pc                0x80485fc
+		DW_AT_high_pc               0x8048665
+		DW_AT_frame_base            <loclist with 3 entries follows>
+			[ 0]<lowpc=0x138><highpc=0x139>DW_OP_breg4+4
+			[ 1]<lowpc=0x139><highpc=0x13b>DW_OP_breg4+8
+			[ 2]<lowpc=0x13b><highpc=0x1a1>DW_OP_breg5+8
+<1><  933>	DW_TAG_subprogram
+		DW_AT_external              yes(1)
+		DW_AT_name                  main
+		DW_AT_decl_file             1 /home/james/school/katana/prelim_test/unwinder/testprog.c
+		DW_AT_decl_line             73
+		DW_AT_prototyped            yes(1)
+		DW_AT_type                  <90>
+		DW_AT_low_pc                0x8048665
+		DW_AT_high_pc               0x8048727
+		DW_AT_frame_base            <loclist with 5 entries follows>
+			[ 0]<lowpc=0x1a1><highpc=0x1a5>DW_OP_breg4+4
+			[ 1]<lowpc=0x1a5><highpc=0x1ab>DW_OP_reg1
+			[ 2]<lowpc=0x1ab><highpc=0x1ac>DW_OP_breg4+4
+			[ 3]<lowpc=0x1ac><highpc=0x1ae>DW_OP_breg4+8
+			[ 4]<lowpc=0x1ae><highpc=0x263>DW_OP_breg5+8
+		DW_AT_sibling               <985>
+<2><  962>	DW_TAG_formal_parameter
+		DW_AT_name                  argc
+		DW_AT_decl_file             1 /home/james/school/katana/prelim_test/unwinder/testprog.c
+		DW_AT_decl_line             72
+		DW_AT_type                  <90>
+<2><  973>	DW_TAG_formal_parameter
+		DW_AT_name                  argv
+		DW_AT_decl_file             1 /home/james/school/katana/prelim_test/unwinder/testprog.c
+		DW_AT_decl_line             72
+		DW_AT_type                  <985>
+<1><  985>	DW_TAG_pointer_type
+		DW_AT_byte_size             4
+		DW_AT_type                  <156>
+<1><  991>	DW_TAG_variable
+		DW_AT_name                  stdout
+		DW_AT_decl_file             5 /usr/include/stdio.h
+		DW_AT_decl_line             146
+		DW_AT_type                  <685>
+		DW_AT_external              yes(1)
+		DW_AT_declaration           yes(1)
+<1>< 1004>	DW_TAG_variable
+		DW_AT_name                  tablevel
+		DW_AT_decl_file             1 /home/james/school/katana/prelim_test/unwinder/testprog.c
+		DW_AT_decl_line             13
+		DW_AT_type                  <90>
+		DW_AT_external              yes(1)
+		DW_AT_location              DW_OP_addr 0x804a04c
+
+.debug_line: line number info for a single cu
+Source lines (from CU-DIE at .debug_info offset 368):
+<source>	[row,column]	<pc>	//<new statement or basic block
+/home/james/school/katana/prelim_test/unwinder/testprog.c:	[ 16,-1]	0x80484c4	// new statement
+/home/james/school/katana/prelim_test/unwinder/testprog.c:	[ 17,-1]	0x80484ca	// new statement
+/home/james/school/katana/prelim_test/unwinder/testprog.c:	[ 19,-1]	0x80484d3	// new statement
+/home/james/school/katana/prelim_test/unwinder/testprog.c:	[ 17,-1]	0x80484df	// new statement
+/home/james/school/katana/prelim_test/unwinder/testprog.c:	[ 21,-1]	0x80484ed	// new statement
+/home/james/school/katana/prelim_test/unwinder/testprog.c:	[ 24,-1]	0x80484ef	// new statement
+/home/james/school/katana/prelim_test/unwinder/testprog.c:	[ 25,-1]	0x80484f5	// new statement
+/home/james/school/katana/prelim_test/unwinder/testprog.c:	[ 26,-1]	0x8048502	// new statement
+/home/james/school/katana/prelim_test/unwinder/testprog.c:	[ 27,-1]	0x8048507	// new statement
+/home/james/school/katana/prelim_test/unwinder/testprog.c:	[ 28,-1]	0x804851a	// new statement
+/home/james/school/katana/prelim_test/unwinder/testprog.c:	[ 29,-1]	0x8048527	// new statement
+/home/james/school/katana/prelim_test/unwinder/testprog.c:	[ 32,-1]	0x8048529	// new statement
+/home/james/school/katana/prelim_test/unwinder/testprog.c:	[ 33,-1]	0x804852f	// new statement
+/home/james/school/katana/prelim_test/unwinder/testprog.c:	[ 34,-1]	0x804853c	// new statement
+/home/james/school/katana/prelim_test/unwinder/testprog.c:	[ 35,-1]	0x8048541	// new statement
+/home/james/school/katana/prelim_test/unwinder/testprog.c:	[ 36,-1]	0x804855b	// new statement
+/home/james/school/katana/prelim_test/unwinder/testprog.c:	[ 37,-1]	0x8048567	// new statement
+/home/james/school/katana/prelim_test/unwinder/testprog.c:	[ 38,-1]	0x804856c	// new statement
+/home/james/school/katana/prelim_test/unwinder/testprog.c:	[ 39,-1]	0x8048578	// new statement
+/home/james/school/katana/prelim_test/unwinder/testprog.c:	[ 40,-1]	0x8048585	// new statement
+/home/james/school/katana/prelim_test/unwinder/testprog.c:	[ 43,-1]	0x8048587	// new statement
+/home/james/school/katana/prelim_test/unwinder/testprog.c:	[ 44,-1]	0x804858d	// new statement
+/home/james/school/katana/prelim_test/unwinder/testprog.c:	[ 45,-1]	0x804859a	// new statement
+/home/james/school/katana/prelim_test/unwinder/testprog.c:	[ 46,-1]	0x804859f	// new statement
+/home/james/school/katana/prelim_test/unwinder/testprog.c:	[ 47,-1]	0x80485ab	// new statement
+/home/james/school/katana/prelim_test/unwinder/testprog.c:	[ 49,-1]	0x80485b4	// new statement
+/home/james/school/katana/prelim_test/unwinder/testprog.c:	[ 47,-1]	0x80485c6	// new statement
+/home/james/school/katana/prelim_test/unwinder/testprog.c:	[ 51,-1]	0x80485d0	// new statement
+/home/james/school/katana/prelim_test/unwinder/testprog.c:	[ 52,-1]	0x80485dc	// new statement
+/home/james/school/katana/prelim_test/unwinder/testprog.c:	[ 53,-1]	0x80485e1	// new statement
+/home/james/school/katana/prelim_test/unwinder/testprog.c:	[ 54,-1]	0x80485ed	// new statement
+/home/james/school/katana/prelim_test/unwinder/testprog.c:	[ 55,-1]	0x80485fa	// new statement
+/home/james/school/katana/prelim_test/unwinder/testprog.c:	[ 58,-1]	0x80485fc	// new statement
+/home/james/school/katana/prelim_test/unwinder/testprog.c:	[ 59,-1]	0x8048602	// new statement
+/home/james/school/katana/prelim_test/unwinder/testprog.c:	[ 60,-1]	0x804860f	// new statement
+/home/james/school/katana/prelim_test/unwinder/testprog.c:	[ 61,-1]	0x8048614	// new statement
+/home/james/school/katana/prelim_test/unwinder/testprog.c:	[ 62,-1]	0x8048620	// new statement
+/home/james/school/katana/prelim_test/unwinder/testprog.c:	[ 63,-1]	0x8048634	// new statement
+/home/james/school/katana/prelim_test/unwinder/testprog.c:	[ 64,-1]	0x8048640	// new statement
+/home/james/school/katana/prelim_test/unwinder/testprog.c:	[ 65,-1]	0x8048645	// new statement
+/home/james/school/katana/prelim_test/unwinder/testprog.c:	[ 66,-1]	0x804864a	// new statement
+/home/james/school/katana/prelim_test/unwinder/testprog.c:	[ 67,-1]	0x8048656	// new statement
+/home/james/school/katana/prelim_test/unwinder/testprog.c:	[ 68,-1]	0x8048663	// new statement
+/home/james/school/katana/prelim_test/unwinder/testprog.c:	[ 73,-1]	0x8048665	// new statement
+/home/james/school/katana/prelim_test/unwinder/testprog.c:	[ 76,-1]	0x8048676	// new statement
+/home/james/school/katana/prelim_test/unwinder/testprog.c:	[ 77,-1]	0x8048682	// new statement
+/home/james/school/katana/prelim_test/unwinder/testprog.c:	[ 78,-1]	0x8048697	// new statement
+/home/james/school/katana/prelim_test/unwinder/testprog.c:	[ 79,-1]	0x80486ac	// new statement
+/home/james/school/katana/prelim_test/unwinder/testprog.c:	[ 80,-1]	0x80486c1	// new statement
+/home/james/school/katana/prelim_test/unwinder/testprog.c:	[ 81,-1]	0x80486d6	// new statement
+/home/james/school/katana/prelim_test/unwinder/testprog.c:	[ 82,-1]	0x80486e2	// new statement
+/home/james/school/katana/prelim_test/unwinder/testprog.c:	[ 83,-1]	0x80486e7	// new statement
+/home/james/school/katana/prelim_test/unwinder/testprog.c:	[ 84,-1]	0x80486f3	// new statement
+/home/james/school/katana/prelim_test/unwinder/testprog.c:	[ 85,-1]	0x80486f8	// new statement
+/home/james/school/katana/prelim_test/unwinder/testprog.c:	[ 86,-1]	0x8048704	// new statement
+/home/james/school/katana/prelim_test/unwinder/testprog.c:	[ 87,-1]	0x8048709	// new statement
+/home/james/school/katana/prelim_test/unwinder/testprog.c:	[ 88,-1]	0x8048716	// new statement
+/home/james/school/katana/prelim_test/unwinder/testprog.c:	[ 88,-1]	0x8048727	// new statement	// end of text sequence
+
+COMPILE_UNIT<header overall offset = 1380>:
+<0><   11>	DW_TAG_compile_unit
+		DW_AT_stmt_list             540
+		DW_AT_ranges                32
+		DW_AT_name                  /tmp/ccuRHrit.s
+		DW_AT_comp_dir              /build/buildd/glibc-2.9/csu
+		DW_AT_producer              GNU AS 2.19.1
+		DW_AT_language              DW_LANG_Mips_Assembler
+
+.debug_line: line number info for a single cu
+Source lines (from CU-DIE at .debug_info offset 1391):
+<source>	[row,column]	<pc>	//<new statement or basic block
+/tmp/ccuRHrit.s:	[ 32,-1]	0x8048380	// new statement
+/tmp/ccuRHrit.s:	[ 33,-1]	0x8048381	// new statement
+/tmp/ccuRHrit.s:	[ 34,-1]	0x8048382	// new statement
+/tmp/ccuRHrit.s:	[ 35,-1]	0x8048383	// new statement
+/tmp/ccuRHrit.s:	[ 35,-1]	0x8048384	// new statement	// end of text sequence
+/tmp/ccuRHrit.s:	[ 46,-1]	0x80487e4	// new statement
+/tmp/ccuRHrit.s:	[ 47,-1]	0x80487e5	// new statement
+/tmp/ccuRHrit.s:	[ 48,-1]	0x80487e6	// new statement
+/tmp/ccuRHrit.s:	[ 49,-1]	0x80487e7	// new statement
+/tmp/ccuRHrit.s:	[ 49,-1]	0x80487e8	// new statement	// end of text sequence
+
+.debug_pubnames
+global _IO_stdin_used  die-in-sect 213, cu-in-sect 107, die-in-cu 117, cu-header-in-sect 96
+global printTabs       die-in-sect 1086, cu-in-sect 368, die-in-cu 729, cu-header-in-sect 357
+global foo4            die-in-sect 1133, cu-in-sect 368, die-in-cu 776, cu-header-in-sect 357
+global foo3            die-in-sect 1173, cu-in-sect 368, die-in-cu 816, cu-header-in-sect 357
+global foo2            die-in-sect 1223, cu-in-sect 368, die-in-cu 866, cu-header-in-sect 357
+global foo1            die-in-sect 1270, cu-in-sect 368, die-in-cu 913, cu-header-in-sect 357
+global main            die-in-sect 1290, cu-in-sect 368, die-in-cu 933, cu-header-in-sect 357
+global tablevel        die-in-sect 1361, cu-in-sect 368, die-in-cu 1004, cu-header-in-sect 357
+
+.debug_macinfo
+
+.debug_loc format <o b e l> means section-offset begin-addr end-addr length-of-block-entry
+	 <obel> 0x00000000 0x000000000 0x00000001        2
+	 <obel> 0x0000000c 0x000000001 0x00000003        2
+	 <obel> 0x00000018 0x000000003 0x0000002b        2
+	 <obel> 0x00000024 0x000000000 0x00000000        0
+	 <obel> 0x0000002c 0x00000002b 0x0000002c        2
+	 <obel> 0x00000038 0x00000002c 0x0000002e        2
+	 <obel> 0x00000044 0x00000002e 0x00000065        2
+	 <obel> 0x00000050 0x000000000 0x00000000        0
+	 <obel> 0x00000058 0x000000065 0x00000066        2
+	 <obel> 0x00000064 0x000000066 0x00000068        2
+	 <obel> 0x00000070 0x000000068 0x000000c3        2
+	 <obel> 0x0000007c 0x000000000 0x00000000        0
+	 <obel> 0x00000084 0x0000000c3 0x000000c4        2
+	 <obel> 0x00000090 0x0000000c4 0x000000c6        2
+	 <obel> 0x0000009c 0x0000000c6 0x00000138        2
+	 <obel> 0x000000a8 0x000000000 0x00000000        0
+	 <obel> 0x000000b0 0x000000138 0x00000139        2
+	 <obel> 0x000000bc 0x000000139 0x0000013b        2
+	 <obel> 0x000000c8 0x00000013b 0x000001a1        2
+	 <obel> 0x000000d4 0x000000000 0x00000000        0
+	 <obel> 0x000000dc 0x0000001a1 0x000001a5        2
+	 <obel> 0x000000e8 0x0000001a5 0x000001ab        1
+	 <obel> 0x000000f3 0x0000001ab 0x000001ac        2
+	 <obel> 0x000000ff 0x0000001ac 0x000001ae        2
+	 <obel> 0x0000010b 0x0000001ae 0x00000263        2
+	 <obel> 0x00000117 0x000000000 0x00000000        0
+
+.debug_abbrev
+<   1><    0><code:  1> DW_TAG_compile_unit DW_children_no
+      <    3>	DW_AT_stmt_list             DW_FORM_data4
+      <    5>	DW_AT_low_pc                DW_FORM_addr
+      <    7>	DW_AT_high_pc               DW_FORM_addr
+      <    9>	DW_AT_name                  DW_FORM_string
+      <   11>	DW_AT_comp_dir              DW_FORM_string
+      <   13>	DW_AT_producer              DW_FORM_string
+      <   15>	DW_AT_language              DW_FORM_data2
+<   2><   19><code:  0> null .debug_abbrev entry
+<   3><   20><code:  1> DW_TAG_compile_unit DW_children_yes
+      <   23>	DW_AT_producer              DW_FORM_strp
+      <   25>	DW_AT_language              DW_FORM_data1
+      <   27>	DW_AT_name                  DW_FORM_strp
+      <   29>	DW_AT_comp_dir              DW_FORM_strp
+      <   31>	DW_AT_low_pc                DW_FORM_addr
+      <   33>	DW_AT_high_pc               DW_FORM_addr
+      <   35>	DW_AT_stmt_list             DW_FORM_data4
+<   4><   39><code:  2> DW_TAG_base_type    DW_children_no
+      <   42>	DW_AT_byte_size             DW_FORM_data1
+      <   44>	DW_AT_encoding              DW_FORM_data1
+      <   46>	DW_AT_name                  DW_FORM_strp
+<   5><   50><code:  3> DW_TAG_base_type    DW_children_no
+      <   53>	DW_AT_byte_size             DW_FORM_data1
+      <   55>	DW_AT_encoding              DW_FORM_data1
+      <   57>	DW_AT_name                  DW_FORM_string
+<   6><   61><code:  4> DW_TAG_base_type    DW_children_no
+      <   64>	DW_AT_byte_size             DW_FORM_data1
+      <   66>	DW_AT_encoding              DW_FORM_data1
+<   7><   70><code:  5> DW_TAG_variable     DW_children_no
+      <   73>	DW_AT_name                  DW_FORM_strp
+      <   75>	DW_AT_decl_file             DW_FORM_data1
+      <   77>	DW_AT_decl_line             DW_FORM_data1
+      <   79>	DW_AT_type                  DW_FORM_ref4
+      <   81>	DW_AT_external              DW_FORM_flag
+      <   83>	DW_AT_location              DW_FORM_block1
+<   8><   87><code:  6> DW_TAG_const_type   DW_children_no
+      <   90>	DW_AT_type                  DW_FORM_ref4
+<   9><   94><code:  0> null .debug_abbrev entry
+<  10><   95><code:  1> DW_TAG_compile_unit DW_children_no
+      <   98>	DW_AT_stmt_list             DW_FORM_data4
+      <  100>	DW_AT_ranges                DW_FORM_data4
+      <  102>	DW_AT_name                  DW_FORM_string
+      <  104>	DW_AT_comp_dir              DW_FORM_string
+      <  106>	DW_AT_producer              DW_FORM_string
+      <  108>	DW_AT_language              DW_FORM_data2
+<  11><  112><code:  0> null .debug_abbrev entry
+<  12><  113><code:  1> DW_TAG_compile_unit DW_children_yes
+      <  116>	DW_AT_producer              DW_FORM_strp
+      <  118>	DW_AT_language              DW_FORM_data1
+      <  120>	DW_AT_name                  DW_FORM_strp
+      <  122>	DW_AT_comp_dir              DW_FORM_strp
+      <  124>	DW_AT_low_pc                DW_FORM_addr
+      <  126>	DW_AT_high_pc               DW_FORM_addr
+      <  128>	DW_AT_stmt_list             DW_FORM_data4
+<  13><  132><code:  2> DW_TAG_typedef      DW_children_no
+      <  135>	DW_AT_name                  DW_FORM_strp
+      <  137>	DW_AT_decl_file             DW_FORM_data1
+      <  139>	DW_AT_decl_line             DW_FORM_data1
+      <  141>	DW_AT_type                  DW_FORM_ref4
+<  14><  145><code:  3> DW_TAG_base_type    DW_children_no
+      <  148>	DW_AT_byte_size             DW_FORM_data1
+      <  150>	DW_AT_encoding              DW_FORM_data1
+      <  152>	DW_AT_name                  DW_FORM_strp
+<  15><  156><code:  4> DW_TAG_base_type    DW_children_no
+      <  159>	DW_AT_byte_size             DW_FORM_data1
+      <  161>	DW_AT_encoding              DW_FORM_data1
+      <  163>	DW_AT_name                  DW_FORM_string
+<  16><  167><code:  5> DW_TAG_base_type    DW_children_no
+      <  170>	DW_AT_byte_size             DW_FORM_data1
+      <  172>	DW_AT_encoding              DW_FORM_data1
+<  17><  176><code:  6> DW_TAG_pointer_type DW_children_no
+      <  179>	DW_AT_byte_size             DW_FORM_data1
+<  18><  183><code:  7> DW_TAG_pointer_type DW_children_no
+      <  186>	DW_AT_byte_size             DW_FORM_data1
+      <  188>	DW_AT_type                  DW_FORM_ref4
+<  19><  192><code:  8> DW_TAG_structure_typeDW_children_yes
+      <  195>	DW_AT_name                  DW_FORM_strp
+      <  197>	DW_AT_byte_size             DW_FORM_data1
+      <  199>	DW_AT_decl_file             DW_FORM_data1
+      <  201>	DW_AT_decl_line             DW_FORM_data1
+      <  203>	DW_AT_sibling               DW_FORM_ref4
+<  20><  207><code:  9> DW_TAG_member       DW_children_no
+      <  210>	DW_AT_name                  DW_FORM_strp
+      <  212>	DW_AT_decl_file             DW_FORM_data1
+      <  214>	DW_AT_decl_line             DW_FORM_data2
+      <  216>	DW_AT_type                  DW_FORM_ref4
+      <  218>	DW_AT_data_member_location  DW_FORM_block1
+<  21><  222><code: 10> DW_TAG_typedef      DW_children_no
+      <  225>	DW_AT_name                  DW_FORM_strp
+      <  227>	DW_AT_decl_file             DW_FORM_data1
+      <  229>	DW_AT_decl_line             DW_FORM_data1
+<  22><  233><code: 11> DW_TAG_member       DW_children_no
+      <  236>	DW_AT_name                  DW_FORM_strp
+      <  238>	DW_AT_decl_file             DW_FORM_data1
+      <  240>	DW_AT_decl_line             DW_FORM_data1
+      <  242>	DW_AT_type                  DW_FORM_ref4
+      <  244>	DW_AT_data_member_location  DW_FORM_block1
+<  23><  248><code: 12> DW_TAG_array_type   DW_children_yes
+      <  251>	DW_AT_type                  DW_FORM_ref4
+      <  253>	DW_AT_sibling               DW_FORM_ref4
+<  24><  257><code: 13> DW_TAG_subrange_typeDW_children_no
+      <  260>	DW_AT_type                  DW_FORM_ref4
+      <  262>	DW_AT_upper_bound           DW_FORM_data1
+<  25><  266><code: 14> DW_TAG_subprogram   DW_children_yes
+      <  269>	DW_AT_external              DW_FORM_flag
+      <  271>	DW_AT_name                  DW_FORM_strp
+      <  273>	DW_AT_decl_file             DW_FORM_data1
+      <  275>	DW_AT_decl_line             DW_FORM_data1
+      <  277>	DW_AT_low_pc                DW_FORM_addr
+      <  279>	DW_AT_high_pc               DW_FORM_addr
+      <  281>	DW_AT_frame_base            DW_FORM_data4
+      <  283>	DW_AT_sibling               DW_FORM_ref4
+<  26><  287><code: 15> DW_TAG_lexical_blockDW_children_yes
+      <  290>	DW_AT_low_pc                DW_FORM_addr
+      <  292>	DW_AT_high_pc               DW_FORM_addr
+<  27><  296><code: 16> DW_TAG_variable     DW_children_no
+      <  299>	DW_AT_name                  DW_FORM_string
+      <  301>	DW_AT_decl_file             DW_FORM_data1
+      <  303>	DW_AT_decl_line             DW_FORM_data1
+      <  305>	DW_AT_type                  DW_FORM_ref4
+      <  307>	DW_AT_location              DW_FORM_block1
+<  28><  311><code: 17> DW_TAG_subprogram   DW_children_yes
+      <  314>	DW_AT_external              DW_FORM_flag
+      <  316>	DW_AT_name                  DW_FORM_strp
+      <  318>	DW_AT_decl_file             DW_FORM_data1
+      <  320>	DW_AT_decl_line             DW_FORM_data1
+      <  322>	DW_AT_prototyped            DW_FORM_flag
+      <  324>	DW_AT_low_pc                DW_FORM_addr
+      <  326>	DW_AT_high_pc               DW_FORM_addr
+      <  328>	DW_AT_frame_base            DW_FORM_data4
+      <  330>	DW_AT_sibling               DW_FORM_ref4
+<  29><  334><code: 18> DW_TAG_formal_parameterDW_children_no
+      <  337>	DW_AT_name                  DW_FORM_string
+      <  339>	DW_AT_decl_file             DW_FORM_data1
+      <  341>	DW_AT_decl_line             DW_FORM_data1
+      <  343>	DW_AT_type                  DW_FORM_ref4
+      <  345>	DW_AT_location              DW_FORM_block1
+<  30><  349><code: 19> DW_TAG_subprogram   DW_children_no
+      <  352>	DW_AT_external              DW_FORM_flag
+      <  354>	DW_AT_name                  DW_FORM_strp
+      <  356>	DW_AT_decl_file             DW_FORM_data1
+      <  358>	DW_AT_decl_line             DW_FORM_data1
+      <  360>	DW_AT_low_pc                DW_FORM_addr
+      <  362>	DW_AT_high_pc               DW_FORM_addr
+      <  364>	DW_AT_frame_base            DW_FORM_data4
+<  31><  368><code: 20> DW_TAG_subprogram   DW_children_yes
+      <  371>	DW_AT_external              DW_FORM_flag
+      <  373>	DW_AT_name                  DW_FORM_strp
+      <  375>	DW_AT_decl_file             DW_FORM_data1
+      <  377>	DW_AT_decl_line             DW_FORM_data1
+      <  379>	DW_AT_prototyped            DW_FORM_flag
+      <  381>	DW_AT_type                  DW_FORM_ref4
+      <  383>	DW_AT_low_pc                DW_FORM_addr
+      <  385>	DW_AT_high_pc               DW_FORM_addr
+      <  387>	DW_AT_frame_base            DW_FORM_data4
+      <  389>	DW_AT_sibling               DW_FORM_ref4
+<  32><  393><code: 21> DW_TAG_formal_parameterDW_children_no
+      <  396>	DW_AT_name                  DW_FORM_strp
+      <  398>	DW_AT_decl_file             DW_FORM_data1
+      <  400>	DW_AT_decl_line             DW_FORM_data1
+      <  402>	DW_AT_type                  DW_FORM_ref4
+<  33><  406><code: 22> DW_TAG_variable     DW_children_no
+      <  409>	DW_AT_name                  DW_FORM_strp
+      <  411>	DW_AT_decl_file             DW_FORM_data1
+      <  413>	DW_AT_decl_line             DW_FORM_data1
+      <  415>	DW_AT_type                  DW_FORM_ref4
+      <  417>	DW_AT_external              DW_FORM_flag
+      <  419>	DW_AT_declaration           DW_FORM_flag
+<  34><  423><code: 23> DW_TAG_variable     DW_children_no
+      <  426>	DW_AT_name                  DW_FORM_strp
+      <  428>	DW_AT_decl_file             DW_FORM_data1
+      <  430>	DW_AT_decl_line             DW_FORM_data1
+      <  432>	DW_AT_type                  DW_FORM_ref4
+      <  434>	DW_AT_external              DW_FORM_flag
+      <  436>	DW_AT_location              DW_FORM_block1
+<  35><  440><code:  0> null .debug_abbrev entry
+<  36><  441><code:  1> DW_TAG_compile_unit DW_children_no
+      <  444>	DW_AT_stmt_list             DW_FORM_data4
+      <  446>	DW_AT_ranges                DW_FORM_data4
+      <  448>	DW_AT_name                  DW_FORM_string
+      <  450>	DW_AT_comp_dir              DW_FORM_string
+      <  452>	DW_AT_producer              DW_FORM_string
+      <  454>	DW_AT_language              DW_FORM_data2
+<  37><  458><code:  0> null .debug_abbrev entry
+
+.debug_string
+name at offset 0, length 11 is GNU C 4.3.3
+name at offset 12, length 27 is /build/buildd/glibc-2.9/csu
+name at offset 40, length 9 is short int
+name at offset 50, length 14 is _IO_stdin_used
+name at offset 65, length 22 is long long unsigned int
+name at offset 88, length 13 is unsigned char
+name at offset 102, length 6 is init.c
+name at offset 109, length 18 is short unsigned int
+name at offset 128, length 13 is long long int
+name at offset 142, length 8 is __quad_t
+name at offset 151, length 8 is _IO_FILE
+name at offset 160, length 12 is _IO_save_end
+name at offset 173, length 4 is foo2
+name at offset 178, length 4 is foo3
+name at offset 183, length 6 is size_t
+name at offset 190, length 10 is testprog.c
+name at offset 201, length 13 is _IO_write_ptr
+name at offset 215, length 6 is _flags
+name at offset 222, length 4 is foo1
+name at offset 227, length 12 is _IO_buf_base
+name at offset 240, length 4 is foo4
+name at offset 245, length 8 is _markers
+name at offset 254, length 12 is _IO_read_end
+name at offset 267, length 8 is tablevel
+name at offset 276, length 5 is _lock
+name at offset 282, length 11 is _cur_column
+name at offset 294, length 4 is _pos
+name at offset 299, length 4 is argv
+name at offset 304, length 5 is _sbuf
+name at offset 310, length 11 is _old_offset
+name at offset 322, length 4 is argc
+name at offset 327, length 10 is _IO_marker
+name at offset 338, length 9 is _shortbuf
+name at offset 348, length 46 is /home/james/school/katana/prelim_test/unwinder
+name at offset 395, length 14 is _IO_write_base
+name at offset 410, length 8 is _unused2
+name at offset 419, length 12 is _IO_read_ptr
+name at offset 432, length 11 is _IO_buf_end
+name at offset 444, length 4 is main
+name at offset 449, length 5 is _next
+name at offset 455, length 6 is __pad1
+name at offset 462, length 6 is __pad2
+name at offset 469, length 6 is __pad3
+name at offset 476, length 6 is __pad4
+name at offset 483, length 6 is __pad5
+name at offset 490, length 13 is _IO_write_end
+name at offset 504, length 9 is __off64_t
+name at offset 514, length 7 is _fileno
+name at offset 522, length 6 is _chain
+name at offset 529, length 7 is __off_t
+name at offset 537, length 15 is _IO_backup_base
+name at offset 553, length 7 is _flags2
+name at offset 561, length 5 is _mode
+name at offset 567, length 13 is _IO_read_base
+name at offset 581, length 9 is printTabs
+name at offset 591, length 14 is _vtable_offset
+name at offset 606, length 13 is _IO_save_base
+name at offset 620, length 6 is stdout
+name at offset 627, length 10 is _IO_lock_t
+
+.debug_aranges
+
+arange starts at 8048410, length of 34, cu_die_offset = 11
+
+COMPILE_UNIT<header overall offset = 0>:
+<0><   11>	DW_TAG_compile_unit
+		DW_AT_stmt_list             0
+		DW_AT_low_pc                0x8048410
+		DW_AT_high_pc               0x8048432
+		DW_AT_name                  ../sysdeps/i386/elf/start.S
+		DW_AT_comp_dir              /build/buildd/glibc-2.9/csu
+		DW_AT_producer              GNU AS 2.19.1
+		DW_AT_language              DW_LANG_Mips_Assembler
+
+arange starts at 8048354, length of 34, cu_die_offset = 248
+
+COMPILE_UNIT<header overall offset = 237>:
+<0><   11>	DW_TAG_compile_unit
+		DW_AT_stmt_list             130
+		DW_AT_ranges                0
+		DW_AT_name                  /build/buildd/glibc-2.9/build-tree/i386-libc/csu/crti.S
+		DW_AT_comp_dir              /build/buildd/glibc-2.9/csu
+		DW_AT_producer              GNU AS 2.19.1
+		DW_AT_language              DW_LANG_Mips_Assembler
+
+arange starts at 80487cc, length of 19, cu_die_offset = 248
+
+COMPILE_UNIT<header overall offset = 237>:
+<0><   11>	DW_TAG_compile_unit
+		DW_AT_stmt_list             130
+		DW_AT_ranges                0
+		DW_AT_name                  /build/buildd/glibc-2.9/build-tree/i386-libc/csu/crti.S
+		DW_AT_comp_dir              /build/buildd/glibc-2.9/csu
+		DW_AT_producer              GNU AS 2.19.1
+		DW_AT_language              DW_LANG_Mips_Assembler
+
+arange starts at 80484c4, length of 611, cu_die_offset = 368
+
+COMPILE_UNIT<header overall offset = 357>:
+<0><   11>	DW_TAG_compile_unit
+		DW_AT_producer              GNU C 4.3.3
+		DW_AT_language              DW_LANG_C89
+		DW_AT_name                  testprog.c
+		DW_AT_comp_dir              /home/james/school/katana/prelim_test/unwinder
+		DW_AT_low_pc                0x80484c4
+		DW_AT_high_pc               0x8048727
+		DW_AT_stmt_list             300
+
+arange starts at 8048380, length of 4, cu_die_offset = 1391
+
+COMPILE_UNIT<header overall offset = 1380>:
+<0><   11>	DW_TAG_compile_unit
+		DW_AT_stmt_list             540
+		DW_AT_ranges                32
+		DW_AT_name                  /tmp/ccuRHrit.s
+		DW_AT_comp_dir              /build/buildd/glibc-2.9/csu
+		DW_AT_producer              GNU AS 2.19.1
+		DW_AT_language              DW_LANG_Mips_Assembler
+
+arange starts at 80487e4, length of 4, cu_die_offset = 1391
+
+COMPILE_UNIT<header overall offset = 1380>:
+<0><   11>	DW_TAG_compile_unit
+		DW_AT_stmt_list             540
+		DW_AT_ranges                32
+		DW_AT_name                  /tmp/ccuRHrit.s
+		DW_AT_comp_dir              /build/buildd/glibc-2.9/csu
+		DW_AT_producer              GNU AS 2.19.1
+		DW_AT_language              DW_LANG_Mips_Assembler
+
+.debug_frame
+
+fde:
+<  0><0x80484c4:0x80484ef><printTabs><fde offset 0x14 length: 0x14><eh offset none>
+    080484c4:	cfa=04(r4/a0) r8/t0=-4(cfa) 
+    080484c5:	cfa=08(r4/a0) r5/a1=-8(cfa) r8/t0=-4(cfa) 
+    080484c7:	cfa=08(r5/a1) r5/a1=-8(cfa) r8/t0=-4(cfa) 
+<  0><0x80484ef:0x8048529><foo4><fde offset 0x2c length: 0x14><eh offset none>
+    080484ef:	cfa=04(r4/a0) r8/t0=-4(cfa) 
+    080484f0:	cfa=08(r4/a0) r5/a1=-8(cfa) r8/t0=-4(cfa) 
+    080484f2:	cfa=08(r5/a1) r5/a1=-8(cfa) r8/t0=-4(cfa) 
+<  0><0x8048529:0x8048587><foo3><fde offset 0x44 length: 0x14><eh offset none>
+    08048529:	cfa=04(r4/a0) r8/t0=-4(cfa) 
+    0804852a:	cfa=08(r4/a0) r5/a1=-8(cfa) r8/t0=-4(cfa) 
+    0804852c:	cfa=08(r5/a1) r5/a1=-8(cfa) r8/t0=-4(cfa) 
+<  0><0x8048587:0x80485fc><foo2><fde offset 0x5c length: 0x14><eh offset none>
+    08048587:	cfa=04(r4/a0) r8/t0=-4(cfa) 
+    08048588:	cfa=08(r4/a0) r5/a1=-8(cfa) r8/t0=-4(cfa) 
+    0804858a:	cfa=08(r5/a1) r5/a1=-8(cfa) r8/t0=-4(cfa) 
+<  0><0x80485fc:0x8048665><foo1><fde offset 0x74 length: 0x14><eh offset none>
+    080485fc:	cfa=04(r4/a0) r8/t0=-4(cfa) 
+    080485fd:	cfa=08(r4/a0) r5/a1=-8(cfa) r8/t0=-4(cfa) 
+    080485ff:	cfa=08(r5/a1) r5/a1=-8(cfa) r8/t0=-4(cfa) 
+<  0><0x8048665:0x8048727><main><fde offset 0x8c length: 0x24><eh offset none>
+    08048665:	cfa=04(r4/a0) r8/t0=-4(cfa) 
+    08048669:	cfa=00(r1/at) r4/a0=r1/at r8/t0=-4(cfa) 
+    0804866f:	cfa=04(r4/a0) r4/a0=r1/at r8/t0=-4(cfa) 
+    08048670:	cfa=08(r4/a0) r4/a0=r1/at r5/a1=-8(cfa) r8/t0=-4(cfa) 
+    08048672:	cfa=08(r5/a1) r4/a0=r1/at r5/a1=-8(cfa) r8/t0=-4(cfa) 
+    08048673:	cfa=08(r5/a1) r4/a0=-12(cfa) r5/a1=-8(cfa) r8/t0=-4(cfa) 
+
+.debug_static_func
+
+.debug_static_vars
+
+.debug_weaknames

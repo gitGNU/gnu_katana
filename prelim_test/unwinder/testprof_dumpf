@@ -1,0 +1,93 @@
+dwarfdump looking for configuration as ./dwarfdump.conf
+dwarfdump looking for configuration as /home/james/.dwarfdump.conf
+dwarfdump using configuration file /home/james/.dwarfdump.conf
+
+.debug_frame
+
+fde:
+<  0><0x8048464:0x804848f><printTabs><fde offset 0x14 length: 0x14><eh offset none>
+    0x08048464:	<off cfa=04(esp) > <off eip=-4(cfa) > 
+    0x08048465:	<off cfa=08(esp) > <off ebp=-8(cfa) > <off eip=-4(cfa) > 
+    0x08048467:	<off cfa=08(ebp) > <off ebp=-8(cfa) > <off eip=-4(cfa) > 
+	fde sec. offset 20 0x14 cie offset for fde: 0 0x0
+	 0 DW_CFA_advance_loc 1  (1 * 1)
+	 1 DW_CFA_def_cfa_offset 8
+	 3 DW_CFA_offset ebp -8  (2 * -4)
+	 5 DW_CFA_advance_loc 2  (2 * 1)
+	 6 DW_CFA_def_cfa_register ebp
+<  0><0x804848f:0x80484c9><foo4><fde offset 0x2c length: 0x14><eh offset none>
+    0x0804848f:	<off cfa=04(esp) > <off eip=-4(cfa) > 
+    0x08048490:	<off cfa=08(esp) > <off ebp=-8(cfa) > <off eip=-4(cfa) > 
+    0x08048492:	<off cfa=08(ebp) > <off ebp=-8(cfa) > <off eip=-4(cfa) > 
+	fde sec. offset 44 0x2c cie offset for fde: 0 0x0
+	 0 DW_CFA_advance_loc 1  (1 * 1)
+	 1 DW_CFA_def_cfa_offset 8
+	 3 DW_CFA_offset ebp -8  (2 * -4)
+	 5 DW_CFA_advance_loc 2  (2 * 1)
+	 6 DW_CFA_def_cfa_register ebp
+<  0><0x80484c9:0x8048527><foo3><fde offset 0x44 length: 0x14><eh offset none>
+    0x080484c9:	<off cfa=04(esp) > <off eip=-4(cfa) > 
+    0x080484ca:	<off cfa=08(esp) > <off ebp=-8(cfa) > <off eip=-4(cfa) > 
+    0x080484cc:	<off cfa=08(ebp) > <off ebp=-8(cfa) > <off eip=-4(cfa) > 
+	fde sec. offset 68 0x44 cie offset for fde: 0 0x0
+	 0 DW_CFA_advance_loc 1  (1 * 1)
+	 1 DW_CFA_def_cfa_offset 8
+	 3 DW_CFA_offset ebp -8  (2 * -4)
+	 5 DW_CFA_advance_loc 2  (2 * 1)
+	 6 DW_CFA_def_cfa_register ebp
+<  0><0x8048527:0x804859c><foo2><fde offset 0x5c length: 0x14><eh offset none>
+    0x08048527:	<off cfa=04(esp) > <off eip=-4(cfa) > 
+    0x08048528:	<off cfa=08(esp) > <off ebp=-8(cfa) > <off eip=-4(cfa) > 
+    0x0804852a:	<off cfa=08(ebp) > <off ebp=-8(cfa) > <off eip=-4(cfa) > 
+	fde sec. offset 92 0x5c cie offset for fde: 0 0x0
+	 0 DW_CFA_advance_loc 1  (1 * 1)
+	 1 DW_CFA_def_cfa_offset 8
+	 3 DW_CFA_offset ebp -8  (2 * -4)
+	 5 DW_CFA_advance_loc 2  (2 * 1)
+	 6 DW_CFA_def_cfa_register ebp
+<  0><0x804859c:0x8048605><foo1><fde offset 0x74 length: 0x14><eh offset none>
+    0x0804859c:	<off cfa=04(esp) > <off eip=-4(cfa) > 
+    0x0804859d:	<off cfa=08(esp) > <off ebp=-8(cfa) > <off eip=-4(cfa) > 
+    0x0804859f:	<off cfa=08(ebp) > <off ebp=-8(cfa) > <off eip=-4(cfa) > 
+	fde sec. offset 116 0x74 cie offset for fde: 0 0x0
+	 0 DW_CFA_advance_loc 1  (1 * 1)
+	 1 DW_CFA_def_cfa_offset 8
+	 3 DW_CFA_offset ebp -8  (2 * -4)
+	 5 DW_CFA_advance_loc 2  (2 * 1)
+	 6 DW_CFA_def_cfa_register ebp
+<  0><0x8048605:0x80486ba><main><fde offset 0x8c length: 0x24><eh offset none>
+    0x08048605:	<off cfa=04(esp) > <off eip=-4(cfa) > 
+    0x08048609:	<off cfa=00(ecx) > <off esp=ecx > <off eip=-4(cfa) > 
+    0x0804860f:	<off cfa=04(esp) > <off esp=ecx > <off eip=-4(cfa) > 
+    0x08048610:	<off cfa=08(esp) > <off esp=ecx > <off ebp=-8(cfa) > <off eip=-4(cfa) > 
+    0x08048612:	<off cfa=08(ebp) > <off esp=ecx > <off ebp=-8(cfa) > <off eip=-4(cfa) > 
+    0x08048613:	<off cfa=08(ebp) > <off esp=-12(cfa) > <off ebp=-8(cfa) > <off eip=-4(cfa) > 
+	fde sec. offset 140 0x8c cie offset for fde: 0 0x0
+	 0 DW_CFA_advance_loc 4  (4 * 1)
+	 1 DW_CFA_def_cfa ecx 0
+	 4 DW_CFA_register esp = ecx
+	 7 DW_CFA_advance_loc 6  (6 * 1)
+	 8 DW_CFA_def_cfa esp 4
+	11 DW_CFA_advance_loc 1  (1 * 1)
+	12 DW_CFA_def_cfa_offset 8
+	14 DW_CFA_offset ebp -8  (2 * -4)
+	16 DW_CFA_advance_loc 2  (2 * 1)
+	17 DW_CFA_def_cfa_register ebp
+	19 DW_CFA_advance_loc 1  (1 * 1)
+	20 DW_CFA_offset esp -12  (3 * -4)
+	22 DW_CFA_nop
+	23 DW_CFA_nop
+
+cie:
+<  0>	version				1
+	cie sec. offset 0 0x0
+	augmentation			
+	code_alignment_factor		1
+	data_alignment_factor		-4
+	return_address_register		8
+	bytes of initial instructions:	7
+	cie length :			16
+	 0 DW_CFA_def_cfa esp 4
+	 3 DW_CFA_offset eip -4  (1 * -4)
+	 5 DW_CFA_nop
+	 6 DW_CFA_nop
