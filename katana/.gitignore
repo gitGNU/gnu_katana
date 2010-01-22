@@ -2,3 +2,6 @@ typepatch
 patchee
 patched
 katana
+*_log
+dump*
+log
