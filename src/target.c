@@ -98,10 +98,13 @@ void memcpyToTarget(long addr,char* data,int numBytes)
   {
     if(i+PTRACE_WORD_SIZE<=numBytes)
     {
-      modifyTarget(addr+i,data[i]);
+      uint val;
+      memcpy(&val,data+i,4);
+      modifyTarget(addr+i,val);
     }
     else
     {
+      printf("only copying partially\n");
       assert(sizeof(uint)==PTRACE_WORD_SIZE);
       uint tmp=0;
       memcpy(&tmp,data+i,numBytes-i);
@@ -128,16 +131,17 @@ void memcpyFromTarget(char* data,long addr,int numBytes)
     }
     else
     {
+      printf("wasn't aligned\n");
       //at the end and wasn't aligned
       memcpy(data+i,&val,numBytes-i);
     }
   }
 }
 
-struct user_regs_struct getTargetRegs()
+struct user_regs_struct* getTargetRegs()
 {
-  struct user_regs_struct regs;
-  if(ptrace(PTRACE_GETREGS,pid,NULL,&regs) < 0)
+  struct user_regs_struct* regs=zmalloc(sizeof(struct user_regs_struct));
+  if(ptrace(PTRACE_GETREGS,pid,NULL,regs) < 0)
   {
     perror("ptrace getregs failed\n");
     die(NULL);
@@ -145,9 +149,9 @@ struct user_regs_struct getTargetRegs()
   return regs;
 }
 
-void setTargetRegs(struct user_regs_struct regs)
+void setTargetRegs(struct user_regs_struct* regs)
 {
-  if(ptrace(PTRACE_SETREGS,pid,NULL,&regs)<0)
+  if(ptrace(PTRACE_SETREGS,pid,NULL,regs)<0)
   {
     perror("ptrace setregs failed\n");
     die(NULL);
@@ -170,7 +174,7 @@ long mmapTarget(int size,int prot)
   //to halt execution until the controlling process calls wait
   char code[]={0xcd,0x80,0xcc,0x00};
 
-  struct user_regs_struct oldRegs,newRegs;
+  struct user_regs_struct* oldRegs,*newRegs;
   oldRegs=getTargetRegs();
   newRegs=oldRegs;
   //we're going to throw the parameters to this syscall
@@ -178,28 +182,28 @@ long mmapTarget(int size,int prot)
   //note that this approach requires an executable stack.
   //if we didn't have an executable stack we could temporarily replace
   //code in the text segment at the program counter
-  newRegs.esp-=sizeof(int);
+  newRegs->esp-=sizeof(int);
   long code4Bytes;
   assert(sizeof(code4Bytes)==4);
   memcpy(&code4Bytes,code,4);
-  modifyTarget(newRegs.esp,code4Bytes);
-  newRegs.eip=newRegs.esp;//we put our code on the stack, so direct the pc to it
-  long returnAddr=newRegs.esp+2;//the int3 instruction
+  modifyTarget(newRegs->esp,code4Bytes);
+  newRegs->eip=newRegs->esp;//we put our code on the stack, so direct the pc to it
+  long returnAddr=newRegs->esp+2;//the int3 instruction
   
   //the call we want to make is
   //mmap(NULL,size,prot,MAP_PRIVATE|MAP_ANONYMOUS,-1,0)
   //mmap in libc is just a wrapper over a kernel call
   //we have a lot to put on the stack
-  modifyTarget(newRegs.esp-=4,0);
-  modifyTarget(newRegs.esp-=4,-1);
-  modifyTarget(newRegs.esp-=4,MAP_PRIVATE|MAP_ANONYMOUS);
-  modifyTarget(newRegs.esp-=4,prot);
-  modifyTarget(newRegs.esp-=4,size);
-  modifyTarget(newRegs.esp-=4,(int)NULL);
-  modifyTarget(newRegs.esp-=4,returnAddr);
-  newRegs.ebx=newRegs.esp+4;//syscall, takes arguments in registers,
+  modifyTarget(newRegs->esp-=4,0);
+  modifyTarget(newRegs->esp-=4,-1);
+  modifyTarget(newRegs->esp-=4,MAP_PRIVATE|MAP_ANONYMOUS);
+  modifyTarget(newRegs->esp-=4,prot);
+  modifyTarget(newRegs->esp-=4,size);
+  modifyTarget(newRegs->esp-=4,(int)NULL);
+  modifyTarget(newRegs->esp-=4,returnAddr);
+  newRegs->ebx=newRegs->esp+4;//syscall, takes arguments in registers,
                             //this is a pointer to the arguments on the stack
-  newRegs.eax=SYS_mmap;//syscall number to identify that this is an mmap call
+  newRegs->eax=SYS_mmap;//syscall number to identify that this is an mmap call
   
   //now actually tell the process about these registers
   setTargetRegs(newRegs);
@@ -211,7 +215,7 @@ long mmapTarget(int size,int prot)
     perror("ptrace getregs failed (getting regs after mmap syscall)\n");
     die(NULL);
   }
-  int retval=newRegs.eax;
+  int retval=newRegs->eax;
   if((void*)retval==MAP_FAILED)
   {
     fprintf(stderr,"mmap in target failed\n");
