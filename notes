@@ -6,6 +6,8 @@ see "DWARF Call Frame information" under "understandings"
 todo: figure out ERESI thing
 todo: write up prototype of using CFIs/FDEs
 todo: prepare to walk Sergey through unwinding of call frame on Wednesday at 3:00
+
+dwarf expressions provide any way to get at symbol table?
 * confusion I have
 ** pointer to type only declared
 what to do about cases where there's a global variable of pointer type
@@ -31,6 +33,46 @@ type that pointer is, we can't really patch it
 ** TODO actual code
    need to get Tenessee Valley code still
 ** multithreaded?
+** C type unsafety
+   As the Ginseng paper points out in section 4.2, C has unsafe casts
+   some of these things can violate the type system. How to account
+   for this? Also might store the address of a member of a struct in
+   some variable. If we remap this variable somewhere, we're going to
+   have to detect that we have a variable pointing into memory that
+   we're no longer using. Even worse, we might want to fixup that
+   variable to point to the new section of memory but at a revised
+   offset.
+
+   Perhaps even more worrisome, what about void*? If we have a global
+   variable of type void*, how do we know what type it points to? We
+   don't. It could be different at different times during program
+   execution even. The paragraph above this one describes a case which
+   is somewhat more unlikely. This on the other hand is used all the
+   time. Abstract data types in C are typically implemented using
+   void*, since C has no notion of template/generic/etc. DWARF doesn't
+   help us here. What can we do? We can locate the text locations at
+   which the symbol is used. If the symbol is cast to a certain type
+   and stored in a variable, there will be dwarf info about that
+   variable so we can figure out what type it's turning into and patch
+   it then (this would involve leaving part of the patcher in the
+   running process). If things are just cast to pass to another
+   function or access a member or something, no dwarf type info will
+   show up. This is problematic. Ginseng does not totally solve this
+   problem either, although it is able to do so perhaps to a greater
+   degree because it analyzes the program's source code and therefore
+   has access to all casts, not just those which are assigned to
+   variables. The best we can do as far as I can see is identify
+   references to symbols of type void* and warn the user about
+   them. It would be nice to have a better solution, however. 
+
+   Perhaps even worse, there is no good solution for arrays. Does
+   something like
+             Foo* bar;
+   denote a pointer to a single instance of Foo, or an array of them?
+   Who knows? The malloc/free code knows (since after all free
+   has to know how much to free). Where the block structures are
+   stored is going to be highly system-dependent however, making
+   writing a portable patcher difficult. Is there a better solution?
 * things to keep in mind
 ** some way to check compatibility with target before applying the patch
 ** patching static variables
@@ -50,6 +92,16 @@ type that pointer is, we can't really patch it
 ** it appears that ld does not write all symbols from the symbol table into the hash table
 ** 32-bit vs 64-bit
    look into dwarf_get_address_size for some help on at least addresses
+** extraneous object code changes
+   as ksplice points out (in section 3.2 of the ksplice paper) it is
+   possible that small changes to the source code produce large
+   object-code changes. due to changes in relative offsets, etc.
+
+   The solution ksplice proposes is to use the gcc options (also
+   provided by the Intel C compiler) -ffunction-sections and
+   -fdata-sections which forces the generation of relocations rather
+   than making assumptions about where things are. We may need to have
+   these relocation entries anyway.
 * references:
 **misc
 *** ELFsh/ERESI papers
@@ -96,7 +148,15 @@ type that pointer is, we can't really patch it
 
     Like Katana has issues with multithreaded (p. 5)
 
-    Has code available at http://www.cs.umd.edu/projects/PL/dsu/software.shtml
+    Has code available at
+    http://www.cs.umd.edu/projects/PL/dsu/software.shtml
+    Note that there is a pdf manual entitled "Ginseng User's Guide" in
+    the source distribution.
+
+    Note: patches are dynamic libraries which are dlopened into the
+    target process. They then contain the code for patching up the
+    target themselves. This is fairly nice but does not provide easy
+    composition of patches or reasoning about the impact of a patch. 
 *** "A Runtime Code Modification Method for Application Programs" 
     http://ols.fedoraproject.org/OLS/Reprints-2008/yamato-reprint.pdf
     proposes a system faster than pannus and livepatch. Like pannus
@@ -113,7 +173,9 @@ type that pointer is, we can't really patch it
     gives them a disadvantage in that they are tied to C. We could
     theoretically work on any language that compiles to ELF files with
     DWARF information. TODO: demonstrate patching an objective C
-    program if possible.
+    program if possible. KSplice paper discusses other disadvantages
+    of working at the source code level, including difficulty patching
+    inline functions.
 
 *** ELF format references
     http://www.skyfree.org/linux/references/ELF_Format.pdf
@@ -208,13 +270,23 @@ type that pointer is, we can't really patch it
 *** should look into it more to see exactly what it can do
 *** requires writing out commands file (apparently by hand, I think)
 
-** ksplice
-a grep of its source code seems to indicate that it does not use dwarf
-for type patching, but the paper does not seem to make it clear what
-it does use
-*** kernel live patching
-*** fairly developed system, one reviewer who rejected Katana suggested looking at it more
-*** http://www.ksplice.com/doc/ksplice.pdf
+** ksplice http://www.ksplice.com/doc/ksplice.pdf
+   kernel live patching
+   fairly developed system, one reviewer who rejected Katana suggested looking at it more
+
+   a grep of its source code seems to indicate that it does not use
+   dwarf for type patching, but the paper does not seem to make it
+   clear what it does use. Upon closer reading of the paper, it looks
+   as though it requires manual code writing in the case of modifying
+   "persistent kernel data structures".
+
+   Like us it tries to do patching based on the object files, not the
+   source, and not require programmer annotation of the source the way
+   Ginseng does. A quote from the first page of the paper "Significant
+   programmer involvement in creating a hot update increases both the
+   cost and the risk of the update, which discourages the adoption of
+   hot updates"
+
 ** Ginseng
    http://www.cs.umd.edu/projects/PL/dsu/software.shtml
    discussino about it above in the references section
@@ -306,6 +378,10 @@ it does use
     Note that at this point the original call location of the
     exception has been wiped off the stack.
 *** After the code in the catch block has executed, it makes a call to __cxa_end_catch
+*** DWARF virtual machine
+    most of the code for the dwarf virtual machine seems to be located
+    in unwind-dw2.h in gcc. If we were going to look for a
+    vulnerability, it is here that'd we'd look
 ** DWARF Call Frame information
 *** from meeting
 need to understand dwarf CIEs better, sergey thinks that format might
@@ -363,26 +439,12 @@ addition of extra functionality should it be needed). We could certainly use it 
 inspiration yes, but I'm not sure where the gain would be in actually
 using the format. I suppose the only real advantage would be in trying
 to promote a standard patch object format, since Dwarf is already a standard.
-*** using it for PO format
-**** no really good way to specify "mem location yet to be determined"
-     Need this because don't know where we're going to be able to mmap in things. No
-     good way to indicate the high level operation of "mmap in a
-     block". Might be able to do this with DW_OP_call[24] and
-     friends. Of course, these supposedly have no meaning in the
-     .debug_frame section, however we're not interpreting the call
-     frame information in the normal way. Could also view a new memory
-     block as the CFA and not actually define the CFA. This gets in
-     the way of an algebra of patches, however, because too many
-     unknown quantities get introduced.
-**** register interpretations
-     Generally interpret "registers" as addresses into the
-     binary. Could, however, have some special register values which
-     are defined to mean special things (free page in memory
+
 * definitions
 ** ET_REL
    ELF file type recognized by linux. Denotes relocatable object
 
-* plans
+* plans/thoughts
 ** basic type-patching process
    read in the old type definition from DWARF information. Construct
    for each type a bijection between field name and field offset (from
@@ -392,3 +454,210 @@ to promote a standard patch object format, since Dwarf is already a standard.
    offset) unless of course the given variable has been eliminated. 
 
 
+
+** using Dwarf call frame info for PO format
+*** needs of the PO format
+**** possible abstraction levels
+     There are various different levels that our operations could be specified at
+*****high level
+****** set this memory location from this other memory location
+      ex, a struct where the order of the fields changes or a function
+      which changes but fits in the same size
+****** relocate the contents of this variable to a new memory location
+      ex, a struct with fields added. Would follow type spec. Note this
+      would also require relocating references to the variable
+****** redefine a function
+      this could just be done with memory operations, including
+      mapping in new memory
+****** add a new function
+****** add a new variable following a type spec
+***** low level
+We don't really want the PO format to operate at this level. Not only
+does it make operations on patch files (composing multiple patch
+files, etc) difficult, it requires that the in-memory target must be
+identical to the binary on disk which we used to generate the
+difference. As the KSplice paper points out, this isn't always going
+to be the case. 
+****** peek target mem
+       Dwarf provides plenty of means to do this
+****** poke target mem
+       Dwarf does not provide good means for doing this. If we view
+       "registers" as mem locations, the CIE/FDE structures provide us
+       with the means to specify every new mem location in the target
+       in terms of an expression. What it does not provide a good means
+       to do is to compute which memory location to assign the value of
+       an expression to
+****** allocate target mem
+       Importantly, later pokes of target mem should be able to refer
+       to an address in terms of a newly allocated address (which
+       cannot be stored in the patch object, as it is not known until
+       runtime). Dwarf does not provide us a good means of doing
+       this. We could theoretically do this with more creative
+       definitions of what a "register" means. Certain register ranges
+       could be defined as NEW_MEM_ID_N + OFFSET (where N is the block of new
+       memory, so we could have one logical block of new memory for
+       each var, etc, that we needed to relocate). For example, the
+       first byte (we're dealing with LEB128, so we can have an
+       arbitrary number of bytes) could have the constant NEW_MEM_ID,
+       indicating that what follows specifies a new memory region. the
+       second byte could be N, specifying the logical new memory region
+       we wish to refer to. The remaining bytes could specify an offset
+       into this memory region. The issue is that we are specifying
+       things in the opposite manner of what we would like. We are
+       saying "this new memory area gets the value of this old memory
+       area" when what we want to say is "this old memory area moves to
+       this new memory area". The way we are saying it makes it harder
+       to compose patches (although at this low level it's hard to
+       compose patches anyway, we need things in terms of symbols).
+***** middle level
+      like low level except refer to things in terms of symbols. For
+      example, we can peek and poke things at offsets from
+      symbols. Because we are doing things relative to symbols, the
+      patch is easier to reason about than in a fully low-level
+      form. If we are doing things in terms of symbols, we must have
+      the means to add symbols to the target. This is just as feasible
+      to do using DWARF although the DWARF expressions to look up
+      symbols are a little ugly. See the section "Dwarf Expressions" later.
+**** Using DWARF
+     The key problem with using the DWARF format is that its expressions
+     are designed to yield a value. They are not designed to perform
+     operations with side effects (setting a value) To make assignments we
+     have a couple options
+***** use call frame tables, interpreting "registers" creatively
+      The issue with this is that there is no mechanism for specifying
+      things sequentially (all assignments are in parallel) and we are
+      not specifying things the way we want, we are specifying what to
+      do to memory to achieve the new version of the exectuable rather
+      than what needs to be done with the old versions of structures. 
+***** coopt the DWARF_OP_call instructions
+      define special call addresses that the VM recognizes and starts
+      executing VM-defined code (still possibly manipulating the stack used by
+      dwarf expressions). This allows the vm to add special functions
+      like "map in new memory" or even "poke data". This makes dwarf
+      expressions no longer a side-effect free language operating only
+      on a stack machine. If we did this we wouldn't even have to use
+      the whole call frame thing at all, as the call frame table's
+      only purpose in our system would be to assign addresses. This is
+      a fairly significant departure from the way dwarf was designed
+      to work, however, since we violate some of the principles of its
+      stack machine.
+***** add in new instructions
+      add in instructions (DWARF_OP_mmap, DWARF_OP_poke, etc) for
+      doing what we need. This has pretty much all the same effects as
+      coopting DWARF_OP_call. It represents a slightly larger change
+      in some ways to the Dwarf instruction language because it adds
+      new instructions but a cleaner change in other ways because it
+      does not change the function of any existing instructions
+*** no really good way to specify "mem location yet to be determined"
+    Need this because don't know where we're going to be able to mmap in things. No
+    good way to indicate the high level operation of "mmap in a
+    block". Might be able to do this with DW_OP_call[24] and
+    friends. Of course, these supposedly have no meaning in the
+    .debug_frame section, however we're not interpreting the call
+    frame information in the normal way. Could also view a new memory
+    block as the CFA and not actually define the CFA. This gets in
+    the way of an algebra of patches, however, because too many
+    unknown quantities get introduced. Could sort of have an algebra
+    on the patches themselves, but wouldn't quite be the same as
+    operating a patch on a running binary that had already been
+    patched. Could store somewhere within the binary info about
+    already applied patches, but this starts to get hackish
+*** register interpretations
+    Generally interpret "registers" as addresses into the
+    binary. Could, however, have some special register values which
+    are defined to mean special things (free page in memory,
+    etc). This starts to seem a little hackish however, we're
+    stretching the dwarf language to do what we want rather than what
+    it was designed for.
+*** Dwarf Expressions
+**** finding the value of a symbol (i.e. address) given it's symtab idx
+     Assuming x86 (32-bit). 64 bit is only slightly different
+
+     *We make the following defininitions of constant values*
+     SYMTAB_START_ADDR stands for the address where the SYMTAB starts in
+                       the target executable. Note that if absolutely necessary
+                       a dwarf expression could be written to read the ELF headers
+                       and determine this
+     SYMTAB_IDX        stands for the index of the symbol we want to retrieve
+     SYM_SIZE          stands for the size of one entry in the symbol table. 
+                       It is equal to sizeof(Elf32_Sym)
+     ST_VALUE_OFF      stands for the offset of the st_value member of an 
+                       Elf32_Sym struct
+     
+     *The dwarf expression would be as follows*
+     DW_OP_addr SYMTAB_START_ADDR        (pushes address of symtab onto the stack)
+     DW_OP_const4u SYMTAB_IDX            (pushes idx into symtab on stack)
+     DW_OP_const4u SYM_SIZE              (pushes size of each symbol on stack)
+     DW_OP_mul                           (pops top two stack entries 
+                                         and pushes their product)
+     DW_OP_plus                          (pops top two stack entries and pushes
+                                         their sum. Now the top of the stack is the 
+                                         address of the symtab entry we want)
+     DW_OP_const4u ST_VALUE_OFF
+     DW_OP_plus                          (now the top of the stack is the address
+                                         in the target image of the st_value we want)
+     DW_OP_deref                         (dereferences address on top of stack and
+                                         and pushes the 4-byte (for 32-bit) result)
+    
+     
+**** finding the value of a symbol given only a strtab index for the name of the symbol
+     Assuming x86 (32-bit). 64 bit is only slightly different. Note also that
+     this expression/procedure is only for proof-of-concept purposes. It may iterate
+     through the entire symbol table, which is undesirable to do on every
+     symbol query.
+     
+     *We make the following definitions of constant values*
+     STRTAB_START_ADDR stands for the address where the .strtab starts in
+                       the target executable. Note that if absolutely necessary
+                       a dwarf expression could be written to read the ELF headers
+                       and determine this.
+     SYMTAB_START_ADDR stands for the address where the .symtab starts in
+                       the target executable. Note that if absolutely necessary
+                       a dwarf expression could be written to read the ELF headers
+                       and determine this
+     SYMTAB_SIZE       stands for the number of entries in the symbol
+                       table. Note that if absolutely necessary a
+                       dwarf expression could be written to read the
+                       ELF headers and determine this
+     STRTAB_IDX        stands for the index of the name of the symbol we want
+                       to retrieve.
+     SYM_SIZE          stands for the size of one entry in the symbol table. 
+                       It is equal to sizeof(Elf32_Sym)
+
+     *The dwarf expressesion would be as follows*
+     DW_OP_const4u 0                   (number of entries we've examined so far)
+     label_loop:                       (labels aren't part of dwarf, but easier to read
+                                        here than byte offsets)
+     DW_OP_dup                         (duplicate value at top of stack)
+     DW_OP_const4u SYM_SIZE
+     DW_OP_mul                         (top of stack is now index in symtab to examine)
+     DW_OP_addr SYMTAB_START_ADDR
+     DW_OP_plus                        (top of stack is now addr of symbol to examine.         
+                                       It happens that st_name is the first 
+                                       entry in Elf32_Sym, so this is the address to 
+                                       dereference to get st_name)
+     DW_OP_deref                       (top of stack is now strtab index of the symbol
+                                        we're examining)
+     DW_OP_const4u STRTAB_IDX
+     DW_OP_eq                          (top of stack is now 0 if this symbol has
+                                        a different name than the one we're looking
+                                        for and 1 if it's the one we want
+     DW_OP_bra label_done              (in actual dwarf code this would be a byte offset
+                                       labels are easier for readability)
+     DW_OP_lit1                        (put the literal 1 on the stack)
+     DW_OP_plus                        (remember we had a duplicate of the number
+                                        of entries we'd examined on the stack?
+                                        Now we increment it)
+     DW_OP_dup
+     DW_OP_const4u SYMTAB_SIZE
+     DW_OP_eq                          (make sure that the index is less than the size)
+     DW_bra label_fail                 (reached end of .symtab without finding it)
+     DW_OP_skip label_loop             (look at the next entry in the symbol table)
+     label_fail:
+     DW_OP_const4u FAILURE_CODE        (push some value that can be used to indicate
+                                        that the symbol wasn't found)
+     label_done:
+     (expression ends here. The top of the stack is the number of symtab entries we've
+     examined so far, so it gives an entry into the symbol table. To actually find the
+     value of that symbol the expression in the above section 
+     "finding the value of a symbol (i.e. address) given it's symtab idx" can be used)
