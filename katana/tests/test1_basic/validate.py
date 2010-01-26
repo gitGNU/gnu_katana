@@ -30,10 +30,14 @@ def validate(logname):
       elif (not addr1New and addr1!=match.group(1)) or (not addr2New and addr2!=match.group(2)):
         addr1New=match.group(1)
         addr2New=match.group(2)
-      elif addr1!=match.group(1) or addr2!=match.group(2):
+      elif (addr1!=match.group(1) and addr1New!=match.group(1)) or (addr2!=match.group(2) and addr2New!=match.group(2)):
+        sys.stderr.write("addr1 or addr2 is wrong, changed for a second time\n");
+        sys.stderr.write("Offending line is:\n");
+        sys.stderr.write(line)
+
         return False
     else:
-      match=re.match(regexEven,line)
+      match=re.search(regexEven,line)
       if not match:
         sys.stderr.write("Line "+str(linecount)+" did not match expected even pattern\n")
         sys.stderr.write("Offending line is:\n")
@@ -43,6 +47,9 @@ def validate(logname):
         field1=match.group(1)
         field2=match.group(2)
       elif field1!=match.group(1) or field2!=match.group(2):
+        sys.stderr.write("Field 1 or Field2 changed, this should not occur\n");
+        sys.stderr.write("Offending line is:\n");
+        sys.stderr.write(line)
         return False
   
   if not addr1New or not addr2New:

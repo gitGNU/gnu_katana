@@ -31,4 +31,4 @@ clean :
 #so that things in the tar archive can be named appropriately
 DIR_TO_TAR=$(shell pwd | sed 's/\(.*\/\)\(.*\)/\2/')
 dist : all
-	cd ../; tar -czf katana --exclude-from=$(PWD)/tar-excludes $(DIR_TO_TAR)
+	cd ../; tar -czf katana.tar.gz --exclude-from=$(PWD)/tar-excludes $(DIR_TO_TAR)

@@ -33,113 +33,60 @@
 #include "target.h"
 #include "elfparse.h"
 #include "hotpatch.h"
+#include <signal.h>
+
 int pid;//pid of running process
 
-//test relocation of the variable bar
-//knowing some very specific things about it
-void testManualRelocateBar()
+#ifdef DEBUG
+#include "katana-prelim.h"
+#endif
+
+void sigsegReceived(int signum)
 {
-  int barSymIdx=getSymtabIdx("bar");
-  int barAddress=getSymAddress(barSymIdx);
-  printf("bar located at %x\n",(unsigned int)barAddress);
-
-  List* relocItems=getRelocationItemsFor(barSymIdx);
-  //allocate a new page for us to put the new variable in
-  long newPageAddr=mmapTarget(sysconf(_SC_PAGE_SIZE),PROT_READ|PROT_WRITE);
-  printf("mapped in a new page at 0x%x\n",(uint)newPageAddr);
-
-  //now set the data in that page
-  //first get it from the old address
-  uint barData[4];
-  memcpyFromTarget((char*)barData,barAddress,sizeof(int)*3);
-  printf("read data %i,%i,%i\n",barData[0],barData[1],barData[2]);
-  //copy it to the new address
-  memcpyToTarget(newPageAddr,(char*)barData,sizeof(int)*3);
-
-  //now test to make sure we copied it correctly
-  memcpyFromTarget((char*)barData,newPageAddr,sizeof(int)*3);
-  printf("read new data %i,%i,%i\n",barData[0],barData[1],barData[2]);
-  
-  for(List* li=relocItems;li;li=li->next)
-  {
-    GElf_Rel* rel=li->value;
-    printf("relocation for bar at %x with type %i\n",(unsigned int)rel->r_offset,(unsigned int)ELF64_R_TYPE(rel->r_info));
-    addr_t oldAddr=getTextAtRelOffset(rel->r_offset);
-    printf("old addr is 0x%x\n",(uint)oldAddr);
-    uint newAddr=newPageAddr+(oldAddr-barAddress);
-    //*oldAddr=newAddr;
-    modifyTarget(rel->r_offset,newAddr);
-  }
-}
-
-//again test relocation of the variable bar using specific
-//knowledge we have about the source program, but this
-//time use the fixupVariable function and the type transformation
-//structures that will be automatically created in the future.
-void testManualRelocateAndTransformBar()
-{
-  TypeInfo fooType;
-  fooType.name=strdup("Foo");
-  fooType.length=12;
-  fooType.numFields=3;
-  fooType.fields=zmalloc(sizeof(char*)*3);
-  fooType.fieldLengths=zmalloc(sizeof(int)*3);
-  fooType.fieldTypes=zmalloc(sizeof(char*)*3);
-  fooType.fields[0]="field1";
-  fooType.fields[1]="field2";
-  fooType.fields[2]="field3";
-  fooType.fieldLengths[0]=fooType.fieldLengths[1]=fooType.fieldLengths[2]=sizeof(int);
-  fooType.fieldTypes[0]=strdup("int");
-  fooType.fieldTypes[1]=strdup("int");
-  fooType.fieldTypes[2]=strdup("int");
-  TypeInfo fooType2;//version with an extra field
-  fooType2.name=strdup("Foo");
-  fooType2.length=16;
-  fooType2.numFields=3;
-  fooType2.fields=zmalloc(sizeof(char*)*4);
-  fooType2.fieldLengths=zmalloc(sizeof(int)*4);
-  fooType2.fieldTypes=zmalloc(sizeof(char*)*4);
-  fooType2.fields[0]="field1";
-  fooType2.fields[1]="field_extra";
-  fooType2.fields[2]="field2";
-  fooType2.fields[3]="field3";
-  fooType2.fieldLengths[0]=fooType2.fieldLengths[1]=fooType2.fieldLengths[2]=fooType2.fieldLengths[3]=sizeof(int);
-  fooType2.fieldTypes[0]=strdup("int");
-  fooType2.fieldTypes[1]=strdup("int");
-  fooType2.fieldTypes[2]=strdup("int");
-  fooType2.fieldTypes[3]=strdup("int");
-  VarInfo barInfo;
-  barInfo.name="bar";
-  barInfo.type=&fooType;
-  TypeTransform trans;
-  trans.from=&fooType;
-  trans.to=&fooType2;
-  trans.fieldOffsets=zmalloc(sizeof(int)*3);
-  trans.fieldOffsets[0]=0;
-  trans.fieldOffsets[1]=8;
-  trans.fieldOffsets[2]=12;
-  TransformationInfo transInfo;
-  transInfo.typeTransformers=dictCreate(10);//todo: 10 a magic number
-  dictInsert(transInfo.typeTransformers,barInfo.type->name,&trans);
-  transInfo.varsToTransform=NULL;//don't actually need it for fixupVariable
-  transInfo.freeSpaceLeft=0;
-  fixupVariable(barInfo,&transInfo,pid);
-  //todo: free memory
+  death("katana segfaulting. . .\n");
 }
 
 void diffAndFixTypes(DwarfInfo* diPatchee,DwarfInfo* diPatched)
 
 {
-  //todo: this assumes both have the same number of compilation units
-  //and that their order corresponds. This is not a good assumption to make
+  //todo: handle addition of variables and also handle
+  //      things moving between compilation units,
+  //      perhaps group global objects from all compilation units
+  //      together before dealing with them.
   List* cuLi1=diPatchee->compilationUnits;
-  List* cuLi2=diPatched->compilationUnits;
-  for(;cuLi1 && cuLi2;cuLi1=cuLi1->next,cuLi2=cuLi2->next)
+  for(;cuLi1;cuLi1=cuLi1->next)
   {
+    CompilationUnit* cu1=cuLi1->value;
+    CompilationUnit* cu2=NULL;
+    //find the corresponding compilation unit in the patched process
+    //note: we assume that the number of compilation units is not so large
+    //that using a hash table would give us much better performance than
+    //just going through a list. If working on a truly enormous project it
+    //might make sense to do this
+    List* cuLi2=diPatched->compilationUnits;
+    for(;cuLi2;cuLi2=cuLi2->next)
+    {
+      cu2=cuLi2->value;
+      if(cu1->name && cu2->name && !strcmp(cu1->name,cu2->name))
+      {
+        break;
+      }
+      cu2=NULL;
+    }
+    if(!cu2)
+    {
+      fprintf(stderr,"WARNING: the patched version omits an entire compilation unit present in the original version.\n");
+      if(cu1->name)
+      {
+        fprintf(stderr,"Missing cu is named %s\n",cu1->name);
+      }
+      break;
+    }
+    cu1->presentInOtherVersion=true;
+    cu2->presentInOtherVersion=true;
+    
     TransformationInfo* trans=zmalloc(sizeof(TransformationInfo));
     trans->typeTransformers=dictCreate(100);//todo: get rid of magic # 100
-    CompilationUnit* cu1=cuLi1->value;
-    CompilationUnit* cu2=cuLi2->value;
     printf("Examining compilation unit %s\n",cu1->name);
     VarInfo** vars1=(VarInfo**)dictValues(cu1->tv->globalVars);
     //todo: handle addition of variables in the patch
@@ -218,6 +165,10 @@ int main(int argc,char** argv)
   {
     die("Usage: katana OLD_BINARY NEW_BINARY PID");
   }
+  struct sigaction act;
+  memset(&act,0,sizeof(struct sigaction));
+  act.sa_handler=&sigsegReceived;
+  //sigaction(SIGSEGV,&act,NULL);
   char* oldBinary=argv[1];
   char* newBinary=argv[2];
   pid=atoi(argv[3]);

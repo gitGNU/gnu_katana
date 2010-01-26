@@ -585,11 +585,12 @@ restoreRegsFromRegisterRules(struct user_regs_struct currentRegs,
 
 void printBacktrace()
 {
-  struct user_regs_struct* regs=getTargetRegs();
+  struct user_regs_struct regs;
+  getTargetRegs(&regs);
   printf("~~~~~Backtrace:~~~~~\n");
   for(int i=0;;i++)
   {
-    FDE* fde=getFDEForPC(regs->eip);
+    FDE* fde=getFDEForPC(regs.eip);
     if(!fde)
     {
       break;
@@ -597,11 +598,11 @@ void printBacktrace()
     printf("%i. %s\n",i,get_fde_proc_name(dbg,fde->lowpc));
     RegRule rules[NUM_REGS];
     memcpy(rules,cie.initialRules,sizeof(RegRule)*NUM_REGS);
-    evaluateInstructions(fde->instructions,fde->numInstructions,rules,regs->eip,&cie);    
-    printf("\t{eax=0x%x,ecx=0x%x,edx=0x%x,ebx=0x%x,esp=0x%x,\n\tebp=0x%x,esi=0x%x,edi=0x%x,eip=0x%x}\n",(uint)regs->eax,(uint)regs->ecx,(uint)regs->edx,(uint)regs->ebx,(uint)regs->esp,(uint)regs->ebp,(uint)regs->esi,(uint)regs->edi,(uint)regs->eip);
+    evaluateInstructions(fde->instructions,fde->numInstructions,rules,regs.eip,&cie);    
+    printf("\t{eax=0x%x,ecx=0x%x,edx=0x%x,ebx=0x%x,esp=0x%x,\n\tebp=0x%x,esi=0x%x,edi=0x%x,eip=0x%x}\n",(uint)regs.eax,(uint)regs.ecx,(uint)regs.edx,(uint)regs.ebx,(uint)regs.esp,(uint)regs.ebp,(uint)regs.esi,(uint)regs.edi,(uint)regs.eip);
     printf("\tunwinding and applying register restore rules:\n");
     printRules(rules,"\t");
-    *regs=restoreRegsFromRegisterRules(*regs,rules);
+    regs=restoreRegsFromRegisterRules(regs,rules);
   }
 }
 
@@ -645,23 +646,25 @@ int main(int argc,char** argv)
     printf("set up breakpoint\n");
     continuePtrace();
     wait(NULL);
-    struct user_regs_struct* regs=getTargetRegs();
-    printf("proc stopped at 0x%x. Press any key to start it again\n",(unsigned int)regs->eip);
+    struct user_regs_struct regs;
+    getTargetRegs(&regs);
+    printf("proc stopped at 0x%x. Press any key to start it again\n",(unsigned int)regs.eip);
     //printCallFrame(regs.eip);
     printBacktrace();
     getc(stdin);
     //put things back
     memcpyToTarget(locToReplace,oldData,4);
-    printf("put back old info eip=0x%x locToReplace=0x%x\n",regs->eip,locToReplace);
-    regs->eip=locToReplace;//so can execute that instruction normally
-    setTargetRegs(regs);
-    struct user_regs_struct* newRegs=getTargetRegs();
-    if(memcmp(regs,newRegs,sizeof(struct user_regs_struct)))
+    printf("put back old info eip=0x%x locToReplace=0x%x\n",(uint)regs.eip,(uint)locToReplace);
+    regs.eip=locToReplace;//so can execute that instruction normally
+    setTargetRegs(&regs);
+    struct user_regs_struct newRegs;
+    getTargetRegs(&newRegs);
+    if(memcmp(&regs,&newRegs,sizeof(struct user_regs_struct)))
     {
       death("something wrong\n");
     }
     printf("put back instruction pointer\n");
-    printf("the process may crash now, this program has a bug\n");
+    printf("the process should continue running\n");
     memcpyFromTarget(oldData,locToReplace,4);
     printf("has bytes %02x,%02x,%02x,%02x\n",oldData[0],oldData[1],oldData[2],oldData[3]);
     endPtrace();

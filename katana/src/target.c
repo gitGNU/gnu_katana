@@ -82,7 +82,7 @@ void modifyTarget(addr_t addr,uint value)
 {
   if(ptrace(PTRACE_POKEDATA,pid,addr,value)<0)
   {
-    perror("ptrace POKEDATA failed\n");
+    perror("ptrace POKEDATA failed in modifyTarget\n");
     die(NULL);
   }
 }
@@ -138,15 +138,13 @@ void memcpyFromTarget(char* data,long addr,int numBytes)
   }
 }
 
-struct user_regs_struct* getTargetRegs()
+void getTargetRegs(struct user_regs_struct* regs)
 {
-  struct user_regs_struct* regs=zmalloc(sizeof(struct user_regs_struct));
   if(ptrace(PTRACE_GETREGS,pid,NULL,regs) < 0)
   {
     perror("ptrace getregs failed\n");
     die(NULL);
   }
-  return regs;
 }
 
 void setTargetRegs(struct user_regs_struct* regs)
@@ -174,59 +172,72 @@ long mmapTarget(int size,int prot)
   //to halt execution until the controlling process calls wait
   char code[]={0xcd,0x80,0xcc,0x00};
 
-  struct user_regs_struct* oldRegs,*newRegs;
-  oldRegs=getTargetRegs();
+  struct user_regs_struct oldRegs,newRegs;
+  getTargetRegs(&oldRegs);
   newRegs=oldRegs;
   //we're going to throw the parameters to this syscall
   //as well as the code itself on the stack
   //note that this approach requires an executable stack.
   //if we didn't have an executable stack we could temporarily replace
   //code in the text segment at the program counter
-  newRegs->esp-=sizeof(int);
+  newRegs.esp-=sizeof(int);
   long code4Bytes;
   assert(sizeof(code4Bytes)==4);
   memcpy(&code4Bytes,code,4);
-  modifyTarget(newRegs->esp,code4Bytes);
-  newRegs->eip=newRegs->esp;//we put our code on the stack, so direct the pc to it
-  long returnAddr=newRegs->esp+2;//the int3 instruction
+  printf("inserting code at eip 0x%x\n",newRegs.eip);
+  #ifdef OLD_MMAP_TARGET
+  modifyTarget(newRegs.esp,code4Bytes);
+  printf("inserted syscall call\n");
+  newRegs.eip=newRegs.esp;//we put our code on the stack, so direct the pc to it
+  long returnAddr=newRegs.esp+2;//the int3 instruction
+  #else
+  char oldText[4];
+  memcpyFromTarget(oldText,newRegs.eip,4);
+  modifyTarget(newRegs.eip,code4Bytes);
+  printf("inserted syscall call\n");
+  long returnAddr=newRegs.eip+2;//the int3 instruction
+  #endif
   
   //the call we want to make is
   //mmap(NULL,size,prot,MAP_PRIVATE|MAP_ANONYMOUS,-1,0)
   //mmap in libc is just a wrapper over a kernel call
   //we have a lot to put on the stack
-  modifyTarget(newRegs->esp-=4,0);
-  modifyTarget(newRegs->esp-=4,-1);
-  modifyTarget(newRegs->esp-=4,MAP_PRIVATE|MAP_ANONYMOUS);
-  modifyTarget(newRegs->esp-=4,prot);
-  modifyTarget(newRegs->esp-=4,size);
-  modifyTarget(newRegs->esp-=4,(int)NULL);
-  modifyTarget(newRegs->esp-=4,returnAddr);
-  newRegs->ebx=newRegs->esp+4;//syscall, takes arguments in registers,
+  modifyTarget(newRegs.esp-=4,0);
+  modifyTarget(newRegs.esp-=4,-1);
+  modifyTarget(newRegs.esp-=4,MAP_PRIVATE|MAP_ANONYMOUS);
+  modifyTarget(newRegs.esp-=4,prot);
+  modifyTarget(newRegs.esp-=4,size);
+  modifyTarget(newRegs.esp-=4,(int)NULL);
+  modifyTarget(newRegs.esp-=4,returnAddr);
+  newRegs.ebx=newRegs.esp+4;//syscall, takes arguments in registers,
                             //this is a pointer to the arguments on the stack
-  newRegs->eax=SYS_mmap;//syscall number to identify that this is an mmap call
+  newRegs.eax=SYS_mmap;//syscall number to identify that this is an mmap call
+  printf("%x\n",SYS_mmap);
+  printf("inserted syscall params on stack\n");
   
+  newRegs.eax=SYS_mmap;//syscall number to identify that this is an mmap call
   //now actually tell the process about these registers
-  setTargetRegs(newRegs);
+  setTargetRegs(&newRegs);
+  
   //and run the code
   continuePtrace();
   wait(NULL);
-  if(ptrace(PTRACE_GETREGS,pid,NULL,&newRegs) < 0)
-  {
-    perror("ptrace getregs failed (getting regs after mmap syscall)\n");
-    die(NULL);
-  }
-  int retval=newRegs->eax;
+  getTargetRegs(&newRegs);//get the return value from the syscall
+  int retval=newRegs.eax;
+  printf("retval is 0x%x\n",(uint)retval);
   if((void*)retval==MAP_FAILED)
   {
     fprintf(stderr,"mmap in target failed\n");
     die(NULL);
   }
+  printf("now at eip 0x%x\n",newRegs.eip);
+  #ifndef OLD_MMAP_TARGET
+  //restore the old code
+  memcpyToTarget(oldRegs.eip,oldText,4);
+  #endif
   //restore the old registers
-  if(ptrace(PTRACE_SETREGS,pid,NULL,&oldRegs)<0)
-  {
-    perror("ptrace setregs failed (when trying to resotre old registers)\n");
-    die(NULL);
-  }
+  setTargetRegs(&oldRegs);
+  printf("mmapped in new page successfully\n");
   return retval;
 }
 

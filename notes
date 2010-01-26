@@ -1,18 +1,11 @@
 -*- mode:org; -*-
 
 * notes from meeting
-see "DWARF Call Frame information" under "understandings"
-
-todo: figure out ERESI thing
-todo: write up prototype of using CFIs/FDEs
-todo: prepare to walk Sergey through unwinding of call frame on Wednesday at 3:00
-
-dwarf expressions provide any way to get at symbol table?
+keep an eye on relocation, compiler defines many times of
+relocations. See if format can support all of relocation types. Look
+at needs these address because we may have the same needs.
 * confusion I have
-** pointer to type only declared
-what to do about cases where there's a global variable of pointer type
-to a struct which has only a declaration. We don't actually know what
-type that pointer is, we can't really patch it
+** Why can't we just relocate functions when patching them?
 * issues I see
 ** exception handling
    issue mentioned in "A Runtime Code Modification Method for
@@ -73,6 +66,10 @@ type that pointer is, we can't really patch it
    has to know how much to free). Where the block structures are
    stored is going to be highly system-dependent however, making
    writing a portable patcher difficult. Is there a better solution?
+** pointer to type only declared
+what to do about cases where there's a global variable of pointer type
+to a struct which has only a declaration. We don't actually know what
+type that pointer is, we can't really patch it
 * things to keep in mind
 ** some way to check compatibility with target before applying the patch
 ** patching static variables
@@ -102,38 +99,46 @@ type that pointer is, we can't really patch it
    -fdata-sections which forces the generation of relocations rather
    than making assumptions about where things are. We may need to have
    these relocation entries anyway.
+** generating relocations
+*** yalnix
+    316k w/ relocs
+    241k w/o relocs
+    This is a 31% increase in size
 * references:
-**misc
-*** ELFsh/ERESI papers
-**** http://phrack.org/issues.html?issue=61&id=8&mode=txt
-     Paper on ALTPLT technique, ET_REL injection, and more
-**** http://www.phiral.net/phrack/phrack/63/p63-0x09_Embedded_Elf_Debugging.txt
-     Long, useful paper on various binary manipulation
-     techniques. Talks about rewriting ELF files to allow calls to
-     previously unused functions in dynamic libraries. Unfortunately,
-     I'm not sure  this will work at runtime (although I should check to
-     find out how the address of the GOT and PLT tables is being
-     determined. Check out .dynamic). Around DUMP 29 in the article it
-     appears that they might actually be doing this, read in more
-     depth. Also consider the section entitled 
-     "Runtime section injection algorithm in memory". It talks about
-     injecting things at runtime
-
-***** note: use the command flist instead of list to show working files
-*** http://artofhacking.com/files/phrack/phrack61/live/aoh_p61-0x08.htm
-*** http://www.ibm.com/developerworks/power/library/pa-spec12/
+** ELF basics
 *** http://developers.sun.com/solaris/articles/elf.html
 *** http://www.linuxjournal.com/node/1060/print
-*** libdwarf: http://reality.sgiweb.org/davea/dwarf.html
+*** Understanding ELF using readelf and objdump
+    http://www.linuxforums.org/articles/understanding-elf-using-readelf-and-objdump_125.html
+    decent introduction to ELF
+*** ELF format reference  http://www.skyfree.org/linux/references/ELF_Format.pdf
+*** http://www.ibm.com/developerworks/power/library/pa-spec12/
 *** powerpoint on ELF http://www.trunix.org/programlama/os/sp13.ppt
-*** x86 calling conventions http://unixwiz.net/techtips/win32-callconv-asm.html
+** ELF hacking
+*** ELFsh/ERESI papers
+*** http://phrack.org/issues.html?issue=61&id=8&mode=txt
+    Paper on ALTPLT technique, ET_REL injection, and more
+*** http://www.phiral.net/phrack/phrack/63/p63-0x09_Embedded_Elf_Debugging.txt
+    Long, useful paper on various binary manipulation
+    techniques. Talks about rewriting ELF files to allow calls to
+    previously unused functions in dynamic libraries. Unfortunately,
+    I'm not sure  this will work at runtime (although I should check to
+    find out how the address of the GOT and PLT tables is being
+    determined. Check out .dynamic). Around DUMP 29 in the article it
+    appears that they might actually be doing this, read in more
+    depth. Also consider the section entitled 
+    "Runtime section injection algorithm in memory". It talks about
+    injecting things at runtime
+
+**** note: use the command flist instead of list to show working files
+*** http://artofhacking.com/files/phrack/phrack61/live/aoh_p61-0x08.htm
 *** elfutils: http://www.blackhat.com/presentations/bh-asia-02/Clowes/elfutils-bh2.tar
     misc tools for patching into elf files. I think it patches stationary files rather
     than running ones, but the same techniques could be extrapolated. Therefore, it could
     be used for example purposes
-*** Understanding ELF using readelf and objdump" 
-    http://www.linuxforums.org/articles/understanding-elf-using-readelf-and-objdump_125.html
-    decent introduction to ELF          
+*** Phrack on runtime code injection
+    http://phrack.org/issues.html?issue=59&id=8#article
+** Academic Systems
 *** Practical Dynamic Software Updating for C
     http://www.cs.umd.edu/~neamtiu/pubs/pldi06neamtiu.pdf
     fairly in-depth look at hot patching, along with actual metrics
@@ -157,7 +162,7 @@ type that pointer is, we can't really patch it
     target process. They then contain the code for patching up the
     target themselves. This is fairly nice but does not provide easy
     composition of patches or reasoning about the impact of a patch. 
-*** "A Runtime Code Modification Method for Application Programs" 
+*** "A Runtime Code Modification Method for Application Programs"
     http://ols.fedoraproject.org/OLS/Reprints-2008/yamato-reprint.pdf
     proposes a system faster than pannus and livepatch. Like pannus
     relies on a kernel module. Talks about some limitations of
@@ -177,10 +182,9 @@ type that pointer is, we can't really patch it
     of working at the source code level, including difficulty patching
     inline functions.
 
-*** ELF format references
-    http://www.skyfree.org/linux/references/ELF_Format.pdf
-*** Phrack on runtime code injection
-    http://phrack.org/issues.html?issue=59&id=8#article
+
+** libdwarf: http://reality.sgiweb.org/davea/dwarf.html
+** x86 calling conventions http://unixwiz.net/techtips/win32-callconv-asm.html
 **call frame info/DWARF/Exception Handling
 *** dwarf standard http://dwarfstd.org/Dwarf3.pdf
 **** Call frame information in section 6.4 (p. 120 in the pdf, marked as p.108)
@@ -259,7 +263,13 @@ type that pointer is, we can't really patch it
     in libstd++ the implementation code can be found
 *** exception handling implementation issues http://chasewoerner.org/exh.pdf
     discusses some of the implementation details of exception handling. Probably not
-    terribly useful but could have a bit of interesting information or two
+    terribly useful but could have a bit of interesting information or
+    two
+*** static binary checking using DWARF and ELF information
+    http://descheck.googlecode.com/files/descheck.pdf 
+    Paper from 2007. Unclear if it was ever published anywhere. Associated
+    with the open source project descheck at
+    http://code.google.com/p/descheck/
 * existing software:
 ** livepatch
    doesn't look very sophisticated. Doesn't make sure target in a safe
@@ -316,7 +326,7 @@ type that pointer is, we can't really patch it
    I think, perhaps read old phrack articles on elfsh to figure our
    etrace usage
    
-   Reading
+*** Reading
    http://s.eresi-project.org/inc/articles/p63-0x09_Embedded_Elf_Debugging.txt
    indicates that actually getting it into running code is a bit of a
    PITA. It requires either modifying the binary or setting LD_PRELOAD
@@ -331,11 +341,18 @@ type that pointer is, we can't really patch it
    etrace in currently running code, it might just be easier to write
    things ourselves.
 
-   Playing around:
+*** Playing around:
    I could not get the ERESI etrel_memory test in the
    testsuite/debugging directory to work. I fear I don't understand
    the reladd command properly. The included .esh script seems to be
    somewhat specific to the memory layout of the system it was tested on
+*** notes
+    does not seem to support adding new symbols to in-memory
+    targets. We could potentially do this by rewriting the .dynamic
+    section and setting the elf headers to point to our new
+    .dynamic section. In fact, in patched processes may need to insert
+    a full symtab section, or at least maintain an on-disk image of
+    one somewhere so that we know exactly how the patch was applied previously
 ** libelf
    Tutorial at
    http://people.freebsd.org/~jkoshy/download/libelf/article.html

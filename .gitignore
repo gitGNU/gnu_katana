@@ -1,2 +1,8 @@
 time
 dump*
+*.o
+*.s
+*.i
+katana.tar.gz
+*.pyc
+test

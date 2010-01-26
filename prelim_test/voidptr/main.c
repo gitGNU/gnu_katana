@@ -45,4 +45,5 @@ int main(int argc,char** argv)
   bar=&mumble;
   foo1();
   foo2();
+  foo1();
 }

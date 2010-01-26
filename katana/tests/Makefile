@@ -1,16 +1,11 @@
 
-CXX=g++
-CC=gcc
-CFLAGS_RELOC=-Xlinker --emit-relocs
-#todo: remove 32-bit dependency
-CFLAGS=-Wall -g $(CFLAGS_RELOC) -std=c99 -D_POSIX_SOURCE -D_BSD_SOURCE -m32
-EXEC=test
+include Makefile_vars
 export CXX
 export CC
 export CFLAGS
 export EXEC
 
-SUBDIRS=test1_basic _test3_multiple_cu
+SUBDIRS=test1_basic test3_multiple_cu
 .PHONY: $(SUBDIRS)
 
 all : $(SUBDIRS)

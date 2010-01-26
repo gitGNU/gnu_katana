@@ -16,11 +16,12 @@
 
 #include <dwarf.h>
 
+Dictionary* cuIdentifiers=NULL;
+
 TypeInfo* getTypeInfoFromATType(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu);
 char* getTypeNameFromATType(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu,Dwarf_Die* dieOfType);
 
 void walkDieTree(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu,bool siblings);
-
 
 
 void dwarfErrorHandler(Dwarf_Error err,Dwarf_Ptr arg)
@@ -29,6 +30,86 @@ void dwarfErrorHandler(Dwarf_Error err,Dwarf_Ptr arg)
   fflush(stderr);
   abort();
 }
+
+int readAttributeAsInt(Dwarf_Attribute attr)
+{
+  Dwarf_Half form;
+  Dwarf_Error err;
+  int result=0;
+  Dwarf_Unsigned data;
+  dwarf_whatform(attr,&form,&err);
+  switch(form)
+  {
+  case DW_FORM_data1:
+  case DW_FORM_data2:
+  case DW_FORM_data4:
+    //todo: deal with sign issues
+    //might be unsigned
+    dwarf_formudata(attr,&data,&err);
+    result=(int)data;
+    break;
+  case DW_FORM_flag:
+    {
+      Dwarf_Bool b;
+      dwarf_formflag(attr,&b,&err);
+      result=b?1:0;
+    }
+    break;
+  default:
+    fprintf(stderr,"readAttributeAsInt cannot handle form type 0x%x yet\n",form);
+    death(NULL);
+  }
+  return result;
+}
+
+//returned string should be freed when you're finished with it
+char* readAttributeAsString(Dwarf_Attribute attr)
+{
+  Dwarf_Half form;
+  Dwarf_Error err;
+  char* result="";
+  char* data;
+  dwarf_whatform(attr,&form,&err);
+  switch(form)
+  {
+  case DW_FORM_string:
+    //todo: deal with sign issues
+    //might be unsigned
+    dwarf_formstring(attr,&data,&err);
+    result=strdup(data);
+    //todo: don't have dbg accessible here, mem leak
+    //dwarf_dealloc(dbg,DW_DLA_STRING,data,&err);
+    break;
+  default:
+    fprintf(stderr,"readAttributeAsString cannot handle form type 0x%x yet\n",form);
+    death(NULL);
+  }
+  return result;
+}
+
+//die must be the die for the cu
+void setIdentifierForCU(CompilationUnit* cu,Dwarf_Die die)
+{
+  if(dictExists(cuIdentifiers,cu->name))
+  {
+    //ok, we have multiple compilation units with the same name, need to use the compilation path as well
+      Dwarf_Attribute attr;
+      Dwarf_Error err;
+      dwarf_attr(die,DW_AT_comp_dir,&attr,&err);
+      char* dir=readAttributeAsString(attr);
+      cu->id=malloc(strlen(cu->name)+strlen(dir)+3);
+      sprintf(cu->id,"%s:%s",cu->name,dir);
+      free(dir);
+  }
+  else
+  {
+    cu->id=strdup(cu->name);
+  }
+  //don't actually care what value we insert, just making
+  //a record that there's something
+  dictInsert(cuIdentifiers,cu->id,cu->id);
+}
+
 
 //the returned pointer should be freed
 char* getNameForDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
@@ -213,6 +294,7 @@ void addBaseTypeFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
 {
   TypeInfo* type=zmalloc(sizeof(TypeInfo));
   type->type=TT_BASE;
+  type->cu=cu;//base types should be the same across all cu's in the given langauge, but we don't know that all cu's are the same language
   Dwarf_Error err=0;
 
   type->name=getNameForDie(dbg,die,cu);
@@ -235,6 +317,7 @@ void addStructureFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
   printf("reading structure ");
   TypeInfo* type=zmalloc(sizeof(TypeInfo));
   type->type=TT_STRUCT;
+  type->cu=cu;
   Dwarf_Error err=0;
 
   type->name=getNameForDie(dbg,die,cu);
@@ -307,6 +390,7 @@ void addPointerTypeFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
 {
   TypeInfo* type=zmalloc(sizeof(TypeInfo));
   type->type=TT_POINTER;
+  type->cu=cu;
   Dwarf_Error err=0;
   printf("getting name for pointer\n");
   type->name=getNameForDie(dbg,die,cu);
@@ -336,36 +420,14 @@ void addPointerTypeFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
   type->incomplete=false;
 }
 
-int readAttributeAsInt(Dwarf_Attribute attr)
-{
-  Dwarf_Half form;
-  Dwarf_Error err;
-  int result=0;
-  Dwarf_Unsigned data;
-  dwarf_whatform(attr,&form,&err);
-  switch(form)
-  {
-  case DW_FORM_data1:
-  case DW_FORM_data2:
-  case DW_FORM_data4:
-  case DW_FORM_flag:
-    //todo: deal with sign issues
-    //might be unsigned
-    dwarf_formudata(attr,&data,&err);
-    result=(int)data;
-    break;
-  default:
-    fprintf(stderr,"readAttributeAsInt cannot handle form type 0x%x yet\n",form);
-    death(NULL);
-  }
-  return result;
-}
+
 
 void addArrayTypeFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
 {
   printf("reading array type\n");
   TypeInfo* type=zmalloc(sizeof(TypeInfo));
   type->type=TT_ARRAY;
+  type->cu=cu;
   Dwarf_Error err=0;
   type->name=getNameForDie(dbg,die,cu);
   TypeInfo* pointedType=getTypeInfoFromATType(dbg,die,cu);
@@ -419,7 +481,7 @@ void addTypedefFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
   }
   else
   {
-    fprintf(stderr,"Unable to resolve typedef for %s\n",name);
+    fprintf(stderr,"WARNING: Unable to resolve typedef for %s\n",name);
   }
   free(name);
 }
@@ -470,6 +532,7 @@ void addVarFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
 void parseCompileUnit(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
 {
   cu->name=getNameForDie(dbg,die,cu);
+  setIdentifierForCU(cu,die);
   printf("compilation unit has name %s\n",cu->name);
 }
                      
@@ -534,7 +597,7 @@ void parseDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu,bool* parseChild
   mapSet(cu->tv->parsedDies,key,key,NULL,NULL);
 }
 
- void walkDieTree(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu,bool siblings)
+void walkDieTree(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu,bool siblings)
 {
   //code inspired by David Anderson's simplereader.c
   //distributed with libdwarf
@@ -606,6 +669,7 @@ DwarfInfo* readDWARFTypes(Elf* elf)
                                 //or does it keep its own state and only set it?
 
   Dictionary* globalVars=dictCreate(100);//todo: get rid of magic number 100 and base it on smth
+  cuIdentifiers=dictCreate(100);//todo: get rid of magic number 100 and base it on smth
   while(1)
   {
     CompilationUnit* cu=zmalloc(sizeof(CompilationUnit));
@@ -668,6 +732,7 @@ DwarfInfo* readDWARFTypes(Elf* elf)
   {
     dwarfErrorHandler(err,NULL);
   }
+  dictDelete(cuIdentifiers,NULL);
   return di;
 }
 
