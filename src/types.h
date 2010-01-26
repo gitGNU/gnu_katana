@@ -47,6 +47,8 @@ typedef struct
 {
   TypeAndVarInfo* tv;
   char* name;
+  char* id;//in case two compilation units have the same name
+  bool presentInOtherVersion;
 } CompilationUnit;
 
 void freeCompilationUnit(CompilationUnit* cu);
@@ -91,7 +93,7 @@ typedef struct
   //the following are relevant only to arrays
   int lowerBound;
   int upperBound;
-
+  CompilationUnit* cu; //which compilation unit the type is in. NULL if the type is visible to all compilation units
 } TypeInfo;
 
 void freeTypeInfo(TypeInfo* t);

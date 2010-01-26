@@ -40,6 +40,7 @@ if 0!=hotproc.wait():
   hotlogf.close()
   hotlogerrf.close()
   vlogf.write("Validator failed because katana exited with failure.\nSee "+klogfname+" and "+klogerrfname+" for more information\n")
+  proc.terminate() #kill it
   vlogf.close()
   sys.exit(1)
 hotlogf.close()

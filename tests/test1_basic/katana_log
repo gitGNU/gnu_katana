@@ -7,99 +7,96 @@ iterating compilation units
 processing die at offset 11 (11)
 compilation unit has name ../sysdeps/i386/elf/start.S
 iterating compilation units
-processing die at offset 107 (11)
+processing die at offset 109 (11)
 compilation unit has name init.c
-processing die at offset 133 (37)
+processing die at offset 135 (37)
 added base type of name unsigned char
-processing die at offset 140 (44)
+processing die at offset 142 (44)
 added base type of name short unsigned int
-processing die at offset 147 (51)
+processing die at offset 149 (51)
 added base type of name unsigned int
-processing die at offset 154 (58)
+processing die at offset 156 (58)
 added base type of name long unsigned int
-processing die at offset 161 (65)
+processing die at offset 163 (65)
 added base type of name signed char
-processing die at offset 168 (72)
+processing die at offset 170 (72)
 added base type of name short int
-processing die at offset 175 (79)
+processing die at offset 177 (79)
 added base type of name int
-processing die at offset 182 (86)
+processing die at offset 184 (86)
 added base type of name long long int
-processing die at offset 189 (93)
+processing die at offset 191 (93)
 added base type of name long long unsigned int
-processing die at offset 196 (100)
+processing die at offset 198 (100)
 added base type of name long int
-processing die at offset 203 (107)
-added base type of name vanon_203
+processing die at offset 205 (107)
+added base type of name vanon_205
 
-processing die at offset 206 (110)
+processing die at offset 208 (110)
 added base type of name char
-processing die at offset 213 (117)
+processing die at offset 215 (117)
 name is const int
-processing die at offset 231 (135)
+processing die at offset 233 (135)
 name is int
 added typedef for name const int
 added variable _IO_stdin_used
-processing die at offset 231 (135)
+processing die at offset 233 (135)
 iterating compilation units
-processing die at offset 248 (11)
-compilation unit has name /build/buildd/glibc-2.9/build-tree/i386-libc/csu/crti.S
-iterating compilation units
-processing die at offset 368 (11)
+processing die at offset 250 (11)
 compilation unit has name main.c
-processing die at offset 394 (37)
+processing die at offset 280 (41)
 name is unsigned int
-processing die at offset 405 (48)
+processing die at offset 291 (52)
 added base type of name unsigned int
 added typedef for name size_t
-processing die at offset 405 (48)
-processing die at offset 412 (55)
+processing die at offset 291 (52)
+processing die at offset 298 (59)
 added base type of name unsigned char
-processing die at offset 419 (62)
+processing die at offset 305 (66)
 added base type of name short unsigned int
-processing die at offset 426 (69)
+processing die at offset 312 (73)
 added base type of name long unsigned int
-processing die at offset 433 (76)
+processing die at offset 319 (80)
 added base type of name signed char
-processing die at offset 440 (83)
+processing die at offset 326 (87)
 added base type of name short int
-processing die at offset 447 (90)
+processing die at offset 333 (94)
 added base type of name int
-processing die at offset 454 (97)
+processing die at offset 340 (101)
 added base type of name long long int
-processing die at offset 461 (104)
+processing die at offset 347 (108)
 added base type of name long long unsigned int
-processing die at offset 468 (111)
+processing die at offset 354 (115)
 name is long long int
 added typedef for name __quad_t
-processing die at offset 479 (122)
+processing die at offset 365 (126)
 name is long int
-processing die at offset 490 (133)
+processing die at offset 376 (137)
 added base type of name long int
 added typedef for name __off_t
-processing die at offset 490 (133)
-processing die at offset 497 (140)
+processing die at offset 376 (137)
+processing die at offset 383 (144)
 name is __quad_t
 added typedef for name __off64_t
-processing die at offset 508 (151)
-added base type of name vanon_508
+processing die at offset 394 (155)
+added base type of name vanon_394
 
-processing die at offset 511 (154)
+processing die at offset 397 (158)
 getting name for pointer
 no type entry
 got name for pointer
 no type entry
 name is void
 added pointer type of name void*
-processing die at offset 513 (156)
+processing die at offset 399 (160)
 getting name for pointer
 got name for pointer
 name is char
-processing die at offset 519 (162)
+processing die at offset 405 (166)
 added base type of name char
 added pointer type of name char*
-processing die at offset 519 (162)
-processing die at offset 526 (169)
+processing die at offset 405 (166)
+processing die at offset 412 (173)
 reading structure of name _IO_FILE
 found field _flags
 name is int
@@ -127,17 +124,17 @@ found field _IO_save_end
 name is char*
 found field _markers
 name is _IO_marker*
-processing die at offset 1036 (679)
+processing die at offset 922 (683)
 getting name for pointer
 got name for pointer
 name is _IO_marker
-processing die at offset 981 (624)
+processing die at offset 867 (628)
 reading structure of name _IO_marker
 found field _next
 name is _IO_marker*
 found field _sbuf
 name is _IO_FILE*
-processing die at offset 1042 (685)
+processing die at offset 928 (689)
 getting name for pointer
 got name for pointer
 name is _IO_FILE
@@ -159,18 +156,18 @@ name is short unsigned int
 found field _vtable_offset
 name is signed char
 found field _shortbuf
-name is char[]_1048
-processing die at offset 1048 (691)
+name is char[]_934
+processing die at offset 934 (695)
 reading array type
 name is char
-added array type of name char[]_1048
+added array type of name char[]_934
 found field _lock
 name is _IO_lock_t*
-processing die at offset 1064 (707)
+processing die at offset 950 (711)
 getting name for pointer
 got name for pointer
 name is _IO_lock_t
-processing die at offset 974 (617)
+processing die at offset 860 (621)
 no type entry
 name is void
 added typedef for name _IO_lock_t
@@ -194,20 +191,20 @@ name is size_t
 found field _mode
 name is int
 found field _unused2
-name is char[]_1070
-processing die at offset 1070 (713)
+name is char[]_956
+processing die at offset 956 (717)
 reading array type
 name is char
-added array type of name char[]_1070
+added array type of name char[]_956
 added structure type _IO_FILE
-processing die at offset 974 (617)
-processing die at offset 981 (624)
-processing die at offset 1036 (679)
-processing die at offset 1042 (685)
-processing die at offset 1048 (691)
-processing die at offset 1064 (707)
-processing die at offset 1070 (713)
-processing die at offset 1086 (729)
+processing die at offset 860 (621)
+processing die at offset 867 (628)
+processing die at offset 922 (683)
+processing die at offset 928 (689)
+processing die at offset 934 (695)
+processing die at offset 950 (711)
+processing die at offset 956 (717)
+processing die at offset 972 (733)
 reading structure of name _Foo
 found field field1
 name is int
@@ -218,27 +215,24 @@ name is int
 found field field3
 name is int
 added structure type _Foo
-processing die at offset 1155 (798)
+processing die at offset 1041 (802)
 name is _Foo
 added typedef for name Foo
-processing die at offset 1166 (809)
-processing die at offset 1186 (829)
-processing die at offset 1215 (858)
-processing die at offset 1226 (869)
-processing die at offset 1238 (881)
+processing die at offset 1052 (813)
+processing die at offset 1072 (833)
+processing die at offset 1101 (862)
+processing die at offset 1115 (876)
+processing die at offset 1130 (891)
 getting name for pointer
 got name for pointer
 name is char*
 added pointer type of name char**
-processing die at offset 1244 (887)
+processing die at offset 1136 (897)
 name is _IO_FILE*
 added variable stdout
-processing die at offset 1257 (900)
+processing die at offset 1149 (910)
 name is Foo
 added variable bar
-iterating compilation units
-processing die at offset 1287 (11)
-compilation unit has name /tmp/ccuRHrit.s
 iterating compilation units
 found symbol hash table
 reading dwarf types from old binary
@@ -247,99 +241,96 @@ iterating compilation units
 processing die at offset 11 (11)
 compilation unit has name ../sysdeps/i386/elf/start.S
 iterating compilation units
-processing die at offset 107 (11)
+processing die at offset 109 (11)
 compilation unit has name init.c
-processing die at offset 133 (37)
+processing die at offset 135 (37)
 added base type of name unsigned char
-processing die at offset 140 (44)
+processing die at offset 142 (44)
 added base type of name short unsigned int
-processing die at offset 147 (51)
+processing die at offset 149 (51)
 added base type of name unsigned int
-processing die at offset 154 (58)
+processing die at offset 156 (58)
 added base type of name long unsigned int
-processing die at offset 161 (65)
+processing die at offset 163 (65)
 added base type of name signed char
-processing die at offset 168 (72)
+processing die at offset 170 (72)
 added base type of name short int
-processing die at offset 175 (79)
+processing die at offset 177 (79)
 added base type of name int
-processing die at offset 182 (86)
+processing die at offset 184 (86)
 added base type of name long long int
-processing die at offset 189 (93)
+processing die at offset 191 (93)
 added base type of name long long unsigned int
-processing die at offset 196 (100)
+processing die at offset 198 (100)
 added base type of name long int
-processing die at offset 203 (107)
-added base type of name vanon_203
+processing die at offset 205 (107)
+added base type of name vanon_205
 
-processing die at offset 206 (110)
+processing die at offset 208 (110)
 added base type of name char
-processing die at offset 213 (117)
+processing die at offset 215 (117)
 name is const int
-processing die at offset 231 (135)
+processing die at offset 233 (135)
 name is int
 added typedef for name const int
 added variable _IO_stdin_used
-processing die at offset 231 (135)
+processing die at offset 233 (135)
 iterating compilation units
-processing die at offset 248 (11)
-compilation unit has name /build/buildd/glibc-2.9/build-tree/i386-libc/csu/crti.S
-iterating compilation units
-processing die at offset 368 (11)
+processing die at offset 250 (11)
 compilation unit has name main.c
-processing die at offset 394 (37)
+processing die at offset 280 (41)
 name is unsigned int
-processing die at offset 405 (48)
+processing die at offset 291 (52)
 added base type of name unsigned int
 added typedef for name size_t
-processing die at offset 405 (48)
-processing die at offset 412 (55)
+processing die at offset 291 (52)
+processing die at offset 298 (59)
 added base type of name unsigned char
-processing die at offset 419 (62)
+processing die at offset 305 (66)
 added base type of name short unsigned int
-processing die at offset 426 (69)
+processing die at offset 312 (73)
 added base type of name long unsigned int
-processing die at offset 433 (76)
+processing die at offset 319 (80)
 added base type of name signed char
-processing die at offset 440 (83)
+processing die at offset 326 (87)
 added base type of name short int
-processing die at offset 447 (90)
+processing die at offset 333 (94)
 added base type of name int
-processing die at offset 454 (97)
+processing die at offset 340 (101)
 added base type of name long long int
-processing die at offset 461 (104)
+processing die at offset 347 (108)
 added base type of name long long unsigned int
-processing die at offset 468 (111)
+processing die at offset 354 (115)
 name is long long int
 added typedef for name __quad_t
-processing die at offset 479 (122)
+processing die at offset 365 (126)
 name is long int
-processing die at offset 490 (133)
+processing die at offset 376 (137)
 added base type of name long int
 added typedef for name __off_t
-processing die at offset 490 (133)
-processing die at offset 497 (140)
+processing die at offset 376 (137)
+processing die at offset 383 (144)
 name is __quad_t
 added typedef for name __off64_t
-processing die at offset 508 (151)
-added base type of name vanon_508
+processing die at offset 394 (155)
+added base type of name vanon_394
 
-processing die at offset 511 (154)
+processing die at offset 397 (158)
 getting name for pointer
 no type entry
 got name for pointer
 no type entry
 name is void
 added pointer type of name void*
-processing die at offset 513 (156)
+processing die at offset 399 (160)
 getting name for pointer
 got name for pointer
 name is char
-processing die at offset 519 (162)
+processing die at offset 405 (166)
 added base type of name char
 added pointer type of name char*
-processing die at offset 519 (162)
-processing die at offset 526 (169)
+processing die at offset 405 (166)
+processing die at offset 412 (173)
 reading structure of name _IO_FILE
 found field _flags
 name is int
@@ -367,17 +358,17 @@ found field _IO_save_end
 name is char*
 found field _markers
 name is _IO_marker*
-processing die at offset 1036 (679)
+processing die at offset 922 (683)
 getting name for pointer
 got name for pointer
 name is _IO_marker
-processing die at offset 981 (624)
+processing die at offset 867 (628)
 reading structure of name _IO_marker
 found field _next
 name is _IO_marker*
 found field _sbuf
 name is _IO_FILE*
-processing die at offset 1042 (685)
+processing die at offset 928 (689)
 getting name for pointer
 got name for pointer
 name is _IO_FILE
@@ -399,18 +390,18 @@ name is short unsigned int
 found field _vtable_offset
 name is signed char
 found field _shortbuf
-name is char[]_1048
-processing die at offset 1048 (691)
+name is char[]_934
+processing die at offset 934 (695)
 reading array type
 name is char
-added array type of name char[]_1048
+added array type of name char[]_934
 found field _lock
 name is _IO_lock_t*
-processing die at offset 1064 (707)
+processing die at offset 950 (711)
 getting name for pointer
 got name for pointer
 name is _IO_lock_t
-processing die at offset 974 (617)
+processing die at offset 860 (621)
 no type entry
 name is void
 added typedef for name _IO_lock_t
@@ -434,20 +425,20 @@ name is size_t
 found field _mode
 name is int
 found field _unused2
-name is char[]_1070
-processing die at offset 1070 (713)
+name is char[]_956
+processing die at offset 956 (717)
 reading array type
 name is char
-added array type of name char[]_1070
+added array type of name char[]_956
 added structure type _IO_FILE
-processing die at offset 974 (617)
-processing die at offset 981 (624)
-processing die at offset 1036 (679)
-processing die at offset 1042 (685)
-processing die at offset 1048 (691)
-processing die at offset 1064 (707)
-processing die at offset 1070 (713)
-processing die at offset 1086 (729)
+processing die at offset 860 (621)
+processing die at offset 867 (628)
+processing die at offset 922 (683)
+processing die at offset 928 (689)
+processing die at offset 934 (695)
+processing die at offset 950 (711)
+processing die at offset 956 (717)
+processing die at offset 972 (733)
 reading structure of name _Foo
 found field field1
 name is int
@@ -456,27 +447,24 @@ name is int
 found field field3
 name is int
 added structure type _Foo
-processing die at offset 1141 (784)
+processing die at offset 1027 (788)
 name is _Foo
 added typedef for name Foo
-processing die at offset 1152 (795)
-processing die at offset 1172 (815)
-processing die at offset 1201 (844)
-processing die at offset 1212 (855)
-processing die at offset 1224 (867)
+processing die at offset 1038 (799)
+processing die at offset 1058 (819)
+processing die at offset 1087 (848)
+processing die at offset 1101 (862)
+processing die at offset 1116 (877)
 getting name for pointer
 got name for pointer
 name is char*
 added pointer type of name char**
-processing die at offset 1230 (873)
+processing die at offset 1122 (883)
 name is _IO_FILE*
 added variable stdout
-processing die at offset 1243 (886)
+processing die at offset 1135 (896)
 name is Foo
 added variable bar
-iterating compilation units
-processing die at offset 1273 (11)
-compilation unit has name /tmp/ccuRHrit.s
 iterating compilation units
 started ptrace
 Examining compilation unit ../sysdeps/i386/elf/start.S
@@ -490,20 +478,27 @@ generated type transformation for type _Foo
 fixing variable bar
 new version of type is larger than old version of type
 requesting mmap of page of size 4096
+inserting code at eip 0x4001d422
+inserted syscall call
+5a
+inserted syscall params on stack
+retval is 0x40021000
+now at eip 0x4001d425
+mmapped in new page successfully
 copying data from offset 0 to offset 0
 copying data from offset 4 to offset 8
 copying data from offset 8 to offset 12
-relocation for bar at 804849b with type 1
-old addr is ox804a024
+relocation for bar at 80484fc with type 1
+old addr is ox804a028
 transformed offset 4 to offset 8 for variable bar
-relocation for bar at 80484a1 with type 1
-old addr is ox804a020
+relocation for bar at 8048502 with type 1
+old addr is ox804a024
 transformed offset 0 to offset 0 for variable bar
-relocation for bar at 80484ba with type 1
-old addr is ox804a024
+relocation for bar at 804851c with type 1
+old addr is ox804a028
 transformed offset 4 to offset 8 for variable bar
-relocation for bar at 80484bf with type 1
-old addr is ox804a020
+relocation for bar at 8048521 with type 1
+old addr is ox804a024
 transformed offset 0 to offset 0 for variable bar
 completed all transformations for compilation unit ../sysdeps/i386/elf/start.S
 Examining compilation unit init.c
@@ -517,49 +512,29 @@ generated type transformation for type _Foo
 fixing variable bar
 new version of type is larger than old version of type
 requesting mmap of page of size 4096
+inserting code at eip 0x4001d422
+inserted syscall call
+5a
+inserted syscall params on stack
+retval is 0x40022000
+now at eip 0x4001d425
+mmapped in new page successfully
 copying data from offset 0 to offset 0
 copying data from offset 4 to offset 8
 copying data from offset 8 to offset 12
-relocation for bar at 804849b with type 1
-old addr is ox804a024
+relocation for bar at 80484fc with type 1
+old addr is ox804a028
 transformed offset 4 to offset 8 for variable bar
-relocation for bar at 80484a1 with type 1
-old addr is ox804a020
+relocation for bar at 8048502 with type 1
+old addr is ox804a024
 transformed offset 0 to offset 0 for variable bar
-relocation for bar at 80484ba with type 1
-old addr is ox804a024
+relocation for bar at 804851c with type 1
+old addr is ox804a028
 transformed offset 4 to offset 8 for variable bar
-relocation for bar at 80484bf with type 1
-old addr is ox804a020
+relocation for bar at 8048521 with type 1
+old addr is ox804a024
 transformed offset 0 to offset 0 for variable bar
 completed all transformations for compilation unit init.c
-Examining compilation unit /build/buildd/glibc-2.9/build-tree/i386-libc/csu/crti.S
-Found variable _IO_stdin_used 
-Found variable stdout 
-Found variable bar 
-offset for field returning 0 for field field1
-offset for field returning 8 for field field2
-offset for field returning 12 for field field3
-generated type transformation for type _Foo
-fixing variable bar
-new version of type is larger than old version of type
-requesting mmap of page of size 4096
-copying data from offset 0 to offset 0
-copying data from offset 4 to offset 8
-copying data from offset 8 to offset 12
-relocation for bar at 804849b with type 1
-old addr is ox804a024
-transformed offset 4 to offset 8 for variable bar
-relocation for bar at 80484a1 with type 1
-old addr is ox804a020
-transformed offset 0 to offset 0 for variable bar
-relocation for bar at 80484ba with type 1
-old addr is ox804a024
-transformed offset 4 to offset 8 for variable bar
-relocation for bar at 80484bf with type 1
-old addr is ox804a020
-transformed offset 0 to offset 0 for variable bar
-completed all transformations for compilation unit /build/buildd/glibc-2.9/build-tree/i386-libc/csu/crti.S
 Examining compilation unit main.c
 Found variable _IO_stdin_used 
 Found variable stdout 
@@ -571,73 +546,26 @@ generated type transformation for type _Foo
 fixing variable bar
 new version of type is larger than old version of type
 requesting mmap of page of size 4096
+inserting code at eip 0x4001d422
+inserted syscall call
+5a
+inserted syscall params on stack
+retval is 0x40023000
+now at eip 0x4001d425
+mmapped in new page successfully
 copying data from offset 0 to offset 0
 copying data from offset 4 to offset 8
 copying data from offset 8 to offset 12
-relocation for bar at 804849b with type 1
-old addr is ox804a024
+relocation for bar at 80484fc with type 1
+old addr is ox804a028
 transformed offset 4 to offset 8 for variable bar
-relocation for bar at 80484a1 with type 1
-old addr is ox804a020
+relocation for bar at 8048502 with type 1
+old addr is ox804a024
 transformed offset 0 to offset 0 for variable bar
-relocation for bar at 80484ba with type 1
-old addr is ox804a024
+relocation for bar at 804851c with type 1
+old addr is ox804a028
 transformed offset 4 to offset 8 for variable bar
-relocation for bar at 80484bf with type 1
-old addr is ox804a020
+relocation for bar at 8048521 with type 1
+old addr is ox804a024
 transformed offset 0 to offset 0 for variable bar
 completed all transformations for compilation unit main.c
-Examining compilation unit /tmp/ccuRHrit.s
-Found variable _IO_stdin_used 
-Found variable stdout 
-Found variable bar 
-offset for field returning 0 for field field1
-offset for field returning 8 for field field2
-offset for field returning 12 for field field3
-generated type transformation for type _Foo
-fixing variable bar
-new version of type is larger than old version of type
-requesting mmap of page of size 4096
-copying data from offset 0 to offset 0
-copying data from offset 4 to offset 8
-copying data from offset 8 to offset 12
-relocation for bar at 804849b with type 1
-old addr is ox804a024
-transformed offset 4 to offset 8 for variable bar
-relocation for bar at 80484a1 with type 1
-old addr is ox804a020
-transformed offset 0 to offset 0 for variable bar
-relocation for bar at 80484ba with type 1
-old addr is ox804a024
-transformed offset 4 to offset 8 for variable bar
-relocation for bar at 80484bf with type 1
-old addr is ox804a020
-transformed offset 0 to offset 0 for variable bar
-completed all transformations for compilation unit /tmp/ccuRHrit.s
-Examining compilation unit (null)
-Found variable _IO_stdin_used 
-Found variable stdout 
-Found variable bar 
-offset for field returning 0 for field field1
-offset for field returning 8 for field field2
-offset for field returning 12 for field field3
-generated type transformation for type _Foo
-fixing variable bar
-new version of type is larger than old version of type
-requesting mmap of page of size 4096
-copying data from offset 0 to offset 0
-copying data from offset 4 to offset 8
-copying data from offset 8 to offset 12
-relocation for bar at 804849b with type 1
-old addr is ox804a024
-transformed offset 4 to offset 8 for variable bar
-relocation for bar at 80484a1 with type 1
-old addr is ox804a020
-transformed offset 0 to offset 0 for variable bar
-relocation for bar at 80484ba with type 1
-old addr is ox804a024
-transformed offset 4 to offset 8 for variable bar
-relocation for bar at 80484bf with type 1
-old addr is ox804a020
-transformed offset 0 to offset 0 for variable bar
-completed all transformations for compilation unit (null)

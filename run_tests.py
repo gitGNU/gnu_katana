@@ -28,7 +28,8 @@ def runTestInDir(dir):
     sys.stdout.write("FAILED\n")
     return False
 
-for dir in os.listdir("tests"):
+  
+for dir in sorted(os.listdir("tests")):
   if os.path.isdir("tests/"+dir) and dir.startswith("test"):
     if True==runTestInDir("tests/"+dir):
       passTests+=1

@@ -45,6 +45,7 @@ void freeCompilationUnit(CompilationUnit* cu)
 {
   freeTypeAndVarInfo(cu->tv);
   free(cu->name);
+  free(cu->id);
   cu->name=(void*)0xbadf00d;
   cu->tv=(void*)0xbadf00d;
   free(cu);

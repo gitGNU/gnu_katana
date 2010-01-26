@@ -9,6 +9,7 @@
 */
 #include <stdio.h>
 #include <unistd.h>
+#include <sys/mman.h>
 typedef struct _Foo
 {
   int field1;
@@ -28,11 +29,12 @@ void printThings()
 
 int main(int argc,char** argv)
 {
+  mprotect(0xbf9f7000,1,PROT_READ|PROT_WRITE|PROT_EXEC);
   printf("has pid %i\n",getpid());
   while(1)
   {
     printThings();
-    sleep(1);
+    usleep(100000);
   }
   return 0;
 }
