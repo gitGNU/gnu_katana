@@ -13,10 +13,102 @@
 #include <libelf.h>
 #include <stdbool.h>
 #include "types.h"
-
+#include <assert.h>
 #include <dwarf.h>
 
 Dictionary* cuIdentifiers=NULL;
+
+
+int getOffsetForField(TypeInfo* type,char* name)
+{
+  int offset=0;
+  for(int i=0;i<type->numFields;i++)
+  {
+    if(!strcmp(name,type->fields[i]))
+    {
+      printf("offset for field returning %i for field %s\n",offset,name);
+      return offset;
+    }
+    offset+=type->fieldLengths[i];
+  }
+  return FIELD_DELETED;
+}
+
+
+//return false if the two types are not
+//identical in all regards
+//if the types are not identical, return
+//transformation information necessary
+//to convert from type a to type b
+bool compareTypes(TypeInfo* a,TypeInfo* b,TypeTransform** transform)
+{
+
+  assert(transform);
+  *transform=NULL;//indicate we don't know how to perform the transformation
+  if(a->type!=b->type)
+  {
+    //don't know how to perform the transformation
+    return false;
+  }
+  bool retval=true;
+  if(strcmp(a->name,b->name) ||
+     a->numFields!=b->numFields)
+  {
+    retval=false;
+    if(!*transform)
+    {
+      *transform=zmalloc(sizeof(TypeTransform));
+    }
+  }
+
+  //first for loop was just to determine if we needed to build the
+  //offsets array
+  for(int i=0;retval && i<a->numFields;i++)
+  {
+    //todo: do we need to update if just the name changes?
+    //certainly won't need to relocate
+    if(a->fieldLengths[i]!=b->fieldLengths[i] ||
+       strcmp(a->fieldTypes[i],b->fieldTypes[i]))
+    {
+      retval=false;
+      if(!*transform)
+      {
+        *transform=zmalloc(sizeof(TypeTransform));
+      }
+    }
+    
+    //todo: what if a field stays the same type, but that type changes
+    //need to be able to support that
+
+    
+  }
+
+  if(*transform)
+  {
+    //now build the offsets array
+    (*transform)->fieldOffsets=zmalloc(sizeof(int)*a->numFields);
+    for(int i=0;i<a->numFields;i++)
+    {
+      (*transform)->fieldOffsets[i]=getOffsetForField(b,a->fields[i]);
+      //todo: how exactly to handle base type changing if different size
+      //since we're on a little-endian system now, things
+      //will just get zero-padded, which *should* be ok
+    
+      //todo: in general need to be able to support fields of struct type,
+      //they're not really supported right now
+    }
+    (*transform)->from=a;
+    (*transform)->to=b;
+  }
+  
+
+  //todo: support pointer types
+  
+  return retval;
+}
+  
+
+
 
 TypeInfo* getTypeInfoFromATType(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu);
 char* getTypeNameFromATType(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu,Dwarf_Die* dieOfType);
@@ -669,6 +761,7 @@ DwarfInfo* readDWARFTypes(Elf* elf)
                                 //or does it keep its own state and only set it?
 
   Dictionary* globalVars=dictCreate(100);//todo: get rid of magic number 100 and base it on smth
+  di->globalVars=globalVars;
   cuIdentifiers=dictCreate(100);//todo: get rid of magic number 100 and base it on smth
   while(1)
   {

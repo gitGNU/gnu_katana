@@ -13,5 +13,12 @@
 //caller should free info when no longer needs it
 DwarfInfo* readDWARFTypes(Elf* elf);
 
+//return false if the two types are not
+//identical in all regards
+//if the types are not identical, return
+//transformation information necessary
+//to convert from type a to type b
+//todo: add in this transformation info
+bool compareTypes(TypeInfo* a,TypeInfo* b,TypeTransform** transform);
 
 #endif

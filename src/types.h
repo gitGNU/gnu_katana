@@ -57,6 +57,12 @@ typedef struct
 {
   List* compilationUnits;
   List* lastCompilationUnit;
+  Dictionary* globalVars;  /*maps var names to VarInfo structs. Note
+                             that this dictionary is the same for all
+                             CUs, as in C all global variables must be
+                             unique across the program. TODO: add in a
+                             CU-local variables section if we ever
+                             support any languages that require it */
 } DwarfInfo;
 
 void freeDwarfInfo(DwarfInfo* di);
@@ -135,8 +141,6 @@ void freeVarInfoVoid(void* v);
 typedef struct
 {
   Dictionary* typeTransformers;//map type name to transformation info
-  List* varsToTransform;
-  List* varsToTransformEnd;
   //the following two variables are so that
   //we can mmap in page-sized chunks of space
   //at a time and use them for multiple variables

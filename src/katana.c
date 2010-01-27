@@ -30,11 +30,11 @@
 #include "dwarftypes.h"
 #include "util.h"
 #include "types.h"
-#include "target.h"
+#include "patcher/target.h"
 #include "elfparse.h"
-#include "hotpatch.h"
+#include "patcher/hotpatch.h"
 #include <signal.h>
-
+#include "patchwrite/patchwrite.h"
 int pid;//pid of running process
 
 #ifdef DEBUG
@@ -80,6 +80,12 @@ void diffAndFixTypes(DwarfInfo* diPatchee,DwarfInfo* diPatched)
       {
         fprintf(stderr,"Missing cu is named %s\n",cu1->name);
       }
+      else
+      {
+        fprintf(stderr,"The compilation unit in the patchee version does not have a name\n");
+      }
+      //todo: we also need to handle a compilation unit being present
+      //in the patched version and not the patchee
       break;
     }
     cu1->presentInOtherVersion=true;
@@ -131,39 +137,20 @@ void diffAndFixTypes(DwarfInfo* diPatchee,DwarfInfo* diPatched)
       }
       if(needsTransform)
       {
-        List* li=zmalloc(sizeof(List));
-        li->value=var;
-        if(trans->varsToTransform)
-        {
-          trans->varsToTransformEnd->next=li;
-        }
-        else
-        {
-          trans->varsToTransform=li;
-        }
-        trans->varsToTransformEnd=li;
+        fixupVariable(*var,trans,pid);
       }
-    }
-    //now actually transform the variables
-    List* li=trans->varsToTransform;
-    for(;li;li=li->next)
-    {
-      VarInfo* var=(VarInfo*)li->value;
-      printf("fixing variable %s\n",var->name);
-      fixupVariable(*var,trans,pid);
     }
     printf("completed all transformations for compilation unit %s\n",cu1->name);
     freeTransformationInfo(trans);
     free(vars1);
-    
   }
 }
 
 int main(int argc,char** argv)
 {
-  if(argc<4)
+  if(argc<3)
   {
-    die("Usage: katana OLD_BINARY NEW_BINARY PID");
+    die("Usage: katana OLD_BINARY NEW_BINARY [PID]");
   }
   struct sigaction act;
   memset(&act,0,sizeof(struct sigaction));
@@ -171,7 +158,14 @@ int main(int argc,char** argv)
   //sigaction(SIGSEGV,&act,NULL);
   char* oldBinary=argv[1];
   char* newBinary=argv[2];
-  pid=atoi(argv[3]);
+  if(argc>3)
+  {
+    pid=atoi(argv[3]);
+  }
+  else
+  {
+    pid=0;//can't patch init so means we aren't working on a process, generate a po file
+  }
   if(elf_version(EV_CURRENT)==EV_NONE)
   {
     die("Failed to init ELF library\n");
@@ -185,17 +179,19 @@ int main(int argc,char** argv)
   printf("reading dwarf types from old binary\n#############################################\n");
   DwarfInfo* diPatchee=readDWARFTypes(e);
 
-  startPtrace();
-  diffAndFixTypes(diPatchee,diPatched);
-  
-
-
-  //printSymTab();
-  
-
-  //testManualRelocateBar();
-  //testManualRelocateAndTransformBar();
-  endPtrace();
+  if(pid)
+  {
+    startPtrace();
+    diffAndFixTypes(diPatchee,diPatched);
+    //printSymTab();
+    //testManualRelocateBar();
+    //testManualRelocateAndTransformBar();
+    endPtrace();
+  }
+  else
+  {
+    writePatch(diPatchee,diPatched,"test.po");
+  }
 
   //flush modifications to disk
   //except not now, now trying to modify it in memory
