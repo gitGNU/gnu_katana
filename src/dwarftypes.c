@@ -759,9 +759,6 @@ DwarfInfo* readDWARFTypes(Elf* elf)
   Dwarf_Unsigned nextCUHeader=0;//todo: does this need to be initialized outside
                                 //the loop, doees dwarf_next_cu_header read it,
                                 //or does it keep its own state and only set it?
-
-  Dictionary* globalVars=dictCreate(100);//todo: get rid of magic number 100 and base it on smth
-  di->globalVars=globalVars;
   cuIdentifiers=dictCreate(100);//todo: get rid of magic number 100 and base it on smth
   while(1)
   {
@@ -781,6 +778,7 @@ DwarfInfo* readDWARFTypes(Elf* elf)
     TypeAndVarInfo* tv=zmalloc(sizeof(TypeAndVarInfo));
     cu->tv=tv;
     tv->types=dictCreate(100);//todo: get rid of magic number 100 and base it on smth
+    Dictionary* globalVars=dictCreate(100);//todo: get rid of magic number 100 and base it on smth
     tv->globalVars=globalVars;
     tv->parsedDies=integerMapCreate(100);//todo: get rid of magic number 100 and base it on smth
     //create the void type

@@ -30,12 +30,7 @@ typedef struct
   //only dealing with global variable for now
   Dictionary* types; //maps type names to TypeInfo structs
   //List* globalTypesList;//exists to give a unique listing of types, as the dictionary contains typedefs, etc //todo: support this
-  Dictionary* globalVars;  /*maps var names to VarInfo structs. Note
-                             that this dictionary is the same for all
-                             CUs, as in C all global variables must be
-                             unique across the program. TODO: add in a
-                             CU-local variables section if we ever
-                             support any languages that require it */
+  Dictionary* globalVars;  /*maps var names to VarInfo structs.  */
   Map* parsedDies; //contains global offsets of dwarf dies we've parsed so far
                           //this is necessary because we don't necessarily parse them
                           //in order because a die can refer to a die that comes later
@@ -57,12 +52,6 @@ typedef struct
 {
   List* compilationUnits;
   List* lastCompilationUnit;
-  Dictionary* globalVars;  /*maps var names to VarInfo structs. Note
-                             that this dictionary is the same for all
-                             CUs, as in C all global variables must be
-                             unique across the program. TODO: add in a
-                             CU-local variables section if we ever
-                             support any languages that require it */
 } DwarfInfo;
 
 void freeDwarfInfo(DwarfInfo* di);
