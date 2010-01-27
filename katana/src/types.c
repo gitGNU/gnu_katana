@@ -65,6 +65,7 @@ void freeDwarfInfo(DwarfInfo* di)
   di->compilationUnits=(void*)0xbadf00d;
   di->lastCompilationUnit=(void*)0xbadf00d;
   free(di);
+  dictDelete(globalVars,NULL,NULL);
 }
 
 void freeTypeInfo(TypeInfo* t)
@@ -108,13 +109,5 @@ void freeTypeTransform(TypeTransform* t)
 void freeTransformationInfo(TransformationInfo* ti)
 {
   dictDelete(ti->typeTransformers,freeTypeTransformVoid);
-  List* li=ti->varsToTransform;
-  while(li)
-  {
-    List* liNext=li->next;
-    //todo: refcount vars? Don't want to actually free them here
-    free(li);
-    li=liNext;
-  }
   free(ti);
 }

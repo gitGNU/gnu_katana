@@ -184,7 +184,7 @@ long mmapTarget(int size,int prot)
   long code4Bytes;
   assert(sizeof(code4Bytes)==4);
   memcpy(&code4Bytes,code,4);
-  printf("inserting code at eip 0x%x\n",newRegs.eip);
+  //printf("inserting code at eip 0x%x\n",newRegs.eip);
   #ifdef OLD_MMAP_TARGET
   modifyTarget(newRegs.esp,code4Bytes);
   printf("inserted syscall call\n");
@@ -230,7 +230,7 @@ long mmapTarget(int size,int prot)
     fprintf(stderr,"mmap in target failed\n");
     die(NULL);
   }
-  printf("now at eip 0x%x\n",newRegs.eip);
+  //printf("now at eip 0x%x\n",newRegs.eip);
   #ifndef OLD_MMAP_TARGET
   //restore the old code
   memcpyToTarget(oldRegs.eip,oldText,4);

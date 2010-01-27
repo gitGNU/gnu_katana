@@ -6,13 +6,14 @@ relocations. See if format can support all of relocation types. Look
 at needs these address because we may have the same needs.
 * confusion I have
 ** Why can't we just relocate functions when patching them?
+   probably can most of the time according to Sergey
 * issues I see
 ** exception handling
    issue mentioned in "A Runtime Code Modification Method for
    Application Programs" (reference 14 in Katana). Can't patch code that
    generates exceptions unless patch .eh_frame
 ** patching debug data?
-   any point?
+   do we need to do it?
 ** existing state
    can it be used to fix existing problems in state or only patch vulnerabilities? 
 ** global initializers
@@ -69,7 +70,13 @@ at needs these address because we may have the same needs.
 ** pointer to type only declared
 what to do about cases where there's a global variable of pointer type
 to a struct which has only a declaration. We don't actually know what
-type that pointer is, we can't really patch it
+type that pointer is, we can't really patch it   
+** adding new sections to in-memory ELF objects
+   can be done. ERESI seems to do it, but their code is a bit hard to
+   track down precisely where it does what. Note that the only thing
+   in an ELF file which is required to live in a fixed place is the
+   ELF header, so could theoretically move around the PHT and SHT if
+   we needed to make them larger
 * things to keep in mind
 ** some way to check compatibility with target before applying the patch
 ** patching static variables
@@ -355,7 +362,7 @@ type that pointer is, we can't really patch it
     one somewhere so that we know exactly how the patch was applied previously
 ** libelf
    Tutorial at
-   http://people.freebsd.org/~jkoshy/download/libelf/article.html
+   http://elftoolchain.sourceforge.net/for-review/libelf-by-example-20100112.pdf
    Sun also has a brief tutorial at http://developers.sun.com/solaris/articles/elf.html
    
    LGPL
@@ -678,3 +685,50 @@ to be the case.
      examined so far, so it gives an entry into the symbol table. To actually find the
      value of that symbol the expression in the above section 
      "finding the value of a symbol (i.e. address) given it's symtab idx" can be used)
+
+*** end plan
+    keeping in mind the discussion above, I have formulated the
+    following plan. The PO file will consist of the following ELF
+    sections
+    1. .patch_syms_rel  list of symbols which need to have memory
+       allocated for them and be relocated
+    2. .patch_syms_new list of symbols which need to have memory
+       allocated for them and be added to the target's symbol table in
+       some way
+    2. .patch_rules "debug_frame" formatted section using our creative
+       interpretation of the registers (see below) to allow specifying
+       rules. Not actually formatted as debug frame, don't have CIE
+       and FDE info, just instructions
+    3. .patch_expr DWARF expressions. Any uses of the EXPR registers
+       (see below) or of DWARF_OP_call_ref uses byte-offsets into this
+       section.
+    4. .strtab string table (needed for symbol tables)
+    
+    TODO: need to include mechanism for including symbol tables,
+    relocation items, etc that may have been stripped from the
+    executing program. Also, when patching something that's already
+    been patched, we need a way to keep that information in memory
+
+    The key is in the creative interpretation of registers. Since we
+    have LEB128 values to work with, we define the following:
+    The first byte of the "register" identifier determines what type
+    of "register" it is. The following values are allowed
+    | identifier  | format                       | value                    |
+    |-------------+------------------------------+--------------------------|
+    | OLD_SYM_VAL | the following bytes          | in an expression,        |
+    |             | will be an offset            | its value resolves       |
+    |             | into the symbol table in     | to the st_value of       |
+    |             | the old version of the       | the symbol               |
+    |             | target                       |                          |
+    |-------------+------------------------------+--------------------------|
+    | NEW_SYM_VAL | the following bytes          | in an expression,        |
+    |             | will be an offset i          | its value resolves       |
+    |             | into the symbol table in     | to the st_value of       |
+    |             | the new version of the       | the symbol               |
+    |             | target.                      |                          |
+    |-------------+------------------------------+--------------------------|
+    | EXPR        | the following bytes          | the value of the DWARF   |
+    |             | will be an offset            | expression when executed |
+    |             | into the .patch_expr section |                          |
+    |             |                              |                          |
+    
