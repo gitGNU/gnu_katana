@@ -65,7 +65,6 @@ void freeDwarfInfo(DwarfInfo* di)
   di->compilationUnits=(void*)0xbadf00d;
   di->lastCompilationUnit=(void*)0xbadf00d;
   free(di);
-  dictDelete(globalVars,NULL,NULL);
 }
 
 void freeTypeInfo(TypeInfo* t)

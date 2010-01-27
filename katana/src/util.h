@@ -31,6 +31,8 @@ void death(char* reason);
 
 #define min(x,y)   ((x)>(y))?(y):(x)
 
+#define max(x,y)   ((x)<(y))?(y):(x)
+
 //! \brief Check whether \a s is NULL or not on a memory allocation. Quit this program if it is NULL.
 #define MALLOC_CHECK(s)  if ((s) == NULL)   {                     \
     fprintf(stderr,"No enough memory at %s:line%d ", __FILE__, __LINE__); \
