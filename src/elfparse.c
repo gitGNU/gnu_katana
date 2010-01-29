@@ -33,7 +33,9 @@ Elf* openELFFile(char* fname)
   fd=open(fname,O_RDONLY);
   if(fd < 0)
   {
-    die("Failed to open binary to be patched\n");
+    char buf[128];
+    snprintf(buf,128,"Failed to open elf file %s (open returned invalid fd)\n",fname);
+    die(buf);
   }
   e=elf_begin(fd,ELF_C_READ,NULL);
   if(!e)

@@ -1,1 +1,2 @@
 WARNING: the patched version omits an entire compilation unit present in the original version.
+The compilation unit in the patchee version does not have a name

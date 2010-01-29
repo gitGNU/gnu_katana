@@ -468,90 +468,23 @@ added variable bar
 iterating compilation units
 started ptrace
 Examining compilation unit ../sysdeps/i386/elf/start.S
+completed all transformations for compilation unit ../sysdeps/i386/elf/start.S
+Examining compilation unit init.c
 Found variable _IO_stdin_used 
+completed all transformations for compilation unit init.c
+Examining compilation unit main.c
 Found variable stdout 
 Found variable bar 
 offset for field returning 0 for field field1
 offset for field returning 8 for field field2
 offset for field returning 12 for field field3
 generated type transformation for type _Foo
-fixing variable bar
 new version of type is larger than old version of type
 requesting mmap of page of size 4096
-inserting code at eip 0x4001d422
 inserted syscall call
 5a
 inserted syscall params on stack
 retval is 0x40021000
-now at eip 0x4001d425
-mmapped in new page successfully
-copying data from offset 0 to offset 0
-copying data from offset 4 to offset 8
-copying data from offset 8 to offset 12
-relocation for bar at 80484fc with type 1
-old addr is ox804a028
-transformed offset 4 to offset 8 for variable bar
-relocation for bar at 8048502 with type 1
-old addr is ox804a024
-transformed offset 0 to offset 0 for variable bar
-relocation for bar at 804851c with type 1
-old addr is ox804a028
-transformed offset 4 to offset 8 for variable bar
-relocation for bar at 8048521 with type 1
-old addr is ox804a024
-transformed offset 0 to offset 0 for variable bar
-completed all transformations for compilation unit ../sysdeps/i386/elf/start.S
-Examining compilation unit init.c
-Found variable _IO_stdin_used 
-Found variable stdout 
-Found variable bar 
-offset for field returning 0 for field field1
-offset for field returning 8 for field field2
-offset for field returning 12 for field field3
-generated type transformation for type _Foo
-fixing variable bar
-new version of type is larger than old version of type
-requesting mmap of page of size 4096
-inserting code at eip 0x4001d422
-inserted syscall call
-5a
-inserted syscall params on stack
-retval is 0x40022000
-now at eip 0x4001d425
-mmapped in new page successfully
-copying data from offset 0 to offset 0
-copying data from offset 4 to offset 8
-copying data from offset 8 to offset 12
-relocation for bar at 80484fc with type 1
-old addr is ox804a028
-transformed offset 4 to offset 8 for variable bar
-relocation for bar at 8048502 with type 1
-old addr is ox804a024
-transformed offset 0 to offset 0 for variable bar
-relocation for bar at 804851c with type 1
-old addr is ox804a028
-transformed offset 4 to offset 8 for variable bar
-relocation for bar at 8048521 with type 1
-old addr is ox804a024
-transformed offset 0 to offset 0 for variable bar
-completed all transformations for compilation unit init.c
-Examining compilation unit main.c
-Found variable _IO_stdin_used 
-Found variable stdout 
-Found variable bar 
-offset for field returning 0 for field field1
-offset for field returning 8 for field field2
-offset for field returning 12 for field field3
-generated type transformation for type _Foo
-fixing variable bar
-new version of type is larger than old version of type
-requesting mmap of page of size 4096
-inserting code at eip 0x4001d422
-inserted syscall call
-5a
-inserted syscall params on stack
-retval is 0x40023000
-now at eip 0x4001d425
 mmapped in new page successfully
 copying data from offset 0 to offset 0
 copying data from offset 4 to offset 8

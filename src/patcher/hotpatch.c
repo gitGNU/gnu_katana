@@ -57,7 +57,7 @@ void fixupStructure(char** datap,TypeTransform* transform,TransformationInfo* tr
     }
     printf("copying data from offset %i to offset %i\n",oldOffsetSoFar,transform->fieldOffsets[i]);
     int idxOfFieldInNew=getIdxForField(newType,oldType->fields[i]);
-    TypeTransform* transformField=(TypeTransform*)dictGet(trans->typeTransformers,oldType->fieldTypes[i]);
+    TypeTransform* transformField=(TypeTransform*)dictGet(trans->typeTransformers,oldType->fieldTypes[i]->name);
     if(!transformField)
     {
       int cpLength=0;

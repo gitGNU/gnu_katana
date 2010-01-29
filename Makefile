@@ -3,9 +3,9 @@ CC=gcc
 #todo: remove 32-bit dependency
 CFLAGS=-Wall -g -std=c99 -D_POSIX_SOURCE -D_BSD_SOURCE -m32 -I src/
 CFLAGS_TYPEPATCH=-Doff64_t=__off64_t
-LDFLAGS_TYPEPATCH=-L /usr/local/lib -ldwarf -lelf
+LDFLAGS_TYPEPATCH=-L /usr/local/lib -ldwarf -lelf -lm
 
-TYPEPATCH_SRC=src/katana.c src/dwarftypes.c src/dictionary.c src/hash.c src/patcher/target.c src/elfparse.c src/util.c src/types.c src/map.c src/patcher/hotpatch.c src/patchwrite/patchwrite.c
+TYPEPATCH_SRC=src/katana.c src/dwarftypes.c src/dictionary.c src/hash.c src/patcher/target.c src/elfparse.c src/util.c src/types.c src/map.c src/patcher/hotpatch.c src/patchwrite/patchwrite.c src/dwarf_instr.c
 
 EXEC=katana
 
