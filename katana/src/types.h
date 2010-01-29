@@ -12,6 +12,7 @@
 
 #include "dictionary.h"
 #include "map.h"
+#include <libdwarf.h>
 
 typedef unsigned int uint;
 typedef unsigned long addr_t;
@@ -65,9 +66,11 @@ typedef enum
   TT_VOID //the void type
 } TYPE_TYPE;
 
+struct TypeTransform_;//forward declare
+
 //struct to hold information about a type in the target program
 //not all members are used by all types (for example, structs use more)
-typedef struct
+typedef struct TypeInfo_
 {
   char* name;
   TYPE_TYPE type;
@@ -82,21 +85,24 @@ typedef struct
   int numFields;
   char** fields;
   int* fieldLengths;
-  char** fieldTypes;
+  struct TypeInfo_** fieldTypes;
   //the following are relevant only to pointers or arrays
-  char* pointedType;//could also be called arrayType
+  struct TypeInfo_* pointedType;//could also be called arrayType
   //the following are relevant only to arrays
   int lowerBound;
   int upperBound;
   CompilationUnit* cu; //which compilation unit the type is in. NULL if the type is visible to all compilation units
+  Dwarf_P_Die die;//used when writing patch info to disk
+  struct TypeTransform_* transformer;//how to transform the type into its other form
 } TypeInfo;
 
 void freeTypeInfo(TypeInfo* t);
 
 #define FIELD_DELETED -2
+#define FIELD_RECURSE -3
 
 //holds information on how to transform one type to another
-typedef struct
+typedef struct TypeTransform_
 {
   TypeInfo* from;
   TypeInfo* to;
@@ -104,8 +110,9 @@ typedef struct
   //contains the new offset of that field from the start of the new structure
   //this can be used to relocate fields within structures
   //the value FIELD_DELETED indicates that the field is no longer
-  //present in the structure
+  //present in the structure. The value FIELD_RECURSE means to look for a type transformation
   int* fieldOffsets;
+  bool onDisk;//user when writing patch info to disk
 } TypeTransform;
 
 void freeTypeTransform(TypeTransform* t);

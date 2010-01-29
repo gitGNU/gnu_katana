@@ -30,7 +30,6 @@ safe_strcpy(char *out, long outlen, const char *in, long inlen)
 }
 
 
-//by James Oakley
 /*
     decode ULEB
 */
@@ -59,9 +58,6 @@ Dwarf_Unsigned local_dwarf_decode_u_leb128(unsigned char *leb128,
 }
 
 
-//this function copied verbatim from dwarfdump
-//unlike the rest of the code in this file it was not written
-//by James Oakley
 /*
         Returns 1 if a proc with this low_pc found.
         Else returns 0.

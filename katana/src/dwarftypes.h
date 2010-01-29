@@ -10,6 +10,7 @@
 #ifndef dwarftypes_h
 #define dwarftypes_h
 #include "elfparse.h"
+#include <libdwarf.h>
 //caller should free info when no longer needs it
 DwarfInfo* readDWARFTypes(Elf* elf);
 
@@ -20,5 +21,7 @@ DwarfInfo* readDWARFTypes(Elf* elf);
 //to convert from type a to type b
 //todo: add in this transformation info
 bool compareTypes(TypeInfo* a,TypeInfo* b,TypeTransform** transform);
+
+void dwarfErrorHandler(Dwarf_Error err,Dwarf_Ptr arg);
 
 #endif

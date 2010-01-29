@@ -19,8 +19,8 @@
 #include <assert.h>
 #include <util.h>
 #include "elfparse.h"
-#include "target.h"
-
+#include "patcher/target.h"
+#include "register.h"
 
 #define NUM_REGS 32
 #define CFA_REGNUM 31
@@ -31,7 +31,9 @@ typedef struct
 {
   int type;//one of DW_CFA_
   int arg1;
+  PoReg arg1Reg;//whether used depends on the type
   int arg2;
+  PoReg arg2Reg;//whether used depends on the type
 } RegInstruction;
 
 typedef enum
@@ -47,7 +49,8 @@ typedef struct
   int regnum;
   E_RULE_TYPE type;
   int offset;//only valid if type is ERT_OFFSET or ERT_CFA
-  int registerNum;//only valid if type is ERT_OFFSET or ERT_CFA
+  int registerNum;//only valid if type is ERT_OFFSET or ERT_CFA and poReg is not valid
+  PoReg poReg;////only valid if type is ERT_OFFSET or ERT_CFA and type is not ERT_NONE
 } RegRule;
 
 typedef struct
@@ -128,15 +131,18 @@ void evaluateInstructions(RegInstruction* instrs,int numInstrs,RegRule  rules[NU
       assert(inst.arg1<NUM_REGS);
       rules[inst.arg1].type=ERT_REGISTER;
       rules[inst.arg1].registerNum=inst.arg2;
+      rules[inst.arg1].poReg=inst.arg2Reg;
       break;
     case DW_CFA_def_cfa:
       rules[CFA_REGNUM].type=ERT_CFA;
       rules[CFA_REGNUM].registerNum=inst.arg1;
+      rules[CFA_REGNUM].poReg=inst.arg1Reg;
       rules[CFA_REGNUM].offset=inst.arg2;
       break;
     case DW_CFA_def_cfa_register:
       rules[CFA_REGNUM].type=ERT_CFA;
       rules[CFA_REGNUM].registerNum=inst.arg1;
+      rules[CFA_REGNUM].poReg=inst.arg1Reg;
       break;
     case DW_CFA_def_cfa_offset:
       rules[CFA_REGNUM].type=ERT_CFA;
@@ -169,6 +175,8 @@ RegInstruction* parseFDEInstructions(Dwarf_Debug dbg,unsigned char* bytes,int le
     int high = byte & 0xc0;
     int low = byte & 0x3f;
     uint uleblen;
+    result[*numInstrs].arg1Reg.type=ERT_NONE;//not using reg unless we set its type
+    result[*numInstrs].arg2Reg.type=ERT_NONE;//not using reg unless we set its type
     switch(high)
     {
     case DW_CFA_advance_loc:
@@ -212,8 +220,40 @@ RegInstruction* parseFDEInstructions(Dwarf_Debug dbg,unsigned char* bytes,int le
         }
         break;
       case DW_CFA_register:
+        printf("Reading CW_CFA_register\n");
+        if(isPoRegType(bytes[1]))
+        {
+          result[*numInstrs].arg1Reg=readRegFromLEB128(bytes + 1,&uleblen);
+        }
+        else
+        {
+          result[*numInstrs].arg1=local_dwarf_decode_u_leb128(bytes + 1, &uleblen);
+        }
+        printf("len was %i\n",uleblen);
+        bytes+=uleblen;
+        len-=uleblen;
+        printf("byte is %i,%i,%i\n",(int)bytes[1],(int)bytes[1],(int)bytes[3]);
+        if(isPoRegType(bytes[1]))
+        {
+          result[*numInstrs].arg2Reg=readRegFromLEB128(bytes + 1,&uleblen);
+        }
+        else
+        {
+          result[*numInstrs].arg2=local_dwarf_decode_u_leb128(bytes + 1, &uleblen);
+        }
+        printf("len was %i\n",uleblen);
+        bytes+=uleblen;
+        len-=uleblen;
+        break;
       case DW_CFA_def_cfa:
-        result[*numInstrs].arg1=local_dwarf_decode_u_leb128(bytes + 1, &uleblen);
+        if(isPoRegType(bytes[1]))
+        {
+          result[*numInstrs].arg1Reg=readRegFromLEB128(bytes + 1,&uleblen);
+        }
+        else
+        {
+          result[*numInstrs].arg1=local_dwarf_decode_u_leb128(bytes + 1, &uleblen);
+        }
         bytes+=uleblen;
         len-=uleblen;
         result[*numInstrs].arg2=local_dwarf_decode_u_leb128(bytes + 1, &uleblen);
@@ -221,6 +261,17 @@ RegInstruction* parseFDEInstructions(Dwarf_Debug dbg,unsigned char* bytes,int le
         len-=uleblen;
         break;
       case DW_CFA_def_cfa_register:
+        if(isPoRegType(bytes[1]))
+        {
+          result[*numInstrs].arg1Reg=readRegFromLEB128(bytes + 1,&uleblen);
+        }
+        else
+        {
+          result[*numInstrs].arg1=local_dwarf_decode_u_leb128(bytes + 1, &uleblen);
+        }
+        bytes+=uleblen;
+        len-=uleblen;
+        break;
       case DW_CFA_def_cfa_offset:
         result[*numInstrs].arg1=local_dwarf_decode_u_leb128(bytes + 1, &uleblen);
         bytes+=uleblen;
@@ -345,13 +396,51 @@ void printInstruction(RegInstruction inst)
     printf("DW_CFA_offset r%i %i\n",inst.arg1,inst.arg2);
     break;
   case DW_CFA_register:
-    printf("DW_CFA_register r%i r%i\n",inst.arg1,inst.arg2);
+    printf("DW_CFA_register ");
+    if(ERT_NONE==inst.arg1Reg.type)
+    {
+      printf("r%i ",inst.arg1);
+    }
+    else
+    {
+      printReg(inst.arg1Reg,stdout);
+      printf(" ");
+    }
+    if(ERT_NONE==inst.arg2Reg.type)
+    {
+      printf("r%i ",inst.arg2);
+    }
+    else
+    {
+      printReg(inst.arg2Reg,stdout);
+      printf(" ");
+    }
+    printf("\n");
     break;
   case DW_CFA_def_cfa:
-    printf("DW_CFA_def_cfa r%i %i\n",inst.arg1,inst.arg2);
+    printf("DW_CFA_def_cfa ");
+    if(ERT_NONE==inst.arg1Reg.type)
+    {
+      printf("r%i ",inst.arg1);
+    }
+    else
+    {
+      printReg(inst.arg1Reg,stdout);
+      printf(" ");
+    }
+    printf("%i \n",inst.arg2);
     break;
   case DW_CFA_def_cfa_register:
-    printf("DW_CFA_def_cfa_register r%i\n",inst.arg1);
+    printf("DW_CFA_def_cfa_register");
+    if(ERT_NONE==inst.arg1Reg.type)
+    {
+      printf("r%i\n",inst.arg1);
+    }
+    else
+    {
+      printReg(inst.arg1Reg,stdout);
+      printf("\n");
+    }
     break;
   case DW_CFA_def_cfa_offset:
     printf("DW_CFA_def_cfa_offset %i\n",inst.arg1);
@@ -427,7 +516,7 @@ void printFDEInfo(FDE* fde)
     printInstruction(fde->instructions[i]);
   }
   printf("\t\tThe table would be as follows\n");
-  for(int i=fde->lowpc;i<fde->highpc;i++)
+  for(int i=fde->lowpc;i<fde->highpc || 0==i;i++)
   {
     RegRule regs[NUM_REGS];
     memcpy(regs,cie.initialRules,sizeof(RegRule)*NUM_REGS);
@@ -610,15 +699,19 @@ void printBacktrace()
 int main(int argc,char** argv)
 {
   pid=-1;
-  if(argc>1)
+  if(argc<2)
   {
-    pid=atoi(argv[1]);
+    death("must specify elf file to open\n");
+  }
+  if(argc>2)
+  {
+    pid=atoi(argv[2]);
   }
   if(elf_version(EV_CURRENT)==EV_NONE)
   {
     die("Failed to init ELF library\n");
   }
-  Elf* e=openELFFile("testprog");
+  Elf* e=openELFFile(argv[1]);
   Dwarf_Error err;
   if(DW_DLV_OK!=dwarf_elf_init(e,DW_DLC_READ,&dwarfErrorHandler,NULL,&dbg,&err))
   {

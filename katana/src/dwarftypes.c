@@ -68,7 +68,7 @@ bool compareTypes(TypeInfo* a,TypeInfo* b,TypeTransform** transform)
     //todo: do we need to update if just the name changes?
     //certainly won't need to relocate
     if(a->fieldLengths[i]!=b->fieldLengths[i] ||
-       strcmp(a->fieldTypes[i],b->fieldTypes[i]))
+       strcmp(a->fieldTypes[i]->name,b->fieldTypes[i]->name))
     {
       retval=false;
       if(!*transform)
@@ -118,6 +118,10 @@ void walkDieTree(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu,bool siblings
 
 void dwarfErrorHandler(Dwarf_Error err,Dwarf_Ptr arg)
 {
+  if(arg)
+  {
+    fprintf(stderr,"%s\n",(char*)arg);
+  }
   fprintf(stderr,"Dwarf error: %s\n",dwarf_errmsg(err));
   fflush(stderr);
   abort();
@@ -464,7 +468,7 @@ void addStructureFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
       
       //todo: perhaps use DW_AT_location instead of this?
       type->fieldLengths[idx]=typeOfField->length;
-      type->fieldTypes[idx]=strdup(typeOfField->name);
+      type->fieldTypes[idx]=typeOfField;
       idx++;
     }while(DW_DLV_OK==dwarf_siblingof(dbg,child,&child,&err));
   }
@@ -506,7 +510,7 @@ void addPointerTypeFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
   }
   else
   {
-    type->pointedType=pointedType->name;
+    type->pointedType=pointedType;
   }
   printf("added pointer type of name %s\n",type->name);
   type->incomplete=false;
@@ -527,7 +531,7 @@ void addArrayTypeFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
   {
     death("ERROR: cannot add array with no type\n");
   }
-  type->pointedType=pointedType->name;
+  type->pointedType=pointedType;
   type->lowerBound=0;
   type->upperBound=0;
   Dwarf_Die child;

@@ -464,6 +464,14 @@ inspiration yes, but I'm not sure where the gain would be in actually
 using the format. I suppose the only real advantage would be in trying
 to promote a standard patch object format, since Dwarf is already a standard.
 
+** how to determine number of bytes in allocated memory
+*** glibc currently (2.11) uses a chunk before the returned pointer
+    this chunk is 2*SIZE_SZ bytes in size. SIZE_SZ seems to eventually
+    resolve to sizeof(size_t). Therefore, an allocated chunk has two
+    size_t sized values. The seconds one seems to be the size of the
+    chunk. Our patcher could test for this behaviour to make sure a
+    recent glibc or something compatible is being used.
+    
 * definitions
 ** ET_REL
    ELF file type recognized by linux. Denotes relocatable object
@@ -712,23 +720,33 @@ to be the case.
     The key is in the creative interpretation of registers. Since we
     have LEB128 values to work with, we define the following:
     The first byte of the "register" identifier determines what type
-    of "register" it is. The following values are allowed
-    | identifier  | format                       | value                    |
-    |-------------+------------------------------+--------------------------|
-    | OLD_SYM_VAL | the following bytes          | in an expression,        |
-    |             | will be an offset            | its value resolves       |
-    |             | into the symbol table in     | to the st_value of       |
-    |             | the old version of the       | the symbol               |
-    |             | target                       |                          |
-    |-------------+------------------------------+--------------------------|
-    | NEW_SYM_VAL | the following bytes          | in an expression,        |
-    |             | will be an offset i          | its value resolves       |
-    |             | into the symbol table in     | to the st_value of       |
-    |             | the new version of the       | the symbol               |
-    |             | target.                      |                          |
-    |-------------+------------------------------+--------------------------|
-    | EXPR        | the following bytes          | the value of the DWARF   |
-    |             | will be an offset            | expression when executed |
-    |             | into the .patch_expr section |                          |
-    |             |                              |                          |
+    of "register" it is. The following values are allowed.
+    | identifier    | format                             | value                 | Notes              |
+    |---------------+------------------------------------+-----------------------+--------------------|
+    | OLD_SYM_VAL   | the following bytes                | in an expression,     | size of region     |
+    |               | will be an index                   | its value resolves    | addressed is given |
+    |               | into the symbol table in           | to the st_value of    | bysymbol size      |
+    |               | the old version of the             | the symbol            |                    |
+    |               | target                             |                       |                    |
+    |---------------+------------------------------------+-----------------------+--------------------|
+    | NEW_SYM_VAL   | the following bytes                | in an expression,     | size of region     |
+    |               | will be an index                   | its value resolves    | addressed is given |
+    |               | into the symbol table in           | to the st_value of    | by symbol size     |
+    |               | the new version of the             | the symbol            |                    |
+    |               | target.                            |                       |                    |
+    |---------------+------------------------------------+-----------------------+--------------------|
+    | EXPR          | the following bytes                | the value of the      |                    |
+    |               | will be an offset                  | DWARF expression when |                    |
+    |               | into the .patch_expr               | executed              |                    |
+    |               | section                            |                       |                    |
+    |---------------+------------------------------------+-----------------------+--------------------|
+    | CURR_TARG_OLD | the first byte determines          | the values in memory  |                    |
+    |               | the size of the region addressed.  | of dereferencing      |                    |
+    |               | The following bytes specify an     | the current object +  |                    |
+    |               | offset from the old address of the | offset                |                    |
+    |               | the current object                 |                       |                    |
+    |---------------+------------------------------------+-----------------------+--------------------|
+    | CURR_TARG_NEW | same as CURR_TARG_OLD except       |                       |                    |
+    |               | refers to the the new address of   |                       |                    |
+    |               | the current object                 |                       |                    |
     

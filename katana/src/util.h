@@ -20,6 +20,7 @@ typedef struct _List
   struct _List* next;
 } List;
 
+typedef unsigned char byte;
 
 //malloc, check return value, and zero
 void* zmalloc(size_t size);
