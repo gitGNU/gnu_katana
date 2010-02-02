@@ -10,13 +10,14 @@
 #ifndef types_h
 #define types_h
 
-#include "dictionary.h"
-#include "map.h"
+#include "util/dictionary.h"
+#include "util/map.h"
 #include <libdwarf.h>
 
 typedef unsigned int uint;
 typedef unsigned long addr_t;
 typedef uint word_t;
+typedef short unsigned int usint;
 
 //we keep track of the type information
 //from on ELF file in a TypesInfo struct
@@ -42,12 +43,20 @@ void freeTypeAndVarInfo(TypeAndVarInfo* tv);
 typedef struct
 {
   TypeAndVarInfo* tv;
+  List* subprograms;
   char* name;
   char* id;//in case two compilation units have the same name
   bool presentInOtherVersion;
 } CompilationUnit;
 
 void freeCompilationUnit(CompilationUnit* cu);
+
+typedef struct
+{
+  char* name;
+  addr_t lowpc;
+  addr_t highpc;
+} Subprogram;
 
 typedef struct
 {
@@ -94,6 +103,7 @@ typedef struct TypeInfo_
   CompilationUnit* cu; //which compilation unit the type is in. NULL if the type is visible to all compilation units
   Dwarf_P_Die die;//used when writing patch info to disk
   struct TypeTransform_* transformer;//how to transform the type into its other form
+  uint fde;//identifier (offset) for fde containing info on how to transform this type
 } TypeInfo;
 
 void freeTypeInfo(TypeInfo* t);
@@ -121,7 +131,8 @@ typedef struct
 {
   char* name;
   TypeInfo* type;
-  //location can be gotten from the symbol table
+  addr_t newLocation;
+  addr_t oldLocation;
   bool declaration;//true for example for a variable declared extern.
                    //The declaration copy is discarded if a real copy is found
 } VarInfo;

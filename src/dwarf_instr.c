@@ -6,7 +6,7 @@
   Description: Functions for manipulating dwarf instructions
 */
 
-#include "util.h"
+#include "util/util.h"
 #include "dwarf_instr.h"
 #include <math.h>
 #include <dwarf.h>
@@ -14,7 +14,7 @@
 //encode bytes (presumably representing a number)
 //as LEB128. The returned pointer should
 //be freed when the user is finished with it
-byte* encodeAsLEB128(byte* bytes,int numBytes,bool signed_,short int* numBytesOut)
+byte* encodeAsLEB128(byte* bytes,int numBytes,bool signed_,usint* numBytesOut)
 {
   int numSeptets=ceil((float)numBytes*8.0/7.0);
   byte* result=zmalloc(numSeptets);
@@ -104,7 +104,7 @@ byte* encodeAsLEB128(byte* bytes,int numBytes,bool signed_,short int* numBytesOu
 }
 
 
-byte* decodeLEB128(byte* bytes,bool signed_,short int* numBytesOut,short int* numSeptetsRead)
+byte* decodeLEB128(byte* bytes,bool signed_,usint* numBytesOut,usint* numSeptetsRead)
 {
   //do a first pass to determine the number of septets
   int numSeptets=0;
@@ -245,4 +245,146 @@ void addInstruction(DwarfInstructions* instrs,DwarfInstruction* instr)
     }
     break;
   }
+}
+
+uint leb128ToUInt(byte* bytes,usint* outLEBBytesRead)
+{
+  usint resultBytes;
+  byte* result=decodeLEB128(bytes,false,&resultBytes,outLEBBytesRead);
+  uint val=0;
+  memcpy(&val,result,resultBytes);
+  return val;
+}
+
+//the returned memory should be freed
+RegInstruction* parseFDEPatchInstructions(Dwarf_Debug dbg,unsigned char* bytes,int len,
+                                     int dataAlign,int codeAlign,int* numInstrs)
+{
+  *numInstrs=0;
+  //allocate more mem than we'll actually need
+  //we can free some later
+  RegInstruction* result=zmalloc(sizeof(RegInstruction)*len);
+  for(;len>0;len--,bytes++,(*numInstrs)++)
+  {
+    //as dwarfdump does, separate out high and low portions
+    //of the byte based on the boundaries of the instructions that
+    //encode an operand with the instruction
+    //all other instructions are accounted for only by the bottom part of the byte
+    unsigned char byte=*bytes;
+    int high = byte & 0xc0;
+    int low = byte & 0x3f;
+    usint uleblen;
+    result[*numInstrs].arg1Reg.type=ERT_NONE;//not using reg unless we set its type
+    result[*numInstrs].arg2Reg.type=ERT_NONE;//not using reg unless we set its type
+    switch(high)
+    {
+    case DW_CFA_advance_loc:
+      result[*numInstrs].type=high;
+      result[*numInstrs].arg1=low*codeAlign;
+      break;
+    case DW_CFA_offset:
+      result[*numInstrs].type=high;
+      result[*numInstrs].arg1=low;
+      result[*numInstrs].arg2=leb128ToUInt(bytes + 1, &uleblen)*dataAlign;
+      bytes+=uleblen;
+      len-=uleblen;
+      break;
+    case DW_CFA_restore:
+      death("DW_CFA_restore not handled\n");
+      break;
+    default:
+      //deal with the things encoded by the bottom portion
+      result[*numInstrs].type=low;
+      switch(low)
+      {
+      case DW_CFA_set_loc:
+        //todo: this assumes 32-bit
+        memcpy(&result[*numInstrs].arg1,bytes+1,sizeof(int));
+        bytes+=sizeof(int);
+        len-=sizeof(int);
+        break;
+      case DW_CFA_advance_loc1:
+        {
+        unsigned char delta = (unsigned char) *(bytes + 1);
+        result[*numInstrs].arg1=delta*codeAlign;
+        bytes+=1;
+        len -= 1;
+        }
+      case DW_CFA_advance_loc2:
+        {
+        unsigned short delta = (unsigned short) *(bytes + 1);
+        result[*numInstrs].arg1=delta*codeAlign;
+        bytes+=2;
+        len -= 2;
+        }
+        break;
+      case DW_CFA_register:
+        printf("Reading CW_CFA_register\n");
+        if(isPoRegType(bytes[1]))
+        {
+          result[*numInstrs].arg1Reg=readRegFromLEB128(bytes + 1,&uleblen);
+        }
+        else
+        {
+          death("register of unexpected format for po\n");
+        }
+        printf("len was %i\n",uleblen);
+        bytes+=uleblen;
+        len-=uleblen;
+        printf("byte is %i,%i,%i\n",(int)bytes[1],(int)bytes[1],(int)bytes[3]);
+        if(isPoRegType(bytes[1]))
+        {
+          result[*numInstrs].arg2Reg=readRegFromLEB128(bytes + 1,&uleblen);
+        }
+        else
+        {
+          death("register of unexpected format for po\n");
+        }
+        printf("len was %i\n",uleblen);
+        bytes+=uleblen;
+        len-=uleblen;
+        break;
+      case DW_CFA_def_cfa:
+        if(isPoRegType(bytes[1]))
+        {
+          result[*numInstrs].arg1Reg=readRegFromLEB128(bytes + 1,&uleblen);
+        }
+        else
+        {
+          death("register of unexpected format for po\n");
+        }
+        bytes+=uleblen;
+        len-=uleblen;
+        result[*numInstrs].arg2=leb128ToUInt(bytes + 1,&uleblen);
+        bytes+=uleblen;
+        len-=uleblen;
+        break;
+      case DW_CFA_def_cfa_register:
+        if(isPoRegType(bytes[1]))
+        {
+          result[*numInstrs].arg1Reg=readRegFromLEB128(bytes + 1,&uleblen);
+        }
+        else
+        {
+          death("register of unexpected format for po\n");
+        }
+        bytes+=uleblen;
+        len-=uleblen;
+        break;
+      case DW_CFA_def_cfa_offset:
+        result[*numInstrs].arg1=leb128ToUInt(bytes + 1, &uleblen);
+        bytes+=uleblen;
+        len-=uleblen;
+        break;
+      case DW_CFA_nop:
+        break;
+      default:
+        fprintf(stderr,"dwarf cfa instruction 0x%x not yet handled\n",(uint)low);
+        death(NULL);
+      }
+    }
+  }
+  //realloc to free mem we didn't actually use
+  result=realloc(result,sizeof(RegInstruction)*(*numInstrs));
+  return result;
 }

@@ -31,3 +31,18 @@ void death(char* reason)
 {
   die(reason);
 }
+
+void deleteList(List* start,void (*delFunc)(void*))
+{
+  List* li=start;
+  while(li)
+  {
+    if(delFunc)
+    {
+      (*delFunc)(li->value);
+    }
+    List* tmp=li->next;
+    free(li);
+    li=tmp;
+  }
+}

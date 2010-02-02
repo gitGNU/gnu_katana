@@ -11,7 +11,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/wait.h>
-#include "util.h"
 #include "types.h"
 #include <assert.h>
 #include <errno.h>
@@ -82,6 +81,7 @@ void modifyTarget(addr_t addr,uint value)
 {
   if(ptrace(PTRACE_POKEDATA,pid,addr,value)<0)
   {
+    fprintf(stderr,"Trying to poke data at 0x%x\n",(uint)addr);
     perror("ptrace POKEDATA failed in modifyTarget\n");
     die(NULL);
   }
@@ -92,7 +92,7 @@ void modifyTarget(addr_t addr,uint value)
 
 
 //copies numBytes from data to addr in target
-void memcpyToTarget(long addr,char* data,int numBytes)
+void memcpyToTarget(long addr,byte* data,int numBytes)
 {
   for(int i=0;i<numBytes;i+=PTRACE_WORD_SIZE)
   {
@@ -115,7 +115,7 @@ void memcpyToTarget(long addr,char* data,int numBytes)
 
 
 //copies numBytes to data from addr in target
-void memcpyFromTarget(char* data,long addr,int numBytes)
+void memcpyFromTarget(byte* data,long addr,int numBytes)
 {
   for(int i=0;i<numBytes;i+=4)
   {
@@ -170,7 +170,7 @@ long mmapTarget(int size,int prot)
   //0x80 indicates that this trap is a syscall
   //0x0cc is int3 instruction, will cause the target
   //to halt execution until the controlling process calls wait
-  char code[]={0xcd,0x80,0xcc,0x00};
+  byte code[]={0xcd,0x80,0xcc,0x00};
 
   struct user_regs_struct oldRegs,newRegs;
   getTargetRegs(&oldRegs);
@@ -191,7 +191,7 @@ long mmapTarget(int size,int prot)
   newRegs.eip=newRegs.esp;//we put our code on the stack, so direct the pc to it
   long returnAddr=newRegs.esp+2;//the int3 instruction
   #else
-  char oldText[4];
+  byte oldText[4];
   memcpyFromTarget(oldText,newRegs.eip,4);
   modifyTarget(newRegs.eip,code4Bytes);
   printf("inserted syscall call\n");

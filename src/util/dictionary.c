@@ -29,6 +29,61 @@ Dictionary* dictCreate(int bucketCnt)
   return dict;
 }
 
+//helper function
+DNODE* dictNodeDuplicate(DNODE* n,void* (*dataCP)(void*))
+{
+  if(!n)
+  {
+    return NULL;
+  }
+  DNODE* new=malloc(sizeof(DNODE));
+  MALLOC_CHECK(new);
+  new->key=strdup(n->key);
+  if(dataCP)
+  {
+    new->data=(*dataCP)(n->data);
+  }
+  else
+  {
+    new->data=n->data;
+  }
+  new->hash=n->hash;
+  new->prev=NULL;
+  if(n->next)
+  {
+    new->next=dictNodeDuplicate(n->next,dataCP);
+    new->next->prev=new;
+  }
+  else
+  {
+    new->next=NULL;
+  }
+  return new;
+}
+
+Dictionary* dictDuplicate(Dictionary* dict,void* (*dataCP)(void*))
+{
+  Dictionary* new=dictCreate(dict->numBuckets);
+  new->size=dict->size;
+  new->start=dictNodeDuplicate(dict->start,dataCP);
+  //now have to find the end. Also have to fill in the hash list
+  new->hash=malloc(new->numBuckets*sizeof(DNODE*));
+  memset(new->hash,0,new->numBuckets*sizeof(DNODE*));
+  DNODE* n=new->start;
+  DNODE* prev=NULL;
+  while(n)
+  {
+    if(!new->hash[n->hash])
+    {
+      new->hash[n->hash]=n;
+    }
+    prev=n;
+    n=n->next;
+  }
+  new->end=prev;
+  return new;
+}
+
 void dictDelete(Dictionary* dict,void (*deleteData)(void*))
 {
   //clean up all items held in the hash table

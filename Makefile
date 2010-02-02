@@ -1,15 +1,25 @@
 CXX=g++
 CC=gcc
 #todo: remove 32-bit dependency
-CFLAGS=-Wall -g -std=c99 -D_POSIX_SOURCE -D_BSD_SOURCE -m32 -I src/
+CFLAGS=-Wall -g -std=c99 -D_POSIX_SOURCE -D_BSD_SOURCE -D_XOPEN_SOURCE -m32 -I src/
 CFLAGS_TYPEPATCH=-Doff64_t=__off64_t
 LDFLAGS_TYPEPATCH=-L /usr/local/lib -ldwarf -lelf -lm
 
-TYPEPATCH_SRC=src/katana.c src/dwarftypes.c src/dictionary.c src/hash.c src/patcher/target.c src/elfparse.c src/util.c src/types.c src/map.c src/patcher/hotpatch.c src/patchwrite/patchwrite.c src/dwarf_instr.c
+PATCHER_SRC=src/patcher/hotpatch.c src/patcher/target.c src/patcher/patchread.c src/patcher/fderead.c src/patcher/dwarfvm.c
+PATCHWRITE_SRC=src/patchwrite/patchwrite.c
+UTIL_SRC=src/util/dictionary.c src/util/hash.c src/util/util.c src/util/map.c
+TYPEPATCH_SRC=src/katana.c src/dwarftypes.c   src/elfparse.c  src/types.c  src/dwarf_instr.c src/register.c $(PATCHWRITE_SRC) $(PATCHER_SRC) $(UTIL_SRC)
 
 EXEC=katana
 
+
+
 all :  $(EXEC)
+
+tests :
+	make -C tests
+
+.PHONY : clean tests
 
 check : all
 	make -C tests

@@ -42,6 +42,8 @@ typedef struct _DICTIONARY Dictionary;
 //! create an empty dictionary
 Dictionary* dictCreate(int nBuckets);
 
+Dictionary* dictDuplicate(Dictionary* dict,void* (*dataCP)(void*));
+
 //! clean up a dictionary that's no longer needed
 //! If deleteData is non-NULL it is called for each data element
 void dictDelete(Dictionary* dict,void (*deleteData)(void*));

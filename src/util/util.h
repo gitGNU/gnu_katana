@@ -20,6 +20,8 @@ typedef struct _List
   struct _List* next;
 } List;
 
+void deleteList(List* start,void (*delFunc)(void*));
+
 typedef unsigned char byte;
 
 //malloc, check return value, and zero

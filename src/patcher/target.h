@@ -25,9 +25,9 @@ void continuePtrace();
 void endPtrace();
 void modifyTarget(addr_t addr,uint value);
 //copies numBytes from data to addr in target
-void memcpyToTarget(long addr,char* data,int numBytes);
+void memcpyToTarget(long addr,byte* data,int numBytes);
 //copies numBytes to data from addr in target
-void memcpyFromTarget(char* data,long addr,int numBytes);
+void memcpyFromTarget(byte* data,long addr,int numBytes);
 void getTargetRegs(struct user_regs_struct* regs);
 void setTargetRegs(struct user_regs_struct* regs);
 //allocate a region of memory in the target

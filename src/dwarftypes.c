@@ -7,15 +7,13 @@
 */
 
 
-#include "dictionary.h"
-#include <libdwarf.h>
 #include <stdlib.h>
 #include <libelf.h>
 #include <stdbool.h>
 #include "types.h"
 #include <assert.h>
 #include <dwarf.h>
-
+#include "elfparse.h"
 Dictionary* cuIdentifiers=NULL;
 
 
@@ -478,6 +476,13 @@ void addStructureFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
     freeTypeInfo(type);//todo: is this really what we want to do
     return;
   }
+  //check for fde info for transformation
+  Dwarf_Attribute attr;
+  res=dwarf_attr(die,DW_AT_MIPS_fde,&attr,&err);
+  if(DW_DLV_OK==res)
+  {
+    type->fde=readAttributeAsInt(attr);
+  }
   type->incomplete=false;
   printf("added structure type %s\n",type->name);
 }
@@ -513,6 +518,13 @@ void addPointerTypeFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
     type->pointedType=pointedType;
   }
   printf("added pointer type of name %s\n",type->name);
+  //check for fde info for transformation
+  Dwarf_Attribute attr;
+  res=dwarf_attr(die,DW_AT_MIPS_fde,&attr,&err);
+  if(DW_DLV_OK==res)
+  {
+    type->fde=readAttributeAsInt(attr);
+  }
   type->incomplete=false;
 }
 
@@ -561,6 +573,14 @@ void addArrayTypeFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
       }
       
     }while(DW_DLV_OK==dwarf_siblingof(dbg,child,&child,&err));
+  }
+
+  //check for fde info for transformation
+  Dwarf_Attribute attr;
+  res=dwarf_attr(die,DW_AT_MIPS_fde,&attr,&err);
+  if(DW_DLV_OK==res)
+  {
+    type->fde=readAttributeAsInt(attr);
   }
   dictInsert(cu->tv->types,type->name,type);
   printf("added array type of name %s\n",type->name);
@@ -749,12 +769,12 @@ void walkDieTree(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu,bool siblings
 
 //the returned structure should be freed
 //when the caller is finished with it
-DwarfInfo* readDWARFTypes(Elf* elf)
+DwarfInfo* readDWARFTypes(ElfInfo* elf)
 {
   DwarfInfo* di=zmalloc(sizeof(DwarfInfo));
   Dwarf_Error err;
   Dwarf_Debug dbg;
-  if(DW_DLV_OK!=dwarf_elf_init(elf,DW_DLC_READ,&dwarfErrorHandler,NULL,&dbg,&err))
+  if(DW_DLV_OK!=dwarf_elf_init(elf->e,DW_DLC_READ,&dwarfErrorHandler,NULL,&dbg,&err))
   {
     dwarfErrorHandler(err,NULL);
   }
