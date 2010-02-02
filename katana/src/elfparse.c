@@ -14,70 +14,61 @@
 #include <stdio.h>
 #include <unistd.h>
 
-Elf_Data* hashTableData=NULL;
-Elf_Data* symTabData=NULL;
-int symTabCount=-1;
-Elf* e=NULL;
-size_t sectionHdrStrTblIdx=-1;
-size_t strTblIdx=-1;
-Elf_Data* textRelocData=NULL;
-int textRelocCount=-1;
-Elf_Data* dataData=NULL;//the data section
-int dataStart=-1;
-Elf_Data* textData=NULL;
-int textStart=-1;
-int fd=-1;//file descriptor for elf file
-
-Elf* openELFFile(char* fname)
+ElfInfo* openELFFile(char* fname)
 {
-  fd=open(fname,O_RDONLY);
-  if(fd < 0)
+  ElfInfo* e=zmalloc(sizeof(ElfInfo));
+  e->fd=open(fname,O_RDONLY);
+  if(e->fd < 0)
   {
     char buf[128];
     snprintf(buf,128,"Failed to open elf file %s (open returned invalid fd)\n",fname);
     die(buf);
   }
-  e=elf_begin(fd,ELF_C_READ,NULL);
-  if(!e)
+  e->e=elf_begin(e->fd,ELF_C_READ,NULL);
+  if(!e->e)
   {
     fprintf(stderr,"Failed to open as an ELF file %s\n",elf_errmsg(-1));
+    free(e);
     die(NULL);
   }
   return e;
 }
 
-void endELF(Elf* _e)
+void endELF(ElfInfo* e)
 {
-  //bad programming practice with globals here
-  //todo: fix it
-  assert(_e==e);
-  elf_end(e);
-  close(fd);
+  elf_end(e->e);
+  close(e->fd);
+  free(e);
 }
 
+bool getSymbol(ElfInfo* e,int symIdx,GElf_Sym* outSym)
+{
+  assert(e->symTabData);
+  return gelf_getsym(e->symTabData,symIdx,outSym);
+}
 
-addr_t getSymAddress(int symIdx)
+addr_t getSymAddress(ElfInfo* e,int symIdx)
 {
   GElf_Sym sym;
-  gelf_getsym(symTabData,symIdx,&sym);
+  gelf_getsym(e->symTabData,symIdx,&sym);
   return sym.st_value;
 }
 
-word_t getTextAtRelOffset(int offset)
+word_t getTextAtRelOffset(ElfInfo* e,int offset)
 {
-  return *((word_t*)(textData->d_buf+(offset-textStart)));
+  return *((word_t*)(e->textData->d_buf+(offset-e->textStart)));
 }
 
-List* getRelocationItemsFor(int symIdx)
+List* getRelocationItemsFor(ElfInfo* e,int symIdx)
 {
-  assert(textRelocData);
+  assert(e->textRelocData);
   List* result=NULL;
   List* cur=NULL;
   //todo: support RELA as well?
-  for(int i=0;i<textRelocCount;i++)
+  for(int i=0;i<e->textRelocCount;i++)
   {
     GElf_Rel rel;
-    gelf_getrel(textRelocData,i,&rel);
+    gelf_getrel(e->textRelocData,i,&rel);
     //printf("found relocation item for symbol %u\n",(unsigned int)ELF64_R_SYM(rel.r_info));
     if(ELF64_R_SYM(rel.r_info)!=symIdx)
     {
@@ -104,12 +95,12 @@ List* getRelocationItemsFor(int symIdx)
 }
 
 
-int getSymtabIdx(char* symbolName)
+int getSymtabIdx(ElfInfo* e,char* symbolName)
 {
   //todo: need to consider endianness?
-  assert(hashTableData);
-  assert(symTabData);
-  assert(strTblIdx>0);
+  assert(e->hashTableData);
+  assert(e->symTabData);
+  assert(e->strTblIdx>0);
   
   //Hash table only contains dynamic symbols, don't use it here
   /*
@@ -151,11 +142,11 @@ int getSymtabIdx(char* symbolName)
   
   //traverse the symbol table to find the symbol we're looking for. Yes this is slow
   //todo: build our own hash table since the .hash section seems incomplete
-  for (int i = 0; i < symTabCount; ++i)
+  for (int i = 0; i < e->symTabCount; ++i)
   {
     GElf_Sym sym;
-    gelf_getsym(symTabData,i,&sym);
-    char* symname=elf_strptr(e, strTblIdx, sym.st_name);
+    gelf_getsym(e->symTabData,i,&sym);
+    char* symname=elf_strptr(e->e, e->strTblIdx, sym.st_name);
     if(!strcmp(symname,symbolName))
     {
       return i;
@@ -165,20 +156,20 @@ int getSymtabIdx(char* symbolName)
   return STN_UNDEF;
 }
 
-void printSymTab()
+void printSymTab(ElfInfo* e)
 {
   printf("symbol table:\n");
   /* print the symbol names */
-  for (int i = 0; i < symTabCount; ++i)
+  for (int i = 0; i < e->symTabCount; ++i)
   {
     GElf_Sym sym;
-    gelf_getsym(symTabData, i, &sym);
-    printf("%i. %s\n", i,elf_strptr(e, strTblIdx, sym.st_name));
+    gelf_getsym(e->symTabData, i, &sym);
+    printf("%i. %s\n", i,elf_strptr(e->e, e->strTblIdx, sym.st_name));
   }
 
 }
 
-void writeOut(char* outfname)
+void writeOut(ElfInfo* e,char* outfname)
 {
   //for some reason writing out to the same file descriptor isn't
   //working well, so we create a copy of all of the elf structures and write out to a new one
@@ -189,9 +180,9 @@ void writeOut(char* outfname)
   }
   //code inspired by ecp in elfutils tests
   Elf *outelf = elf_begin (outfd, ELF_C_WRITE, NULL);
-  gelf_newehdr (outelf, gelf_getclass (e));
+  gelf_newehdr (outelf, gelf_getclass(e->e));
   GElf_Ehdr ehdr_mem;
-  GElf_Ehdr *ehdr=gelf_getehdr(e,&ehdr_mem);
+  GElf_Ehdr *ehdr=gelf_getehdr(e->e,&ehdr_mem);
   gelf_update_ehdr (outelf,ehdr);
   if(ehdr->e_phnum > 0)
   {
@@ -200,11 +191,11 @@ void writeOut(char* outfname)
     for (cnt = 0; cnt < ehdr->e_phnum; ++cnt)
     {
       GElf_Phdr phdr_mem;
-      gelf_update_phdr (outelf,cnt,gelf_getphdr(e,cnt,&phdr_mem));
+      gelf_update_phdr(outelf,cnt,gelf_getphdr(e->e,cnt,&phdr_mem));
     }
   }
   Elf_Scn* scn=NULL;
-  while ((scn = elf_nextscn(e,scn)))
+  while ((scn = elf_nextscn(e->e,scn)))
   {
     Elf_Scn *newscn = elf_newscn (outelf);
     GElf_Shdr shdr_mem;
@@ -224,28 +215,28 @@ void writeOut(char* outfname)
 
 
 
-void findELFSections()
+void findELFSections(ElfInfo* e)
 {
   //todo: this is deprecated but the non deprecated version
   //(elf_getshdrstrndx) isn't linking on my system. This may betray some
   //more important screw-up somewhere)
-  elf_getshdrstrndx (e, &sectionHdrStrTblIdx);
+  elf_getshdrstrndx(e->e, &e->sectionHdrStrTblIdx);
   
-  for(Elf_Scn* scn=elf_nextscn (e, NULL);scn;scn=elf_nextscn(e,scn))
+  for(Elf_Scn* scn=elf_nextscn (e->e,NULL);scn;scn=elf_nextscn(e->e,scn))
   {
     GElf_Shdr shdr;
     gelf_getshdr(scn,&shdr);
-    char* name=elf_strptr(e,sectionHdrStrTblIdx,shdr.sh_name);
+    char* name=elf_strptr(e->e,e->sectionHdrStrTblIdx,shdr.sh_name);
     if(!strcmp(".hash",name))
     {
       printf("found symbol hash table\n");
-      hashTableData=elf_getdata(scn,NULL);
+      e->hashTableData=elf_getdata(scn,NULL);
     }
     else if(!strcmp(".symtab",name))
     {
-      symTabData=elf_getdata(scn,NULL);
-      symTabCount = shdr.sh_size / shdr.sh_entsize;
-      strTblIdx=shdr.sh_link;
+      e->symTabData=elf_getdata(scn,NULL);
+      e->symTabCount = shdr.sh_size / shdr.sh_entsize;
+      e->strTblIdx=shdr.sh_link;
     }
     else if(!strcmp(".strtab",name))
     {
@@ -254,20 +245,20 @@ void findELFSections()
     }
     else if(!strcmp(".rel.text",name))
     {
-      textRelocData=elf_getdata(scn,NULL);
-      textRelocCount = shdr.sh_size / shdr.sh_entsize;
+      e->textRelocData=elf_getdata(scn,NULL);
+      e->textRelocCount = shdr.sh_size / shdr.sh_entsize;
     }
     else if(!strcmp(".data",name))
     {
-      dataData=elf_getdata(scn,NULL);
-      dataStart=shdr.sh_addr;
+      e->dataData=elf_getdata(scn,NULL);
+      e->dataStart=shdr.sh_addr;
       //printf("data size is 0x%x at offset 0x%x\n",dataData->d_size,(uint)dataData->d_off);
       //printf("data section starts at address 0x%x\n",dataStart);
     }
     else if(!strcmp(".text",name))
     {
-      textData=elf_getdata(scn,NULL);
-      textStart=shdr.sh_addr;
+      e->textData=elf_getdata(scn,NULL);
+      e->textStart=shdr.sh_addr;
     }
   }
 }

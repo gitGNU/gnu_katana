@@ -9,6 +9,7 @@
 #include "target.h"
 #include "elfparse.h"
 #include <unistd.h>
+#include "hotpatch.h"
 
 int getIdxForField(TypeInfo* type,char* name)
 {
@@ -23,14 +24,21 @@ int getIdxForField(TypeInfo* type,char* name)
 }
 
 
-void getFreeSpaceForTransformation(TransformationInfo* trans,uint howMuch)
+addr_t getFreeSpaceForTransformation(TransformationInfo* trans,uint howMuch)
 {
+  addr_t retval;
   if(howMuch<=trans->freeSpaceLeft)
   {
-    return;
+    retval=trans->addrFreeSpace;
   }
-  trans->addrFreeSpace=mmapTarget(sysconf(_SC_PAGE_SIZE),PROT_READ|PROT_WRITE);
-  trans->freeSpaceLeft=sysconf(_SC_PAGE_SIZE);
+  else
+  {
+    retval=trans->addrFreeSpace=mmapTarget(sysconf(_SC_PAGE_SIZE),PROT_READ|PROT_WRITE);
+    trans->freeSpaceLeft=sysconf(_SC_PAGE_SIZE);
+  }
+  trans->freeSpaceLeft-=howMuch;
+  trans->addrFreeSpace+=howMuch;
+  return retval;
   //todo: if there's a little bit of free space left,
   //we just discard it. This is wasteful
 }
@@ -41,12 +49,12 @@ void getFreeSpaceForTransformation(TransformationInfo* trans,uint howMuch)
 //and transforms it to transform->from
 //and stores the result back in datap
 //the original contents of datap may be freed
-void fixupStructure(char** datap,TypeTransform* transform,TransformationInfo* trans)
+void fixupStructure(byte** datap,TypeTransform* transform,TransformationInfo* trans)
 {
-  char* data=*datap;
+  byte* data=*datap;
   TypeInfo* oldType=transform->from;
   TypeInfo* newType=transform->to;
-  char* newData=zmalloc(newType->length);
+  byte* newData=zmalloc(newType->length);
   //now fix up the internals of the variable
   int oldOffsetSoFar=0;
   for(int i=0;i<oldType->numFields;i++)
@@ -78,7 +86,7 @@ void fixupStructure(char** datap,TypeTransform* transform,TransformationInfo* tr
     else
     {
       //we can't just copy the data verbatim, its structure has changed
-      char* fieldData=zmalloc(oldType->fieldLengths[i]);
+      byte* fieldData=zmalloc(oldType->fieldLengths[i]);
       memcpy(fieldData,data+oldOffsetSoFar,oldType->fieldLengths[i]);
       fixupStructure(&fieldData,transformField,trans);
       memcpy(newData+transform->fieldOffsets[i],fieldData,newType->fieldLengths[idxOfFieldInNew]);
@@ -90,11 +98,12 @@ void fixupStructure(char** datap,TypeTransform* transform,TransformationInfo* tr
   *datap=newData;
 }
 
+//!!!legacy function. Do not use
 //returns true if it was able to transform the variable
 //todo: I don't think this will work on extern variables or
 //any other sort of variable that might have multiple entries
 //in the dwarf file
-bool fixupVariable(VarInfo var,TransformationInfo* trans,int pid)
+bool fixupVariable(VarInfo var,TransformationInfo* trans,int pid,ElfInfo* e)
 {
   TypeTransform* transform=(TypeTransform*)dictGet(trans->typeTransformers,var.type->name);
   if(!transform)
@@ -106,20 +115,17 @@ bool fixupVariable(VarInfo var,TransformationInfo* trans,int pid)
   int oldLength=transform->from->length;
   TypeInfo* oldType=transform->from;
   //first we have to get the current value of the variable
-  int idx=getSymtabIdx(var.name);
-  long addr=getSymAddress(idx);//todo: deal with scope issues
+  int idx=getSymtabIdx(e,var.name);
+  long addr=getSymAddress(e,idx);//todo: deal with scope issues
   long newAddr=0;
-  char* data=NULL;
+  byte* data=NULL;
   if(newLength > oldLength)
   {
     printf("new version of type is larger than old version of type\n");
     //we'll have to allocate new space for the variable
-    getFreeSpaceForTransformation(trans,newLength);
-    newAddr=trans->addrFreeSpace;
-    trans->addrFreeSpace+=newLength;
-    trans->freeSpaceLeft-=newLength;
+    newAddr=getFreeSpaceForTransformation(trans,newLength);
     //now zero it out
-    char* zeros=zmalloc(newLength);
+    byte* zeros=zmalloc(newLength);
     memcpyToTarget(newAddr,zeros,newLength);
     free(zeros);
     //now put in the fields that we know about
@@ -141,7 +147,7 @@ bool fixupVariable(VarInfo var,TransformationInfo* trans,int pid)
     data=malloc(oldLength);
     MALLOC_CHECK(data);
     memcpyFromTarget(data,addr,oldLength);
-    char* zeros=zmalloc(oldLength);
+    byte* zeros=zmalloc(oldLength);
     newAddr=addr;
     memcpyToTarget(newAddr,zeros,newLength);
     free(zeros);
@@ -149,16 +155,16 @@ bool fixupVariable(VarInfo var,TransformationInfo* trans,int pid)
 
   fixupStructure(&data,transform,trans);
   memcpyToTarget(newAddr,data,newLength);
-
+  int symIdx=getSymtabIdx(e,var.name);
   //cool, the variable is all nicely relocated and whatnot. But if the variable
   //did change, we may have to relocate references to it.
-  List* relocItems=getRelocationItemsFor(idx);
+  List* relocItems=getRelocationItemsFor(e,symIdx);
   for(List* li=relocItems;li;li=li->next)
   {
     GElf_Rel* rel=li->value;
     printf("relocation for %s at %x with type %i\n",var.name,(unsigned int)rel->r_offset,(unsigned int)ELF64_R_TYPE(rel->r_info));
     //modify the data to shift things over 4 bytes just to see if we can do it
-    word_t oldAddrAccessed=getTextAtRelOffset(rel->r_offset);
+    word_t oldAddrAccessed=getTextAtRelOffset(e,rel->r_offset);
     printf("old addr is ox%x\n",(uint)oldAddrAccessed);
     uint offset=oldAddrAccessed-addr;//recall, addr is the address of the symbol
     
@@ -167,23 +173,52 @@ bool fixupVariable(VarInfo var,TransformationInfo* trans,int pid)
     //todo: this is only a guess, not really accurate. In the final version, just rely on the code accessing the variable being recompiled
     //don't make guesses like this
     //if we aren't making those guesses we just assume the offset stays the same and relocate accordingly
-    int fieldIdx=0;
+    int fieldSymIdx=0;
     int offsetSoFar=0;
     for(int i=0;i<oldType->numFields;i++)
     {
       if(offsetSoFar+oldType->fieldLengths[i] > offset)
       {
-        fieldIdx=i;
+        fieldSymIdx=i;
         break;
       }
       offsetSoFar+=oldType->fieldLengths[i];
     }
-    printf("transformed offset %i to offset %i for variable %s\n",offset,transform->fieldOffsets[fieldIdx],var.name);
-    offset=transform->fieldOffsets[fieldIdx];
+    printf("transformed offset %i to offset %i for variable %s\n",offset,transform->fieldOffsets[fieldSymIdx],var.name);
+    offset=transform->fieldOffsets[fieldSymIdx];
     
     uint newAddrAccessed=newAddr+offset;//newAddr is new address of the symbol
     
     modifyTarget(rel->r_offset,newAddrAccessed);//now the access is fully relocated
   }
   return true;
+}
+
+void performRelocations(ElfInfo* e,VarInfo* var)
+{
+  int symIdx=getSymtabIdx(e,var->name);
+  addr_t addr=getSymAddress(e,symIdx);
+  //cool, the variable is all nicely relocated and whatnot. But if the variable
+  //did change, we may have to relocate references to it.
+  List* relocItems=getRelocationItemsFor(e,symIdx);
+  for(List* li=relocItems;li;li=li->next)
+  {
+    GElf_Rel* rel=li->value;
+    printf("relocation for %s at %x with type %i\n",var->name,(unsigned int)rel->r_offset,(unsigned int)ELF64_R_TYPE(rel->r_info));
+    //modify the data to shift things over 4 bytes just to see if we can do it
+    word_t oldAddrAccessed=getTextAtRelOffset(e,rel->r_offset);
+    printf("old addr is ox%x\n",(uint)oldAddrAccessed);
+    uint offset=oldAddrAccessed-addr;//recall, addr is the address of the symbol
+    
+
+    //without precise info about the old type, can't even guess
+    //which field we were accessing. That's ok though, because
+    //any code accessing a changed type should have changed. Assume that
+    //we've already done all the code changes. Until we have code patching
+    //though, this will be wrong
+    
+    uint newAddrAccessed=var->newLocation+offset;//newAddr is new address of the symbol
+    
+    modifyTarget(rel->r_offset,newAddrAccessed);//now the access is fully relocated
+  }
 }

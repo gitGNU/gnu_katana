@@ -479,7 +479,7 @@ LOCAL_SYMBOLS:
 <1><  795>	DW_TAG_subprogram
 		DW_AT_external              yes(1)
 		DW_AT_name                  printThings
-		DW_AT_decl_file             1 /home/james/school/katana/katana/tests/test1_basic/v0/main.c
+	DW_AT_decl_file             1 /home/james/school/katana/katana/tests/test1_basic/v0/main.c
 		DW_AT_decl_line             23
 		DW_AT_low_pc                0x8048494
 		DW_AT_high_pc               0x80484e6

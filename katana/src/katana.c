@@ -28,7 +28,6 @@
 #include <libdwarf.h>
 #include "dwarf.h"
 #include "dwarftypes.h"
-#include "util.h"
 #include "types.h"
 #include "patcher/target.h"
 #include "elfparse.h"
@@ -36,10 +35,12 @@
 #include <signal.h>
 #include "patchwrite/patchwrite.h"
 int pid;//pid of running process
-
+ElfInfo* oldBinElfInfo=NULL;
 #ifdef DEBUG
 #include "katana-prelim.h"
 #endif
+#include <sys/stat.h>
+#include "patcher/patchread.h"
 
 void sigsegReceived(int signum)
 {
@@ -137,7 +138,7 @@ void diffAndFixTypes(DwarfInfo* diPatchee,DwarfInfo* diPatched)
       }
       if(needsTransform)
       {
-        fixupVariable(*var,trans,pid);
+        fixupVariable(*var,trans,pid,oldBinElfInfo);
       }
     }
     printf("completed all transformations for compilation unit %s\n",cu1->name);
@@ -150,54 +151,96 @@ int main(int argc,char** argv)
 {
   if(argc<3)
   {
-    die("Usage: katana OLD_BINARY NEW_BINARY [PID]");
+    die("Usage: katana -g [-o OUT_FILE] OLD_BINARY NEW_BINARY \n\tOr: katana -p PATCH_FILE PID");
   }
   struct sigaction act;
   memset(&act,0,sizeof(struct sigaction));
   act.sa_handler=&sigsegReceived;
-  //sigaction(SIGSEGV,&act,NULL);
-  char* oldBinary=argv[1];
-  char* newBinary=argv[2];
-  if(argc>3)
+  sigaction(SIGSEGV,&act,NULL);
+  int opt;
+  bool genPatch=false;
+  bool applyPatch=false;
+  char* outfile=NULL;
+  while((opt=getopt(argc,argv,"gpo:"))>0)
   {
-    pid=atoi(argv[3]);
+    switch(opt)
+    {
+    case 'g':
+      genPatch=true;
+      break;
+    case 'p':
+      applyPatch=true;
+      break;
+    case 'o':
+      outfile=optarg;
+      break;
+    }
   }
-  else
+  if(applyPatch && genPatch)
   {
-    pid=0;//can't patch init so means we aren't working on a process, generate a po file
+    death("cannot both generate and apply a patch in a single run\n");
+  }
+  if(!(applyPatch | genPatch))
+  {
+    death("One of -g (gen patch) or -p (apply patch) must be specified\n");
   }
   if(elf_version(EV_CURRENT)==EV_NONE)
   {
     die("Failed to init ELF library\n");
   }
-  Elf* e=openELFFile(newBinary);
-  printf("reading dwarf types from new binary\n############################################\n");
-  DwarfInfo* diPatched=readDWARFTypes(e);
-  endELF(e);
-  e=openELFFile(oldBinary);
-  findELFSections();
-  printf("reading dwarf types from old binary\n#############################################\n");
-  DwarfInfo* diPatchee=readDWARFTypes(e);
-
-  if(pid)
+  if(genPatch)
   {
+    if(argc-optind<2)
+    {
+      death("Usage to generate patch: katana -g [-o OUT_FILE] OLD_BINARY NEW_BINARY");
+    }
+    char* oldBinary=argv[optind];
+    char* newBinary=argv[optind+1];
+    if(!outfile)
+    {
+      outfile=zmalloc(strlen(oldBinary)+5);
+      strcpy(outfile,oldBinary);
+      strcat(outfile,".po");
+    }
+    ElfInfo* e=openELFFile(newBinary);
+    printf("reading dwarf types from new binary\n############################################\n");
+    DwarfInfo* diPatched=readDWARFTypes(e);
+    endELF(e);
+    e=openELFFile(oldBinary);
+    oldBinElfInfo=e;
+    findELFSections(e);
+    printf("reading dwarf types from old binary\n#############################################\n");
+    DwarfInfo* diPatchee=readDWARFTypes(e);
+    printf("outfile is %s",outfile);
+    writePatch(diPatchee,diPatched,outfile,oldBinElfInfo);
+    endELF(e);
+  }
+  else //applyPatch
+  {
+    if(argc-optind<2)
+    {
+      death("Usage to apply patch: katana -p PATCH_FILE PID");
+    }
+    char* patchFile=argv[optind];
+    printf("patch file is %s\n",patchFile);
+    pid=atoi(argv[optind+1]);
+    char execPath[128];
+    snprintf(execPath,128,"/proc/%i/exe",pid);
+    struct stat s;
+    if(0!=stat(execPath,&s))
+    {
+      fprintf(stderr,"%s does not exist. Is this a linux system or other unix system with a Plan-9 style /proc filesystem? If it is, then the process may have exited",execPath);
+      death(NULL);
+    }
+    oldBinElfInfo=openELFFile(execPath);
+    findELFSections(oldBinElfInfo);
+    ElfInfo* patch=openELFFile(patchFile);
+    findELFSections(patch);
     startPtrace();
-    diffAndFixTypes(diPatchee,diPatched);
-    //printSymTab();
-    //testManualRelocateBar();
-    //testManualRelocateAndTransformBar();
+    readAndApplyPatch(pid,oldBinElfInfo,patch);
+    //diffAndFixTypes(diPatchee,diPatched);
     endPtrace();
   }
-  else
-  {
-    writePatch(diPatchee,diPatched,"test.po");
-  }
-
-  //flush modifications to disk
-  //except not now, now trying to modify it in memory
-  //writeOut("newpatchee");
-  //all done
-  endELF(e);
   return 0;
 }
 

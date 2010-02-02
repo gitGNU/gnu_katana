@@ -17,13 +17,15 @@
 #include <libdwarf.h>
 #include <dwarf.h>
 #include <assert.h>
-#include <util.h>
+#include <util/util.h>
 #include "elfparse.h"
 #include "patcher/target.h"
 #include "register.h"
+#include "util/map.h"
 
 #define NUM_REGS 32
 #define CFA_REGNUM 31
+
 
 int pid=0;//pid of the target process
 
@@ -36,28 +38,22 @@ typedef struct
   PoReg arg2Reg;//whether used depends on the type
 } RegInstruction;
 
-typedef enum
-{
-  ERT_UNDEF=0,
-  ERT_OFFSET,
-  ERT_REGISTER,
-  ERT_CFA
-} E_RULE_TYPE;
 
 typedef struct
 {
   int regnum;
-  E_RULE_TYPE type;
-  int offset;//only valid if type is ERT_OFFSET or ERT_CFA
-  int registerNum;//only valid if type is ERT_OFFSET or ERT_CFA and poReg is not valid
-  PoReg poReg;////only valid if type is ERT_OFFSET or ERT_CFA and type is not ERT_NONE
+  PoReg poRegLH;
+  E_REG_RULE_TYPE type;
+  int offset;//only valid if type is ERRT_OFFSET or ERRT_CFA
+  int registerNum;//only valid if type is ERRT_OFFSET or ERRT_CFA and poReg is not valid
+  PoReg poRegRH;////only valid if type is ERRT_OFFSET or ERRT_CFA and type is not ERRT_NONE
 } RegRule;
 
 typedef struct
 {
   RegInstruction* initialInstructions;
   int numInitialInstructions;
-  RegRule initialRules[NUM_REGS];
+  Dictionary* initialRules;
   Dwarf_Signed dataAlign;
   Dwarf_Unsigned codeAlign;
   Dwarf_Half returnAddrRuleNum;
@@ -74,7 +70,7 @@ typedef struct
   int highpc;
 } FDE;
 
-void printRules(RegRule* rules,char* tabstr);
+void printRules(Dictionary* rulesDict,char* tabstr);
 void printRule(RegRule rule,int regnum);
 char* getX86RegNameFromDwarfRegNum(int num);
 
@@ -88,7 +84,7 @@ int numFdes;
 Dwarf_Debug dbg;
 
 Dwarf_Unsigned local_dwarf_decode_u_leb128(unsigned char *leb128,
-                                           unsigned int *leb128_length);
+                                           short unsigned int *leb128_length);
 char* get_fde_proc_name(Dwarf_Debug dbg, Dwarf_Addr low_pc);
 
 
@@ -97,12 +93,39 @@ char* get_fde_proc_name(Dwarf_Debug dbg, Dwarf_Addr low_pc);
 //execution continues until the end of the instructions or until the location is advanced
 //past stopLocation. stopLocation should be relative to the start of the instructions (i.e. the instructions are considered to start at 0)
 //if stopLocation is negative, it is ignored
-void evaluateInstructions(RegInstruction* instrs,int numInstrs,RegRule  rules[NUM_REGS],int stopLocation,CIE* cie)
+void evaluateInstructions(RegInstruction* instrs,int numInstrs,Dictionary* rules,int stopLocation)
 {
+  RegRule* rule=NULL;
+  PoReg cfaReg;
+  memset(&cfaReg,0,sizeof(PoReg));
+  cfaReg.type=ERT_CFA;
+  RegRule* cfaRule=dictGet(rules,strForReg(cfaReg));
   int loc=0;
   for(int i=0;i<numInstrs;i++)
   {
     RegInstruction inst=instrs[i];
+    if(ERT_NONE==inst.arg1Reg.type)
+    {
+      char buf[32];
+      sprintf(buf,"%i",inst.arg1);
+      rule=dictGet(rules,buf);
+      if(!rule)
+      {
+        rule=zmalloc(sizeof(RegRule));
+        rule->regnum=inst.arg1;
+        dictInsert(rules,buf,rule);
+      }
+    }
+    else
+    {
+      rule=dictGet(rules,strForReg(inst.arg1Reg));
+      if(!rule)
+      {
+        rule=zmalloc(sizeof(RegRule));
+        rule->poRegLH=inst.arg1Reg;
+        dictInsert(rules,strForReg(inst.arg1Reg),rule);
+      }
+    }
     //printf("evaluating instruction of type 0x%x\n",(uint)inst.type);
     switch(inst.type)
     {
@@ -123,30 +146,28 @@ void evaluateInstructions(RegInstruction* instrs,int numInstrs,RegRule  rules[NU
       }
       break;
     case DW_CFA_offset:
-      assert(inst.arg1<NUM_REGS);
-      rules[inst.arg1].type=ERT_OFFSET;
-      rules[inst.arg1].offset=inst.arg2;
+      rule->type=ERRT_OFFSET;
+      rule->offset=inst.arg2;
       break;
     case DW_CFA_register:
-      assert(inst.arg1<NUM_REGS);
-      rules[inst.arg1].type=ERT_REGISTER;
-      rules[inst.arg1].registerNum=inst.arg2;
-      rules[inst.arg1].poReg=inst.arg2Reg;
+      rule->type=ERRT_REGISTER;
+      rule->registerNum=inst.arg2;
+      rule->poRegRH=inst.arg2Reg;
       break;
     case DW_CFA_def_cfa:
-      rules[CFA_REGNUM].type=ERT_CFA;
-      rules[CFA_REGNUM].registerNum=inst.arg1;
-      rules[CFA_REGNUM].poReg=inst.arg1Reg;
-      rules[CFA_REGNUM].offset=inst.arg2;
+      cfaRule->type=ERRT_CFA;
+      cfaRule->registerNum=inst.arg1;
+      cfaRule->poRegRH=inst.arg1Reg;
+      cfaRule->offset=inst.arg2;
       break;
     case DW_CFA_def_cfa_register:
-      rules[CFA_REGNUM].type=ERT_CFA;
-      rules[CFA_REGNUM].registerNum=inst.arg1;
-      rules[CFA_REGNUM].poReg=inst.arg1Reg;
+      cfaRule->type=ERRT_CFA;
+      cfaRule->registerNum=inst.arg1;
+      cfaRule->poRegRH=inst.arg1Reg;
       break;
     case DW_CFA_def_cfa_offset:
-      rules[CFA_REGNUM].type=ERT_CFA;
-      rules[CFA_REGNUM].offset=inst.arg1;
+      cfaRule->type=ERRT_CFA;
+      cfaRule->offset=inst.arg1;
       break;
     case DW_CFA_nop:
       //do nothing, nothing changed
@@ -174,7 +195,7 @@ RegInstruction* parseFDEInstructions(Dwarf_Debug dbg,unsigned char* bytes,int le
     unsigned char byte=*bytes;
     int high = byte & 0xc0;
     int low = byte & 0x3f;
-    uint uleblen;
+    short unsigned int uleblen;
     result[*numInstrs].arg1Reg.type=ERT_NONE;//not using reg unless we set its type
     result[*numInstrs].arg2Reg.type=ERT_NONE;//not using reg unless we set its type
     switch(high)
@@ -229,7 +250,6 @@ RegInstruction* parseFDEInstructions(Dwarf_Debug dbg,unsigned char* bytes,int le
         {
           result[*numInstrs].arg1=local_dwarf_decode_u_leb128(bytes + 1, &uleblen);
         }
-        printf("len was %i\n",uleblen);
         bytes+=uleblen;
         len-=uleblen;
         printf("byte is %i,%i,%i\n",(int)bytes[1],(int)bytes[1],(int)bytes[3]);
@@ -241,7 +261,6 @@ RegInstruction* parseFDEInstructions(Dwarf_Debug dbg,unsigned char* bytes,int le
         {
           result[*numInstrs].arg2=local_dwarf_decode_u_leb128(bytes + 1, &uleblen);
         }
-        printf("len was %i\n",uleblen);
         bytes+=uleblen;
         len-=uleblen;
         break;
@@ -325,7 +344,8 @@ void readDebugFrame(Dwarf_Debug dbg)
                      &initInstrLen, &err);
   cie.initialInstructions=parseFDEInstructions(dbg,initInstr,initInstrLen,cie.dataAlign,
                                                 cie.codeAlign,&cie.numInitialInstructions);
-  evaluateInstructions(cie.initialInstructions,cie.numInitialInstructions,cie.initialRules,-1,&cie);
+  cie.initialRules=dictCreate(100);//todo: get rid of arbitrary constant 100
+  evaluateInstructions(cie.initialInstructions,cie.numInitialInstructions,cie.initialRules,-1);
   //todo: bizarre bug, it keeps coming out as -1, which is wrong
   cie.codeAlign=1;
   
@@ -354,6 +374,7 @@ void readDebugFrame(Dwarf_Debug dbg)
                         &fde_offset, &err);
     fdes[i].lowpc=lowPC;
     fdes[i].highpc=lowPC+funcLength;
+    printf("fde has lowpc of %i and highpc of %i\n",fdes[i].lowpc,fdes[i].highpc);
     
   }
 }
@@ -455,34 +476,63 @@ void printInstruction(RegInstruction inst)
 
 void printRule(RegRule rule,int regnum)
 {
-  
+
+  char* regStr=NULL;
+  char buf[128];
+  if(ERRT_CFA==rule.type)
+  {
+    regStr="cfa";
+  }
+  else if(rule.poRegLH.type!=ERT_NONE)
+  {
+    regStr=strForReg(rule.poRegLH);
+  }
+  else
+  {
+    snprintf(buf,128,"r%i(%s)",rule.regnum,getX86RegNameFromDwarfRegNum(rule.regnum));
+  }
   switch(rule.type)
   {
-  case ERT_UNDEF:
-    printf("r%i(%s) = Undefined\n",regnum,getX86RegNameFromDwarfRegNum(regnum));
+  case ERRT_UNDEF:
+    printf("%s = Undefined\n",regStr);
     break;
-  case ERT_OFFSET:
-    printf("r%i(%s) = cfa + %i\n",regnum,getX86RegNameFromDwarfRegNum(regnum),rule.offset);
+  case ERRT_OFFSET:
+    printf("%s = cfa + %i\n",regStr,rule.offset);
     break;
-  case ERT_REGISTER:
-    printf("r%i(%s) = r%i(%s)\n",regnum,getX86RegNameFromDwarfRegNum(regnum),rule.registerNum,getX86RegNameFromDwarfRegNum(rule.registerNum));
+  case ERRT_REGISTER:
+    if(ERT_NONE!=rule.poRegRH.type)
+    {
+      printf("%s = %s\n",regStr,strForReg(rule.poRegRH));
+    }
+    else
+    {
+      printf("%s = r%i(%s)\n",regStr,rule.registerNum,getX86RegNameFromDwarfRegNum(rule.registerNum));
+    }
     break;
-  case ERT_CFA:
-    printf("cfa = r%i(%s) + %i\n",rule.registerNum,getX86RegNameFromDwarfRegNum(rule.registerNum),rule.offset);
+  case ERRT_CFA:
+    if(ERT_NONE!=rule.poRegRH.type)
+    {
+      printf("%s = %s + %i\n",regStr,strForReg(rule.poRegRH),rule.offset);
+    }
+    else
+    {
+      printf("%s = r%i(%s) + %i\n",regStr,rule.registerNum,getX86RegNameFromDwarfRegNum(rule.registerNum),rule.offset);
+    }
     break;
   default:
     death("unknown rule type\n");
   }
 }
 
-void printRules(RegRule* rules,char* tabstr)
+void printRules(Dictionary* rulesDict,char* tabstr)
 {
-  for(int i=0;i<NUM_REGS;i++)
+  RegRule** rules=(RegRule**)dictValues(rulesDict);
+  for(int i=0;rules[i];i++)
   {
-    if(rules[i].type!=ERT_UNDEF)
+    if(rules[i]->type!=ERRT_UNDEF)
     {
       printf("%s",tabstr);
-      printRule(rules[i],i);
+      printRule(*rules[i],i);
     }
   }
 }
@@ -518,11 +568,11 @@ void printFDEInfo(FDE* fde)
   printf("\t\tThe table would be as follows\n");
   for(int i=fde->lowpc;i<fde->highpc || 0==i;i++)
   {
-    RegRule regs[NUM_REGS];
-    memcpy(regs,cie.initialRules,sizeof(RegRule)*NUM_REGS);
-    evaluateInstructions(fde->instructions,fde->numInstructions,regs,i-fde->lowpc,&cie);
+    Dictionary* rulesDict=dictDuplicate(cie.initialRules,NULL);
+    evaluateInstructions(fde->instructions,fde->numInstructions,rulesDict,i-fde->lowpc);
     printf("\t\t-Register Rules at text address 0x%x------\n",i);
-    printRules(regs,"\t\t\t");
+    printRules(rulesDict,"\t\t\t");
+    dictDelete(rulesDict,NULL);
   }
 }
 
@@ -531,12 +581,11 @@ void printCallFrame(uint pc)
   FDE* fde=getFDEForPC(pc);
   printf("##########Call Frame##########\n");
   printFDEInfo(fde);
-  RegRule regs[NUM_REGS];
-  memcpy(regs,cie.initialRules,sizeof(RegRule)*NUM_REGS);
-  evaluateInstructions(fde->instructions,fde->numInstructions,regs,pc,&cie);
+  Dictionary* rulesDict=dictDuplicate(cie.initialRules,NULL);
+  evaluateInstructions(fde->instructions,fde->numInstructions,rulesDict,pc);
   printf("------Register Rules at PC 0x%x-------\n",pc);
-  printRules(regs,"\t");
-  
+  printRules(rulesDict,"\t");
+  dictDelete(rulesDict,NULL);
 }
 
 char* getX86RegNameFromDwarfRegNum(int num)
@@ -636,29 +685,39 @@ void setRegValueFromDwarfRegNum(struct user_regs_struct* regs,int num,long int n
 
 struct user_regs_struct
 restoreRegsFromRegisterRules(struct user_regs_struct currentRegs,
-                             RegRule* rules)
+                             Dictionary* rulesDict)
 {
   struct user_regs_struct regs=currentRegs;
-  RegRule cfaRule=rules[CFA_REGNUM];
-  assert(ERT_CFA==cfaRule.type);
-  uint cfaAddr=getRegValueFromDwarfRegNum(currentRegs,cfaRule.registerNum)+cfaRule.offset;
+  PoReg cfaReg;
+  memset(&cfaReg,0,sizeof(PoReg));
+  cfaReg.type=ERT_CFA;
+  RegRule* cfaRule=dictGet(rulesDict,strForReg(cfaReg));
+  assert(ERRT_CFA==cfaRule->type);
+  uint cfaAddr=getRegValueFromDwarfRegNum(currentRegs,cfaRule->registerNum)+cfaRule->offset;
   for(int i=0;i<NUM_REGS;i++)
   {
     //printf("restoring reg %i\n",i);
-    if(rules[i].type!=ERT_UNDEF && i!=CFA_REGNUM)
+    char buf[32];
+    sprintf(buf,"%i",i);
+    RegRule* rule=dictGet(rulesDict,buf);
+    if(!rule)
     {
-      if(ERT_REGISTER==rules[i].type)
+      continue;
+    }
+    if(rule->type!=ERRT_UNDEF && i!=CFA_REGNUM)
+    {
+      if(ERRT_REGISTER==rule->type)
       {
         //printf("type is register\n");
-        setRegValueFromDwarfRegNum(&regs,rules[i].registerNum,
+        setRegValueFromDwarfRegNum(&regs,rule->registerNum,
                                    getRegValueFromDwarfRegNum(currentRegs,
-                                                              rules[i].registerNum));
+                                                              rule->registerNum));
       }
-      else if(ERT_OFFSET==rules[i].type)
+      else if(ERRT_OFFSET==rule->type)
       {
-        uint addr=(int)cfaAddr + rules[i].offset;
+        uint addr=(int)cfaAddr + rule->offset;
         long int value;
-        memcpyFromTarget((char*)&value,addr,sizeof(value));
+        memcpyFromTarget((byte*)&value,addr,sizeof(value));
         //printf("type is offset\n");
         setRegValueFromDwarfRegNum(&regs,i,value);
       }
@@ -685,13 +744,13 @@ void printBacktrace()
       break;
     }
     printf("%i. %s\n",i,get_fde_proc_name(dbg,fde->lowpc));
-    RegRule rules[NUM_REGS];
-    memcpy(rules,cie.initialRules,sizeof(RegRule)*NUM_REGS);
-    evaluateInstructions(fde->instructions,fde->numInstructions,rules,regs.eip,&cie);    
+    Dictionary* rulesDict=dictDuplicate(cie.initialRules,NULL);
+    evaluateInstructions(fde->instructions,fde->numInstructions,rulesDict,regs.eip);    
     printf("\t{eax=0x%x,ecx=0x%x,edx=0x%x,ebx=0x%x,esp=0x%x,\n\tebp=0x%x,esi=0x%x,edi=0x%x,eip=0x%x}\n",(uint)regs.eax,(uint)regs.ecx,(uint)regs.edx,(uint)regs.ebx,(uint)regs.esp,(uint)regs.ebp,(uint)regs.esi,(uint)regs.edi,(uint)regs.eip);
     printf("\tunwinding and applying register restore rules:\n");
-    printRules(rules,"\t");
-    regs=restoreRegsFromRegisterRules(regs,rules);
+    printRules(rulesDict,"\t");
+    regs=restoreRegsFromRegisterRules(regs,rulesDict);
+    dictDelete(rulesDict,NULL);
   }
 }
 
@@ -711,9 +770,9 @@ int main(int argc,char** argv)
   {
     die("Failed to init ELF library\n");
   }
-  Elf* e=openELFFile(argv[1]);
+  ElfInfo* e=openELFFile(argv[1]);
   Dwarf_Error err;
-  if(DW_DLV_OK!=dwarf_elf_init(e,DW_DLC_READ,&dwarfErrorHandler,NULL,&dbg,&err))
+  if(DW_DLV_OK!=dwarf_elf_init(e->e,DW_DLC_READ,&dwarfErrorHandler,NULL,&dbg,&err))
   {
     dwarfErrorHandler(err,NULL);
   }
@@ -730,8 +789,8 @@ int main(int argc,char** argv)
     startPtrace();
     //int3 instruction w/syscall
     //make a breakpoint at foo4
-    char code[]={0xcc,0x90,0x90,0x90};
-    char oldData[4];//what we replaced
+    byte code[]={0xcc,0x90,0x90,0x90};
+    byte oldData[4];//what we replaced
     uint locToReplace=0x80484fd;//address of a statement in function foo4
     memcpyFromTarget(oldData,locToReplace,4);
     memcpyToTarget(locToReplace,code,4);

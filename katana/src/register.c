@@ -10,12 +10,13 @@
 #include "register.h"
 #include "dwarf_instr.h"
 #include <assert.h>
+#include "patcher/target.h"
 
-PoReg readRegFromLEB128(byte* leb,uint* bytesRead)
+PoReg readRegFromLEB128(byte* leb,usint* bytesRead)
 {
   PoReg result;
-  short numBytes;
-  short int numSeptets;
+  usint numBytes;
+  usint numSeptets;
   byte* bytes=decodeLEB128(leb,false,&numBytes,&numSeptets);
   *bytesRead=numSeptets;
   assert(numBytes>0);
@@ -46,30 +47,116 @@ PoReg readRegFromLEB128(byte* leb,uint* bytesRead)
   return result;
 }
 
-void printReg(PoReg reg,FILE* f)
+//the returned string should be freed
+char* strForReg(PoReg reg)
 {
+  char* buf=zmalloc(128);
   assert(reg.type!=ERT_NONE);
   switch(reg.type)
   {
   case ERT_CURR_TARG_OLD:
-    fprintf(f,"{CURR_TARG_OLD,0x%x bytes,0x%x off}",reg.size,reg.u.offset);
+    snprintf(buf,128,"{CURR_TARG_OLD,0x%x bytes,0x%x off}",reg.size,reg.u.offset);
     break;
   case ERT_CURR_TARG_NEW:
-    fprintf(f,"{CURR_TARG_NEW,0x%x bytes,0x%x off}",reg.size,reg.u.offset);
+    snprintf(buf,128,"{CURR_TARG_NEW,0x%x bytes,0x%x off}",reg.size,reg.u.offset);
     break;
   case ERT_EXPR:
     //todo: print out expression
-    fprintf(f,"{EXPR,0x%x off",reg.u.offset);
+    snprintf(buf,128,"{EXPR,0x%x off",reg.u.offset);
     break;
   case ERT_NEW_SYM_VAL:
     //todo: find symbol name
-    fprintf(f,"{NEW_SYM_VAL,idx %i}",reg.u.index);
+    snprintf(buf,128,"{NEW_SYM_VAL,idx %i}",reg.u.index);
     break;
   case ERT_OLD_SYM_VAL:
     //todo: find symbol name
-    fprintf(f,"{OLD_SYM_VAL,idx %i}",reg.u.index);
+    snprintf(buf,128,"{OLD_SYM_VAL,idx %i}",reg.u.index);
+    break;
+  case ERT_CFA:
+    snprintf(buf,128,"{CFA}");
     break;
   default:
     death("unsupported register type\n");
   }
+  return buf;
+}
+
+void printReg(PoReg reg,FILE* f)
+{
+  char* str=strForReg(reg);
+  fprintf(f,"%s",str);
+  free(str);
+}
+
+
+//resolve any register to a value (as distinct from the symbolic form it may be in)
+//this may include resolving symbols in elf files, dereferencing
+//things in memory, etc
+//the result will be written to the result parameter and the number
+//of bytes in the result will be returned;
+//some values behave differently if they're being assigned than evaluated
+//rightHand is true if this register is being assigned
+int resolveRegisterValue(PoReg* reg,SpecialRegsState* state,byte** result,bool rightHand)
+{
+  //todo: error on value of NEW things if not right hand?
+  //perhaps don't even need the rightHand parameter
+  addr_t addr=0;
+  switch(reg->type)
+  {
+  case ERT_NONE:
+    death("resolveRegisterValue cannot be called on a register of NONE type\n");
+    break;
+  case ERT_CURR_TARG_NEW:
+    addr=state->currAddrNew+reg->u.offset;
+    break;
+  case ERT_CURR_TARG_OLD:
+    addr=state->currAddrOld+reg->u.offset;
+    if(rightHand)
+    {
+      death("Cannot assign a memory value in the old version of the target\n");
+    }
+    break;
+  case ERT_EXPR:
+    //todo: implement these
+    death("expressions not supported yet. Poke the developer\n");
+    break;
+  case ERT_OLD_SYM_VAL:
+    if(rightHand)
+    {
+      death("Cannot assign a symbol  in the old version of the target\n");
+    }
+    addr=getSymAddress(state->oldBinaryElf,reg->u.index);
+    *result=zmalloc(sizeof(addr_t));
+    memcpy(*result,&addr,sizeof(addr_t));
+    return sizeof(addr_t);
+    break;
+  case ERT_NEW_SYM_VAL:
+    //todo: implement these
+    death("ERT_NEW_SYM_VAL not supported yet. Poke the developer\n");
+    break;
+  case ERT_CFA:
+    //todo: implement these
+    death("ERT_CFA not supported yet. Poke the developer\n");
+    break;
+  default:
+    death("unknown register type\n");
+  }
+  if(addr)
+  {
+    if(rightHand)
+    {
+      *result=zmalloc(sizeof(addr_t));
+      memcpy(*result,&addr,sizeof(addr_t));
+      return sizeof(addr_t);
+    }
+    else
+    {
+      //need to dereference an address
+      *result=zmalloc(reg->size);
+      memcpyFromTarget(*result,addr,reg->size);
+      return reg->size;
+    }
+  }
+  death("resolveRegisterValue should have returned by now\n");
+  return 0;
 }

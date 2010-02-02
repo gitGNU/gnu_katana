@@ -10,7 +10,7 @@
 
 #include <libdwarf.h>
 #include <dwarf.h>
-#include "util.h"
+#include "util/util.h"
 
 /*
 
@@ -34,7 +34,7 @@ safe_strcpy(char *out, long outlen, const char *in, long inlen)
     decode ULEB
 */
 Dwarf_Unsigned local_dwarf_decode_u_leb128(unsigned char *leb128,
-                            unsigned int *leb128_length)
+                            unsigned short int *leb128_length)
 {
     unsigned char byte = 0;
     Dwarf_Unsigned number = 0;

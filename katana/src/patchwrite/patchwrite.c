@@ -6,7 +6,6 @@
   Description: Write patch information out to a po (patch object) file
 */
 
-#include "util.h"
 #include "types.h"
 #include "dwarftypes.h"
 #include <gelf.h>
@@ -18,6 +17,7 @@
 #include <assert.h>
 #include "register.h"
 
+ElfInfo* oldBinary=NULL;
 
 typedef struct
 {
@@ -33,13 +33,21 @@ Elf_Data* patch_rules_data=NULL;
 Elf_Data* patch_expr_data=NULL;
 Elf_Data* strtab_data=NULL;
 Elf_Data* symtab_data=NULL;
+//Elf_Data* old_symtab_data=NULL;
 
 //Elf_Scn* patch_syms_rel_scn=NULL;
 //Elf_Scn* patch_syms_new_scn=NULL;
+
 Elf_Scn* patch_rules_scn=NULL;
 Elf_Scn* patch_expr_scn=NULL;
 Elf_Scn* strtab_scn=NULL;
 Elf_Scn* symtab_scn=NULL;
+//now not writing old symbols b/c
+//better to get the from /proc/PID/exe
+/*Elf_Scn* old_symtab_scn=NULL;//relevant symbols from the symbol table of the old binary
+                             //we must store this in the patch object in case the object
+                             //in memory does not have a symbol table loaded in memory
+                             */
 
 Dwarf_P_Debug dbg;
 Dwarf_P_Die rootDie=NULL;
@@ -165,8 +173,8 @@ void writeTransformationToDwarf(TypeTransform* trans)
   trans->onDisk=true;
   Dwarf_Error err;
   Dwarf_P_Fde fde=dwarf_new_fde(dbg,&err);
-  assert(trans->from->die);
-  dwarf_add_frame_fde(dbg,fde,trans->from->die,cie,0,0,0,&err);
+  assert(trans->to->die);
+  dwarf_add_frame_fde(dbg,fde,trans->to->die,cie,0,0,0,&err);
   DwarfInstructions instrs;
   memset(&instrs,0,sizeof(DwarfInstructions));
   int oldBytesSoFar=0;
@@ -338,7 +346,7 @@ void writeTypeTransformationInfo(DwarfInfo* diPatchee,DwarfInfo* diPatched)
       {
         List* li=zmalloc(sizeof(List));
         VarTransformation* vt=zmalloc(sizeof(VarTransformation));
-        vt->var=var;
+        vt->var=patchedVar;
         vt->transform=(TypeTransform*)dictGet(trans->typeTransformers,var->type->name);
         if(!vt->transform)
         {
@@ -481,7 +489,29 @@ void createSections(Elf* outelf)
   shdr->sh_addralign=4;//32-bit
   shdr->sh_entsize=sizeof(Elf32_Sym);
   shdr->sh_name=addStrtabEntry(".symtab");
-  printf("symtab idx is %i\n",elf_ndxscn(symtab_scn));
+
+  //now not using old symtab b/c better to get old symbols from
+  // /proc/PID/exe
+  /*
+  //symtab for symbols we care about in old binary
+  old_symtab_scn=elf_newscn(outelf);
+  old_symtab_data=elf_newdata(old_symtab_scn);
+  old_symtab_data->d_align=1;
+  old_symtab_data->d_buf=malloc(8);//arbitrary starting size, more
+                                       //will be allocced as needed
+  old_symtab_data->d_off=0;
+  old_symtab_data->d_size=8;//again, will increase as needed
+  old_symtab_data->d_version=EV_CURRENT;
+  
+  shdr=elf32_getshdr(old_symtab_scn);
+  shdr->sh_type=SHT_SYMTAB;
+  shdr->sh_link=1;//index of string table
+  shdr->sh_info=0;//todo: p.1-13 of ELF format describes this,
+                          //but I don't quite understand it
+  shdr->sh_addralign=4;//32-bit
+  shdr->sh_entsize=sizeof(Elf32_Sym);
+  shdr->sh_name=addStrtabEntry(".symtab.v0");
+  */
 }
 
 void finalizeDataSizes()
@@ -527,6 +557,18 @@ void finalizeDataSizes()
                                      symtab_data->d_size);
   shdr=elf32_getshdr(symtab_scn);
   shdr->sh_size=symtab_data->d_size;
+
+  //now not using old symtab b/c better to get old symbols from
+  // /proc/PID/exe
+  /*
+  //symtab from old binary
+  old_symtab_data->d_size=old_symtab_data->d_off;//what was actually used
+  old_symtab_data->d_off=0;
+  old_symtab_data->d_buf=realloc(old_symtab_data->d_buf,
+                                     old_symtab_data->d_size);
+  shdr=elf32_getshdr(old_symtab_scn);
+  shdr->sh_size=old_symtab_data->d_size;
+  */
 }
 
 int dwarfWriteSectionCallback(char* name,int size,Dwarf_Unsigned type,
@@ -555,8 +597,9 @@ int dwarfWriteSectionCallback(char* name,int size,Dwarf_Unsigned type,
   return sym.st_shndx;
 }
 
-void writePatch(DwarfInfo* diPatchee,DwarfInfo* diPatched,char* fname)
+void writePatch(DwarfInfo* diPatchee,DwarfInfo* diPatched,char* fname,ElfInfo* oldBinary_)
 {
+  oldBinary=oldBinary_;
   int outfd = creat(fname, 0666);
   if (outfd < 0)
   {
@@ -628,6 +671,6 @@ void writePatch(DwarfInfo* diPatchee,DwarfInfo* diPatched,char* fname)
 
   elf_end (outelf);
   close (outfd);
-  printf("wrote elf file\n");
+  printf("wrote elf file %s\n",fname);
 }
 

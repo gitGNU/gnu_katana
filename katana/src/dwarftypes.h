@@ -12,7 +12,7 @@
 #include "elfparse.h"
 #include <libdwarf.h>
 //caller should free info when no longer needs it
-DwarfInfo* readDWARFTypes(Elf* elf);
+DwarfInfo* readDWARFTypes(ElfInfo* elf);
 
 //return false if the two types are not
 //identical in all regards
