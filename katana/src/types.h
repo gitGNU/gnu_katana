@@ -43,7 +43,7 @@ void freeTypeAndVarInfo(TypeAndVarInfo* tv);
 typedef struct
 {
   TypeAndVarInfo* tv;
-  List* subprograms;
+  Dictionary* subprograms;//functions in this compilation unit mapped by name. Type of SubprogramInfo
   char* name;
   char* id;//in case two compilation units have the same name
   bool presentInOtherVersion;
@@ -56,7 +56,7 @@ typedef struct
   char* name;
   addr_t lowpc;
   addr_t highpc;
-} Subprogram;
+} SubprogramInfo;
 
 typedef struct
 {

@@ -40,7 +40,8 @@ ElfInfo* oldBinElfInfo=NULL;
 #include "katana-prelim.h"
 #endif
 #include <sys/stat.h>
-#include "patcher/patchread.h"
+#include "patcher/patchapply.h"
+#include "patcher/versioning.h"
 
 void sigsegReceived(int signum)
 {
@@ -202,18 +203,18 @@ int main(int argc,char** argv)
       strcpy(outfile,oldBinary);
       strcat(outfile,".po");
     }
-    ElfInfo* e=openELFFile(newBinary);
+    ElfInfo* newBinaryElfInfo=openELFFile(newBinary);
+    findELFSections(newBinaryElfInfo);
     printf("reading dwarf types from new binary\n############################################\n");
-    DwarfInfo* diPatched=readDWARFTypes(e);
-    endELF(e);
-    e=openELFFile(oldBinary);
-    oldBinElfInfo=e;
-    findELFSections(e);
+    DwarfInfo* diPatched=readDWARFTypes(newBinaryElfInfo);
+    oldBinElfInfo=openELFFile(oldBinary);
+    findELFSections(oldBinElfInfo);
     printf("reading dwarf types from old binary\n#############################################\n");
-    DwarfInfo* diPatchee=readDWARFTypes(e);
+    DwarfInfo* diPatchee=readDWARFTypes(oldBinElfInfo);
     printf("outfile is %s",outfile);
-    writePatch(diPatchee,diPatched,outfile,oldBinElfInfo);
-    endELF(e);
+    writePatch(diPatchee,diPatched,outfile,oldBinElfInfo,newBinaryElfInfo);
+    endELF(oldBinElfInfo);
+    endELF(newBinaryElfInfo);
   }
   else //applyPatch
   {
@@ -224,15 +225,7 @@ int main(int argc,char** argv)
     char* patchFile=argv[optind];
     printf("patch file is %s\n",patchFile);
     pid=atoi(argv[optind+1]);
-    char execPath[128];
-    snprintf(execPath,128,"/proc/%i/exe",pid);
-    struct stat s;
-    if(0!=stat(execPath,&s))
-    {
-      fprintf(stderr,"%s does not exist. Is this a linux system or other unix system with a Plan-9 style /proc filesystem? If it is, then the process may have exited",execPath);
-      death(NULL);
-    }
-    oldBinElfInfo=openELFFile(execPath);
+    oldBinElfInfo=getElfRepresentingProc(pid);
     findELFSections(oldBinElfInfo);
     ElfInfo* patch=openELFFile(patchFile);
     findELFSections(patch);

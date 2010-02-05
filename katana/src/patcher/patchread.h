@@ -9,4 +9,5 @@
 #ifndef patchread_h
 #define patchread_h
 void readAndApplyPatch(int pid,ElfInfo* targetBin,ElfInfo* patch);
+ElfInfo* getElfRepresentingProc(int pid);
 #endif

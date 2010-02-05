@@ -147,6 +147,8 @@ PatchData* makePatchData(PoRegRule* rule,SpecialRegsState* state)
   return result;
 }
 
+//patchBin is the elf object we're mirroring all the changes
+//we made to memory in so that it's possible to do successive patching
 void patchDataWithFDE(VarInfo* var,FDE* fde,ElfInfo* oldBinaryElf)
 {
   SpecialRegsState state;

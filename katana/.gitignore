@@ -9,3 +9,7 @@ test.po
 testdump
 a.out
 memloss
+*.po
+*dump*
+errlog
+*.po.rel

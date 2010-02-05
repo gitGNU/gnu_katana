@@ -20,6 +20,7 @@ typedef struct _List
   struct _List* next;
 } List;
 
+List* concatLists(List* l1Start,List* l1End,List* l2Start,List* l2End,List** endOut);
 void deleteList(List* start,void (*delFunc)(void*));
 
 typedef unsigned char byte;

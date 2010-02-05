@@ -88,7 +88,7 @@ byte* encodeAsLEB128(byte* bytes,int numBytes,bool signed_,usint* numBytesOut)
   }
   *numBytesOut=numSeptets;
   
-  printf("encoded into LEB as follows:\n");
+  /*  printf("encoded into LEB as follows:\n");
   printf("bytes : {");
   for(int i=0;i<numBytes;i++)
   {
@@ -99,7 +99,7 @@ byte* encodeAsLEB128(byte* bytes,int numBytes,bool signed_,usint* numBytesOut)
   {
     printf("%i(%i)%s ",(int)result[i],(int)result[i]&0x7F,i+1<numSeptets?",":"");
   }
-  printf("}\n");
+  printf("}\n");*/
   return result;
 }
 

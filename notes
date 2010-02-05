@@ -111,7 +111,11 @@ type that pointer is, we can't really patch it
     316k w/ relocs
     241k w/o relocs
     This is a 31% increase in size
+** need to patch changes to the data segment that might be string constants, etc, things not named
 * references:
+** x86
+*** x86 calling conventions http://unixwiz.net/techtips/win32-callconv-asm.html
+*** x86 instruction set reference http://download.intel.com/design/PentiumII/manuals/24319102.PDF
 ** ELF basics
 *** http://developers.sun.com/solaris/articles/elf.html
 *** http://www.linuxjournal.com/node/1060/print
@@ -190,9 +194,9 @@ type that pointer is, we can't really patch it
     inline functions.
 
 
-** libdwarf: http://reality.sgiweb.org/davea/dwarf.html
-** x86 calling conventions http://unixwiz.net/techtips/win32-callconv-asm.html
+
 **call frame info/DWARF/Exception Handling
+*** libdwarf: http://reality.sgiweb.org/davea/dwarf.html
 *** dwarf standard http://dwarfstd.org/Dwarf3.pdf
 **** Call frame information in section 6.4 (p. 120 in the pdf, marked as p.108)
 **** section 6.4.4 discusses exactly how to practically unwind the stack
