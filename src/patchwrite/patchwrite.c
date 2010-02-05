@@ -16,8 +16,11 @@
 #include <dwarf.h>
 #include <assert.h>
 #include "register.h"
+#include "codediff.h"
+#include "relocation.h"
 
 ElfInfo* oldBinary=NULL;
+ElfInfo* newBinary=NULL;
 
 typedef struct
 {
@@ -25,6 +28,7 @@ typedef struct
   TypeTransform* transform;
 } VarTransformation;
 
+ElfInfo patch;
 Elf *outelf;
 
 //Elf_Data* patch_syms_rel_data=NULL;
@@ -33,7 +37,11 @@ Elf_Data* patch_rules_data=NULL;
 Elf_Data* patch_expr_data=NULL;
 Elf_Data* strtab_data=NULL;
 Elf_Data* symtab_data=NULL;
+Elf_Data* text_data=NULL;//for storing new versions of functions
+Elf_Data* rodata_data=NULL;
+Elf_Data* rela_text_data=NULL;
 //Elf_Data* old_symtab_data=NULL;
+bool dataFinalized=false;//determines whether we're misusing d_size and d_off or not
 
 //Elf_Scn* patch_syms_rel_scn=NULL;
 //Elf_Scn* patch_syms_new_scn=NULL;
@@ -42,17 +50,32 @@ Elf_Scn* patch_rules_scn=NULL;
 Elf_Scn* patch_expr_scn=NULL;
 Elf_Scn* strtab_scn=NULL;
 Elf_Scn* symtab_scn=NULL;
+Elf_Scn* text_scn=NULL;//for storing new versions of functions
+Elf_Scn* rodata_scn=NULL;//hold the new rodata from the patch
+Elf_Scn* rela_text_scn=NULL;
 //now not writing old symbols b/c
 //better to get the from /proc/PID/exe
 /*Elf_Scn* old_symtab_scn=NULL;//relevant symbols from the symbol table of the old binary
                              //we must store this in the patch object in case the object
                              //in memory does not have a symbol table loaded in memory
                              */
-
 Dwarf_P_Debug dbg;
 Dwarf_P_Die rootDie=NULL;
 Dwarf_P_Die lastDie=NULL;//keep track of for sibling purposes
 Dwarf_Unsigned cie;//index of cie we're using
+
+
+void addDataToScn(Elf_Data* dataDest,void* data,int size)
+{
+  if(size>dataDest->d_size-dataDest->d_off)
+  {
+    //ran out of space, allocate more
+    dataDest->d_size=max(dataDest->d_size*2,size*2);
+    dataDest->d_buf=realloc(dataDest->d_buf,dataDest->d_size);
+  }
+  memcpy((byte*)dataDest->d_buf+dataDest->d_off,data,size);
+  dataDest->d_off+=size;
+}
 
 //adds an entry to the string table, return its offset
 int addStrtabEntry(char* str)
@@ -70,6 +93,7 @@ int addStrtabEntry(char* str)
   }
   memcpy((char*)strtab_data->d_buf+strtab_data->d_off,str,len);
   strtab_data->d_off+=len;
+  elf_flagdata(strtab_data,ELF_C_SET,ELF_F_DIRTY);
   return strtab_data->d_off-len;
 }
 
@@ -89,7 +113,26 @@ int addSymtabEntry(Elf_Data* data,Elf32_Sym* sym)
   }
   memcpy((char*)data->d_buf+data->d_off,sym,len);
   data->d_off+=len;
+  if(data==symtab_data)
+  {
+    patch.symTabCount=data->d_off/len;
+  }
   return (data->d_off-len)/len;
+}
+
+void writeFuncToDwarf(char* name,uint textOffset,uint funcTextSize,int symIdx)
+{
+  Dwarf_Error err;
+  Dwarf_P_Die parent=lastDie?NULL:rootDie;
+  Dwarf_P_Die die=dwarf_new_die(dbg,DW_TAG_subprogram,parent,NULL,lastDie,NULL,&err);
+  dwarf_add_AT_name(die,name,&err);
+  //note that we add in highpc and lowpc info for the new version of
+  //the function. This is so that when patching we can find it
+  
+  //todo: these are going to need relocation
+  dwarf_add_AT_targ_address(dbg,die,DW_AT_low_pc,textOffset,symIdx,&err);
+  dwarf_add_AT_targ_address(dbg,die,DW_AT_high_pc,textOffset+funcTextSize,symIdx,&err);
+  lastDie=die;
 }
 
 void writeTypeToDwarf(TypeInfo* type)
@@ -251,7 +294,210 @@ void writeVarTransforms(List* varTrans)
   }
 }
 
-void writeTypeTransformationInfo(DwarfInfo* diPatchee,DwarfInfo* diPatched)
+List* getTypeTransformationInfoForCU(CompilationUnit* cu1,CompilationUnit* cu2)
+{
+  List* varTransHead=NULL;
+  List* varTransTail=NULL;
+  TransformationInfo* trans=zmalloc(sizeof(TransformationInfo));
+  trans->typeTransformers=dictCreate(100);//todo: get rid of magic # 100
+  printf("Examining compilation unit %s\n",cu1->name);
+  VarInfo** vars1=(VarInfo**)dictValues(cu1->tv->globalVars);
+  //todo: handle addition of variables in the patch
+  VarInfo* var=vars1[0];
+  Dictionary* patchVars=cu2->tv->globalVars;
+  for(int i=0;var;i++,var=vars1[i])
+  {
+    printf("Found variable %s \n",var->name);
+    VarInfo* patchedVar=dictGet(patchVars,var->name);
+    if(!patchedVar)
+    {
+      //todo: do we need to do anything special to handle removal of variables in the patch?
+      printf("warning: var %s seems to have been removed in the patch\n",var->name);
+      continue;
+    }
+    TypeInfo* ti1=var->type;
+    TypeInfo* ti2=patchedVar->type;
+    bool needsTransform=false;
+    if(dictExists(trans->typeTransformers,ti1->name))
+    {
+      needsTransform=true;
+    }
+    else
+    {
+      //todo: should have some sort of caching for types we've already
+      //determined to be equal
+      TypeTransform* transform=NULL;
+      if(!compareTypes(ti1,ti2,&transform))
+      {
+        if(!transform)
+        {
+          //todo: may not want to actually abort, may just want to issue
+          //an error
+          fprintf(stderr,"Error, cannot generate type transformation for variable %s\n",var->name);
+          fflush(stderr);
+          abort();
+        }
+        printf("generated type transformation for type %s\n",ti1->name);
+        dictInsert(trans->typeTransformers,ti1->name,transform);
+        needsTransform=true;
+      }
+    }
+    if(needsTransform)
+    {
+      List* li=zmalloc(sizeof(List));
+      VarTransformation* vt=zmalloc(sizeof(VarTransformation));
+      vt->var=patchedVar;
+      vt->transform=(TypeTransform*)dictGet(trans->typeTransformers,var->type->name);
+      if(!vt->transform)
+      {
+        death("the transformation info for that variable doesn't exist!\n");
+      }
+      li->value=vt;
+      if(varTransHead)
+      {
+        varTransTail->next=li;
+      }
+      else
+      {
+        varTransHead=li;
+      }
+      varTransTail=li;
+    }
+  }
+  free(vars1);
+  return varTransHead;
+}
+
+void writeFuncTransformationInfoForCU(CompilationUnit* cu1,CompilationUnit* cu2)
+{
+  SubprogramInfo** funcs1=(SubprogramInfo**)dictValues(cu1->subprograms);
+  for(int i=0;funcs1[i];i++)
+  {
+    SubprogramInfo* func=funcs1[i];
+    SubprogramInfo* patchedFunc=dictGet(cu2->subprograms,func->name);
+    if(!areSubprogramsIdentical(func,patchedFunc,oldBinary,newBinary))
+    {
+      printf("writing transformation info for function %s\n",func->name);
+      int len=func->highpc-func->lowpc;
+      if(len>text_data->d_size-text_data->d_off)
+      {
+        //ran out of space, allocate more
+        text_data->d_size=max(text_data->d_size*2,len*2);
+        text_data->d_buf=realloc(text_data->d_buf,text_data->d_size);
+      }
+      
+      memcpy(text_data->d_buf+text_data->d_off,getTextDataAtAbs(newBinary,func->lowpc,IN_MEM),len);
+      Elf32_Sym sym;
+      sym.st_name=addStrtabEntry(func->name);
+      sym.st_value=text_data->d_off;//is it ok that this is section-relative, since
+      //we set st_shndx to be the text section
+      sym.st_size=0;
+      sym.st_info=ELF32_ST_INFO(STB_GLOBAL,STT_FUNC);
+      sym.st_other=0;
+      sym.st_shndx=elf_ndxscn(text_scn);
+      int idx=addSymtabEntry(symtab_data,&sym);
+
+      //we also have to add an entry into debug info, so that
+      //we know to patch the function
+      writeFuncToDwarf(func->name,text_data->d_off,len,idx);
+      text_data->d_off+=len;
+
+      //also include any relocations which exist for anything inside this function
+      List* relocs=getRelocationItemsInRange(newBinary,getSectionByName(newBinary,".rel.text"),patchedFunc->lowpc,patchedFunc->highpc);
+      List* li=relocs;
+      for(;li;li=li->next)
+      {
+        //we always use RELA rather than REL in the patch file
+        //because having the addend recorded makes some
+        //things much easier to work with
+        Elf32_Rela rela;//what we actually write to the file
+        RelocInfo* reloc=li->value;
+        //todo: we insert symbols so that the relocations
+        //will be valid, but we need to make sure we don't insert
+        //a single symbol too many times, it wastes space
+        int symIdx;
+        if(ERT_REL==reloc->type)
+        {
+          symIdx=ELF64_R_SYM(reloc->rel.r_info);//elf64 b/c using GElf
+        }
+        else //RELA
+        {
+          symIdx=ELF64_R_SYM(reloc->rela.r_info);//elf64 b/c using GElf
+        }
+        GElf_Sym symInNewBin;
+        getSymbol(newBinary,symIdx,&symInNewBin);
+        char* symname=elf_strptr(newBinary->e, newBinary->strTblIdx,
+                                 symInNewBin.st_name);
+        Elf_Scn* rodataScn=getSectionByName(newBinary,".rodata");
+        GElf_Shdr shdr;
+        gelf_getshdr(rodataScn,&shdr);
+        addr_t rodataStart=shdr.sh_addr;
+        sym.st_name=addStrtabEntry(symname);
+        sym.st_value=symInNewBin.st_value;
+        sym.st_size=symInNewBin.st_size;
+        sym.st_info=symInNewBin.st_info;
+        int symType=ELF64_ST_TYPE(symInNewBin.st_info);
+        sym.st_shndx=SHN_UNDEF;        
+        if(STT_SECTION==symType)
+        {
+          char* scnName=getSectionNameFromIdx(newBinary,symInNewBin.st_shndx);
+          if(!strcmp(".rodata",scnName))
+          {
+            sym.st_shndx=elf_ndxscn(rodata_scn);
+          }
+          else
+          {
+            death("don't yet support functions referring to sections other than rodata\n");
+          }
+        }
+        sym.st_info=ELF32_ST_INFO(ELF64_ST_BIND(symInNewBin.st_info),
+                                  symType);
+        sym.st_other=symInNewBin.st_other;
+
+        //we might have already added this same symbol
+        GElf_Sym gsym=symToGELFSym(sym);
+        /*        //make sure our patch is up to date
+        if (elf_update (outelf, ELF_C_NULL) <0)
+        {
+          fprintf(stderr,"Failed to update structure of patch file: %s\n",elf_errmsg (-1));
+          }*/
+        int reindex=findSymbol(&patch,&gsym,&patch);
+        if(SHN_UNDEF==reindex)
+        {
+          reindex=addSymtabEntry(symtab_data,&sym);
+        }
+        printf("reindex is %i\n",reindex);
+        byte type;
+        if(ERT_REL==reloc->type)
+        {
+          type=ELF64_R_TYPE(reloc->rel.r_info);
+        }
+        else //RELA
+        {
+          type=ELF64_R_TYPE(reloc->rela.r_info);
+        }
+        rela.r_info=ELF32_R_INFO(reindex,type);
+        rela.r_offset=ERT_REL==reloc->type?reloc->rel.r_offset:reloc->rela.r_offset;
+        if(ERT_REL==reloc->type)
+        {
+          //have to calculate the addend
+          word_t addrAccessed=getTextAtAbs(newBinary,rela.r_offset,IN_MEM);
+          rela.r_addend=addrAccessed-sym.st_value;
+        }
+        else
+        {
+          rela.r_addend=reloc->rela.r_addend;
+        }
+        printf("adding reloc for offset 0x%x\n",rela.r_offset);
+        addDataToScn(rela_text_data,&rela,sizeof(Elf32_Rela));
+      }
+      deleteList(relocs,free);
+    }
+  }
+}
+
+  
+void writeTypeAndFuncTransformationInfo(DwarfInfo* diPatchee,DwarfInfo* diPatched)
 {
   List* varTransHead=NULL;
   List* varTransTail=NULL;
@@ -297,78 +543,13 @@ void writeTypeTransformationInfo(DwarfInfo* diPatchee,DwarfInfo* diPatched)
     }
     cu1->presentInOtherVersion=true;
     cu2->presentInOtherVersion=true;
-    
-    TransformationInfo* trans=zmalloc(sizeof(TransformationInfo));
-    trans->typeTransformers=dictCreate(100);//todo: get rid of magic # 100
-    printf("Examining compilation unit %s\n",cu1->name);
-    VarInfo** vars1=(VarInfo**)dictValues(cu1->tv->globalVars);
-    //todo: handle addition of variables in the patch
-    VarInfo* var=vars1[0];
-    Dictionary* patchVars=cu2->tv->globalVars;
-    for(int i=0;var;i++,var=vars1[i])
-    {
-      printf("Found variable %s \n",var->name);
-      VarInfo* patchedVar=dictGet(patchVars,var->name);
-      if(!patchedVar)
-      {
-        //todo: do we need to do anything special to handle removal of variables in the patch?
-        printf("warning: var %s seems to have been removed in the patch\n",var->name);
-        continue;
-      }
-      TypeInfo* ti1=var->type;
-      TypeInfo* ti2=patchedVar->type;
-      bool needsTransform=false;
-      if(dictExists(trans->typeTransformers,ti1->name))
-      {
-        needsTransform=true;
-      }
-      else
-      {
-        //todo: should have some sort of caching for types we've already
-        //determined to be equal
-        TypeTransform* transform=NULL;
-        if(!compareTypes(ti1,ti2,&transform))
-        {
-          if(!transform)
-          {
-            //todo: may not want to actually abort, may just want to issue
-            //an error
-            fprintf(stderr,"Error, cannot generate type transformation for variable %s\n",var->name);
-            fflush(stderr);
-            abort();
-          }
-          printf("generated type transformation for type %s\n",ti1->name);
-          dictInsert(trans->typeTransformers,ti1->name,transform);
-          needsTransform=true;
-        }
-      }
-      if(needsTransform)
-      {
-        List* li=zmalloc(sizeof(List));
-        VarTransformation* vt=zmalloc(sizeof(VarTransformation));
-        vt->var=patchedVar;
-        vt->transform=(TypeTransform*)dictGet(trans->typeTransformers,var->type->name);
-        if(!vt->transform)
-        {
-          death("the transformation info for that variable doesn't exist!\n");
-        }
-        li->value=vt;
-        if(varTransHead)
-        {
-          varTransTail->next=li;
-        }
-        else
-        {
-          varTransHead=li;
-        }
-        varTransTail=li;
-      }
-    }
+    List* li=getTypeTransformationInfoForCU(cu1,cu2);
+    varTransHead=concatLists(varTransHead,varTransTail,li,NULL,&varTransTail);
+    writeFuncTransformationInfoForCU(cu1,cu2);
 
     printf("completed all transformations for compilation unit %s\n",cu1->name);
     //freeTransformationInfo(trans);//this was causing memory errors. todo: debug it
     //I think it's needed for writeVarTransforms later. Should do reference counting
-    free(vars1);
   }
   writeVarTransforms(varTransHead);
 }
@@ -490,6 +671,11 @@ void createSections(Elf* outelf)
   shdr->sh_entsize=sizeof(Elf32_Sym);
   shdr->sh_name=addStrtabEntry(".symtab");
 
+  //first symbol in symtab should be all zeros
+  Elf32_Sym sym;
+  memset(&sym,0,sizeof(Elf32_Sym));
+  addSymtabEntry(symtab_data,&sym);
+
   //now not using old symtab b/c better to get old symbols from
   // /proc/PID/exe
   /*
@@ -512,6 +698,81 @@ void createSections(Elf* outelf)
   shdr->sh_entsize=sizeof(Elf32_Sym);
   shdr->sh_name=addStrtabEntry(".symtab.v0");
   */
+
+  //text section for new functions
+  text_scn=elf_newscn(outelf);
+  text_data=elf_newdata(text_scn);
+  text_data->d_align=1;
+  text_data->d_buf=malloc(8);//arbitrary starting size, more
+                                       //will be allocced as needed
+  text_data->d_off=0;
+  text_data->d_size=8;//will increase as needed
+  text_data->d_version=EV_CURRENT;
+  
+  shdr=elf32_getshdr(text_scn);
+  shdr->sh_type=SHT_PROGBITS;
+  shdr->sh_link=0;
+  shdr->sh_info=0;
+  shdr->sh_addralign=1;//normally text is aligned, but we never actually execute from this section
+  shdr->sh_name=addStrtabEntry(".text.new");
+
+  //rodata section for new strings, constants, etc
+  //(note that in many cases these may not actually be "new" ones,
+  //but unfortunately because .rodata is so unstructured, it can
+  //be difficult to determine what is needed and what is not
+  rodata_scn=elf_newscn(outelf);
+  rodata_data=elf_newdata(rodata_scn);
+  rodata_data->d_align=1;
+  rodata_data->d_buf=malloc(8);//arbitrary starting size, more
+                                       //will be allocced as needed
+  rodata_data->d_off=0;
+  rodata_data->d_size=8;//will increase as needed
+  rodata_data->d_version=EV_CURRENT;
+  
+  shdr=elf32_getshdr(rodata_scn);
+  shdr->sh_type=SHT_PROGBITS;
+  shdr->sh_link=0;
+  shdr->sh_info=0;
+  shdr->sh_addralign=1;//normally text is aligned, but we never actually execute from this section
+  shdr->sh_name=addStrtabEntry(".rodata.new");
+
+  //rel.text.new
+  rela_text_scn=elf_newscn(outelf);
+  rela_text_data=elf_newdata(rela_text_scn);
+  rela_text_data->d_align=1;
+  rela_text_data->d_buf=malloc(8);//mem will be allocated as needed
+  rela_text_data->d_off=0;
+  rela_text_data->d_size=8;
+  rela_text_data->d_version=EV_CURRENT;
+  shdr=elf32_getshdr(rela_text_scn);
+  shdr->sh_type=SHT_RELA;
+  shdr->sh_addralign=4;//todo: diff for 64-bit
+  shdr->sh_name=addStrtabEntry(".rela.text.new");
+
+  //write symbols for sections
+  sym.st_info=ELF32_ST_INFO(STB_LOCAL,STT_SECTION);
+  sym.st_name=elf32_getshdr(text_scn)->sh_name;
+  sym.st_shndx=elf_ndxscn(text_scn);
+  addSymtabEntry(symtab_data,&sym);
+  sym.st_name=elf32_getshdr(strtab_scn)->sh_name;
+  sym.st_shndx=elf_ndxscn(strtab_scn);
+  addSymtabEntry(symtab_data,&sym);
+  sym.st_name=elf32_getshdr(symtab_scn)->sh_name;
+  sym.st_shndx=elf_ndxscn(symtab_scn);
+  addSymtabEntry(symtab_data,&sym);
+  sym.st_name=elf32_getshdr(rela_text_scn)->sh_name;
+  sym.st_shndx=elf_ndxscn(rela_text_scn);
+  addSymtabEntry(symtab_data,&sym);
+}
+
+void finalizeDataSize(Elf_Scn* scn,Elf_Data* data)
+{
+  data->d_size=data->d_off;//what was actually used
+  data->d_off=0;
+  data->d_buf=realloc(data->d_buf,
+                      data->d_size);
+  Elf32_Shdr* shdr=elf32_getshdr(scn);
+  shdr->sh_size=data->d_size;
 }
 
 void finalizeDataSizes()
@@ -569,20 +830,60 @@ void finalizeDataSizes()
   shdr=elf32_getshdr(old_symtab_scn);
   shdr->sh_size=old_symtab_data->d_size;
   */
+
+  finalizeDataSize(text_scn,text_data);
+  finalizeDataSize(rela_text_scn,rela_text_data);
+  finalizeDataSize(rodata_scn,rodata_data);
+
+  dataFinalized=true;
 }
 
 int dwarfWriteSectionCallback(char* name,int size,Dwarf_Unsigned type,
                               Dwarf_Unsigned flags,Dwarf_Unsigned link,
                               Dwarf_Unsigned info,int* sectNameIdx,int* error)
 {
+  //look through all the sections for one which matches to
+  //see if we've already created this section
+  Elf_Scn* scn=elf_nextscn(outelf,NULL);
+  int nameLen=strlen(name);
+  for(;scn;scn=elf_nextscn(outelf,scn))
+  {
+    Elf32_Shdr* shdr=elf32_getshdr(scn);
+    if(!strncmp(strtab_data->d_buf+shdr->sh_name,name,nameLen))
+    {
+      //ok, we found the section we want, now have to find its symbol
+      int symtabSize=dataFinalized?symtab_data->d_size:symtab_data->d_off;
+      for(int i=0;i<symtabSize/sizeof(Elf32_Sym);i++)
+      {
+        Elf32_Sym* sym=(Elf32_Sym*)(symtab_data->d_buf+i*sizeof(Elf32_Sym));
+        int idx=elf_ndxscn(scn);
+        //printf("we're on section with index %i and symbol for index %i\n",idx,sym->st_shndx);
+        if(STT_SECTION==ELF32_ST_TYPE(sym->st_info) && idx==sym->st_shndx)
+        {
+          *sectNameIdx=i;
+          return idx;
+        }
+      }
+      fprintf(stderr,"finding existing section for %s\n",name);
+      death("found section already existing but had no symbol, this should be impossible\n");
+    }
+  }
+
+  //section doesn't already exist, create it
+ 
   //todo: write this section
-  Elf_Scn* scn=elf_newscn(outelf);
+  scn=elf_newscn(outelf);
   Elf32_Shdr* shdr=elf32_getshdr(scn);
   shdr->sh_name=addStrtabEntry(name);
   shdr->sh_type=type;
   shdr->sh_flags=flags;
   shdr->sh_size=size;
   shdr->sh_link=link;
+  if(0==link && SHT_REL==type)
+  {
+    //make symtab the link
+    shdr->sh_link=elf_ndxscn(symtab_scn);
+  }
   shdr->sh_info=info;
   Elf32_Sym sym;
   sym.st_name=shdr->sh_name;
@@ -597,15 +898,31 @@ int dwarfWriteSectionCallback(char* name,int size,Dwarf_Unsigned type,
   return sym.st_shndx;
 }
 
-void writePatch(DwarfInfo* diPatchee,DwarfInfo* diPatched,char* fname,ElfInfo* oldBinary_)
+
+//todo: in the future only copy rodata from object files which changed,
+//don't necessarily need *all* the rodata
+void writeROData()
 {
+  uint len=newBinary->roData->d_size;
+  rodata_data->d_buf=zmalloc(len);
+  rodata_data->d_size=rodata_data->d_off=len;
+  memcpy(rodata_data->d_buf,newBinary->roData->d_buf,len);
+}
+
+
+void writePatch(DwarfInfo* diPatchee,DwarfInfo* diPatched,char* fname,ElfInfo* oldBinary_,ElfInfo* newBinary_)
+{
+  memset(&patch,0,sizeof(ElfInfo));
   oldBinary=oldBinary_;
+  newBinary=newBinary_;
   int outfd = creat(fname, 0666);
   if (outfd < 0)
   {
     fprintf(stderr,"cannot open output file '%s'", fname);
   }
+
   outelf = elf_begin (outfd, ELF_C_WRITE, NULL);
+  patch.e=outelf;
   Elf32_Ehdr* ehdr=elf32_newehdr(outelf);
   if(!ehdr)
   {
@@ -625,19 +942,32 @@ void writePatch(DwarfInfo* diPatchee,DwarfInfo* diPatched,char* fname,ElfInfo* o
 
   createSections(outelf);
   ehdr->e_shstrndx=elf_ndxscn(strtab_scn);//set strtab in elf header
+  //todo: perhaps the two string tables should be separate
+  patch.strTblIdx=patch.sectionHdrStrTblIdx=ehdr->e_shstrndx;
+  patch.symTabData=symtab_data;
 
   Dwarf_Error err;
   dbg=dwarf_producer_init(DW_DLC_WRITE,dwarfWriteSectionCallback,dwarfErrorHandler,NULL,&err);
   rootDie=dwarf_new_die(dbg,DW_TAG_compile_unit,NULL,NULL,NULL,NULL,&err);
+  dwarf_add_die_to_debug(dbg,rootDie,&err);
   cie=dwarf_add_frame_cie(dbg,"",1,1,0,NULL,0,&err);
   if(DW_DLV_NOCOUNT==cie)
   {
     dwarfErrorHandler(err,"creating frame cie failed");
   }
+
+  //call this once so the necessary dwarf sections get created
+  dwarf_transform_to_disk_form(dbg,&err);
+
+  //so far there should be only local sections in symtab. Can set sh_info
+  //apropriately
+  Elf32_Shdr* shdr=elf32_getshdr(symtab_scn);
+  shdr->sh_info=symtab_data->d_off/sizeof(Elf32_Sym)+1;
+  printf("set symtab sh_info to %i\n",shdr->sh_info);
   
   //now that we've created the necessary things, actually run through
   //the stuff to write in our data
-  writeTypeTransformationInfo(diPatchee,diPatched);
+  writeTypeAndFuncTransformationInfo(diPatchee,diPatched);
 
   dwarf_add_die_to_debug(dbg,rootDie,&err);
   int numSections=dwarf_transform_to_disk_form(dbg,&err);
@@ -656,13 +986,11 @@ void writePatch(DwarfInfo* diPatchee,DwarfInfo* diPatched,char* fname,ElfInfo* o
     data->d_buf=zmalloc(length);
     memcpy(data->d_buf,buf,length);
   }
+  writeROData();
   finalizeDataSizes();
 
-  //now I don't remember what this was for and it seems to cause problems
-  //elf_flagelf (outelf, ELF_C_SET, ELF_F_LAYOUT);
 
-
-  if (elf_update (outelf, ELF_C_WRITE) <0)
+  if(elf_update (outelf, ELF_C_WRITE) <0)
   {
     fprintf(stderr,"Failed to write out elf file: %s\n",elf_errmsg (-1));
     exit(1);

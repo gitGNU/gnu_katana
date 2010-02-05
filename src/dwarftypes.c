@@ -149,6 +149,14 @@ int readAttributeAsInt(Dwarf_Attribute attr)
       result=b?1:0;
     }
     break;
+  case DW_FORM_addr:
+    {
+      Dwarf_Addr addr;
+      dwarf_formaddr(attr,&addr,&err);
+      assert(sizeof(addr_t)==sizeof(int));
+      result=(int)addr;
+    }
+    break;
   default:
     fprintf(stderr,"readAttributeAsInt cannot handle form type 0x%x yet\n",form);
     death(NULL);
@@ -270,6 +278,9 @@ char* getNameForDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
         //the dwarf type information
         snprintf(buf,2048,"%s[]_%i",name,(int)offset);
       }
+      break;
+    case DW_TAG_subprogram:
+      snprintf(buf,64,"lambda_%i\n",(int)offset);
       break;
     default:
       snprintf(buf,64,"unknown_type_anon_%u\n",(uint)offset);
@@ -651,7 +662,26 @@ void parseCompileUnit(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
   setIdentifierForCU(cu,die);
   printf("compilation unit has name %s\n",cu->name);
 }
-                     
+
+void addSubprogramFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
+{
+  SubprogramInfo* prog=zmalloc(sizeof(SubprogramInfo));
+  prog->name=getNameForDie(dbg,die,cu);
+  Dwarf_Attribute attr;
+  Dwarf_Error err;
+  int res=dwarf_attr(die,DW_AT_low_pc,&attr,&err);
+  if(DW_DLV_OK==res)
+  {
+    prog->lowpc=readAttributeAsInt(attr);
+  }
+  res=dwarf_attr(die,DW_AT_high_pc,&attr,&err);
+  if(DW_DLV_OK==res)
+  {
+    prog->highpc=readAttributeAsInt(attr);
+  }
+  dictInsert(cu->subprograms,prog->name,prog);
+}
+
 void parseDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu,bool* parseChildren)
 {
   Dwarf_Off off,cuOff;
@@ -700,9 +730,13 @@ void parseDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu,bool* parseChild
     break;
   case DW_TAG_variable:
     addVarFromDie(dbg,die,cu);
-  case DW_TAG_subprogram://todo: will need to add in subprogram processing for scoping reasons
+    break;
+  case DW_TAG_subprogram:
+    addSubprogramFromDie(dbg,die,cu);
+    break;
   case DW_TAG_formal_parameter: //ignore because if a function change will be recompiled and won't modify function while executing it
     break;
+
   default:
     fprintf(stderr,"Unknown die type 0x%x. Ignoring it but this may not be what you want\n",tag);
     
@@ -787,6 +821,7 @@ DwarfInfo* readDWARFTypes(ElfInfo* elf)
   while(1)
   {
     CompilationUnit* cu=zmalloc(sizeof(CompilationUnit));
+    cu->subprograms=dictCreate(100);//todo: get rid of magic # 100 and base it on something
     List* cuLi=zmalloc(sizeof(List));
     cuLi->value=cu;
     if(di->compilationUnits)

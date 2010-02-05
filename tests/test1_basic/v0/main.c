@@ -29,7 +29,6 @@ void printThings()
 
 int main(int argc,char** argv)
 {
-  mprotect(0xbf9f7000,1,PROT_READ|PROT_WRITE|PROT_EXEC);
   printf("has pid %i\n",getpid());
   while(1)
   {

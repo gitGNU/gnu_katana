@@ -131,7 +131,7 @@ void memcpyFromTarget(byte* data,long addr,int numBytes)
     }
     else
     {
-      printf("wasn't aligned\n");
+      printf("memcpyFromTarget: wasn't aligned\n");
       //at the end and wasn't aligned
       memcpy(data+i,&val,numBytes-i);
     }

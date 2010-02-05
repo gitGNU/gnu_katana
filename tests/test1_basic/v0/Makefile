@@ -1,5 +1,4 @@
 SRC=main.c
-
 all : $(EXEC)
 
 $(EXEC) : $(SRC)
