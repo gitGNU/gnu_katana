@@ -14,7 +14,13 @@ EXEC=katana
 
 
 
-all :  $(EXEC)
+all :  debug
+
+debug : CFLAGS+=-DDEBUG
+debug :  $(EXEC)
+
+release : $(EXEC)
+
 
 tests :
 	make -C tests
