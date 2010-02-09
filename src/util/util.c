@@ -7,6 +7,7 @@
 */
 
 #include "util.h"
+#include <stdarg.h>
 
 void* zmalloc(size_t size)
 {
@@ -16,20 +17,18 @@ void* zmalloc(size_t size)
   return result;
 }
 
-void die(char* reason)
+
+void death(char* reason,...)
 {
+  va_list ap;
+  va_start(ap,reason);
   if(reason)
   {
-    fprintf(stderr,"%s",reason);
+    vfprintf(stderr,reason,ap);
   }
   fflush(stderr);
   fflush(stdout);
   abort();
-}
-
-void death(char* reason)
-{
-  die(reason);
 }
 
 void deleteList(List* start,void (*delFunc)(void*))

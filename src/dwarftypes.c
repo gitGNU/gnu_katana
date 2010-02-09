@@ -872,7 +872,7 @@ DwarfInfo* readDWARFTypes(ElfInfo* elf)
     }
     if(res == DW_DLV_NO_ENTRY)
     {
-      die("no entry! in dwarf_siblingof on CU die. This should never happen. Something is terribly wrong \n");
+      death("no entry! in dwarf_siblingof on CU die. This should never happen. Something is terribly wrong \n");
     }
     walkDieTree(dbg,cu_die,cu,true);
     dwarf_dealloc(dbg,cu_die,DW_DLA_DIE);
