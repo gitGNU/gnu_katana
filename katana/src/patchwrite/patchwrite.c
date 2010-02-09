@@ -370,6 +370,173 @@ List* getTypeTransformationInfoForCU(CompilationUnit* cu1,CompilationUnit* cu2)
   return varTransHead;
 }
 
+int reindexSectionForPatch(int scnIdx)
+{
+  char* scnName=getSectionNameFromIdx(newBinary,scnIdx);
+  if(!strcmp(".rodata",scnName))
+  {
+    return elf_ndxscn(rodata_scn);
+  }
+  else
+  {
+    death("don't yet support functions referring to sections other than rodata\n");
+  }
+  return STN_UNDEF;
+}
+
+idx_t addSymbolFromNewBinaryToPatch(idx_t symIdx)
+{
+  GElf_Sym symInNewBin;
+  getSymbol(newBinary,symIdx,&symInNewBin);
+  char* symname=elf_strptr(newBinary->e, newBinary->strTblIdx,
+                           symInNewBin.st_name);
+  //create a symbol to represent the symbol in newBinary
+  //that this relocation refers to. If we don't already have a corresponding
+  //symbol in the patch file, we may have to add this one
+  Elf32_Sym sym;
+  sym.st_name=addStrtabEntry(symname);
+  sym.st_value=symInNewBin.st_value;
+  sym.st_size=symInNewBin.st_size;
+  sym.st_info=symInNewBin.st_info;
+  int symType=ELF64_ST_TYPE(symInNewBin.st_info);
+  sym.st_shndx=SHN_UNDEF;        
+  if(STT_SECTION==symType)
+  {
+    sym.st_shndx=reindexSectionForPatch(symInNewBin.st_shndx);
+  }
+  sym.st_info=ELF32_ST_INFO(ELF64_ST_BIND(symInNewBin.st_info),
+                            symType);
+  sym.st_other=symInNewBin.st_other;
+
+  //we might have already added this same symbol to the patch
+  GElf_Sym gsym=symToGELFSym(sym);
+  int reindex=findSymbol(&patch,&gsym,&patch);
+  if(SHN_UNDEF==reindex)
+  {
+    reindex=addSymtabEntry(symtab_data,&sym);
+  }
+  printf("reindex is %i\n",reindex);
+  return reindex;
+}
+
+//segmentBase should be the start of the text that these relocations refer to
+void writeRelocationsInRange(addr_t lowpc,addr_t highpc,Elf_Scn* scn,
+                             addr_t segmentBase)
+{
+  List* relocs=getRelocationItemsInRange(newBinary,scn,lowpc,highpc);
+  
+  List* li=relocs;
+  for(;li;li=li->next)
+  {
+    //we always use RELA rather than REL in the patch file
+    //because having the addend recorded makes some
+    //things much easier to work with
+    Elf32_Rela rela;//what we actually write to the file
+    RelocInfo* reloc=li->value;
+    //todo: we insert symbols so that the relocations
+    //will be valid, but we need to make sure we don't insert
+    //a single symbol too many times, it wastes space
+    int symIdx;
+    if(ERT_REL==reloc->type)
+    {
+      symIdx=ELF64_R_SYM(reloc->rel.r_info);//elf64 b/c using GElf
+    }
+    else //RELA
+    {
+      symIdx=ELF64_R_SYM(reloc->rela.r_info);//elf64 b/c using GElf
+    }
+
+    idx_t reindex=addSymbolFromNewBinaryToPatch(symIdx);
+    addr_t symValue=getSymAddress(newBinary,symIdx);
+    
+    //now look at the relocation itself
+    byte type;
+    if(ERT_REL==reloc->type)
+    {
+      type=ELF64_R_TYPE(reloc->rel.r_info);
+    }
+    else //RELA
+    {
+      type=ELF64_R_TYPE(reloc->rela.r_info);
+    }
+    rela.r_info=ELF32_R_INFO(reindex,type);
+    rela.r_offset=ERT_REL==reloc->type?reloc->rel.r_offset:reloc->rela.r_offset;
+    addr_t oldRelOffset=rela.r_offset;
+    //now rebase the offset based on where in the data this text is going
+    GElf_Shdr shdr;
+    gelf_getshdr(rela_text_scn,&shdr);
+    //note: this relies on our current incorrect usage of the offset field
+    //for bookkeeping
+    addr_t newRelOffset=rela.r_offset-lowpc+segmentBase;
+    if(ERT_REL==reloc->type)
+    {
+      switch(type)
+      {
+      case R_386_32:
+        {
+          //have to calculate the addend
+          word_t addrAccessed=getTextAtAbs(newBinary,oldRelOffset,IN_MEM);
+          rela.r_addend=addrAccessed-symValue;
+        }
+        break;
+      case R_386_PC32:
+        {
+          word_t addrAccessed=getTextAtAbs(newBinary,oldRelOffset,IN_MEM);
+          rela.r_addend=addrAccessed-symValue+oldRelOffset+1;//+1
+          //because it's pc at next instruction
+              
+          //this is a pc-relative relocation but we're changing the address
+          //of the instruction, therefore the addend is not what it would be
+          if(addrAccessed < lowpc || addrAccessed > highpc)
+          {
+            addr_t diff=newRelOffset-oldRelOffset;
+            setTextAtAbs(newBinary,oldRelOffset,addrAccessed+diff,IN_MEM);
+                
+            //we're not just accessing something in the current function
+            //tweak the addend so that even with the new value
+            //we can access the same absolute address, which is what
+            //we really want to do. The text segment will never get
+            //relocated on linux x86 so the reasons for making this
+            //relative in the first place are gone
+            //rela.r_addend=addrAccessed-(newRelOffset+1)-sym.st_value;
+          }
+        }
+        break;
+      default:
+        death("relocation type not yet handled in writeFuncTransformationInfoForCU\n");
+      }
+    }
+    else
+    {
+      switch(type)
+      {
+      case R_386_32:
+        rela.r_addend=reloc->rela.r_addend;
+        break;
+      case R_386_PC32:
+        {
+          word_t addrAccessed=getTextAtAbs(newBinary,rela.r_offset,IN_MEM);
+          rela.r_addend=addrAccessed-symValue;
+          //this is a pc-relative relocation but we're changing the address
+          //of the instruction, therefore the addend is not what it would be
+          if(rela.r_addend < lowpc || rela.r_addend > highpc)
+          {
+            //we're not just accessing something in the current function
+            rela.r_addend+=rela.r_offset-oldRelOffset;//add in the difference in PC
+          }
+        }
+        break;
+      default:
+        death("relocation type not yet handled in writeFuncTransformationInfoForCU\n");
+      }
+    }
+    rela.r_offset=newRelOffset;
+    printf("adding reloc for offset 0x%x\n",rela.r_offset);
+    addDataToScn(rela_text_data,&rela,sizeof(Elf32_Rela));
+  }
+  deleteList(relocs,free);
+}
+
 void writeFuncTransformationInfoForCU(CompilationUnit* cu1,CompilationUnit* cu2)
 {
   SubprogramInfo** funcs1=(SubprogramInfo**)dictValues(cu1->subprograms);
@@ -399,7 +566,7 @@ void writeFuncTransformationInfoForCU(CompilationUnit* cu1,CompilationUnit* cu2)
       sym.st_info=ELF32_ST_INFO(STB_GLOBAL,STT_FUNC);
       sym.st_other=0;
       sym.st_shndx=elf_ndxscn(text_scn);
-      int idx=addSymtabEntry(symtab_data,&sym);
+      idx_t idx=addSymtabEntry(symtab_data,&sym);
 
       //we also have to add an entry into debug info, so that
       //we know to patch the function
@@ -407,150 +574,7 @@ void writeFuncTransformationInfoForCU(CompilationUnit* cu1,CompilationUnit* cu2)
       text_data->d_off+=len;
 
       //also include any relocations which exist for anything inside this function
-      List* relocs=getRelocationItemsInRange(newBinary,getSectionByName(newBinary,".rel.text"),patchedFunc->lowpc,patchedFunc->highpc);
-      
-      List* li=relocs;
-      for(;li;li=li->next)
-      {
-        //we always use RELA rather than REL in the patch file
-        //because having the addend recorded makes some
-        //things much easier to work with
-        Elf32_Rela rela;//what we actually write to the file
-        RelocInfo* reloc=li->value;
-        //todo: we insert symbols so that the relocations
-        //will be valid, but we need to make sure we don't insert
-        //a single symbol too many times, it wastes space
-        int symIdx;
-        if(ERT_REL==reloc->type)
-        {
-          symIdx=ELF64_R_SYM(reloc->rel.r_info);//elf64 b/c using GElf
-        }
-        else //RELA
-        {
-          symIdx=ELF64_R_SYM(reloc->rela.r_info);//elf64 b/c using GElf
-        }
-        GElf_Sym symInNewBin;
-        getSymbol(newBinary,symIdx,&symInNewBin);
-        char* symname=elf_strptr(newBinary->e, newBinary->strTblIdx,
-                                 symInNewBin.st_name);
-        Elf_Scn* rodataScn=getSectionByName(newBinary,".rodata");
-        gelf_getshdr(rodataScn,&shdr);
-        addr_t rodataStart=shdr.sh_addr;
-        sym.st_name=addStrtabEntry(symname);
-        sym.st_value=symInNewBin.st_value;
-        sym.st_size=symInNewBin.st_size;
-        sym.st_info=symInNewBin.st_info;
-        int symType=ELF64_ST_TYPE(symInNewBin.st_info);
-        sym.st_shndx=SHN_UNDEF;        
-        if(STT_SECTION==symType)
-        {
-          char* scnName=getSectionNameFromIdx(newBinary,symInNewBin.st_shndx);
-          if(!strcmp(".rodata",scnName))
-          {
-            sym.st_shndx=elf_ndxscn(rodata_scn);
-          }
-          else
-          {
-            death("don't yet support functions referring to sections other than rodata\n");
-          }
-        }
-        sym.st_info=ELF32_ST_INFO(ELF64_ST_BIND(symInNewBin.st_info),
-                                  symType);
-        sym.st_other=symInNewBin.st_other;
-
-        //we might have already added this same symbol
-        GElf_Sym gsym=symToGELFSym(sym);
-
-        int reindex=findSymbol(&patch,&gsym,&patch);
-        if(SHN_UNDEF==reindex)
-        {
-          reindex=addSymtabEntry(symtab_data,&sym);
-        }
-        printf("reindex is %i\n",reindex);
-        byte type;
-        if(ERT_REL==reloc->type)
-        {
-          type=ELF64_R_TYPE(reloc->rel.r_info);
-        }
-        else //RELA
-        {
-          type=ELF64_R_TYPE(reloc->rela.r_info);
-        }
-        rela.r_info=ELF32_R_INFO(reindex,type);
-        rela.r_offset=ERT_REL==reloc->type?reloc->rel.r_offset:reloc->rela.r_offset;
-        addr_t oldRelOffset=rela.r_offset;
-        //now rebase the offset based on where in the data this text is going
-        gelf_getshdr(rela_text_scn,&shdr);
-        //note: this relies on our current incorrect usage of the offset field
-        //for bookkeeping
-        addr_t newRelOffset=rela.r_offset-patchedFunc->lowpc+funcSegmentBase;
-        if(ERT_REL==reloc->type)
-        {
-          switch(type)
-          {
-          case R_386_32:
-            {
-            //have to calculate the addend
-            word_t addrAccessed=getTextAtAbs(newBinary,oldRelOffset,IN_MEM);
-            rela.r_addend=addrAccessed-sym.st_value;
-            }
-            break;
-          case R_386_PC32:
-            {
-              word_t addrAccessed=getTextAtAbs(newBinary,oldRelOffset,IN_MEM);
-              rela.r_addend=addrAccessed-sym.st_value+oldRelOffset+1;//+1
-              //because it's pc at next instruction
-              
-              //this is a pc-relative relocation but we're changing the address
-              //of the instruction, therefore the addend is not what it would be
-              if(addrAccessed < patchedFunc->lowpc || addrAccessed > patchedFunc->highpc)
-              {
-                addr_t diff=newRelOffset-oldRelOffset;
-                setTextAtAbs(newBinary,oldRelOffset,addrAccessed+diff,IN_MEM);
-                
-                //we're not just accessing something in the current function
-                //tweak the addend so that even with the new value
-                //we can access the same absolute address, which is what
-                //we really want to do. The text segment will never get
-                //relocated on linux x86 so the reasons for making this
-                //relative in the first place are gone
-                //rela.r_addend=addrAccessed-(newRelOffset+1)-sym.st_value;
-              }
-            }
-            break;
-          default:
-            death("relocation type not yet handled in writeFuncTransformationInfoForCU\n");
-          }
-        }
-        else
-        {
-          switch(type)
-          {
-          case R_386_32:
-            rela.r_addend=reloc->rela.r_addend;
-            break;
-          case R_386_PC32:
-            {
-            word_t addrAccessed=getTextAtAbs(newBinary,rela.r_offset,IN_MEM);
-            rela.r_addend=addrAccessed-sym.st_value;
-            //this is a pc-relative relocation but we're changing the address
-            //of the instruction, therefore the addend is not what it would be
-            if(rela.r_addend < patchedFunc->lowpc || rela.r_addend > patchedFunc->highpc)
-            {
-              //we're not just accessing something in the current function
-              rela.r_addend+=rela.r_offset-oldRelOffset;//add in the difference in PC
-            }
-            }
-            break;
-          default:
-            death("relocation type not yet handled in writeFuncTransformationInfoForCU\n");
-          }
-        }
-        rela.r_offset=newRelOffset;
-        printf("adding reloc for offset 0x%x\n",rela.r_offset);
-        addDataToScn(rela_text_data,&rela,sizeof(Elf32_Rela));
-      }
-      deleteList(relocs,free);
+      writeRelocationsInRange(patchedFunc->lowpc,patchedFunc->highpc,getSectionByName(newBinary,".rel.text"),funcSegmentBase);
     }
   }
 }

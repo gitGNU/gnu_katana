@@ -18,6 +18,7 @@ typedef unsigned int uint;
 typedef unsigned long addr_t;
 typedef uint word_t;
 typedef short unsigned int usint;
+typedef int idx_t;
 
 //we keep track of the type information
 //from on ELF file in a TypesInfo struct

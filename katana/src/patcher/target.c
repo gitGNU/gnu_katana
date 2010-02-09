@@ -104,7 +104,7 @@ void memcpyToTarget(long addr,byte* data,int numBytes)
     }
     else
     {
-      printf("only copying partially\n");
+      //printf("only copying partially\n");
       assert(sizeof(uint)==PTRACE_WORD_SIZE);
       uint tmp=0;
       memcpy(&tmp,data+i,numBytes-i);
@@ -131,7 +131,7 @@ void memcpyFromTarget(byte* data,long addr,int numBytes)
     }
     else
     {
-      printf("memcpyFromTarget: wasn't aligned\n");
+      //printf("memcpyFromTarget: wasn't aligned\n");
       //at the end and wasn't aligned
       memcpy(data+i,&val,numBytes-i);
     }

@@ -75,13 +75,7 @@ void insertTrampolineJump(addr_t insertAt,addr_t jumpTo)
   code[1]=0x25;//specify the addressing mode
 
   addr_t addrAddr=insertAt+2+sizeof(addr_t);//address of mem location holding jmp target
-  //code[2]=(addrAddr>>24)&0xFF;
-  //code[3]=(addrAddr>>16)&0xFF;
-  //code[4]=(addrAddr>>8)&0xFF;
-  //code[5]=(addrAddr>>0)&0xFF;
   memcpy(code+2,&addrAddr,sizeof(addr_t));
-  //todo: did I get endianness right here?
-  //x86 is bizarre
   memcpy(code+2+sizeof(addr_t),&jumpTo,sizeof(addr_t));
   printf("inserting at 0x%x, address to jump to is 0x%x\n",(uint)insertAt,(uint)jumpTo);
   memcpyToTarget(insertAt,code,len);
@@ -98,6 +92,7 @@ void insertTrampolineJump(addr_t insertAt,addr_t jumpTo)
 void applyFunctionPatch(SubprogramInfo* func,int pid,ElfInfo* targetBin,ElfInfo* patch,
                         TransformationInfo* trans)
 {
+  printf("patching function %s\n",func->name);
   //int len=func->highpc-func->lowpc;
   uint offset=func->lowpc;//-patch->textStart[IN_MEM]
   //get the function text from the patch file
@@ -206,6 +201,10 @@ addr_t copyInEntireSection(ElfInfo* patch,char* name,TransformationInfo* trans)
 }
 
 
+//this is a horrible function full of hacks that I've been trying to get
+//working and have been failing it. It should be massively revamped before it's any good
+//basically it attempts to fix the program header so the program can run, but doesn't
+//do so successfully
 void writeOutPatchedBin(bool flushToDisk)
 {
   //todo: this is all not working
@@ -265,7 +264,7 @@ void writeOutPatchedBin(bool flushToDisk)
   elf_flagelf(patchedBin->e,ELF_C_SET,ELF_F_DIRTY);
 
   elf_flagelf(patchedBin->e,ELF_C_CLR,ELF_F_LAYOUT);
-  if(elf_update(patchedBin->e, flushToDisk?ELF_C_WRITE:ELF_C_NULL) <0)
+  if(elf_update(patchedBin->e, ELF_C_NULL) <0)
   {
     fprintf(stderr,"Failed to write out patched elf file representing mem: %s\n",elf_errmsg (-1));
     death(NULL);
@@ -290,6 +289,41 @@ void writeOutPatchedBin(bool flushToDisk)
       gelf_update_phdr(patchedBin->e,cnt,&phdr_mem);
     }
   }
+
+  //hackish fix for now, get this more thoroughly in the future
+  GElf_Phdr phdr;
+  gelf_getphdr(patchedBin->e,2,&phdr);
+  GElf_Shdr shdr;
+  Elf_Scn* scn=getSectionByName(patchedBin,".eh_frame");
+  gelf_getshdr(scn,&shdr);
+  phdr.p_filesz=shdr.sh_offset+shdr.sh_size;
+  phdr.p_memsz=0x888;//horrible hack specific to what we're debugging now
+  gelf_update_phdr(patchedBin->e,2,&phdr);
+
+  gelf_getphdr(patchedBin->e,3,&phdr);
+  scn=getSectionByName(patchedBin,".ctors");
+  gelf_getshdr(scn,&shdr);
+  phdr.p_offset=shdr.sh_offset;
+  scn=getSectionByName(patchedBin,".bss");
+  gelf_getshdr(scn,&shdr);
+  phdr.p_filesz=shdr.sh_offset+shdr.sh_size-phdr.p_offset;
+  gelf_update_phdr(patchedBin->e,3,&phdr);
+
+  gelf_getphdr(patchedBin->e,4,&phdr);
+  scn=getSectionByName(patchedBin,".dynamic");
+  gelf_getshdr(scn,&shdr);
+  phdr.p_offset=shdr.sh_offset;
+  phdr.p_filesz=shdr.sh_offset+shdr.sh_size-phdr.p_offset;
+  gelf_update_phdr(patchedBin->e,4,&phdr);
+
+  gelf_getphdr(patchedBin->e,7,&phdr);
+  scn=getSectionByName(patchedBin,".ctors");
+  gelf_getshdr(scn,&shdr);
+  phdr.p_offset=shdr.sh_offset;
+  scn=getSectionByName(patchedBin,".got");
+  gelf_getshdr(scn,&shdr);
+  phdr.p_filesz=shdr.sh_offset+shdr.sh_size-phdr.p_offset;
+  gelf_update_phdr(patchedBin->e,7,&phdr);
 
   elf_flagelf(patchedBin->e,ELF_C_SET,ELF_F_DIRTY);
   elf_flagelf(patchedBin->e,ELF_C_SET,ELF_F_LAYOUT);

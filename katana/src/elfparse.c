@@ -53,7 +53,10 @@ addr_t getSymAddress(ElfInfo* e,int symIdx)
 {
   assert(e->symTabData);
   GElf_Sym sym;
-  gelf_getsym(e->symTabData,symIdx,&sym);
+  if(!gelf_getsym(e->symTabData,symIdx,&sym))
+  {
+    death("gelf_getsym failed in getSymAddress\n");
+  }
   return sym.st_value;
 }
 
