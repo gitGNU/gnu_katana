@@ -44,11 +44,6 @@ List* getRelocationItemsFor(ElfInfo* e,int symIdx);
 //list value type is RelocInfo
 List* getRelocationItemsInRange(ElfInfo* e,Elf_Scn* relocScn,addr_t lowAddr,addr_t highAddr);
 
-//from an index of a symbol in the old ELF structure,
-//find it's index in the new ELF structure. Return -1 if it cannot be found
-//The matching is done solely on name
-int reindexSymbol(ElfInfo* old,ElfInfo* new,int oldIdx);
-
 /*
 //apply all relocations corresponding to the movement of certain symbols
 //The List parameter should be a List with values of type
@@ -73,4 +68,8 @@ void applyRelocations(List* relocs,ElfInfo* oldElf);
 //oldElf is used for reference, what things that
 //need relocating were originally located against
 void applyAllRelocations(ElfInfo* e,ElfInfo* oldElf);
+
+//compute an addend for when we have REL instead of RELA
+addr_t computeAddend(ElfInfo* e,byte type,idx_t symIdx,addr_t r_offset);
+
 #endif
