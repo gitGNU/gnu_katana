@@ -29,9 +29,7 @@ typedef unsigned char byte;
 void* zmalloc(size_t size);
 
 
-void die(char* reason);
-//just an alias
-void death(char* reason);
+void death(char* reason,...);
 
 #define min(x,y)   ((x)>(y))?(y):(x)
 
@@ -47,6 +45,6 @@ void death(char* reason);
 //! \brief Set memory space starts at pointer \a n of size \a m to zero. 
 #define BZERO(n,m)  memset(n, 0, m)
 
-
+#define GARBAGE 0xCC //204 decimal
 
 #endif

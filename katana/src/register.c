@@ -42,7 +42,7 @@ PoReg readRegFromLEB128(byte* leb,usint* bytesRead)
     memcpy(&result.u.offset,bytes+1,4);
     break;
   default:
-    die("unsupported register type\n");
+    death("unsupported register type\n");
   }
   return result;
 }
