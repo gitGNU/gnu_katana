@@ -8,6 +8,10 @@
 */
 #include <stdio.h>
 #include <unistd.h>
+#include <signal.h>
+#include <string.h>
+#include <stdlib.h>
+
 typedef struct _Foo
 {
   int field1;
@@ -17,6 +21,13 @@ typedef struct _Foo
 } Foo;
 
 Foo bar={42,0,66,111};
+
+void sigReceived(int signum)
+{
+  fprintf(stderr,"bad signal\n");
+  abort();
+}
+
 
 void printThings()
 {
@@ -29,6 +40,14 @@ void printThings()
 
 int main(int argc,char** argv)
 {
+  struct sigaction act;
+  act.sa_handler=&sigReceived;
+  memset(&act,0,sizeof(act));
+  sigaction(SIGSEGV,&act,NULL);
+  sigaction(SIGILL,&act,NULL);
+  sigaction(SIGTERM,&act,NULL);
+  sigaction(SIGQUIT,&act,NULL);
+  sigaction(SIGHUP,&act,NULL);
   printf("has pid %i\n",getpid());
   while(1)
   {

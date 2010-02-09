@@ -58,6 +58,9 @@ void applyRelocationsForSymbols(List* symMoves);*/
 
 //apply the given relocation using oldSym for reference
 //to calculate the offset from the symol address
+//oldSym may be NULL if the relocation type is ERT_RELA instead of ERT_REL
+//type determines whether the relocation is being applied
+//in-memory or on-disk or both
 void applyRelocation(RelocInfo* rel,GElf_Sym* oldSym,ELF_STORAGE_TYPE type);
 
 //apply a list of relocations (list value type is GElf_Reloc)

@@ -17,10 +17,14 @@
 #include <dirent.h>
 #include "relocation.h"
 #include "versioning.h"
+#include <assert.h>
+
 
 ElfInfo* patchedBin=NULL;
+ElfInfo* targetBin=NULL;
 addr_t patchTextAddr=0;
 addr_t patchRodataAddr=0;
+addr_t patchRelTextAddr=0;
 
 void allocateMemoryForVarRelocation(VarInfo* var,TransformationInfo* trans)
 {
@@ -34,7 +38,7 @@ void allocateMemoryForVarRelocation(VarInfo* var,TransformationInfo* trans)
   //todo: handle errors
 }
 
-void transformVarData(VarInfo* var,Map* fdeMap,ElfInfo* targetBin)
+void transformVarData(VarInfo* var,Map* fdeMap)
 {
   printf("transforming var %s\n",var->name);
   FDE* transformerFDE=mapGet(fdeMap,&var->type->fde);
@@ -99,6 +103,7 @@ void applyFunctionPatch(SubprogramInfo* func,int pid,ElfInfo* targetBin,ElfInfo*
   //get the function text from the patch file
   //void* data=getTextDataAtRelOffset(patch,func->lowpc);
   addr_t addr=patchTextAddr+offset;
+  printf("patch text address is 0x%x\n",(uint)patchTextAddr);
 
   //not doing copy any more, already did that when mapped in
   //the whole text segment at once
@@ -170,11 +175,19 @@ addr_t copyInEntireSection(ElfInfo* patch,char* name,TransformationInfo* trans)
   memcpyToTarget(addr,data->d_buf,data->d_size);
   //and create a section for it
   Elf_Scn* newscn = elf_newscn (patchedBin->e);
-  GElf_Shdr shdr;
+  GElf_Shdr shdr,shdrNew;
   gelf_getshdr(scn,&shdr);
-  shdr.sh_addr=patchTextAddr;
-  shdr.sh_name=addStrtabEntryToExisting(patchedBin,name,true);
-  gelf_update_shdr(newscn,&shdr);
+  gelf_getshdr(scn,&shdrNew);
+  shdrNew.sh_addr=addr;
+  shdrNew.sh_name=addStrtabEntryToExisting(patchedBin,name,true);
+  shdrNew.sh_type=shdr.sh_type;
+  shdrNew.sh_flags=shdr.sh_flags;
+  shdrNew.sh_size=shdr.sh_size;
+  shdrNew.sh_link=0;//todo: should this be set?
+  shdrNew.sh_info=0;//todo: should this be set?
+  shdrNew.sh_addralign=shdr.sh_addralign;
+  shdrNew.sh_entsize=shdr.sh_entsize;
+  gelf_update_shdr(newscn,&shdrNew);
   Elf_Data* newdata=elf_newdata(newscn);
   *newdata=*data;
   newdata->d_buf=zmalloc(newdata->d_size);
@@ -192,8 +205,105 @@ addr_t copyInEntireSection(ElfInfo* patch,char* name,TransformationInfo* trans)
   return addr;
 }
 
-void readAndApplyPatch(int pid,ElfInfo* targetBin,ElfInfo* patch)
+
+void writeOutPatchedBin(bool flushToDisk)
 {
+  //todo: this is all not working
+  #ifdef not_defined
+  //need this if using ELF_F_LAYOUT due to bug(?) in libelf
+  //leading to incorrect program headers if we let libelf
+  //handle the layout
+  GElf_Ehdr ehdr;
+  if(!gelf_getehdr(patchedBin->e,&ehdr))
+  {
+    death("failed to get ehdr in fixupPatchedBinSectionHeaders\n");
+  }
+  int offsetSoFar=0;
+  for(int i=1;i<ehdr.e_shnum;i++)
+  {
+    Elf_Scn* scn=elf_getscn(patchedBin->e,i);
+    assert(scn);
+    GElf_Shdr shdr;
+    if(!gelf_getshdr(scn,&shdr))
+    {
+      death("failed to get shdr in fixupPatchedBinSectionHeaders\n");
+    }
+    //hack here. Assuming we won't be modifying the first section and
+    //can get the likely offset of all the others starting from the
+    //first section (whose offset depends on the headers coming before
+    //it)
+    int alignBytes=offsetSoFar%shdr.sh_addralign;
+    if(alignBytes)
+    {
+      offsetSoFar+=shdr.sh_addralign-alignBytes;//complement it to get
+                                              //what we actually need
+                                              //to increase the offset
+                                              //by
+    }
+    printf("old offset for section %i is %i and offset so far is %u\n",i,(int)shdr.sh_offset,offsetSoFar);
+    if(1==i)
+    {
+      offsetSoFar=shdr.sh_offset;
+    }
+    else
+    {
+      //shdr.sh_offset=offsetSoFar;
+    }
+    
+    Elf_Data* data=elf_getdata(scn,NULL);
+    if(data)
+    {
+      shdr.sh_size=data->d_size;
+    }
+    offsetSoFar+=shdr.sh_size;
+    gelf_update_shdr(scn,&shdr);
+  }
+  #endif
+  
+  //just mark everything as dirty, easier than keeping track on low level
+  //todo: as optimization could keep track at low level
+  elf_flagelf(patchedBin->e,ELF_C_SET,ELF_F_DIRTY);
+
+  elf_flagelf(patchedBin->e,ELF_C_CLR,ELF_F_LAYOUT);
+  if(elf_update(patchedBin->e, flushToDisk?ELF_C_WRITE:ELF_C_NULL) <0)
+  {
+    fprintf(stderr,"Failed to write out patched elf file representing mem: %s\n",elf_errmsg (-1));
+    death(NULL);
+  }
+  GElf_Ehdr ehdr;
+  if(!gelf_getehdr(patchedBin->e,&ehdr))
+  {
+    fprintf(stdout,"Failed to get ehdr from elf file we're duplicating: %s\n",elf_errmsg (-1));
+    death(NULL);
+  }
+  if(ehdr.e_phnum > 0)
+  {
+    int cnt;
+    for(cnt = 0;cnt < ehdr.e_phnum;++cnt)
+    {
+      GElf_Phdr phdr_mem;
+      if(!gelf_getphdr(targetBin->e,cnt,&phdr_mem))
+      {
+        fprintf(stdout,"Failed to get phdr from elf file we're duplicating: %s\n",elf_errmsg (-1));
+        death(NULL);
+      }
+      gelf_update_phdr(patchedBin->e,cnt,&phdr_mem);
+    }
+  }
+
+  elf_flagelf(patchedBin->e,ELF_C_SET,ELF_F_DIRTY);
+  elf_flagelf(patchedBin->e,ELF_C_SET,ELF_F_LAYOUT);
+  //now write out our patched binary
+  if(elf_update(patchedBin->e, flushToDisk?ELF_C_WRITE:ELF_C_NULL) <0)
+  {
+    fprintf(stderr,"Failed to write out patched elf file representing mem: %s\n",elf_errmsg (-1));
+    death(NULL);
+  }
+}
+
+void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch)
+{
+    targetBin=targetBin_;
   //we create an on-disk version of the patched binary
   //setting this up is much easier than modifying the in-memory ELF
   //structures. It does, however, allow us to write an accurate symbol table,
@@ -204,8 +314,22 @@ void readAndApplyPatch(int pid,ElfInfo* targetBin,ElfInfo* patch)
   char patchedBinFname[256];
   snprintf(patchedBinFname,256,"%s/exe",dir);
   free(dir);
-  patchedBin=duplicateElf(targetBin,patchedBinFname,false);
+  elf_flagelf(targetBin->e,ELF_C_SET,ELF_F_LAYOUT);
+  patchedBin=duplicateElf(targetBin,patchedBinFname,false,true);
   
+  elf_flagelf(patchedBin->e,ELF_C_SET,ELF_F_LAYOUT);//we assume all responsibility
+  //for layout. For some reason libelf seems to have issues with some of the program
+  //headers such that the program can't execute if we don't do this.
+  //I suspect either a bug in libelf or something wrong with my own usage, but
+  //I have no idea what I might be doing wrong and don't have the patience to debug libelf
+  //right now, so we'll just work around this by doing layout manually
+  //see http://uw713doc.sco.com/en/man/html.3elf/elf_update.3elf.html (or some
+  //other manpage on elf_update) for a description of what we now
+  //have to take care of manually
+  //note: this actually isn't working, I can't get the ELF
+  //file written out in such a way that it executes. I need to figure
+  //this out more
+
   //go through variables in the patch file and apply their fixups
   //todo: we're assuming for now that symbols in the binary the patch was generated
   //with and in the target binary are going to have the same values
@@ -222,17 +346,25 @@ void readAndApplyPatch(int pid,ElfInfo* targetBin,ElfInfo* patch)
 
   //map in entirety of .rodata.new
   patchRodataAddr=copyInEntireSection(patch,".rodata.new",&trans);
+  
+  writeOutPatchedBin(false);
 
-  if(elf_update(patchedBin->e, ELF_C_NULL) <0)
-  {
-    fprintf(stderr,"Failed to update patched elf file representing mem: %s\n",elf_errmsg (-1));
-    death(NULL);
-  }
-
+  
   Elf_Scn* relTextScn=getSectionByName(patch,".rela.text.new");
   //go through and reindex all of the symbols
   Elf_Data* data=elf_getdata(relTextScn,NULL);
   int numRelocs=data->d_size/sizeof(Elf32_Rela);
+  Elf_Scn* patchTextNew=getSectionByName(patch,".text.new");
+  GElf_Shdr shdr;
+  if(!gelf_getshdr(patchTextNew,&shdr))
+  {
+    death("failed to get shdr\n");
+  }
+  
+  addr_t oldTextNewStart=shdr.sh_addr;
+  printf("old start is 0x%x\n",(uint)oldTextNewStart);
+  Elf_Scn* textScn=getSectionByName(patch,".text.new");
+  Elf_Data* textData=elf_getdata(textScn,NULL);
   for(int i=0;i<numRelocs;i++)
   {
     Elf32_Rela* rela=((Elf32_Rela*)data->d_buf)+i;
@@ -241,9 +373,25 @@ void readAndApplyPatch(int pid,ElfInfo* targetBin,ElfInfo* patch)
     int reindex=reindexSymbol(patch,patchedBin,symIdx);
     printf("reindexed to %i\n",reindex);
     rela->r_info=ELF32_R_INFO(reindex,type);
+    addr_t newOffset=rela->r_offset-oldTextNewStart+patchTextAddr;
+    switch(type)
+    {
+    case R_386_PC32:
+      {
+        assert(rela->r_offset<textData->d_size);
+        word_t addrAccessed=*((word_t*)(textData->d_buf+rela->r_offset));
+        //if we were using a PC-relative relocation and the PC wasn't in the patch text,
+        //have to update it for this relocation
+        //todo: don't do this if the relocation was actually
+        //for something relative to the patch
+        addr_t diff=patchTextAddr-oldTextNewStart;
+        modifyTarget(newOffset,addrAccessed+diff);
+      }
+    }
+    rela->r_offset=newOffset;
   }
   
-  addr_t patchRelTextAddr=copyInEntireSection(patch,".rela.text.new",&trans);
+  patchRelTextAddr=copyInEntireSection(patch,".rela.text.new",&trans);
 
   
   for(List* cuLi=diPatch->compilationUnits;cuLi;cuLi=cuLi->next)
@@ -264,7 +412,7 @@ void readAndApplyPatch(int pid,ElfInfo* targetBin,ElfInfo* patch)
       {
         allocateMemoryForVarRelocation(vars[i],&trans);
       }
-      transformVarData(vars[i],fdeMap,targetBin);
+      transformVarData(vars[i],fdeMap);
       if(relocate)
       {
         relocateVar(vars[i],targetBin);
@@ -280,17 +428,27 @@ void readAndApplyPatch(int pid,ElfInfo* targetBin,ElfInfo* patch)
     }
   }
 
-  //just mark everything as dirty, easier than keeping track on low level
-  //todo: as optimization could keep track at low level
-  elf_flagelf(patchedBin->e,ELF_C_SET,ELF_F_DIRTY);
-  elf_flagelf(patchedBin->e,ELF_C_CLR,ELF_F_LAYOUT);
+
+  //now perform relocations to our functions to give them a chance
+  //of working
+  relTextScn=getSectionByName(patchedBin,".rela.text.new");
+  data=elf_getdata(relTextScn,NULL);
   
-  //now write out our patched binary
-  if(elf_update(patchedBin->e, ELF_C_WRITE) <0)
+  RelocInfo reloc;
+  memset(&reloc.rel,0,sizeof(reloc.rel));
+  reloc.e=patchedBin;
+  reloc.type=ERT_RELA;
+  reloc.scnIdx=elf_ndxscn(getSectionByName(patchedBin,".text.new"));
+  for(int i=0;i<numRelocs;i++)
   {
-    fprintf(stderr,"Failed to write out patched elf file representing mem: %s\n",elf_errmsg (-1));
-    death(NULL);
+    if(!gelf_getrela(data,i,&reloc.rela))
+    {
+      death("Failed to get relocation\n");
+    }
+    applyRelocation(&reloc,NULL,IN_MEM);//todo: on disk as well
   }
+
+  writeOutPatchedBin(true);
   elf_end(patchedBin->e);
   close(patchedBin->fd);
   
