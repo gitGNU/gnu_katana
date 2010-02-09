@@ -18,7 +18,7 @@
 #include "relocation.h"
 #include "versioning.h"
 #include <assert.h>
-
+#include "symbol.h"
 
 ElfInfo* patchedBin=NULL;
 ElfInfo* targetBin=NULL;

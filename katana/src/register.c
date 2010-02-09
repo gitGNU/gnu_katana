@@ -11,6 +11,7 @@
 #include "dwarf_instr.h"
 #include <assert.h>
 #include "patcher/target.h"
+#include "symbol.h"
 
 PoReg readRegFromLEB128(byte* leb,usint* bytesRead)
 {

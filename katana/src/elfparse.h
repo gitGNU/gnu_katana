@@ -49,9 +49,6 @@ word_t getTextAtAbs(ElfInfo* e,addr_t addr,ELF_STORAGE_TYPE type);
 void setTextAtAbs(ElfInfo* e,addr_t addr,word_t value,ELF_STORAGE_TYPE type);
 void* getTextDataAtRelOffset(ElfInfo* e,int offset);
 word_t getTextAtRelOffset(ElfInfo* e,int offset);
-addr_t getSymAddress(ElfInfo* e,int symIdx);
-//return false if symbol with the given index doesn't exist
-bool getSymbol(ElfInfo* e,int symIdx,GElf_Sym* outSym);
 int getSymtabIdx(ElfInfo* e,char* symbolName);
 void printSymTab(ElfInfo* e);
 //have to pass the name that the elf file will originally get written
@@ -64,10 +61,7 @@ void findELFSections(ElfInfo* e);
 Elf_Scn* getSectionByName(ElfInfo* e,char* name);
 char* getSectionNameFromIdx(ElfInfo* e,int idx);
 
-//find the symbol matching the given symbol
-int findSymbol(ElfInfo* e,GElf_Sym* sym,ElfInfo* ref);
 
-GElf_Sym symToGELFSym(Elf32_Sym sym);
 char* getScnHdrString(ElfInfo* e,int idx);
 char* getString(ElfInfo* e,int idx);
 #endif

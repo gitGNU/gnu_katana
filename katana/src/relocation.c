@@ -10,28 +10,8 @@
 #include "util/util.h"
 #include "patcher/target.h"
 #include <assert.h>
+#include "symbol.h"
 
-
-//from an index of a symbol in the old ELF structure,
-//find it's index in the new ELF structure. Return -1 if it cannot be found
-//The matching is done solely on name
-int reindexSymbol(ElfInfo* old,ElfInfo* new,int oldIdx)
-{
-  //todo: need a method of apropriately handling local/week symbols
-  //(other than section ones, which aren't really a big deal to handle)
-  //we should be able to use the FILE symbols placed above local symbols
-  //to do this
-  
-  GElf_Sym sym;
-  //todo: in the future we could match on other things beside name
-  //in case name was duplicated for some reason
-  if(!getSymbol(old,oldIdx,&sym))
-  {
-    death("invalid symbol index in reindexSymbol\n");
-  }
-  int idx=findSymbol(new,&sym,old);
-  return idx;
-}
 
 /*
 //apply all relocations corresponding to the movement of certain symbols
@@ -289,4 +269,27 @@ List* getRelocationItemsFor(ElfInfo* e,int symIdx)
     free(reloc);//had an extra one allocated
   }
   return relocsHead;
+}
+
+
+//compute an addend for when we have REL instead of RELA
+addr_t computeAddend(ElfInfo* e,byte type,idx_t symIdx,addr_t r_offset)
+{
+  addr_t symVal=getSymAddress(e,symIdx);
+  word_t addrAccessed=getTextAtAbs(e,r_offset,IN_MEM);
+  switch(type)
+  {
+  case R_386_32:
+    return addrAccessed-symVal;
+    break;
+  case R_386_PC32:
+
+    return addrAccessed-symVal+r_offset+1;
+    //+1 because it's pc at next instruction
+    break;
+  default:
+    death("unhandled relocation type in computeAddend\n");
+    break;
+  }
+  return 0;
 }

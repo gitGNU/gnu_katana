@@ -18,6 +18,7 @@
 #include "register.h"
 #include "codediff.h"
 #include "relocation.h"
+#include "symbol.h"
 
 ElfInfo* oldBinary=NULL;
 ElfInfo* newBinary=NULL;
@@ -447,7 +448,6 @@ void writeRelocationsInRange(addr_t lowpc,addr_t highpc,Elf_Scn* scn,
     }
 
     idx_t reindex=addSymbolFromNewBinaryToPatch(symIdx);
-    addr_t symValue=getSymAddress(newBinary,symIdx);
     
     //now look at the relocation itself
     byte type;
@@ -468,30 +468,29 @@ void writeRelocationsInRange(addr_t lowpc,addr_t highpc,Elf_Scn* scn,
     //note: this relies on our current incorrect usage of the offset field
     //for bookkeeping
     addr_t newRelOffset=rela.r_offset-lowpc+segmentBase;
+
     if(ERT_REL==reloc->type)
     {
-      switch(type)
-      {
-      case R_386_32:
-        {
-          //have to calculate the addend
-          word_t addrAccessed=getTextAtAbs(newBinary,oldRelOffset,IN_MEM);
-          rela.r_addend=addrAccessed-symValue;
-        }
-        break;
+      rela.r_addend=computeAddend(newBinary,type,symIdx,reloc->rel.r_offset);
+    }
+    else
+    {
+      rela.r_addend=reloc->rela.r_addend;
+    }
+
+    //now depending on the type we may have to do some additional fixups
+    switch(type)
+    {
       case R_386_PC32:
         {
           word_t addrAccessed=getTextAtAbs(newBinary,oldRelOffset,IN_MEM);
-          rela.r_addend=addrAccessed-symValue+oldRelOffset+1;//+1
-          //because it's pc at next instruction
-              
           //this is a pc-relative relocation but we're changing the address
           //of the instruction, therefore the addend is not what it would be
           if(addrAccessed < lowpc || addrAccessed > highpc)
           {
             addr_t diff=newRelOffset-oldRelOffset;
             setTextAtAbs(newBinary,oldRelOffset,addrAccessed+diff,IN_MEM);
-                
+          
             //we're not just accessing something in the current function
             //tweak the addend so that even with the new value
             //we can access the same absolute address, which is what
@@ -502,34 +501,8 @@ void writeRelocationsInRange(addr_t lowpc,addr_t highpc,Elf_Scn* scn,
           }
         }
         break;
-      default:
-        death("relocation type not yet handled in writeFuncTransformationInfoForCU\n");
-      }
     }
-    else
-    {
-      switch(type)
-      {
-      case R_386_32:
-        rela.r_addend=reloc->rela.r_addend;
-        break;
-      case R_386_PC32:
-        {
-          word_t addrAccessed=getTextAtAbs(newBinary,rela.r_offset,IN_MEM);
-          rela.r_addend=addrAccessed-symValue;
-          //this is a pc-relative relocation but we're changing the address
-          //of the instruction, therefore the addend is not what it would be
-          if(rela.r_addend < lowpc || rela.r_addend > highpc)
-          {
-            //we're not just accessing something in the current function
-            rela.r_addend+=rela.r_offset-oldRelOffset;//add in the difference in PC
-          }
-        }
-        break;
-      default:
-        death("relocation type not yet handled in writeFuncTransformationInfoForCU\n");
-      }
-    }
+    
     rela.r_offset=newRelOffset;
     printf("adding reloc for offset 0x%x\n",rela.r_offset);
     addDataToScn(rela_text_data,&rela,sizeof(Elf32_Rela));

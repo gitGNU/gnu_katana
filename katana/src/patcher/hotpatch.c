@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include "hotpatch.h"
 #include "relocation.h"
+#include "symbol.h"
 
 int getIdxForField(TypeInfo* type,char* name)
 {
