@@ -46,6 +46,7 @@ ElfInfo* openELFFile(char* fname);
 void endELF(ElfInfo* _e);
 void* getTextDataAtAbs(ElfInfo* e,addr_t addr,ELF_STORAGE_TYPE type);
 word_t getTextAtAbs(ElfInfo* e,addr_t addr,ELF_STORAGE_TYPE type);
+void setTextAtAbs(ElfInfo* e,addr_t addr,word_t value,ELF_STORAGE_TYPE type);
 void* getTextDataAtRelOffset(ElfInfo* e,int offset);
 word_t getTextAtRelOffset(ElfInfo* e,int offset);
 addr_t getSymAddress(ElfInfo* e,int symIdx);
@@ -57,8 +58,8 @@ void printSymTab(ElfInfo* e);
 //out to, because of the way elf_begin is set up
 //if flushToDisk is false doesn't
 //actually write to disk right now
-ElfInfo* duplicateElf(ElfInfo* e,char* outfname,bool flushToDisk);
-void writeOut(ElfInfo* e,char* outfname);
+ElfInfo* duplicateElf(ElfInfo* e,char* outfname,bool flushToDisk,bool keepLayout);
+void writeOut(ElfInfo* e,char* outfname,bool keepLayout);
 void findELFSections(ElfInfo* e);
 Elf_Scn* getSectionByName(ElfInfo* e,char* name);
 char* getSectionNameFromIdx(ElfInfo* e,int idx);

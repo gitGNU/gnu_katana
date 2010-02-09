@@ -30,14 +30,14 @@ void startPtrace()
   if(ptrace(PTRACE_ATTACH,pid,NULL,NULL)<0)
   {
     fprintf(stderr,"ptrace failed to attach to process\n");
-    die(NULL);
+    death(NULL);
   }
   //kill(pid,SIGSTOP);
   /*if(ptrace(PTRACE_CONT,pid,NULL,SIGSTOP)<0)
   {
     //just make sure the process is running
     perror("failed to continue process\n");
-    die(NULL);
+    death(NULL);
     }*/
 
   //this line included on recommendation of phrack
@@ -71,7 +71,7 @@ void endPtrace()
   if(ptrace(PTRACE_DETACH,pid,NULL,NULL)<0)
   {
     fprintf(stderr,"ptrace failed to detach\n");
-    die(NULL);
+    death(NULL);
   }
   kill(pid,SIGCONT);
 }
@@ -83,7 +83,7 @@ void modifyTarget(addr_t addr,uint value)
   {
     fprintf(stderr,"Trying to poke data at 0x%x\n",(uint)addr);
     perror("ptrace POKEDATA failed in modifyTarget\n");
-    die(NULL);
+    death(NULL);
   }
 }
 
@@ -123,7 +123,7 @@ void memcpyFromTarget(byte* data,long addr,int numBytes)
     if(errno)
     {
       perror("ptrace PEEKDATA failed\n");
-      die(NULL);
+      death(NULL);
     }
     if(i+PTRACE_WORD_SIZE<=numBytes)
     {
@@ -143,7 +143,7 @@ void getTargetRegs(struct user_regs_struct* regs)
   if(ptrace(PTRACE_GETREGS,pid,NULL,regs) < 0)
   {
     perror("ptrace getregs failed\n");
-    die(NULL);
+    death(NULL);
   }
 }
 
@@ -152,7 +152,7 @@ void setTargetRegs(struct user_regs_struct* regs)
   if(ptrace(PTRACE_SETREGS,pid,NULL,regs)<0)
   {
     perror("ptrace setregs failed\n");
-    die(NULL);
+    death(NULL);
   }
 }
   
@@ -228,7 +228,7 @@ long mmapTarget(int size,int prot)
   if((void*)retval==MAP_FAILED)
   {
     fprintf(stderr,"mmap in target failed\n");
-    die(NULL);
+    death(NULL);
   }
   //printf("now at eip 0x%x\n",newRegs.eip);
   #ifndef OLD_MMAP_TARGET

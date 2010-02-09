@@ -67,6 +67,8 @@ Dwarf_Unsigned cie;//index of cie we're using
 
 void addDataToScn(Elf_Data* dataDest,void* data,int size)
 {
+  //using offset field incorrectly here, coopting it for our
+  //bookkeeping purposes to avoid reallocating too often
   if(size>dataDest->d_size-dataDest->d_off)
   {
     //ran out of space, allocate more
@@ -378,15 +380,17 @@ void writeFuncTransformationInfoForCU(CompilationUnit* cu1,CompilationUnit* cu2)
     if(!areSubprogramsIdentical(func,patchedFunc,oldBinary,newBinary))
     {
       printf("writing transformation info for function %s\n",func->name);
-      int len=func->highpc-func->lowpc;
+      int len=patchedFunc->highpc-patchedFunc->lowpc;
       if(len>text_data->d_size-text_data->d_off)
       {
         //ran out of space, allocate more
         text_data->d_size=max(text_data->d_size*2,len*2);
         text_data->d_buf=realloc(text_data->d_buf,text_data->d_size);
       }
-      
-      memcpy(text_data->d_buf+text_data->d_off,getTextDataAtAbs(newBinary,func->lowpc,IN_MEM),len);
+      GElf_Shdr shdr;
+      gelf_getshdr(text_scn,&shdr);
+      addr_t funcSegmentBase=text_data->d_off+shdr.sh_addr;//where text for this function is based
+      memcpy(text_data->d_buf+text_data->d_off,getTextDataAtAbs(newBinary,patchedFunc->lowpc,IN_MEM),len);
       Elf32_Sym sym;
       sym.st_name=addStrtabEntry(func->name);
       sym.st_value=text_data->d_off;//is it ok that this is section-relative, since
@@ -404,6 +408,7 @@ void writeFuncTransformationInfoForCU(CompilationUnit* cu1,CompilationUnit* cu2)
 
       //also include any relocations which exist for anything inside this function
       List* relocs=getRelocationItemsInRange(newBinary,getSectionByName(newBinary,".rel.text"),patchedFunc->lowpc,patchedFunc->highpc);
+      
       List* li=relocs;
       for(;li;li=li->next)
       {
@@ -429,7 +434,6 @@ void writeFuncTransformationInfoForCU(CompilationUnit* cu1,CompilationUnit* cu2)
         char* symname=elf_strptr(newBinary->e, newBinary->strTblIdx,
                                  symInNewBin.st_name);
         Elf_Scn* rodataScn=getSectionByName(newBinary,".rodata");
-        GElf_Shdr shdr;
         gelf_getshdr(rodataScn,&shdr);
         addr_t rodataStart=shdr.sh_addr;
         sym.st_name=addStrtabEntry(symname);
@@ -456,11 +460,7 @@ void writeFuncTransformationInfoForCU(CompilationUnit* cu1,CompilationUnit* cu2)
 
         //we might have already added this same symbol
         GElf_Sym gsym=symToGELFSym(sym);
-        /*        //make sure our patch is up to date
-        if (elf_update (outelf, ELF_C_NULL) <0)
-        {
-          fprintf(stderr,"Failed to update structure of patch file: %s\n",elf_errmsg (-1));
-          }*/
+
         int reindex=findSymbol(&patch,&gsym,&patch);
         if(SHN_UNDEF==reindex)
         {
@@ -478,16 +478,75 @@ void writeFuncTransformationInfoForCU(CompilationUnit* cu1,CompilationUnit* cu2)
         }
         rela.r_info=ELF32_R_INFO(reindex,type);
         rela.r_offset=ERT_REL==reloc->type?reloc->rel.r_offset:reloc->rela.r_offset;
+        addr_t oldRelOffset=rela.r_offset;
+        //now rebase the offset based on where in the data this text is going
+        gelf_getshdr(rela_text_scn,&shdr);
+        //note: this relies on our current incorrect usage of the offset field
+        //for bookkeeping
+        addr_t newRelOffset=rela.r_offset-patchedFunc->lowpc+funcSegmentBase;
         if(ERT_REL==reloc->type)
         {
-          //have to calculate the addend
-          word_t addrAccessed=getTextAtAbs(newBinary,rela.r_offset,IN_MEM);
-          rela.r_addend=addrAccessed-sym.st_value;
+          switch(type)
+          {
+          case R_386_32:
+            {
+            //have to calculate the addend
+            word_t addrAccessed=getTextAtAbs(newBinary,oldRelOffset,IN_MEM);
+            rela.r_addend=addrAccessed-sym.st_value;
+            }
+            break;
+          case R_386_PC32:
+            {
+              word_t addrAccessed=getTextAtAbs(newBinary,oldRelOffset,IN_MEM);
+              rela.r_addend=addrAccessed-sym.st_value+oldRelOffset+1;//+1
+              //because it's pc at next instruction
+              
+              //this is a pc-relative relocation but we're changing the address
+              //of the instruction, therefore the addend is not what it would be
+              if(addrAccessed < patchedFunc->lowpc || addrAccessed > patchedFunc->highpc)
+              {
+                addr_t diff=newRelOffset-oldRelOffset;
+                setTextAtAbs(newBinary,oldRelOffset,addrAccessed+diff,IN_MEM);
+                
+                //we're not just accessing something in the current function
+                //tweak the addend so that even with the new value
+                //we can access the same absolute address, which is what
+                //we really want to do. The text segment will never get
+                //relocated on linux x86 so the reasons for making this
+                //relative in the first place are gone
+                //rela.r_addend=addrAccessed-(newRelOffset+1)-sym.st_value;
+              }
+            }
+            break;
+          default:
+            death("relocation type not yet handled in writeFuncTransformationInfoForCU\n");
+          }
         }
         else
         {
-          rela.r_addend=reloc->rela.r_addend;
+          switch(type)
+          {
+          case R_386_32:
+            rela.r_addend=reloc->rela.r_addend;
+            break;
+          case R_386_PC32:
+            {
+            word_t addrAccessed=getTextAtAbs(newBinary,rela.r_offset,IN_MEM);
+            rela.r_addend=addrAccessed-sym.st_value;
+            //this is a pc-relative relocation but we're changing the address
+            //of the instruction, therefore the addend is not what it would be
+            if(rela.r_addend < patchedFunc->lowpc || rela.r_addend > patchedFunc->highpc)
+            {
+              //we're not just accessing something in the current function
+              rela.r_addend+=rela.r_offset-oldRelOffset;//add in the difference in PC
+            }
+            }
+            break;
+          default:
+            death("relocation type not yet handled in writeFuncTransformationInfoForCU\n");
+          }
         }
+        rela.r_offset=newRelOffset;
         printf("adding reloc for offset 0x%x\n",rela.r_offset);
         addDataToScn(rela_text_data,&rela,sizeof(Elf32_Rela));
       }
@@ -715,6 +774,7 @@ void createSections(Elf* outelf)
   shdr->sh_info=0;
   shdr->sh_addralign=1;//normally text is aligned, but we never actually execute from this section
   shdr->sh_name=addStrtabEntry(".text.new");
+  shdr->sh_addr=0;//going to have to relocate anyway so no point in trying to keep the same address
 
   //rodata section for new strings, constants, etc
   //(note that in many cases these may not actually be "new" ones,

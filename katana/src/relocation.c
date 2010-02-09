@@ -87,11 +87,20 @@ void applyAllRelocations(ElfInfo* e,ElfInfo* oldElf)
 
 //apply the given relocation using oldSym for reference
 //to calculate the offset from the symol address
+//oldSym may be NULL if the relocation type is ERT_RELA instead of ERT_REL
 void applyRelocation(RelocInfo* rel,GElf_Sym* oldSym,ELF_STORAGE_TYPE type)
 {
   addr_t addrToBeRelocated;
   addr_t newAddrAccessed;
-  int symIdx=ELF64_R_SYM(rel->rel.r_info);//elf64 b/c using GElf
+  int symIdx;
+  if(ERT_REL==rel->type)
+  {
+    symIdx=ELF64_R_SYM(rel->rel.r_info);//elf64 b/c using GElf
+  }
+  else
+  {
+    symIdx=ELF64_R_SYM(rel->rela.r_info);//elf64 b/c using GElf
+  }
   addr_t addrNew=getSymAddress(rel->e,symIdx);
   if(ERT_REL==rel->type)
   {
@@ -104,7 +113,7 @@ void applyRelocation(RelocInfo* rel,GElf_Sym* oldSym,ELF_STORAGE_TYPE type)
       oldAddrAccessed=getTextAtAbs(rel->e,rel->rel.r_offset,IN_MEM);
       break;
     default:
-      death("relocation type we can't handle yet\n");
+      death("relocation type we can't handle yet (for REL)\n");
     }
     uint offset=oldAddrAccessed-addrOld;
     newAddrAccessed=addrNew+offset;
@@ -113,13 +122,18 @@ void applyRelocation(RelocInfo* rel,GElf_Sym* oldSym,ELF_STORAGE_TYPE type)
   else //RELA
   {
     addrToBeRelocated=rel->rela.r_offset;
-    switch(ELF64_R_TYPE(rel->rela.r_info))
+    int type=ELF64_R_TYPE(rel->rela.r_info);
+    switch(type)
     {
     case R_386_32:
       newAddrAccessed=addrNew+rel->rela.r_addend;
       break;
+    case R_386_PC32:
+      //off by one?
+      newAddrAccessed=addrNew+rel->rela.r_addend-rel->rela.r_offset;
+      break;
     default:
-      death("relocation type we can't handle yet\n");
+      death("relocation type %i we can't handle yet (for RELA)\n",type);
     }
   }
   

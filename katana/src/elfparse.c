@@ -23,14 +23,14 @@ ElfInfo* openELFFile(char* fname)
   {
     char buf[128];
     snprintf(buf,128,"Failed to open elf file %s (open returned invalid fd)\n",fname);
-    die(buf);
+    death(buf);
   }
   e->e=elf_begin(e->fd,ELF_C_READ,NULL);
   if(!e->e)
   {
     fprintf(stderr,"Failed to open as an ELF file %s\n",elf_errmsg(-1));
     free(e);
-    die(NULL);
+    death(NULL);
   }
   findELFSections(e);
   return e;
@@ -82,7 +82,14 @@ word_t getTextAtAbs(ElfInfo* e,addr_t addr,ELF_STORAGE_TYPE type)
   uint offset=addr-e->textStart[type];
   assert(e->textData->d_size >= offset);
   return *((word_t*)(e->textData->d_buf+offset));
+}
 
+void setTextAtAbs(ElfInfo* e,addr_t addr,word_t value,ELF_STORAGE_TYPE type)
+{
+  assert(e->textData);
+  uint offset=addr-e->textStart[type];
+  assert(e->textData->d_size >= offset);
+  memcpy(e->textData->d_buf+offset,&value,sizeof(word_t));
 }
 
 void* getTextDataAtRelOffset(ElfInfo* e,int offset)
@@ -173,7 +180,7 @@ void printSymTab(ElfInfo* e)
 
 //have to pass the name that the elf file will originally get written
 //out to, because of the way elf_begin is set up
-ElfInfo* duplicateElf(ElfInfo* e,char* outfname,bool flushToDisk)
+ElfInfo* duplicateElf(ElfInfo* e,char* outfname,bool flushToDisk,bool keepLayout)
 {
   int outfd = creat(outfname, 0666);
   if (outfd < 0)
@@ -181,7 +188,8 @@ ElfInfo* duplicateElf(ElfInfo* e,char* outfname,bool flushToDisk)
     fprintf(stderr,"cannot open output file '%s'", outfname);
   }
   //code inspired by ecp in elfutils tests
-  Elf *outelf = elf_begin (outfd, ELF_C_WRITE, NULL);
+  Elf *outelf = elf_begin(outfd, ELF_C_WRITE, NULL);
+
   gelf_newehdr (outelf, gelf_getclass(e->e));
   GElf_Ehdr ehdr;
   if(!gelf_getehdr(e->e,&ehdr))
@@ -189,7 +197,7 @@ ElfInfo* duplicateElf(ElfInfo* e,char* outfname,bool flushToDisk)
     fprintf(stdout,"Failed to get ehdr from elf file we're duplicating: %s\n",elf_errmsg (-1));
     death(NULL);
   }
-  gelf_update_ehdr (outelf,&ehdr);
+  gelf_update_ehdr(outelf,&ehdr);
   if(ehdr.e_phnum > 0)
   {
     int cnt;
@@ -214,20 +222,27 @@ ElfInfo* duplicateElf(ElfInfo* e,char* outfname,bool flushToDisk)
     Elf_Data* newdata=elf_newdata(newscn);
     Elf_Data* data=elf_getdata (scn,NULL);
     assert(data);
-    *newdata=*data;
+    newdata->d_off=data->d_off;
+    newdata->d_size=data->d_size;
+    newdata->d_align=data->d_align;
+    newdata->d_version=data->d_version;
+    newdata->d_type=data->d_type;
     if(SHT_NOBITS!=shdr.sh_type)
     {
       newdata->d_buf=zmalloc(newdata->d_size);
-      printf("size is %i in scn idx %i\n",data->d_size,elf_ndxscn(scn));
+      //printf("size is %i in scn idx %i\n",data->d_size,elf_ndxscn(scn));
       memcpy(newdata->d_buf,data->d_buf,data->d_size);
     }
   }
 
-  //why were we doing this (tells libelf not to layout automatically,
-  //we assume responsibility for all layout
-  //elf_flagelf (outelf, ELF_C_SET, ELF_F_LAYOUT);
 
-  if (elf_update (outelf, flushToDisk?ELF_C_WRITE:ELF_C_NULL) <0)
+  elf_flagelf(outelf, ELF_C_SET, ELF_F_DIRTY);
+  if(keepLayout)
+  {
+      elf_flagelf(outelf,ELF_C_SET,ELF_F_LAYOUT);
+  }
+
+  if (elf_update(outelf, flushToDisk?ELF_C_WRITE:ELF_C_NULL) <0)
   {
     fprintf(stdout,"Failed to write out elf file: %s\n",elf_errmsg (-1));
   }
@@ -239,9 +254,9 @@ ElfInfo* duplicateElf(ElfInfo* e,char* outfname,bool flushToDisk)
   return newE;
 }
 
-void writeOut(ElfInfo* e,char* outfname)
+void writeOut(ElfInfo* e,char* outfname,bool keepLayout)
 {
-  ElfInfo* newE=duplicateElf(e,outfname,true);
+  ElfInfo* newE=duplicateElf(e,outfname,true,keepLayout);
   close(newE->fd);
   elf_end(newE->e);
   free(newE);

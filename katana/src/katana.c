@@ -49,7 +49,6 @@ void sigsegReceived(int signum)
 }
 
 void diffAndFixTypes(DwarfInfo* diPatchee,DwarfInfo* diPatched)
-
 {
   //todo: handle addition of variables and also handle
   //      things moving between compilation units,
@@ -150,9 +149,12 @@ void diffAndFixTypes(DwarfInfo* diPatchee,DwarfInfo* diPatched)
 
 int main(int argc,char** argv)
 {
+  #ifdef DEBUG
+  system("rm -rf /tmp/katana-$USER/patched/*");
+  #endif
   if(argc<3)
   {
-    die("Usage: katana -g [-o OUT_FILE] OLD_BINARY NEW_BINARY \n\tOr: katana -p PATCH_FILE PID");
+    death("Usage: katana -g [-o OUT_FILE] OLD_BINARY NEW_BINARY \n\tOr: katana -p PATCH_FILE PID");
   }
   struct sigaction act;
   memset(&act,0,sizeof(struct sigaction));
@@ -187,7 +189,7 @@ int main(int argc,char** argv)
   }
   if(elf_version(EV_CURRENT)==EV_NONE)
   {
-    die("Failed to init ELF library\n");
+    death("Failed to init ELF library\n");
   }
   if(genPatch)
   {

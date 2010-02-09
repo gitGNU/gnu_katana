@@ -7,6 +7,10 @@ at needs these address because we may have the same needs.
 * confusion I have
 ** Why can't we just relocate functions when patching them?
    probably can most of the time according to Sergey
+** why does gcc use pc-relative relocations for PLT stuff
+   I think it's because for stuff within the same section (like .text)
+   you can relocate the section and not have to relocate anything
+** wtf is up with libelf and writing ELF files that can be executed.
 * issues I see
 ** exception handling
    issue mentioned in "A Runtime Code Modification Method for

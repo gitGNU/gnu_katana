@@ -13,3 +13,4 @@ memloss
 *dump*
 errlog
 *.po.rel
+core

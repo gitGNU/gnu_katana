@@ -53,7 +53,7 @@ char* createKatanaDirs(int pid,int version)
 {
   //todo: error checking
   char buf1[128];
-  snprintf(buf1,128,"/tmp/katana-%s/",getenv("USER"));
+  snprintf(buf1,128,"/tmp/katana-%s",getenv("USER"));
   mode_t mode=S_IRWXU;
   mkdir(buf1,mode);
   char buf2[256];
