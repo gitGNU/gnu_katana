@@ -21,25 +21,38 @@ newProg=os.path.join(sys.argv[1],"v1","test")
 logfname=os.path.join(sys.argv[1],"log")
 logf=open(logfname,"w")
 logf.truncate()
-proc=subprocess.Popen([prog],stdout=logf)
-#sleep for a moment to let the process run
-time.sleep(0.5)
-#now start the hotpatcher
+
+#generate the patch
 klogfname=os.path.join(sys.argv[1],"katana_log")
 hotlogf=open(klogfname,"w")
 klogerrfname=os.path.join(sys.argv[1],"katana_err_log")
 hotlogerrf=open(klogerrfname,"w")
 hotlogf.write("\nStarting patch of "+prog+"\n-------------------------------------------\n")
 hotlogf.flush()
-args=["./katana",prog,newProg,str(proc.pid)]
-vlogf.write("running "+string.join(args," ")+"\n")
-hotproc=subprocess.Popen(args,stdout=hotlogf,stderr=hotlogerrf)
-
-
-if 0!=hotproc.wait():
+patchOut=os.sys.argv[1]+".po"
+args=["./katana","-g","-o",patchOut,prog,newProg]
+vlogf.write("running:\n "+string.join(args," ")+"\n")
+kproc=subprocess.Popen(args,stdout=hotlogf,stderr=hotlogerrf)
+if 0!=kproc.wait():
   hotlogf.close()
   hotlogerrf.close()
-  vlogf.write("Validator failed because katana exited with failure.\nSee "+klogfname+" and "+klogerrfname+" for more information\n")
+  vlogf.write("Validator failed because katana exited with failure while generating patch.\nSee "+klogfname+" and "+klogerrfname+" for more information\n")
+  proc.terminate() #kill it
+  vlogf.close()
+  sys.exit(1)
+
+proc=subprocess.Popen([prog],stdout=logf)
+#sleep for a moment to let the process run
+time.sleep(0.5)
+#now start the hotpatcher
+args=["./katana","-p",patchOut,str(proc.pid)]
+vlogf.write("running "+string.join(args," ")+"\n")
+kproc=subprocess.Popen(args,stdout=hotlogf,stderr=hotlogerrf)
+
+if 0!=kproc.wait():
+  hotlogf.close()
+  hotlogerrf.close()
+  vlogf.write("Validator failed because katana exited with failure while applying patch.\nSee "+klogfname+" and "+klogerrfname+" for more information\n")
   proc.terminate() #kill it
   vlogf.close()
   sys.exit(1)
