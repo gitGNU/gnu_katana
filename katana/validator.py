@@ -15,6 +15,7 @@ if len(sys.argv)!=2:
 sys.path.append(os.path.abspath(sys.argv[1]))
 validateModule=__import__("validate")
 
+vlogf.write("############################\n")
 vlogf.write("Validator running in dir: "+sys.argv[1]+"\n")
 prog=os.path.join(sys.argv[1],"v0","test")
 newProg=os.path.join(sys.argv[1],"v1","test")
@@ -37,7 +38,6 @@ if 0!=kproc.wait():
   hotlogf.close()
   hotlogerrf.close()
   vlogf.write("Validator failed because katana exited with failure while generating patch.\nSee "+klogfname+" and "+klogerrfname+" for more information\n")
-  proc.terminate() #kill it
   vlogf.close()
   sys.exit(1)
 
