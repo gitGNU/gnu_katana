@@ -9,6 +9,10 @@
 */
 #include <stdio.h>
 #include <unistd.h>
+#include <signal.h>
+#include <stdlib.h>
+#include <string.h>
+
 typedef struct _Foo
 {
   int field1;
@@ -20,8 +24,18 @@ typedef struct _Foo
 Foo bar={42,66,111};
 
 
+void sigReceived(int signum)
+{
+  fprintf(stderr,"bad signal\n");
+  abort();
+}
+
+void otherPrintThings();
+
 void printThings()
 {
+  int a=1;
+  printf("This is print things version %i\n",a);
   printf("Foo: %i,%i\n",bar.field1,bar.field2);
   printf("field 1 at addr: %x, field 2 at addr: %x\n",(unsigned int) &bar.field1,(unsigned int)&bar.field2);
   fflush(stdout);
@@ -29,11 +43,20 @@ void printThings()
 
 int main(int argc,char** argv)
 {
+  struct sigaction act;
+  act.sa_handler=&sigReceived;
+  memset(&act,0,sizeof(act));
+  sigaction(SIGSEGV,&act,NULL);
+  sigaction(SIGILL,&act,NULL);
+  sigaction(SIGTERM,&act,NULL);
+  sigaction(SIGQUIT,&act,NULL);
+  sigaction(SIGHUP,&act,NULL);
   printf("has pid %i\n",getpid());
   while(1)
   {
     printThings();
-    sleep(1);
+    otherPrintThings();
+    usleep(100000);
   }
   return 0;
 }

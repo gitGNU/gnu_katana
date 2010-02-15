@@ -22,6 +22,8 @@ def validate(logname):
   field1Other=None
   field2Other=None
   for line in f:
+    if line.startswith("This is other") or line.startswith("This is print"):
+      continue
     linecount+=1
     if linecount<3:
       continue
