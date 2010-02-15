@@ -102,6 +102,7 @@ void applyRelocation(RelocInfo* rel,GElf_Sym* oldSym,ELF_STORAGE_TYPE type)
   else //RELA
   {
     addrToBeRelocated=rel->rela.r_offset;
+    printf("applying relocation at 0x%x\n",(uint)addrToBeRelocated);
     int type=ELF64_R_TYPE(rel->rela.r_info);
     switch(type)
     {
@@ -110,6 +111,7 @@ void applyRelocation(RelocInfo* rel,GElf_Sym* oldSym,ELF_STORAGE_TYPE type)
       break;
     case R_386_PC32:
       //off by one?
+      //printf("addrNew is 0x%x, addend ix 0x%x, offset is 0x%x\n",addrNew,rel->rela.r_addend,rel->rela.r_offset);
       newAddrAccessed=addrNew+rel->rela.r_addend-rel->rela.r_offset;
       break;
     default:

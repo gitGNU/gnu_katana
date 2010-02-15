@@ -23,11 +23,6 @@
 ElfInfo* oldBinary=NULL;
 ElfInfo* newBinary=NULL;
 
-typedef struct
-{
-  VarInfo* var;
-  TypeTransform* transform;
-} VarTransformation;
 
 ElfInfo patch;
 Elf *outelf;
@@ -61,8 +56,8 @@ Elf_Scn* rela_text_scn=NULL;
                              //in memory does not have a symbol table loaded in memory
                              */
 Dwarf_P_Debug dbg;
-Dwarf_P_Die rootDie=NULL;
-Dwarf_P_Die lastDie=NULL;//keep track of for sibling purposes
+Dwarf_P_Die firstCUDie=NULL;
+Dwarf_P_Die lastCUDie=NULL;//keep track of for sibling purposes
 Dwarf_Unsigned cie;//index of cie we're using
 
 
@@ -123,11 +118,31 @@ int addSymtabEntry(Elf_Data* data,Elf32_Sym* sym)
   return (data->d_off-len)/len;
 }
 
-void writeFuncToDwarf(char* name,uint textOffset,uint funcTextSize,int symIdx)
+void writeCUToDwarf(CompilationUnit* cu)
 {
   Dwarf_Error err;
-  Dwarf_P_Die parent=lastDie?NULL:rootDie;
-  Dwarf_P_Die die=dwarf_new_die(dbg,DW_TAG_subprogram,parent,NULL,lastDie,NULL,&err);
+  assert(!cu->die);
+  cu->die=dwarf_new_die(dbg,DW_TAG_compile_unit,NULL,NULL,lastCUDie,NULL,&err);
+  dwarf_add_AT_name(cu->die,cu->name,&err);
+  if(!firstCUDie)
+  {
+    firstCUDie=cu->die;
+  }
+  lastCUDie=cu->die;
+}
+
+
+void writeFuncToDwarf(char* name,uint textOffset,uint funcTextSize,
+                      int symIdx,CompilationUnit* cu)
+{
+  if(!cu->die)
+  {
+    writeCUToDwarf(cu);
+  }
+  Dwarf_Error err;
+  Dwarf_P_Die parent=cu->lastDie?NULL:cu->die;
+  assert(parent || cu->lastDie);
+  Dwarf_P_Die die=dwarf_new_die(dbg,DW_TAG_subprogram,parent,NULL,cu->lastDie,NULL,&err);
   dwarf_add_AT_name(die,name,&err);
   //note that we add in highpc and lowpc info for the new version of
   //the function. This is so that when patching we can find it
@@ -135,11 +150,16 @@ void writeFuncToDwarf(char* name,uint textOffset,uint funcTextSize,int symIdx)
   //todo: these are going to need relocation
   dwarf_add_AT_targ_address(dbg,die,DW_AT_low_pc,textOffset,symIdx,&err);
   dwarf_add_AT_targ_address(dbg,die,DW_AT_high_pc,textOffset+funcTextSize,symIdx,&err);
-  lastDie=die;
+  cu->lastDie=die;
 }
 
 void writeTypeToDwarf(TypeInfo* type)
 {
+  if(!type->cu->die)
+  {
+    writeCUToDwarf(type->cu);
+  }
+  
   if(type->die)
   {
     return;//already written
@@ -165,10 +185,11 @@ void writeTypeToDwarf(TypeInfo* type)
   default:
     death("unknown type type\n");
   }
-  Dwarf_P_Die parent=lastDie?NULL:rootDie;
+  Dwarf_P_Die parent=type->cu->lastDie?NULL:type->cu->die;
+  assert(parent || type->cu->lastDie);
   Dwarf_Error err;
-  Dwarf_P_Die die=dwarf_new_die(dbg,tag,parent,NULL,lastDie,NULL,&err);
-  lastDie=die;
+  Dwarf_P_Die die=dwarf_new_die(dbg,tag,parent,NULL,type->cu->lastDie,NULL,&err);
+  type->cu->lastDie=die;
   type->die=die;
   dwarf_add_AT_name(die,type->name,&err);
   dwarf_add_AT_unsigned_const(dbg,die,DW_AT_byte_size,type->length,&err);
@@ -199,14 +220,26 @@ void writeTypeToDwarf(TypeInfo* type)
   }
 }
 
-void writeVarToDwarf(VarInfo* var)
+void writeVarToDwarf(VarInfo* var,CompilationUnit* cu)
 {
+  assert(cu);
+  if(!cu->die)
+  {
+    writeCUToDwarf(cu);
+  }
   Dwarf_Error err;
   writeTypeToDwarf(var->type);
-  Dwarf_P_Die die=dwarf_new_die(dbg,DW_TAG_variable,NULL,NULL,lastDie,NULL,&err);
+  Dwarf_P_Die sibling=cu->lastDie;
+  Dwarf_P_Die parent=NULL;
+  if(!sibling)
+  {
+    parent=cu->die;
+  }
+  assert(parent || sibling);
+  Dwarf_P_Die die=dwarf_new_die(dbg,DW_TAG_variable,parent,NULL,sibling,NULL,&err);
   dwarf_add_AT_name(die,var->name,&err);
   dwarf_add_AT_reference(dbg,die,DW_AT_type,var->type->die,&err);
-  lastDie=die;
+  cu->lastDie=die;
 }
 
 void writeTransformationToDwarf(TypeTransform* trans)
@@ -278,7 +311,7 @@ void writeVarTransforms(List* varTrans)
   for(;li;li=li->next)
   {
     VarTransformation* vt=li->value;
-    writeVarToDwarf(vt->var);
+    writeVarToDwarf(vt->var,vt->cu);
     writeTransformationToDwarf(vt->transform);
     printf("writing transformation for var %s\n",vt->var->name);
     /*
@@ -297,17 +330,17 @@ void writeVarTransforms(List* varTrans)
   }
 }
 
-List* getTypeTransformationInfoForCU(CompilationUnit* cu1,CompilationUnit* cu2)
+List* getTypeTransformationInfoForCU(CompilationUnit* cuOld,CompilationUnit* cuNew)
 {
   List* varTransHead=NULL;
   List* varTransTail=NULL;
   TransformationInfo* trans=zmalloc(sizeof(TransformationInfo));
   trans->typeTransformers=dictCreate(100);//todo: get rid of magic # 100
-  printf("Examining compilation unit %s\n",cu1->name);
-  VarInfo** vars1=(VarInfo**)dictValues(cu1->tv->globalVars);
+  printf("Examining compilation unit %s\n",cuOld->name);
+  VarInfo** vars1=(VarInfo**)dictValues(cuOld->tv->globalVars);
   //todo: handle addition of variables in the patch
   VarInfo* var=vars1[0];
-  Dictionary* patchVars=cu2->tv->globalVars;
+  Dictionary* patchVars=cuNew->tv->globalVars;
   for(int i=0;var;i++,var=vars1[i])
   {
     printf("Found variable %s \n",var->name);
@@ -351,6 +384,7 @@ List* getTypeTransformationInfoForCU(CompilationUnit* cu1,CompilationUnit* cu2)
       VarTransformation* vt=zmalloc(sizeof(VarTransformation));
       vt->var=patchedVar;
       vt->transform=(TypeTransform*)dictGet(trans->typeTransformers,var->type->name);
+      vt->cu=cuNew;
       if(!vt->transform)
       {
         death("the transformation info for that variable doesn't exist!\n");
@@ -510,13 +544,19 @@ void writeRelocationsInRange(addr_t lowpc,addr_t highpc,Elf_Scn* scn,
   deleteList(relocs,free);
 }
 
-void writeFuncTransformationInfoForCU(CompilationUnit* cu1,CompilationUnit* cu2)
+
+void writeFuncTransformationInfoForCU(CompilationUnit* cuOld,CompilationUnit* cuNew)
 {
-  SubprogramInfo** funcs1=(SubprogramInfo**)dictValues(cu1->subprograms);
+  SubprogramInfo** funcs1=(SubprogramInfo**)dictValues(cuOld->subprograms);
   for(int i=0;funcs1[i];i++)
   {
     SubprogramInfo* func=funcs1[i];
-    SubprogramInfo* patchedFunc=dictGet(cu2->subprograms,func->name);
+    SubprogramInfo* patchedFunc=dictGet(cuNew->subprograms,func->name);
+    if(!patchedFunc)
+    {
+      fprintf(stderr,"WARNING: function %s was removed from the patched version of compilation unit %s\n",func->name,cuNew->name);
+      continue;
+    }
     if(!areSubprogramsIdentical(func,patchedFunc,oldBinary,newBinary))
     {
       printf("writing transformation info for function %s\n",func->name);
@@ -543,7 +583,7 @@ void writeFuncTransformationInfoForCU(CompilationUnit* cu1,CompilationUnit* cu2)
 
       //we also have to add an entry into debug info, so that
       //we know to patch the function
-      writeFuncToDwarf(func->name,text_data->d_off,len,idx);
+      writeFuncToDwarf(func->name,text_data->d_off,len,idx,cuNew);
       text_data->d_off+=len;
 
       //also include any relocations which exist for anything inside this function
@@ -565,8 +605,8 @@ void writeTypeAndFuncTransformationInfo(DwarfInfo* diPatchee,DwarfInfo* diPatche
   List* cuLi1=diPatchee->compilationUnits;
   for(;cuLi1;cuLi1=cuLi1->next)
   {
-    CompilationUnit* cu1=cuLi1->value;
-    CompilationUnit* cu2=NULL;
+    CompilationUnit* cuOld=cuLi1->value;
+    CompilationUnit* cuNew=NULL;
     //find the corresponding compilation unit in the patched process
     //note: we assume that the number of compilation units is not so large
     //that using a hash table would give us much better performance than
@@ -575,19 +615,19 @@ void writeTypeAndFuncTransformationInfo(DwarfInfo* diPatchee,DwarfInfo* diPatche
     List* cuLi2=diPatched->compilationUnits;
     for(;cuLi2;cuLi2=cuLi2->next)
     {
-      cu2=cuLi2->value;
-      if(cu1->name && cu2->name && !strcmp(cu1->name,cu2->name))
+      cuNew=cuLi2->value;
+      if(cuOld->name && cuNew->name && !strcmp(cuOld->name,cuNew->name))
       {
         break;
       }
-      cu2=NULL;
+      cuNew=NULL;
     }
-    if(!cu2)
+    if(!cuNew)
     {
       fprintf(stderr,"WARNING: the patched version omits an entire compilation unit present in the original version.\n");
-      if(cu1->name)
+      if(cuOld->name)
       {
-        fprintf(stderr,"Missing cu is named %s\n",cu1->name);
+        fprintf(stderr,"Missing cu is named \"%s\"\n",cuOld->name);
       }
       else
       {
@@ -597,13 +637,13 @@ void writeTypeAndFuncTransformationInfo(DwarfInfo* diPatchee,DwarfInfo* diPatche
       //in the patched version and not the patchee
       break;
     }
-    cu1->presentInOtherVersion=true;
-    cu2->presentInOtherVersion=true;
-    List* li=getTypeTransformationInfoForCU(cu1,cu2);
+    cuOld->presentInOtherVersion=true;
+    cuNew->presentInOtherVersion=true;
+    List* li=getTypeTransformationInfoForCU(cuOld,cuNew);
     varTransHead=concatLists(varTransHead,varTransTail,li,NULL,&varTransTail);
-    writeFuncTransformationInfoForCU(cu1,cu2);
+    writeFuncTransformationInfoForCU(cuOld,cuNew);
 
-    printf("completed all transformations for compilation unit %s\n",cu1->name);
+    printf("completed all transformations for compilation unit %s\n",cuOld->name);
     //freeTransformationInfo(trans);//this was causing memory errors. todo: debug it
     //I think it's needed for writeVarTransforms later. Should do reference counting
   }
@@ -674,6 +714,8 @@ void createSections(Elf* outelf)
   shdr->sh_entsize=sizeof(Elf32_Sym);
   shdr->sh_name=addStrtabEntry(".patch_syms_new");*/
 
+  #ifdef RENAMED_DWARF_SCNS
+  
   //now create patch rules
   patch_rules_scn=elf_newscn(outelf);
   patch_rules_data=elf_newdata(patch_rules_scn);
@@ -707,6 +749,8 @@ void createSections(Elf* outelf)
   shdr->sh_info=SHN_UNDEF;
   shdr->sh_addralign=1;
   shdr->sh_name=addStrtabEntry(".patch_expr");
+
+  #endif
 
   //ordinary symtab
   symtab_scn=elf_newscn(outelf);
@@ -861,12 +905,16 @@ void finalizeDataSizes()
   shdr=elf32_getshdr(patch_syms_new_scn);
   shdr->sh_size=patch_syms_new_data->d_size;*/
 
+  #ifdef RENAMED_DWARF_SCNS
+  
   //then patch expressions
   patch_expr_data->d_size=patch_expr_data->d_off;//what was actually used
   patch_expr_data->d_off=0;
   patch_expr_data->d_buf=realloc(patch_expr_data->d_buf,patch_expr_data->d_size);
   shdr=elf32_getshdr(patch_expr_scn);
   shdr->sh_size=patch_expr_data->d_size;
+
+  #endif
 
   //ordinary symtab
   symtab_data->d_size=symtab_data->d_off;//what was actually used
@@ -1005,8 +1053,8 @@ void writePatch(DwarfInfo* diPatchee,DwarfInfo* diPatched,char* fname,ElfInfo* o
 
   Dwarf_Error err;
   dbg=dwarf_producer_init(DW_DLC_WRITE,dwarfWriteSectionCallback,dwarfErrorHandler,NULL,&err);
-  rootDie=dwarf_new_die(dbg,DW_TAG_compile_unit,NULL,NULL,NULL,NULL,&err);
-  dwarf_add_die_to_debug(dbg,rootDie,&err);
+  Dwarf_P_Die tmpRootDie=dwarf_new_die(dbg,DW_TAG_compile_unit,NULL,NULL,NULL,NULL,&err);
+  dwarf_add_die_to_debug(dbg,tmpRootDie,&err);
   cie=dwarf_add_frame_cie(dbg,"",1,1,0,NULL,0,&err);
   if(DW_DLV_NOCOUNT==cie)
   {
@@ -1026,7 +1074,7 @@ void writePatch(DwarfInfo* diPatchee,DwarfInfo* diPatched,char* fname,ElfInfo* o
   //the stuff to write in our data
   writeTypeAndFuncTransformationInfo(diPatchee,diPatched);
 
-  dwarf_add_die_to_debug(dbg,rootDie,&err);
+  dwarf_add_die_to_debug(dbg,firstCUDie,&err);
   int numSections=dwarf_transform_to_disk_form(dbg,&err);
   printf("num dwarf sections is %i\n",numSections);
   for(int i=0;i<numSections;i++)

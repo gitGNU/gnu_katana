@@ -15,7 +15,7 @@
 #include <dwarf.h>
 #include "elfparse.h"
 Dictionary* cuIdentifiers=NULL;
-
+DwarfInfo* di;
 
 int getOffsetForField(TypeInfo* type,char* name)
 {
@@ -656,11 +656,38 @@ void addVarFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
   printf("added variable %s\n",var->name);
 }
 
-void parseCompileUnit(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
+void parseCompileUnit(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit** cu)
 {
-  cu->name=getNameForDie(dbg,die,cu);
-  setIdentifierForCU(cu,die);
-  printf("compilation unit has name %s\n",cu->name);
+  *cu=zmalloc(sizeof(CompilationUnit));
+  (*cu)->subprograms=dictCreate(100);//todo: get rid of magic # 100 and base it on something
+  List* cuLi=zmalloc(sizeof(List));
+  cuLi->value=*cu;
+  if(di->compilationUnits)
+  {
+    di->lastCompilationUnit->next=cuLi;
+  }
+  else
+  {
+    di->compilationUnits=cuLi;
+  }
+  di->lastCompilationUnit=cuLi;
+          
+  TypeAndVarInfo* tv=zmalloc(sizeof(TypeAndVarInfo));
+  (*cu)->tv=tv;
+  tv->types=dictCreate(100);//todo: get rid of magic number 100 and base it on smth
+  Dictionary* globalVars=dictCreate(100);//todo: get rid of magic number 100 and base it on smth
+  assert(globalVars);
+  tv->globalVars=globalVars;
+  tv->parsedDies=integerMapCreate(100);//todo: get rid of magic number 100 and base it on smth
+  //create the void type
+  TypeInfo* voidType=zmalloc(sizeof(TypeInfo));
+  voidType->type=TT_VOID;
+  voidType->name=strdup("void");
+  dictInsert(tv->types,voidType->name,voidType);
+    
+  (*cu)->name=getNameForDie(dbg,die,*cu);
+  setIdentifierForCU(*cu,die);
+  printf("compilation unit has name %s\n",(*cu)->name);
 }
 
 void addSubprogramFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
@@ -682,57 +709,71 @@ void addSubprogramFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
   dictInsert(cu->subprograms,prog->name,prog);
 }
 
-void parseDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu,bool* parseChildren)
+//takes a ** to a compile unit because if we parse a compile unit,
+//the current compile unit will change
+void parseDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit** cu,bool* parseChildren)
 {
   Dwarf_Off off,cuOff;
   Dwarf_Error err;
   dwarf_dieoffset(die,&off,&err);
   dwarf_die_CU_offset(die,&cuOff,&err);
   printf("processing die at offset %i (%i)\n",(int)off,(int)cuOff);
-  if(mapExists(cu->tv->parsedDies,&off))
+  if(*cu && mapExists((*cu)->tv->parsedDies,&off))
   {
     //we've already parsed this die
     *parseChildren=false;//already will have parsed children too
     return;
   }
-  //insert it into our set of parsed dies so that
-  //it's impossible to enter an infinite loop with
-  //a die referencing a die currently being processed
-  //map requires memory allocated for the key
-  int* key=zmalloc(sizeof(int));
-  *key=off;
-  mapInsert(cu->tv->parsedDies,key,"incomplete");
-  *parseChildren=true;
+
   Dwarf_Half tag = 0;
   dwarf_tag(die,&tag,&err);
+  if(!(*cu) && tag!=DW_TAG_compile_unit)
+  {
+    death("tag before compile unit\n");
+  }
+
+  int* key=zmalloc(sizeof(int));
+  *key=off;
+  if(*cu)
+  {
+    //insert it into our set of parsed dies so that
+    //it's impossible to enter an infinite loop with
+    //a die referencing a die currently being processed
+    //map requires memory allocated for the key
+    mapInsert((*cu)->tv->parsedDies,key,"incomplete");
+    *parseChildren=true;
+  }
+  
+
+  
   switch(tag)
   {
   case DW_TAG_compile_unit:
     parseCompileUnit(dbg,die,cu);
     break;
   case DW_TAG_base_type:
-    addBaseTypeFromDie(dbg,die,cu);
+    addBaseTypeFromDie(dbg,die,*cu);
     break;
   case DW_TAG_pointer_type:
-    addPointerTypeFromDie(dbg,die,cu);
+    addPointerTypeFromDie(dbg,die,*cu);
     break;
   case DW_TAG_array_type:
-    addArrayTypeFromDie(dbg,die,cu);
+    addArrayTypeFromDie(dbg,die,*cu);
     *parseChildren=false;
     break;
   case DW_TAG_structure_type:
-    addStructureFromDie(dbg,die,cu);
+    addStructureFromDie(dbg,die,*cu);
     *parseChildren=false;//reading the structure will have taken care of that
     break;
   case DW_TAG_typedef:
   case DW_TAG_const_type://const only changes program semantics, not memory layout, so we don't care about it really, just treat it as a typedef
-    addTypedefFromDie(dbg,die,cu);
+    addTypedefFromDie(dbg,die,*cu);
     break;
   case DW_TAG_variable:
-    addVarFromDie(dbg,die,cu);
+    addVarFromDie(dbg,die,*cu);
     break;
   case DW_TAG_subprogram:
-    addSubprogramFromDie(dbg,die,cu);
+    addSubprogramFromDie(dbg,die,*cu);
     break;
   case DW_TAG_formal_parameter: //ignore because if a function change will be recompiled and won't modify function while executing it
     break;
@@ -744,7 +785,7 @@ void parseDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu,bool* parseChild
   
   //insert the key as its value too because all we
   //care about is its existance, not its value
-  mapSet(cu->tv->parsedDies,key,key,NULL,NULL);
+  mapSet((*cu)->tv->parsedDies,key,key,NULL,NULL);
 }
 
 void walkDieTree(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu,bool siblings)
@@ -764,7 +805,7 @@ void walkDieTree(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu,bool siblings
   }
   dwarf_dealloc(dbg,name,DW_DLA_STRING);
   bool parseChildren=true;
-  parseDie(dbg,die,cu,&parseChildren);
+  parseDie(dbg,die,&cu,&parseChildren);
   Dwarf_Die childOrSibling;
   if(parseChildren)
   {
@@ -805,7 +846,7 @@ void walkDieTree(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu,bool siblings
 //when the caller is finished with it
 DwarfInfo* readDWARFTypes(ElfInfo* elf)
 {
-  DwarfInfo* di=zmalloc(sizeof(DwarfInfo));
+  di=zmalloc(sizeof(DwarfInfo));
   Dwarf_Error err;
   Dwarf_Debug dbg;
   if(DW_DLV_OK!=dwarf_elf_init(elf->e,DW_DLC_READ,&dwarfErrorHandler,NULL,&dbg,&err))
@@ -817,41 +858,14 @@ DwarfInfo* readDWARFTypes(ElfInfo* elf)
   Dwarf_Unsigned nextCUHeader=0;//todo: does this need to be initialized outside
                                 //the loop, doees dwarf_next_cu_header read it,
                                 //or does it keep its own state and only set it?
+  Dwarf_Unsigned cuHeaderLength=0;
+  Dwarf_Half version=0;
+  Dwarf_Unsigned abbrevOffset=0;
+  Dwarf_Half addressSize=0;
   cuIdentifiers=dictCreate(100);//todo: get rid of magic number 100 and base it on smth
   while(1)
   {
-    CompilationUnit* cu=zmalloc(sizeof(CompilationUnit));
-    cu->subprograms=dictCreate(100);//todo: get rid of magic # 100 and base it on something
-    List* cuLi=zmalloc(sizeof(List));
-    cuLi->value=cu;
-    if(di->compilationUnits)
-    {
-      di->lastCompilationUnit->next=cuLi;
-    }
-    else
-    {
-      di->compilationUnits=cuLi;
-    }
-    di->lastCompilationUnit=cuLi;
-          
-    TypeAndVarInfo* tv=zmalloc(sizeof(TypeAndVarInfo));
-    cu->tv=tv;
-    tv->types=dictCreate(100);//todo: get rid of magic number 100 and base it on smth
-    Dictionary* globalVars=dictCreate(100);//todo: get rid of magic number 100 and base it on smth
-    tv->globalVars=globalVars;
-    tv->parsedDies=integerMapCreate(100);//todo: get rid of magic number 100 and base it on smth
-    //create the void type
-    TypeInfo* voidType=zmalloc(sizeof(TypeInfo));
-    voidType->type=TT_VOID;
-    voidType->name=strdup("void");
-    dictInsert(tv->types,voidType->name,voidType);
-    
     printf("iterating compilation units\n");
-    Dwarf_Unsigned cuHeaderLength=0;
-    Dwarf_Half version=0;
-    Dwarf_Unsigned abbrevOffset=0;
-    Dwarf_Half addressSize=0;
-    Dwarf_Die cu_die = 0;
     int res;
     res = dwarf_next_cu_header(dbg,&cuHeaderLength,&version, &abbrevOffset,
                                &addressSize,&nextCUHeader, &err);
@@ -864,6 +878,9 @@ DwarfInfo* readDWARFTypes(ElfInfo* elf)
       //finished reading all compilation units
       break;
     }
+    CompilationUnit* cu=NULL;
+    
+    Dwarf_Die cu_die = 0;
     // The CU will have a single sibling, a cu_die.
     //passing NULL gets the first die in the CU
     if(DW_DLV_ERROR==dwarf_siblingof(dbg,NULL,&cu_die,&err))
@@ -874,6 +891,8 @@ DwarfInfo* readDWARFTypes(ElfInfo* elf)
     {
       death("no entry! in dwarf_siblingof on CU die. This should never happen. Something is terribly wrong \n");
     }
+    //walk the die tree without siblings because
+    //we must initialize each compilation unit separately
     walkDieTree(dbg,cu_die,cu,true);
     dwarf_dealloc(dbg,cu_die,DW_DLA_DIE);
   }
@@ -885,5 +904,3 @@ DwarfInfo* readDWARFTypes(ElfInfo* elf)
   dictDelete(cuIdentifiers,NULL);
   return di;
 }
-
-
