@@ -67,6 +67,8 @@ void relocateVar(VarInfo* var,ElfInfo* targetBin)
 
 void insertTrampolineJump(addr_t insertAt,addr_t jumpTo)
 {
+  printf("inserting at 0x%x, address to jump to is 0x%x\n",(uint)insertAt,(uint)jumpTo);
+  
   //remember that the JMP absolute is indirect, have to specify
   //memory location which hold the memory location to jump to
   int len=2+sizeof(addr_t)*2;
@@ -77,7 +79,6 @@ void insertTrampolineJump(addr_t insertAt,addr_t jumpTo)
   addr_t addrAddr=insertAt+2+sizeof(addr_t);//address of mem location holding jmp target
   memcpy(code+2,&addrAddr,sizeof(addr_t));
   memcpy(code+2+sizeof(addr_t),&jumpTo,sizeof(addr_t));
-  printf("inserting at 0x%x, address to jump to is 0x%x\n",(uint)insertAt,(uint)jumpTo);
   memcpyToTarget(insertAt,code,len);
   byte* verify=zmalloc(len);
   memcpyFromTarget(verify,insertAt,len);
@@ -405,7 +406,7 @@ void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch)
     int symIdx=ELF32_R_SYM(rela->r_info);
     int type=ELF32_R_TYPE(rela->r_info);
     int reindex=reindexSymbol(patch,patchedBin,symIdx);
-    printf("reindexed to %i\n",reindex);
+    printf("reindexed to %i at 0x%x\n",reindex,(uint)getSymAddress(patchedBin,reindex));
     rela->r_info=ELF32_R_INFO(reindex,type);
     addr_t newOffset=rela->r_offset-oldTextNewStart+patchTextAddr;
     switch(type)
@@ -419,18 +420,22 @@ void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch)
         //todo: don't do this if the relocation was actually
         //for something relative to the patch
         addr_t diff=patchTextAddr-oldTextNewStart;
+        printf("for PC32 relocation, modifying access at 0x%x to access 0x%x\n",(uint)newOffset,(uint)(addrAccessed+diff));
         modifyTarget(newOffset,addrAccessed+diff);
       }
+      //todo: apply other sorts of relocations too? I'm confused
     }
     rela->r_offset=newOffset;
   }
   
   patchRelTextAddr=copyInEntireSection(patch,".rela.text.new",&trans);
 
-  
+  printf("======Applying patches=======\n");
   for(List* cuLi=diPatch->compilationUnits;cuLi;cuLi=cuLi->next)
   {
     CompilationUnit* cu=cuLi->value;
+    printf("reading patch compilation unit %s\n",cu->name);
+        
     //first patch variables
     VarInfo** vars=(VarInfo**) dictValues(cu->tv->globalVars);
     for(int i=0;vars[i];i++)

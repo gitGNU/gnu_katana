@@ -48,6 +48,8 @@ typedef struct
   char* name;
   char* id;//in case two compilation units have the same name
   bool presentInOtherVersion;
+  Dwarf_P_Die die;//for when writing out a patch
+  Dwarf_P_Die lastDie;//for when writing out a patch
 } CompilationUnit;
 
 void freeCompilationUnit(CompilationUnit* cu);
@@ -159,5 +161,13 @@ typedef struct
 } TransformationInfo;
 
 void freeTransformationInfo(TransformationInfo* ti);
+
+
+typedef struct
+{
+  VarInfo* var;
+  TypeTransform* transform;
+  CompilationUnit* cu;
+} VarTransformation;
 
 #endif
