@@ -1,0 +1,334 @@
+\documentclass[a4paper,12pt]{article}
+\usepackage[total={6.7in,10in}, top=1.0in, left=0.9in, includefoot]{geometry}
+\usepackage{color}
+\usepackage{url}
+\usepackage{wrapfig}
+\usepackage{hyperref}
+
+\begin{document}
+\title{Katana Paper Additions}
+\maketitle
+
+\addtocounter{section}{1}
+
+\section{Tracking Object Dependencies}
+\textcolor{red}{Note that this is part is a work in progress and is
+  not implemented}
+
+\section{Automated Patching}
+\subsection{Code Patching}
+\subsubsection{Symbol Resolution}
+\textcolor{red}{we are no longer copying symbol values into the PO
+  only the names of the symbols so we can look them up on patch
+  application (unless you disagree Sergey and want to go back to what
+  the original paper says)}
+
+\textcolor{red}{We \emph{are} handling relocations for code patches,
+  but full support for the PLT is currently \emph{not} implemented
+  (it's soon on my to-do list)}
+
+\textcolor{red}{The addition of new symbols is not actually fully
+  supported at the moment, as my first couple examples only patched
+  existing variables. I could get this working in an hour or two
+  though}
+
+\subsubsection{Patch Application}
+\textcolor{red}{Code patching with trampoline jumps \emph{is}
+  implemented. I intend to explore relocating all calls to the
+  function to avoid the overhead of the trampoline but have not
+  actually made any efforts in this direction yet}
+
+\subsection{Data Patching}
+\subsubsection{Type Discovery}
+\textcolor{red}{This is implemented. The only difference from the
+  original paper is that I'm only insert differing types if a variable
+actually using that type is encountered}
+
+\subsubsection{Data Traversal}
+\textcolor{red}{adding of the variable to the PO is implemented
+  (although as mentioned earlier we do not add its address, preferring
+  to rely on symbol information in the executable). Issues of scope
+  and checking activation frames are not yet implemented (although
+  they're next on my todo list)}
+\subsection{Patch Application}
+\textcolor{red}{The basics of this are implemented. Pointers are not
+  yet supported. Eventually we should support custom initializers for
+  new members in types}
+\vspace{1in}
+\textcolor{red}{the following is a new section. It should probably go
+  after section 3 in the original Katana paper}
+\addtocounter{section}{-1}
+\subsection{Challenges}
+\textcolor{red}{I would mention that there is nothing about our
+  approach that inherently won't work with multithreading, just that
+  dealing with it through ptrace takes considerable work. Also, I
+  don't know if this is really the best place to talk about
+  determining patching safety. Perhaps there should be another section
+  for that?}
+\section{Patch Object Format}
+\subsection{Reasons and Needs}
+We have developed a Patch Object format with the following properties
+\begin{itemize}
+ \item a valid ELF file
+ \item information about types and functions requiring patches contained
+   as DWARF information
+ \item type transformations specified using a language defined by the
+   Dwarf standard
+\end{itemize}
+Through the use of existing standards and well-structured ELF files
+utilizing a simple expression language for data patching, we aim to
+create patches which are easily examined (or modified) with existing
+tools. This easy compatibility with the existing binary tools and
+standards brings us to a very good point: why should patching not be a
+part of the ABI and of the standard toolchain? This does not
+necessarily have to be the precise format we use for Katana, any such
+format that would become a standard, whether an actual standard or a
+de-facto standard should be well vetted by the community, but we argue
+that something like this should be included in the standard object
+types, along with relocatable objects, executable objects, shared
+libraries, and core dumps. Consider the situation. Relocatable objects
+containing new code and data which may be inserted at runtime are
+nothing new. This is the entire premise of the dynamic
+library. User-written functions which may have to run upon this code
+injection (in the case of patching data where the desired actions
+cannot be determined automatically) already exist as the
+\texttt{.init} and \texttt{.fini} sections. Due to this similarity
+between some of the functionality needed by patching and the
+functionality offered by dynamic
+libraries, some previous systems have performed patching by creating
+patches as dynamic libraries which contain not only the code and data
+to be patched but the mechanism to perform the patching \cite{ginseng}
+\cite{polus}. We argue that
+this is an unnecessary mixing of data and logic, and that a patch
+which contains merely the information necessary to fix a running
+process and not the code to do so is more desirable. The code to apply
+the patch should live in one place on any given system, as most other
+executable content does. We do not embed emacs within our text files,
+after all. Dynamic libraries and other relocatable, linkable objects
+do not contain code and data intended to overwrite data in an existing
+executable or process. Consider, however, that redefining certain
+symbols is only a slight twist on ordinary linker behaviour. Ordinary
+linker behaviour for global symbols is to fail if a symbol is defined
+more than once. Ordinary behaviour for weak symbols is to use a global
+definition if available or the weak symbol otherwise. When performing
+dynamic linking, generally the first appropriate symbol encountered in
+the chain of symbol tables is used. It is not a far difference to
+define the linkage rule that the symbol definition from the most
+recent patch takes precedence. Therefore, applying a patch consists of
+the following steps
+\begin{enumerate}
+\item Injecting appropriate sections of the patch into memory. This
+includes putting their contents into memory and performing relocations
+on these sections (but not on the rest of the in-memory process) so
+that they fit into their environment
+\item Copying existing data to the appropriate regions of the newly
+mapped-in patch
+\item Performing relocation on the entire in-memory process such that the
+symbols defined by the patch take precedence.
+\end{enumerate}
+These steps are all such fundamental operations that they should
+become universally supported by the ABI and the toolchain. 
+
+On the other hand, note the specification of a general patch
+format does not completely prescribe the patch application. From a
+standard patch format, a patcher is still free to make decisions such
+as when to patch safely and whether to patch functions by inserting
+trampolines in the old versions of the functions or by relocating all
+references to the function (we currently do the former in Katana, but
+may later transition to doing the latter).
+
+\subsection{Our Patch Object Format}
+Our Patch Object (PO) format is an ELF-based
+format. Figure \ref{fig:elfheaders} shows the sections contained in a
+simple patch. \texttt{.text.new} and \texttt{.rodata.new} are of
+course the new code and supporting
+\begin{wrapfigure}{l}{0.4\textwidth}
+{\footnotesize
+\begin{verbatim}
+  Section Headers:
+    [Nr] Name              Type          
+    [ 0]                   NULL          
+    [ 1] .strtab           STRTAB        
+    [ 2] .symtab           SYMTAB        
+    [ 3] .text.new         PROGBITS      
+    [ 4] .rodata.new       PROGBITS      
+    [ 5] .rela.text.new    RELA          
+    [ 6] .debug_info       PROGBITS      
+    [ 7] .debug_abbrev     PROGBITS      
+    [ 8] .debug_frame      PROGBITS      
+    [ 9] .rel.debug_info   REL           
+    [10] .rel.debug_frame  REL           
+\end{verbatim}
+}
+\caption{Headers for the PO}
+\label{fig:elfheaders}
+\vspace{-10pt}
+\end{wrapfigure}
+constants to inject. \texttt{.rela.text.new} allows \texttt{.text.new}
+to be properly relocated after it is adjusted. While System V based
+systems use only relocation sections of type \texttt{SHT\_REL}, we
+chose to use \texttt{SHT\_RELA} in our patch objects because they make
+addends much easier to keep track of as we relocate from patched
+binary to patch object to patched process in memory. This is all
+really nothing new, storing ELF sections to be injected in-memory has
+been done before in other systems. What is new in our patch object is
+the inclusion of DWARF sections. The \texttt{.debug\_info} section in
+an ordinary executable program contains a tree of DIEs (Debugging
+Information Entities) with information about every type, variable, and
+procedure in each compilation unit in the program. In a patch object,
+we store information only about the procedures and variables which
+have changed. This of course includes storing the type information for
+changed variables. An example of the DWARF DIE information contained
+in a patch can be seen in Figure \ref{fig:dies}.
+
+Note that we store considerably less information about each entity
+than is typically contained. This is because we read most of the
+information from the DWARF and symbol table information of the
+executing process. This allows the patch to be more flexible as it
+does not require that all variables and procedures be located at
+exactly the addresses they were expected to be at when the patch was
+generated. This flexibility allows a single patch between versions \emph{va}
+and \emph{vb} to patch both an executable which was originally compiled to \emph{va}
+and an executable which was patched from earlier versions to be
+equivalent to \emph{va}. Ksplice, one of the few other patchers which
+operates solely at the binary level, does not have this capability \cite{ksplice}. Note
+that patch versioning is currently a work in progress and not fully
+implemented.
+\begin{wrapfigure}{r}{0.5\linewidth}
+{\footnotesize
+\begin{verbatim}
+  .debug_info
+
+  COMPILE_UNIT<header overall offset = 0>:
+  <0><   11>	DW_TAG_compile_unit
+      DW_AT_name                  main.c
+
+  LOCAL_SYMBOLS:
+  <1><   19>	DW_TAG_subprogram
+      DW_AT_name                  printThings
+      DW_AT_low_pc                0x0
+      DW_AT_high_pc               0x70
+  <1><   40>	DW_TAG_structure_type
+      DW_AT_name                  _Foo
+      DW_AT_byte_size             16
+      DW_AT_MIPS_fde              16
+      DW_AT_sibling               <93>
+  <2><   55>	DW_TAG_member
+      DW_AT_name                  field1
+  <2><   63>	DW_TAG_member
+      DW_AT_name                  field_extra
+  <2><   76>	DW_TAG_member
+      DW_AT_name                  field2
+  <2><   84>	DW_TAG_member
+      DW_AT_name                  field3
+  <1><   93>	DW_TAG_base_type
+      DW_AT_name                  int
+      DW_AT_byte_size             4
+  <1><   99>	DW_TAG_variable
+      DW_AT_name                  bar
+      DW_AT_type                  <40>
+\end{verbatim}
+}
+\caption{Dwarf DIEs in the PO}
+\label{fig:dies}
+\vspace{-10pt}
+\end{wrapfigure}
+
+Most of the information in the DIE tree is concerned only with names
+or how to locate code within the patch object (high and low pc). Of
+special interest, however, is the \texttt{fde} attribute of the
+\texttt{DW\_TAG\_structure\_type}. This attribute specifies an offset
+in the \texttt{.debug\_frame} section of an FDE (Frame Description
+Entity). Dwarf FDEs are designed for use in transforming one call
+frame into the previous call frame, and thereby walking up a call
+stack for either debugging purposes or exception handling purposes
+(using the \texttt{.eh\_frame} section). Transforming one call frame
+to another, however, is not such a different operation from
+transforming one structure to another version of the same
+structure. We have aided this use with an implementation of the DWARF
+virtual machine which defines several special register types
+(exploiting the fact that for the purposes of generality, DWARF
+registers are specified as LEB128 numbers, giving an unlimited number
+of registers). The DWARF register instructions contained in the FDE
+referenced in Figure \ref{fig:dies} for copying \texttt{field1},\texttt{field2}, and
+\texttt{field3} from the original version of a structure \texttt{\_Foo}
+to a new version of \texttt{\_Foo} which has gained the extra member
+\texttt{field\_extra} in the middle of the existing fields would be
+represented as in Figure \ref{fig:fdeinstrs}.
+\begin{figure}[hb]
+{\footnotesize
+\begin{verbatim}
+DW_CFA_register {CURR_TARG_NEW,0x4 bytes,0x0 off} {CURR_TARG_OLD,0x4 bytes,0x0 off} 
+DW_CFA_register {CURR_TARG_NEW,0x4 bytes,0x8 off} {CURR_TARG_OLD,0x4 bytes,0x4 off} 
+DW_CFA_register {CURR_TARG_NEW,0x4 bytes,0xc off} {CURR_TARG_OLD,0x4 bytes,0x8 off} 
+\end{verbatim}
+}
+\caption{FDE instructions for data patching}
+\label{fig:fdeinstrs}
+\end{figure}
+
+\texttt{CURR\_TARG\_NEW} and \texttt{CURR\_TARG\_OLD} are special
+symbolic values defined by the virtual machine. If we are patching the
+variable 'bar', then the \texttt{CURR\_TARG\_OLD} will be the old address of bar
+(it's value in the symbol table) and \texttt{CURR\_TARG\_NEW} will be the new
+address bar is being relocated to. Our registers take advantage of the
+LEB128 encoding to hold a considerable amount of information in the
+register identifier. In the case seen above, the first byte identifies
+the class of the register (\texttt{CURR\_TARG\_NEW} or \texttt{CURR\_TARG\_OLD} in this
+example), the following word specifies the size of the storage
+addressed (this is included so that register assignments may copy an
+arbitrary number of bytes), and the final word specifies an offset
+from the address referred to by \texttt{CURR\_TARG\_}(\texttt{NEW}|\texttt{OLD}).
+
+\textcolor{red}{the following is an addition to the related work
+  section}
+\section{Related Work}
+   There are several hot-patching systems preceding Katana. One of the
+   most well known is probably Ginseng \cite{ginseng}. Ginseng (and
+   systems drawing inspiration from it such as Polus \cite{polus}) have
+   successfully demonstrated patching of such important software as
+   apache and sshd. These systems perform analysis of the differences
+   between the original and patched versions at the source code
+   level. This introduces considerable (and we argue unnecessary)
+   complexity and inability to deal well with some optimizations such
+   as inlining and hand-written assembly. The complexity of analyzing
+   the source code ties these systems to generally a single language
+   (C in the case of both Ginseng and Polus). By contrast, Katana is
+   language agnostic as it works at the level of the binary ABI, and
+   although we have not yet demonstrated it doing so, it should be
+   able to patch binaries compiled from any language, providing the
+   necessary symbol and relocation information is supplied. Ginseng
+   also requires significant programmer interaction in annotating the
+   code \cite{ginseng-manual} and requires
+   compiling the code to use type-wrappers, allowing the patching of
+   data types but at the cost of indirect access to them. The more
+   programmer effort involved in generating a patch, the more likely
+   the patch is to be incomplete or incorrect.
+
+   Motivated by many of the points in the above paragraph, the
+   successful Ksplice system \cite{ksplice} patches at the binary level, as we do. We
+   claim the following differences from and improvements over Ksplice.
+   \begin{itemize}
+   \item Ksplice operates on the kernel. As their paper states, most of their
+     technique is not specific to the kernel, but there is no evidence
+     that it has been implemented to function on userland programs.
+     Katana operates on userland.
+   \item Ksplice makes no attempt to patch data, relying entirely on
+     programmer-written transformation functions when data types do
+     change
+   \item Ksplice patches are created as kernel modules. Ksplice does not
+     provide a mechanism to perform operations, such as composition,
+     on these patches.
+   \end{itemize}
+   
+   To the best of our knowledge, Katana is the first system to utilize
+   DWARF type information in patching. 
+\vspace{1in}
+
+\textcolor{red}{References need to be merged with the original paper,
+  at least the Ksplice one is already cited by the original paper}
+\bibliographystyle{acm}
+\bibliography{additions}
+\end{document}
+% LocalWords:  toolchain linkable init fini FDE FDEs DIEs Polus CURR TARG LEB
+% LocalWords:  CFA DW

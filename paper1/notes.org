@@ -1,0 +1,48 @@
+*Info to add in revised version of paper
+** state what has been done and what is work in progress
+*** activation records: not done
+*** PLT support: not done
+*** good determination of which functions to patch: not done
+*** basic type patching: done
+*** basic function patching with relocation: done
+** talk about PO format
+*** ELF object
+*** Dwarf DIEs for things that have changed
+*** FDEs for describing how to patch types
+*** .text that's changed
+*** relocations for text
+** differences from related work, esp ksplice
+*** like ksplace is based on binary format
+    can talk about why that's better, ksplice paper has lots of ideas
+*** we patch types
+*** userland, ksplice is kernel (although their methods are generic)
+*** reasoning about patches
+
+*Text
+** section # 3 Data Patching
+   Currently not completely correct because says find different types and write
+   them out, then find different variables and write them out. Actually what we do
+   is read in all types and variables, and go through all the variables to see if their
+   types are different, memoizing the result.
+
+   p.10 states
+    If it is, then we add the variable along with its original address
+    from the replicated executable, its new address from the patch,
+    and type information to the PO.
+
+   This isn't really what we do. We don't copy either the original
+   address or the new address to the patch precisely. We actually
+   don't care what the new address is, since it's going to change when
+   we inject it into the process. We just keep the symbol name so that
+   we can relocate all references to it appropriately once we put it
+   in memory. For the old location of the symbol we rely on reading
+   /proc/PID/exe. In the event that the executable was stripped, we
+   would have to store in the patch some of the symbol information
+   that was removed from the executable. This may eventually be
+   supported by katana but it's not a priority since the extra disk
+   space required by non-stripped executables is not usually a major issue.
+
+
+   Note we only handle global variables at the moment, local ones are coming.
+
+   show dump of the dwarf type info in the patch and say that this is working
