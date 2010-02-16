@@ -7,3 +7,6 @@ katana.tar.gz
 *.pyc
 test
 notes.txt
+*.bbl
+*.aux
+*.blg

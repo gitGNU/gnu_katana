@@ -116,6 +116,9 @@ type that pointer is, we can't really patch it
     241k w/o relocs
     This is a 31% increase in size
 ** need to patch changes to the data segment that might be string constants, etc, things not named
+** what if we could copy out the image in memory so that we could somehow restart it later
+   in the event that something went wrong. Problem with this is system
+   resources that won't be able to get back like file descriptors, etc
 * references:
 ** x86
 *** x86 calling conventions http://unixwiz.net/techtips/win32-callconv-asm.html
