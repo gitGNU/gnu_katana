@@ -39,6 +39,7 @@ typedef struct
   Elf_Data* roData;
   int fd;//file descriptor for elf file
   char* fname;//file name associated with descriptor
+  DwarfInfo* dwarfInfo;
 } ElfInfo;
 
 

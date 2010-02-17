@@ -14,6 +14,8 @@
 #include <assert.h>
 #include <dwarf.h>
 #include "elfparse.h"
+#include "util/logging.h"
+
 Dictionary* cuIdentifiers=NULL;
 DwarfInfo* di;
 
@@ -24,7 +26,7 @@ int getOffsetForField(TypeInfo* type,char* name)
   {
     if(!strcmp(name,type->fields[i]))
     {
-      printf("offset for field returning %i for field %s\n",offset,name);
+      logprintf(ELL_INFO_V1,ELS_MISC,"offset for field returning %i for field %s\n",offset,name);
       return offset;
     }
     offset+=type->fieldLengths[i];
@@ -311,7 +313,7 @@ char* getTypeNameFromATType(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu,Dw
   int res=dwarf_attr(die,DW_AT_type,&attr,&err);
   if(res==DW_DLV_NO_ENTRY)
   {
-    printf("no type entry\n");
+    logprintf(ELL_INFO_V1,ELS_MISC,"no type entry\n");
     //this happens in gcc-generated stuff, there's no DWARF entry
     //for the void type, so we have to create it manually
     return "void";
@@ -329,7 +331,7 @@ char* getTypeNameFromATType(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu,Dw
   if(form==DW_FORM_ref_addr)
   {
     dwarf_global_formref(attr,&offsetOfType,&err);
-    //printf("global offset is %i\n",(int)offsetOfType);
+    //logprintf(ELL_INFO_V1,ELS_MISC,"global offset is %i\n",(int)offsetOfType);
     dwarf_offdie(dbg,offsetOfType,dieOfType,&err);
     if(DW_DLV_ERROR==res)
     {
@@ -338,16 +340,16 @@ char* getTypeNameFromATType(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu,Dw
   }
   else
   {
-    //printf("form is %x\n",form);
+    //logprintf(ELL_INFO_V1,ELS_MISC,"form is %x\n",form);
     dwarf_formref(attr,&offsetOfType,&err);
-    //printf("cu-relative offset is %i\n",(int)offsetOfType);
+    //logprintf(ELL_INFO_V1,ELS_MISC,"cu-relative offset is %i\n",(int)offsetOfType);
     Dwarf_Off offsetOfCu;
     Dwarf_Off off1,off2;
     //dwarf_CU_dieoffset_given_die(die,&offsetOfCu,&err);//doesn't work for some reason
     dwarf_dieoffset(die,&off1,&err);
     dwarf_die_CU_offset(die,&off2,&err);
     offsetOfCu=off1-off2;
-    //printf("offset of cu is %i\n",(int)offsetOfCu);
+    //logprintf(ELL_INFO_V1,ELS_MISC,"offset of cu is %i\n",(int)offsetOfCu);
     int res=dwarf_offdie(dbg,offsetOfCu+offsetOfType,dieOfType,&err);
     if(DW_DLV_ERROR==res)
     {
@@ -378,7 +380,7 @@ TypeInfo* getTypeInfoFromATType(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* c
 {
   Dwarf_Die dieOfType;
   char* name=getTypeNameFromATType(dbg,die,cu,&dieOfType);
-  printf("name is %s\n",name);
+  logprintf(ELL_INFO_V1,ELS_MISC,"name is %s\n",name);
   //todo: scoping? vars other than global?
   TypeInfo* result=dictGet(cu->tv->types,name);
   if(!result)
@@ -413,20 +415,20 @@ void addBaseTypeFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
   }
   type->length=byteSize;
   dictInsert(cu->tv->types,type->name,type);
-  printf("added base type of name %s\n",type->name);
+  logprintf(ELL_INFO_V1,ELS_MISC,"added base type of name %s\n",type->name);
 }
 
 //read in the type definition of a structure
 void addStructureFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
 {
-  printf("reading structure ");
+  logprintf(ELL_INFO_V1,ELS_MISC,"reading structure ");
   TypeInfo* type=zmalloc(sizeof(TypeInfo));
   type->type=TT_STRUCT;
   type->cu=cu;
   Dwarf_Error err=0;
 
   type->name=getNameForDie(dbg,die,cu);
-  printf("of name %s\n",type->name);
+  logprintf(ELL_INFO_V1,ELS_MISC,"of name %s\n",type->name);
   Dwarf_Unsigned byteSize;
   int res=dwarf_bytesize(die,&byteSize,&err);
   if(DW_DLV_NO_ENTRY==res)
@@ -464,7 +466,7 @@ void addStructureFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
       MALLOC_CHECK(type->fieldTypes);
 
       type->fields[idx]=getNameForDie(dbg,child,cu);
-      printf("found field %s\n",type->fields[idx]);
+      logprintf(ELL_INFO_V1,ELS_MISC,"found field %s\n",type->fields[idx]);
 
       TypeInfo* typeOfField=getTypeInfoFromATType(dbg,child,cu);
       if(!typeOfField)
@@ -495,7 +497,7 @@ void addStructureFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
     type->fde=readAttributeAsInt(attr);
   }
   type->incomplete=false;
-  printf("added structure type %s\n",type->name);
+  logprintf(ELL_INFO_V1,ELS_MISC,"added structure type %s\n",type->name);
 }
 
 void addPointerTypeFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
@@ -504,9 +506,9 @@ void addPointerTypeFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
   type->type=TT_POINTER;
   type->cu=cu;
   Dwarf_Error err=0;
-  printf("getting name for pointer\n");
+  logprintf(ELL_INFO_V1,ELS_MISC,"getting name for pointer\n");
   type->name=getNameForDie(dbg,die,cu);
-  printf("got name for pointer\n");
+  logprintf(ELL_INFO_V1,ELS_MISC,"got name for pointer\n");
   type->incomplete=true;//set incomplete and add in case the structure we get refers to it
   dictInsert(cu->tv->types,type->name,type);
   Dwarf_Unsigned byteSize;
@@ -528,7 +530,7 @@ void addPointerTypeFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
   {
     type->pointedType=pointedType;
   }
-  printf("added pointer type of name %s\n",type->name);
+  logprintf(ELL_INFO_V1,ELS_MISC,"added pointer type of name %s\n",type->name);
   //check for fde info for transformation
   Dwarf_Attribute attr;
   res=dwarf_attr(die,DW_AT_MIPS_fde,&attr,&err);
@@ -543,7 +545,7 @@ void addPointerTypeFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
 
 void addArrayTypeFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
 {
-  printf("reading array type\n");
+  logprintf(ELL_INFO_V1,ELS_MISC,"reading array type\n");
   TypeInfo* type=zmalloc(sizeof(TypeInfo));
   type->type=TT_ARRAY;
   type->cu=cu;
@@ -594,7 +596,7 @@ void addArrayTypeFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
     type->fde=readAttributeAsInt(attr);
   }
   dictInsert(cu->tv->types,type->name,type);
-  printf("added array type of name %s\n",type->name);
+  logprintf(ELL_INFO_V1,ELS_MISC,"added array type of name %s\n",type->name);
 }
 
 void addTypedefFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
@@ -604,7 +606,7 @@ void addTypedefFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
   if(type)
   {
     dictInsert(cu->tv->types,name,type);
-    printf("added typedef for name %s\n",name);
+    logprintf(ELL_INFO_V1,ELS_MISC,"added typedef for name %s\n",name);
   }
   else
   {
@@ -653,7 +655,7 @@ void addVarFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
   {
     dictInsert(cu->tv->globalVars,var->name,var);
   }
-  printf("added variable %s\n",var->name);
+  logprintf(ELL_INFO_V1,ELS_MISC,"added variable %s\n",var->name);
 }
 
 void parseCompileUnit(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit** cu)
@@ -687,7 +689,7 @@ void parseCompileUnit(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit** cu)
     
   (*cu)->name=getNameForDie(dbg,die,*cu);
   setIdentifierForCU(*cu,die);
-  printf("compilation unit has name %s\n",(*cu)->name);
+  logprintf(ELL_INFO_V1,ELS_MISC,"compilation unit has name %s\n",(*cu)->name);
 }
 
 void addSubprogramFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
@@ -717,7 +719,7 @@ void parseDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit** cu,bool* parseChil
   Dwarf_Error err;
   dwarf_dieoffset(die,&off,&err);
   dwarf_die_CU_offset(die,&cuOff,&err);
-  printf("processing die at offset %i (%i)\n",(int)off,(int)cuOff);
+  logprintf(ELL_INFO_V1,ELS_MISC,"processing die at offset %i (%i)\n",(int)off,(int)cuOff);
   if(*cu && mapExists((*cu)->tv->parsedDies,&off))
   {
     //we've already parsed this die
@@ -865,7 +867,7 @@ DwarfInfo* readDWARFTypes(ElfInfo* elf)
   cuIdentifiers=dictCreate(100);//todo: get rid of magic number 100 and base it on smth
   while(1)
   {
-    printf("iterating compilation units\n");
+    logprintf(ELL_INFO_V1,ELS_MISC,"iterating compilation units\n");
     int res;
     res = dwarf_next_cu_header(dbg,&cuHeaderLength,&version, &abbrevOffset,
                                &addressSize,&nextCUHeader, &err);
@@ -902,5 +904,6 @@ DwarfInfo* readDWARFTypes(ElfInfo* elf)
     dwarfErrorHandler(err,NULL);
   }
   dictDelete(cuIdentifiers,NULL);
+  elf->dwarfInfo=di;
   return di;
 }

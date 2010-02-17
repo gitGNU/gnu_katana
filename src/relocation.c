@@ -72,47 +72,38 @@ void applyRelocation(RelocInfo* rel,GElf_Sym* oldSym,ELF_STORAGE_TYPE type)
 {
   addr_t addrToBeRelocated;
   addr_t newAddrAccessed;
-  int symIdx;
-  if(ERT_REL==rel->type)
-  {
-    symIdx=ELF64_R_SYM(rel->rel.r_info);//elf64 b/c using GElf
-  }
-  else
-  {
-    symIdx=ELF64_R_SYM(rel->rela.r_info);//elf64 b/c using GElf
-  }
+  int symIdx=rel->symIdx;
   addr_t addrNew=getSymAddress(rel->e,symIdx);
   if(ERT_REL==rel->type)
   {
     addr_t addrOld=oldSym->st_value;
     addr_t oldAddrAccessed;
-    switch(ELF64_R_TYPE(rel->rel.r_info))
+    switch(rel->relocType)
     {
     case R_386_32:
       //todo: we're assuming we're in the text section
-      oldAddrAccessed=getTextAtAbs(rel->e,rel->rel.r_offset,IN_MEM);
+      oldAddrAccessed=getTextAtAbs(rel->e,rel->r_offset,IN_MEM);
       break;
     default:
       death("relocation type we can't handle yet (for REL)\n");
     }
     uint offset=oldAddrAccessed-addrOld;
     newAddrAccessed=addrNew+offset;
-    addrToBeRelocated=rel->rel.r_offset;
+    addrToBeRelocated=rel->r_offset;
   }
   else //RELA
   {
-    addrToBeRelocated=rel->rela.r_offset;
+    addrToBeRelocated=rel->r_offset;
     printf("applying relocation at 0x%x\n",(uint)addrToBeRelocated);
-    int type=ELF64_R_TYPE(rel->rela.r_info);
-    switch(type)
+    switch(rel->relocType)
     {
     case R_386_32:
-      newAddrAccessed=addrNew+rel->rela.r_addend;
+      newAddrAccessed=addrNew+rel->r_addend;
       break;
     case R_386_PC32:
       //off by one?
       //printf("addrNew is 0x%x, addend ix 0x%x, offset is 0x%x\n",addrNew,rel->rela.r_addend,rel->rela.r_offset);
-      newAddrAccessed=addrNew+rel->rela.r_addend-rel->rela.r_offset;
+      newAddrAccessed=addrNew+rel->r_addend-rel->r_offset;
       break;
     default:
       death("relocation type %i we can't handle yet (for RELA)\n",type);
@@ -144,7 +135,7 @@ void applyRelocations(List* relocs,ElfInfo* oldElf)
   for(;li;li=li->next)
   {
     RelocInfo* reloc=(RelocInfo*)li->value;
-    int symIdx=ELF64_R_SYM(reloc->rel.r_info);//elf64 b/c using GElf
+    int symIdx=reloc->symIdx;
     int oldSymIdx=reindexSymbol(reloc->e,oldElf,symIdx);
     if(oldSymIdx>0)
     {
@@ -174,6 +165,8 @@ List* getRelocationItemsInRange(ElfInfo* e,Elf_Scn* relocScn,addr_t lowAddr,addr
   E_RELOC_TYPE type=SHT_REL==shdr.sh_type?ERT_REL:ERT_RELA;
   Elf_Data* data=elf_getdata(relocScn,NULL);
   int scnIdx=elf_ndxscn(relocScn);
+  GElf_Rel rel;
+  GElf_Rela rela;
   for(int i=0;i<data->d_size/shdr.sh_entsize;i++)
   {
     if(!reloc)
@@ -183,21 +176,28 @@ List* getRelocationItemsInRange(ElfInfo* e,Elf_Scn* relocScn,addr_t lowAddr,addr
       reloc->scnIdx=scnIdx;
       reloc->type=type;
     }
-    if(ERT_REL==reloc->type)
+    if(ERT_REL==type)
     {
-      gelf_getrel(data,i,&reloc->rel);
-      if(reloc->rel.r_offset < lowAddr || reloc->rel.r_offset > highAddr)
+      gelf_getrel(data,i,&rel);
+      if(rel.r_offset < lowAddr || rel.r_offset > highAddr)
       {
         continue;
       }
+      reloc->r_offset=rel.r_offset;
+      reloc->relocType=ELF64_R_TYPE(rel.r_info);//elf64 because it's GElf
+      reloc->symIdx=ELF64_R_SYM(rel.r_info);//elf64 because it's GElf
     }
     else //RELA
     {
-      gelf_getrela(data,i,&reloc->rela);
-      if(reloc->rela.r_offset < lowAddr || reloc->rela.r_offset > highAddr)
+      gelf_getrela(data,i,&rela);
+      if(rela.r_offset < lowAddr || rela.r_offset > highAddr)
       {
         continue;
       }
+      reloc->r_offset=rela.r_offset;
+      reloc->r_addend=rela.r_addend;
+      reloc->relocType=ELF64_R_TYPE(rela.r_info);//elf64 because it's GElf
+      reloc->symIdx=ELF64_R_SYM(rela.r_info);//elf64 because it's GElf
     }
     List* li=zmalloc(sizeof(List));
     li->value=reloc;
@@ -224,9 +224,11 @@ List* getRelocationItemsFor(ElfInfo* e,int symIdx)
   //note: system V architecture only uses REL entries,
   //as long as we're sticking with Linux shouldn't
   //have to worry about RELA
+  //todo:make sure this is what we want, since our patch objects use rela sections
   RelocInfo* reloc=NULL;
   List* relocsHead=NULL;
   List* relocsTail=NULL;
+  GElf_Rel rel;
   for(Elf_Scn* scn=elf_nextscn (e->e,NULL);scn;scn=elf_nextscn(e->e,scn))
   {
     int scnIdx=elf_ndxscn(scn);
@@ -245,12 +247,15 @@ List* getRelocationItemsFor(ElfInfo* e,int symIdx)
           reloc->e=e;
           reloc->scnIdx=scnIdx;
         }
-        gelf_getrel(data,j,&reloc->rel);
+        gelf_getrel(data,j,&rel);
         //printf("found relocation item for symbol %u\n",(unsigned int)ELF64_R_SYM(rel.r_info));
-        if(ELF64_R_SYM(reloc->rel.r_info)!=symIdx)
+        if(ELF64_R_SYM(rel.r_info)!=symIdx)
         {
           continue;
         }
+        reloc->r_offset=rel.r_offset;
+        reloc->relocType=ELF64_R_TYPE(rel.r_info);//elf64 because it's GElf
+        reloc->symIdx=ELF64_R_SYM(rel.r_info);//elf64 because it's GElf
         List* li=zmalloc(sizeof(List));
         li->value=reloc;
         reloc=NULL;
@@ -294,4 +299,14 @@ addr_t computeAddend(ElfInfo* e,byte type,idx_t symIdx,addr_t r_offset)
     break;
   }
   return 0;
+}
+
+//if the reloc has an addend, return it, otherwise compute it
+addr_t getAddendForReloc(RelocInfo* reloc)
+{
+  if(ERT_RELA==reloc->type)
+  {
+    return reloc->r_addend;
+  }
+  return computeAddend(reloc->e,reloc->relocType,reloc->symIdx,reloc->r_offset);
 }
