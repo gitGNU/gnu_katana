@@ -474,16 +474,21 @@ void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch)
   data=elf_getdata(relTextScn,NULL);
   
   RelocInfo reloc;
-  memset(&reloc.rel,0,sizeof(reloc.rel));
+  memset(&reloc,0,sizeof(reloc));
   reloc.e=patchedBin;
   reloc.type=ERT_RELA;
   reloc.scnIdx=elf_ndxscn(getSectionByName(patchedBin,".text.new"));
+  GElf_Rela rela;
   for(int i=0;i<numRelocs;i++)
   {
-    if(!gelf_getrela(data,i,&reloc.rela))
+    if(!gelf_getrela(data,i,&rela))
     {
       death("Failed to get relocation\n");
     }
+    reloc.r_offset=rela.r_offset;
+    reloc.r_addend=rela.r_addend;
+    reloc.relocType=ELF64_R_TYPE(rela.r_info);//elf64 because it's GElf
+    reloc.symIdx=ELF64_R_SYM(rela.r_info);//elf64 because it's GElf
     applyRelocation(&reloc,NULL,IN_MEM);//todo: on disk as well
   }
 

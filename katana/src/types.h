@@ -12,7 +12,9 @@
 
 #include "util/dictionary.h"
 #include "util/map.h"
+#include "util/list.h"
 #include <libdwarf.h>
+
 
 typedef unsigned int uint;
 typedef unsigned long addr_t;

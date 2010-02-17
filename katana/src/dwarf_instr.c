@@ -10,6 +10,7 @@
 #include "dwarf_instr.h"
 #include <math.h>
 #include <dwarf.h>
+#include "util/logging.h"
 
 //encode bytes (presumably representing a number)
 //as LEB128. The returned pointer should
@@ -22,7 +23,7 @@ byte* encodeAsLEB128(byte* bytes,int numBytes,bool signed_,usint* numBytesOut)
   int bitOffset=0;//offset into the current byte
   for(int i=0;i<numSeptets;i++)
   {
-    //printf("byte offset is %i and bitOffset is %i\n",byteOffset,bitOffset);
+    //logprintf(ELL_INFO_V1,ELS_MISC,"byte offset is %i and bitOffset is %i\n",byteOffset,bitOffset);
     //shift down to the bits we actually want, then shift up to
     //the position we want them in
     int bitsRetrieved=min(7,8-bitOffset);
@@ -32,9 +33,9 @@ byte* encodeAsLEB128(byte* bytes,int numBytes,bool signed_,usint* numBytesOut)
     {
       mask|=1<<(bitOffset+i);
     }
-    //printf("mask is %i and shift is %i\n",mask,shift);
+    //logprintf(ELL_INFO_V1,ELS_MISC,"mask is %i and shift is %i\n",mask,shift);
     byte val=(mask&bytes[byteOffset])>>shift;
-    //printf("bits retrieved is %i and that value is %i\n",bitsRetrieved,(int)val);
+    //logprintf(ELL_INFO_V1,ELS_MISC,"bits retrieved is %i and that value is %i\n",bitsRetrieved,(int)val);
     if(bitsRetrieved<7 && byteOffset+1<numBytes) //didn't get a full 7 bits before
                                                  //and have room to get more
     {
@@ -45,8 +46,8 @@ byte* encodeAsLEB128(byte* bytes,int numBytes,bool signed_,usint* numBytesOut)
       {
         mask|=1<<i;
       }
-      //printf("getting %i more bits. previously val was %i\n",bitsToGet,(int)val);
-      //printf("next byte is %i, masking it with %i\n",(int)bytes[byteOffset+1],mask);
+      //logprintf(ELL_INFO_V1,ELS_MISC,"getting %i more bits. previously val was %i\n",bitsToGet,(int)val);
+      //logprintf(ELL_INFO_V1,ELS_MISC,"next byte is %i, masking it with %i\n",(int)bytes[byteOffset+1],mask);
       //here we're putting them in the MSB of the septet
       val|=(mask&bytes[byteOffset+1])<<(bitsRetrieved);
     }
@@ -88,18 +89,18 @@ byte* encodeAsLEB128(byte* bytes,int numBytes,bool signed_,usint* numBytesOut)
   }
   *numBytesOut=numSeptets;
   
-  /*  printf("encoded into LEB as follows:\n");
-  printf("bytes : {");
+  /*  logprintf(ELL_INFO_V1,ELS_MISC,"encoded into LEB as follows:\n");
+  logprintf(ELL_INFO_V1,ELS_MISC,"bytes : {");
   for(int i=0;i<numBytes;i++)
   {
-    printf("%i%s ",(int)bytes[i],i+1<numBytes?",":"");
+    logprintf(ELL_INFO_V1,ELS_MISC,"%i%s ",(int)bytes[i],i+1<numBytes?",":"");
   }
-  printf("}\n become: {");
+  logprintf(ELL_INFO_V1,ELS_MISC,"}\n become: {");
   for(int i=0;i<numSeptets;i++)
   {
-    printf("%i(%i)%s ",(int)result[i],(int)result[i]&0x7F,i+1<numSeptets?",":"");
+    logprintf(ELL_INFO_V1,ELS_MISC,"%i(%i)%s ",(int)result[i],(int)result[i]&0x7F,i+1<numSeptets?",":"");
   }
-  printf("}\n");*/
+  logprintf(ELL_INFO_V1,ELS_MISC,"}\n");*/
   return result;
 }
 
@@ -115,7 +116,7 @@ byte* decodeLEB128(byte* bytes,bool signed_,usint* numBytesOut,usint* numSeptets
   int bitOffset=0;//offset into the current byte
   for(int i=0;i<numSeptets;i++)
   {
-    //printf("byte offset is %i and bitOffset is %i\n",byteOffset,bitOffset);
+    //logprintf(ELL_INFO_V1,ELS_MISC,"byte offset is %i and bitOffset is %i\n",byteOffset,bitOffset);
     //if there is a bit offset into the byte, will be filling
     //starting above the LSB
     //construct a mask as appropriate to mask out parts of LEB value we don't want
@@ -127,22 +128,22 @@ byte* decodeLEB128(byte* bytes,bool signed_,usint* numBytesOut,usint* numSeptets
     }
     byte val=bytes[i]&mask;
     int shift=0==bitOffset?0:8-bitsRetrieved;
-    //printf("mask is %i and val is %i, and shift is %i\n",mask,(int)val,shift);
+    //logprintf(ELL_INFO_V1,ELS_MISC,"mask is %i and val is %i, and shift is %i\n",mask,(int)val,shift);
     result[byteOffset]|=val<<shift;
-    //printf("byte so far is %i\n",(int)result[byteOffset]);
+    //logprintf(ELL_INFO_V1,ELS_MISC,"byte so far is %i\n",(int)result[byteOffset]);
     if(bitsRetrieved<7 && byteOffset+1<numBytes)
     {
       int bitsToGet=7-bitsRetrieved;
-      //printf("need to get %i additional bits from this septet with val %i(%i)\n",bitsToGet,(int)val,(int)bytes[i]&0x7F);
+      //logprintf(ELL_INFO_V1,ELS_MISC,"need to get %i additional bits from this septet with val %i(%i)\n",bitsToGet,(int)val,(int)bytes[i]&0x7F);
       //need to construct mask so we don't read too much
       byte mask=0;
       for(int j=0;j<bitsToGet;j++)
       {
         mask|=1<<(bitsRetrieved+j);
       }
-      //printf("mask for additional bytes is %u\n",(uint)mask);
+      //logprintf(ELL_INFO_V1,ELS_MISC,"mask for additional bytes is %u\n",(uint)mask);
       result[byteOffset+1]=(mask&bytes[i])>>bitsRetrieved;
-      //printf("after getting those bits, next byte is %i\n",result[byteOffset+1]);
+      //logprintf(ELL_INFO_V1,ELS_MISC,"after getting those bits, next byte is %i\n",result[byteOffset+1]);
     }
     bitOffset+=7;
     if(bitOffset>=8)
@@ -153,18 +154,18 @@ byte* decodeLEB128(byte* bytes,bool signed_,usint* numBytesOut,usint* numSeptets
   }
   *numBytesOut=numBytes;
   *numSeptetsRead=numSeptets;
-  /*printf("decoded from LEB as follows:\n");
-  /printf("leb bytes : {");
+  /*logprintf(ELL_INFO_V1,ELS_MISC,"decoded from LEB as follows:\n");
+  /logprintf(ELL_INFO_V1,ELS_MISC,"leb bytes : {");
   for(int i=0;i<numSeptets;i++)
   {
-    printf("%i(%i)%s ",(int)bytes[i],(int)bytes[i]&0x7F,i+1<numSeptets?",":"");
+    logprintf(ELL_INFO_V1,ELS_MISC,"%i(%i)%s ",(int)bytes[i],(int)bytes[i]&0x7F,i+1<numSeptets?",":"");
   }
-  printf("}\n become: {");
+  logprintf(ELL_INFO_V1,ELS_MISC,"}\n become: {");
   for(int i=0;i<numBytes;i++)
   {
-    printf("%i%s ",(int)result[i],i+1<numBytes?",":"");
+    logprintf(ELL_INFO_V1,ELS_MISC,"%i%s ",(int)result[i],i+1<numBytes?",":"");
   }
-  printf("}\n");*/
+  logprintf(ELL_INFO_V1,ELS_MISC,"}\n");*/
   return result;
 }
 
@@ -319,7 +320,7 @@ RegInstruction* parseFDEPatchInstructions(Dwarf_Debug dbg,unsigned char* bytes,i
         }
         break;
       case DW_CFA_register:
-        printf("Reading CW_CFA_register\n");
+        logprintf(ELL_INFO_V1,ELS_MISC,"Reading CW_CFA_register\n");
         if(isPoRegType(bytes[1]))
         {
           result[*numInstrs].arg1Reg=readRegFromLEB128(bytes + 1,&uleblen);
@@ -328,10 +329,10 @@ RegInstruction* parseFDEPatchInstructions(Dwarf_Debug dbg,unsigned char* bytes,i
         {
           death("register of unexpected format for po\n");
         }
-        printf("len was %i\n",uleblen);
+        logprintf(ELL_INFO_V1,ELS_MISC,"len was %i\n",uleblen);
         bytes+=uleblen;
         len-=uleblen;
-        printf("byte is %i,%i,%i\n",(int)bytes[1],(int)bytes[1],(int)bytes[3]);
+        logprintf(ELL_INFO_V1,ELS_MISC,"byte is %i,%i,%i\n",(int)bytes[1],(int)bytes[1],(int)bytes[3]);
         if(isPoRegType(bytes[1]))
         {
           result[*numInstrs].arg2Reg=readRegFromLEB128(bytes + 1,&uleblen);
@@ -340,7 +341,7 @@ RegInstruction* parseFDEPatchInstructions(Dwarf_Debug dbg,unsigned char* bytes,i
         {
           death("register of unexpected format for po\n");
         }
-        printf("len was %i\n",uleblen);
+        logprintf(ELL_INFO_V1,ELS_MISC,"len was %i\n",uleblen);
         bytes+=uleblen;
         len-=uleblen;
         break;

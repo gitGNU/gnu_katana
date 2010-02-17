@@ -42,6 +42,7 @@ ElfInfo* oldBinElfInfo=NULL;
 #include <sys/stat.h>
 #include "patcher/patchapply.h"
 #include "patcher/versioning.h"
+#include "util/logging.h"
 
 void sigsegReceived(int signum)
 {
@@ -156,6 +157,9 @@ int main(int argc,char** argv)
   {
     death("Usage: katana -g [-o OUT_FILE] OLD_BINARY NEW_BINARY \n\tOr: katana -p PATCH_FILE PID");
   }
+
+  loggingDefaults();
+  
   struct sigaction act;
   memset(&act,0,sizeof(struct sigaction));
   act.sa_handler=&sigsegReceived;

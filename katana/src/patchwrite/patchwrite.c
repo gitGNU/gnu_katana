@@ -471,30 +471,14 @@ void writeRelocationsInRange(addr_t lowpc,addr_t highpc,Elf_Scn* scn,
     //todo: we insert symbols so that the relocations
     //will be valid, but we need to make sure we don't insert
     //a single symbol too many times, it wastes space
-    int symIdx;
-    if(ERT_REL==reloc->type)
-    {
-      symIdx=ELF64_R_SYM(reloc->rel.r_info);//elf64 b/c using GElf
-    }
-    else //RELA
-    {
-      symIdx=ELF64_R_SYM(reloc->rela.r_info);//elf64 b/c using GElf
-    }
+    int symIdx=reloc->symIdx;
 
     idx_t reindex=addSymbolFromNewBinaryToPatch(symIdx);
     
     //now look at the relocation itself
-    byte type;
-    if(ERT_REL==reloc->type)
-    {
-      type=ELF64_R_TYPE(reloc->rel.r_info);
-    }
-    else //RELA
-    {
-      type=ELF64_R_TYPE(reloc->rela.r_info);
-    }
+    byte type=reloc->relocType;
     rela.r_info=ELF32_R_INFO(reindex,type);
-    rela.r_offset=ERT_REL==reloc->type?reloc->rel.r_offset:reloc->rela.r_offset;
+    rela.r_offset=reloc->r_offset;
     addr_t oldRelOffset=rela.r_offset;
     //now rebase the offset based on where in the data this text is going
     GElf_Shdr shdr;
@@ -505,11 +489,11 @@ void writeRelocationsInRange(addr_t lowpc,addr_t highpc,Elf_Scn* scn,
 
     if(ERT_REL==reloc->type)
     {
-      rela.r_addend=computeAddend(newBinary,type,symIdx,reloc->rel.r_offset);
+      rela.r_addend=computeAddend(newBinary,type,symIdx,reloc->r_offset);
     }
     else
     {
-      rela.r_addend=reloc->rela.r_addend;
+      rela.r_addend=reloc->r_addend;
     }
 
     //now depending on the type we may have to do some additional fixups

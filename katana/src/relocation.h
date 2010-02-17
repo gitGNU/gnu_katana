@@ -20,9 +20,15 @@ typedef enum
 
 typedef struct
 {
-  GElf_Rel rel;//the relocation
+  /*GElf_Rel rel;//the relocation
   GElf_Rela rela;
-  E_RELOC_TYPE type;//only one of rel and rela is valid. This tells which one
+  
+  */
+  addr_t r_offset;
+  idx_t symIdx;//extracted from r_info
+  byte relocType;//extracted from r_info
+  addr_t r_addend;//may not always be valid. 0 if invalid
+  E_RELOC_TYPE type;//if ERT_RELA then r_addend is valid, otherwise it is not
   ElfInfo* e;//the elf object the relocation is for
   int scnIdx;//which section this relocation applies to in e
 } RelocInfo;
@@ -72,4 +78,6 @@ void applyAllRelocations(ElfInfo* e,ElfInfo* oldElf);
 //compute an addend for when we have REL instead of RELA
 addr_t computeAddend(ElfInfo* e,byte type,idx_t symIdx,addr_t r_offset);
 
+//if the reloc has an addend, return it, otherwise compute it
+addr_t getAddendForReloc(RelocInfo* reloc);
 #endif

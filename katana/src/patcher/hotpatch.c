@@ -210,12 +210,12 @@ void performRelocations(ElfInfo* e,VarInfo* var)
   for(List* li=relocItems;li;li=li->next)
   {
     RelocInfo* rel=li->value;
-    printf("relocation for %s at %x with type %i\n",var->name,(unsigned int)rel->rel.r_offset,(unsigned int)ELF64_R_TYPE(rel->rel.r_info));
+    printf("relocation for %s at %x with type %i\n",var->name,(unsigned int)rel->r_offset,(unsigned int)rel->relocType);
     word_t oldAddrAccessed;
-    switch(ELF64_R_TYPE(rel->rel.r_info))
+    switch(rel->relocType)
     {
     case R_386_32:
-      oldAddrAccessed=getTextAtAbs(e,rel->rel.r_offset,IN_MEM);
+      oldAddrAccessed=getTextAtAbs(e,rel->r_offset,IN_MEM);
       break;
     default:
       death("relocation type we can't handle yet\n");
@@ -232,6 +232,6 @@ void performRelocations(ElfInfo* e,VarInfo* var)
     
     uint newAddrAccessed=var->newLocation+offset;//newAddr is new address of the symbol
     printf("new addr is 0x%x\n",newAddrAccessed);
-    modifyTarget(rel->rel.r_offset,newAddrAccessed);//now the access is fully relocated
+    modifyTarget(rel->r_offset,newAddrAccessed);//now the access is fully relocated
   }
 }
