@@ -24,7 +24,7 @@ DwarfInfo* di;
 TypeInfo* getTypeInfoFromATType(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu);
 char* getTypeNameFromATType(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu,Dwarf_Die* dieOfType);
 
-void walkDieTree(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu,bool siblings);
+void walkDieTree(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu,bool siblings,ElfInfo* elf);
 
 
 void dwarfErrorHandler(Dwarf_Error err,Dwarf_Ptr arg)
@@ -297,7 +297,7 @@ TypeInfo* getTypeInfoFromATType(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* c
   if(!result)
   {
     //it's possible we haven't read this die yet
-    walkDieTree(dbg,dieOfType,cu,false);
+    walkDieTree(dbg,dieOfType,cu,false,cu->elf);
   }
   result=dictGet(cu->tv->types,name);
   if(!result)
@@ -569,9 +569,10 @@ void addVarFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
   logprintf(ELL_INFO_V4,ELS_MISC,"added variable %s\n",var->name);
 }
 
-void parseCompileUnit(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit** cu)
+void parseCompileUnit(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit** cu,ElfInfo* elf)
 {
   *cu=zmalloc(sizeof(CompilationUnit));
+  (*cu)->elf=elf;
   (*cu)->subprograms=dictCreate(100);//todo: get rid of magic # 100 and base it on something
   List* cuLi=zmalloc(sizeof(List));
   cuLi->value=*cu;
@@ -624,7 +625,7 @@ void addSubprogramFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
 
 //takes a ** to a compile unit because if we parse a compile unit,
 //the current compile unit will change
-void parseDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit** cu,bool* parseChildren)
+void parseDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit** cu,bool* parseChildren,ElfInfo* elf)
 {
   Dwarf_Off off,cuOff;
   Dwarf_Error err;
@@ -662,7 +663,7 @@ void parseDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit** cu,bool* parseChil
   switch(tag)
   {
   case DW_TAG_compile_unit:
-    parseCompileUnit(dbg,die,cu);
+    parseCompileUnit(dbg,die,cu,elf);
     break;
   case DW_TAG_base_type:
     addBaseTypeFromDie(dbg,die,*cu);
@@ -701,7 +702,7 @@ void parseDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit** cu,bool* parseChil
   mapSet((*cu)->tv->parsedDies,key,key,NULL,NULL);
 }
 
-void walkDieTree(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu,bool siblings)
+void walkDieTree(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu,bool siblings,ElfInfo* elf)
 {
   //code inspired by David Anderson's simplereader.c
   //distributed with libdwarf
@@ -718,7 +719,7 @@ void walkDieTree(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu,bool siblings
   }
   dwarf_dealloc(dbg,name,DW_DLA_STRING);
   bool parseChildren=true;
-  parseDie(dbg,die,&cu,&parseChildren);
+  parseDie(dbg,die,&cu,&parseChildren,elf);
   Dwarf_Die childOrSibling;
   if(parseChildren)
   {
@@ -730,7 +731,7 @@ void walkDieTree(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu,bool siblings
       //if however there simply is no child it won't be an error
       //but the return value won't be ok
       //printf("walking child\n");
-      walkDieTree(dbg,childOrSibling,cu,true);
+      walkDieTree(dbg,childOrSibling,cu,true,elf);
       dwarf_dealloc(dbg,childOrSibling,DW_DLA_DIE);
     }
   }
@@ -750,7 +751,7 @@ void walkDieTree(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu,bool siblings
     return;
   }
   //printf("walking sibling\n");
-  walkDieTree(dbg,childOrSibling,cu,true);
+  walkDieTree(dbg,childOrSibling,cu,true,elf);
   dwarf_dealloc(dbg,childOrSibling,DW_DLA_DIE);
 
 }
@@ -806,7 +807,7 @@ DwarfInfo* readDWARFTypes(ElfInfo* elf)
     }
     //walk the die tree without siblings because
     //we must initialize each compilation unit separately
-    walkDieTree(dbg,cu_die,cu,true);
+    walkDieTree(dbg,cu_die,cu,true,elf);
     dwarf_dealloc(dbg,cu_die,DW_DLA_DIE);
   }
   

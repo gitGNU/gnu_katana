@@ -52,6 +52,7 @@ typedef struct
   bool presentInOtherVersion;
   Dwarf_P_Die die;//for when writing out a patch
   Dwarf_P_Die lastDie;//for when writing out a patch
+  struct ElfInfo* elf;//elf file this comilation unit is in
 } CompilationUnit;
 
 void freeCompilationUnit(CompilationUnit* cu);
