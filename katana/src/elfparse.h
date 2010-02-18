@@ -20,7 +20,7 @@ typedef enum
   ON_DISK=2
 } ELF_STORAGE_TYPE;
 
-typedef struct
+typedef struct ElfInfo
 {
   Elf_Data* hashTableData;
   Elf_Data* symTabData;
