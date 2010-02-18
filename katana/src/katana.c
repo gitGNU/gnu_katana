@@ -43,110 +43,13 @@ ElfInfo* oldBinElfInfo=NULL;
 #include "patcher/patchapply.h"
 #include "patcher/versioning.h"
 #include "util/logging.h"
+#include "patchwrite/typediff.h"
 
 void sigsegReceived(int signum)
 {
   death("katana segfaulting. . .\n");
 }
 
-void diffAndFixTypes(DwarfInfo* diPatchee,DwarfInfo* diPatched)
-{
-  //todo: handle addition of variables and also handle
-  //      things moving between compilation units,
-  //      perhaps group global objects from all compilation units
-  //      together before dealing with them.
-  List* cuLi1=diPatchee->compilationUnits;
-  for(;cuLi1;cuLi1=cuLi1->next)
-  {
-    CompilationUnit* cu1=cuLi1->value;
-    CompilationUnit* cu2=NULL;
-    //find the corresponding compilation unit in the patched process
-    //note: we assume that the number of compilation units is not so large
-    //that using a hash table would give us much better performance than
-    //just going through a list. If working on a truly enormous project it
-    //might make sense to do this
-    List* cuLi2=diPatched->compilationUnits;
-    for(;cuLi2;cuLi2=cuLi2->next)
-    {
-      cu2=cuLi2->value;
-      if(cu1->name && cu2->name && !strcmp(cu1->name,cu2->name))
-      {
-        break;
-      }
-      cu2=NULL;
-    }
-    if(!cu2)
-    {
-      fprintf(stderr,"WARNING: the patched version omits an entire compilation unit present in the original version.\n");
-      if(cu1->name)
-      {
-        fprintf(stderr,"Missing cu is named %s\n",cu1->name);
-      }
-      else
-      {
-        fprintf(stderr,"The compilation unit in the patchee version does not have a name\n");
-      }
-      //todo: we also need to handle a compilation unit being present
-      //in the patched version and not the patchee
-      break;
-    }
-    cu1->presentInOtherVersion=true;
-    cu2->presentInOtherVersion=true;
-    
-    TransformationInfo* trans=zmalloc(sizeof(TransformationInfo));
-    trans->typeTransformers=dictCreate(100);//todo: get rid of magic # 100
-    printf("Examining compilation unit %s\n",cu1->name);
-    VarInfo** vars1=(VarInfo**)dictValues(cu1->tv->globalVars);
-    //todo: handle addition of variables in the patch
-    VarInfo* var=vars1[0];
-    Dictionary* patchVars=cu2->tv->globalVars;
-    for(int i=0;var;i++,var=vars1[i])
-    {
-      printf("Found variable %s \n",var->name);
-      VarInfo* patchedVar=dictGet(patchVars,var->name);
-      if(!patchedVar)
-      {
-        //todo: do we need to do anything special to handle removal of variables in the patch?
-        printf("warning: var %s seems to have been removed in the patch\n",var->name);
-        continue;
-      }
-      TypeInfo* ti1=var->type;
-      TypeInfo* ti2=patchedVar->type;
-      bool needsTransform=false;
-      if(dictExists(trans->typeTransformers,ti1->name))
-      {
-        needsTransform=true;
-      }
-      else
-      {
-        //todo: should have some sort of caching for types we've already
-        //determined to be equal
-        TypeTransform* transform=NULL;
-        if(!compareTypes(ti1,ti2,&transform))
-        {
-          if(!transform)
-          {
-            //todo: may not want to actually abort, may just want to issue
-            //an error
-            fprintf(stderr,"Error, cannot generate type transformation for variable %s\n",var->name);
-            fflush(stderr);
-            abort();
-          }
-          printf("generated type transformation for type %s\n",ti1->name);
-          dictInsert(trans->typeTransformers,ti1->name,transform);
-          needsTransform=true;
-        }
-      }
-      if(needsTransform)
-      {
-        fixupVariable(*var,trans,pid,oldBinElfInfo);
-      }
-    }
-    printf("completed all transformations for compilation unit %s\n",cu1->name);
-    freeTransformationInfo(trans);
-    free(vars1);
-  }
-}
 
 int main(int argc,char** argv)
 {
@@ -237,7 +140,6 @@ int main(int argc,char** argv)
     findELFSections(patch);
     startPtrace();
     readAndApplyPatch(pid,oldBinElfInfo,patch);
-    //diffAndFixTypes(diPatchee,diPatched);
     endPtrace();
   }
   return 0;

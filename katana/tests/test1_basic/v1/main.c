@@ -26,8 +26,6 @@ Foo bar={42,0,66,111};
 
 void printThings()
 {
-  int a=1;
-  printf("this is print things version %i\n",a);
   printf("Foo: %i,%i\n",bar.field1,bar.field2);
   printf("field 1 at addr: %x, field 2 at addr: %x\n",(unsigned int)&bar.field1,(unsigned int)&bar.field2);
   fflush(stdout);

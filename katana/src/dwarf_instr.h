@@ -57,10 +57,13 @@ void addInstruction(DwarfInstructions* instrs,DwarfInstruction* instr);
 RegInstruction* parseFDEPatchInstructions(Dwarf_Debug dbg,unsigned char* bytes,int len,
                                      int dataAlign,int codeAlign,int* numInstrs);
 //some versions of dwarf.h have a misspelling
-#ifdef DW_CFA_lo_user
-#define DW_CFA_KATANA_do_fixups DW_CFA_lo_user+0x5
-#else
-#define DW_CFA_KATANA_do_fixups DW_CFA_low_user+0x5
+#ifndef DW_CFA_lo_user
+#define DW_CFA_lo_user DW_CFA_low_user
 #endif
+//specifies that the value for the given register should be computed
+//by applying the fixups in the given FDE
+//It therefore takes two operands, the first is a register number and the
+//second is an FDE number (index of the FDE to use for fixups)
+#define DW_CFA_KATANA_do_fixups DW_CFA_lo_user+0x5
 
 #endif

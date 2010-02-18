@@ -125,9 +125,11 @@ typedef struct TypeTransform_
   //contains the new offset of that field from the start of the new structure
   //this can be used to relocate fields within structures
   //the value FIELD_DELETED indicates that the field is no longer
-  //present in the structure. The value FIELD_RECURSE means to look for a type transformation
+  //present in the structure. The value FIELD_RECURSE means to look for a type
+  //transformation for that type
   int* fieldOffsets;
-  bool onDisk;//user when writing patch info to disk
+  bool onDisk;//used when writing patch info to disk
+  Dwarf_Unsigned fdeIdx;//index of FDE corresponding to the transformation
 } TypeTransform;
 
 void freeTypeTransform(TypeTransform* t);
@@ -148,6 +150,7 @@ void freeVarInfo(VarInfo* v);
 //wrapper
 void freeVarInfoVoid(void* v);
 
+//todo: get rid of this structure
 //structure to hold information about transformation
 //necessary to hotpatch types
 typedef struct
