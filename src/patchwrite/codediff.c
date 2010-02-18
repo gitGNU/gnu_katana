@@ -18,17 +18,18 @@ int cmpRelocs(void* a,void* b)
 {
   RelocInfo* relocA=a;
   RelocInfo* relocB=b;
-  return relocA->r_offset=relocB->r_offset;
+  return relocA->r_offset-relocB->r_offset;
 }
 
 bool areSubprogramsIdentical(SubprogramInfo* patcheeFunc,SubprogramInfo* patchedFunc,
                              ElfInfo* oldBinary,ElfInfo* newBinary)
 {
+  logprintf(ELL_INFO_V1,ELS_CODEDIFF,"testing whether subprograms for %s are identical\n",patcheeFunc->name);
   int len1=patcheeFunc->highpc-patcheeFunc->lowpc;
   int len2=patchedFunc->highpc-patchedFunc->lowpc;
   if(len1!=len2)
   {
-    logprintf(ELL_INFO_V1,ELS_CODEDIFF,"subprogram for %s changed, one is larger than the other",patcheeFunc->name);
+    logprintf(ELL_INFO_V1,ELS_CODEDIFF,"subprogram for %s changed, one is larger than the other\n",patcheeFunc->name);
     return false;
   }
 
@@ -48,7 +49,7 @@ bool areSubprogramsIdentical(SubprogramInfo* patcheeFunc,SubprogramInfo* patched
   {
     deleteList(newRelocations,free);
     deleteList(oldRelocations,free);
-    logprintf(ELL_INFO_V1,ELS_CODEDIFF,"subprogram for %s changed, they contain different numbers of relocations",patcheeFunc->name);
+    logprintf(ELL_INFO_V1,ELS_CODEDIFF,"subprogram for %s changed, they contain different numbers of relocations\n",patcheeFunc->name);
     return false;
   }
 
@@ -86,7 +87,7 @@ bool areSubprogramsIdentical(SubprogramInfo* patcheeFunc,SubprogramInfo* patched
         //todo: the test against st_shndx isn't necessarily valid, sections
         //could have ben re-numbered between the two, although it's unlikely
         retval=false;
-        logprintf(ELL_INFO_V1,ELS_CODEDIFF,"subprogram for %s changed, symbols differ (in more than value)",patcheeFunc->name);
+        logprintf(ELL_INFO_V1,ELS_CODEDIFF,"subprogram for %s changed, symbols differ (in more than value)\n",patcheeFunc->name);
         break;
       }
 
@@ -94,7 +95,7 @@ bool areSubprogramsIdentical(SubprogramInfo* patcheeFunc,SubprogramInfo* patched
       if(getAddendForReloc(relocOld) != getAddendForReloc(relocNew))
       {
         retval=false;
-        logprintf(ELL_INFO_V1,ELS_CODEDIFF,"subprogram for %s changed, relocation addends differ",patcheeFunc->name);
+        logprintf(ELL_INFO_V1,ELS_CODEDIFF,"subprogram for %s changed, relocation addends differ\n",patcheeFunc->name);
         break;
       }
 
@@ -106,11 +107,13 @@ bool areSubprogramsIdentical(SubprogramInfo* patcheeFunc,SubprogramInfo* patched
     }
     else if(patcheeFunc->lowpc+i==relocOld->r_offset) //somehow just one matches
     {
+      logprintf(ELL_INFO_V1,ELS_CODEDIFF,"subprogram for %s changed, only old offset matches\n",patcheeFunc->name);
       retval=false;
       break;
     }
     else if(patchedFunc->lowpc+i==relocNew->r_offset)
     {
+      logprintf(ELL_INFO_V1,ELS_CODEDIFF,"subprogram for %s changed, only new offset matches\n",patcheeFunc->name);
       retval=false;
       break;
     }
@@ -118,11 +121,16 @@ bool areSubprogramsIdentical(SubprogramInfo* patcheeFunc,SubprogramInfo* patched
     if(textOld[i]!=textNew[i])
     {
       retval=false;
+      logprintf(ELL_INFO_V1,ELS_CODEDIFF,"subprogram for %s changed, byte at %i differs\n",patcheeFunc->name,i);
       break;
     }
   }
   
   deleteList(newRelocations,free);
   deleteList(oldRelocations,free);
+  if(retval)
+  {
+    logprintf(ELL_INFO_V1,ELS_CODEDIFF,"subprogram for %s did not change\n",patcheeFunc->name);
+  }
   return retval;
 }
