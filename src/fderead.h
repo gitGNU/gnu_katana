@@ -30,7 +30,7 @@ typedef struct
 } CIE;
 
 
-typedef struct
+typedef struct FDE
 {
   Dwarf_Fde dfde;
   CIE* cie;
@@ -40,6 +40,12 @@ typedef struct
   int highpc;//not using currently. May use for versioning in the future
   int offset;//offset from beginning of debug frame
 } FDE;
+
+
+//the returned memory should be freed
+RegInstruction* parseFDEInstructions(Dwarf_Debug dbg,unsigned char* bytes,int len,
+                                     int dataAlign,int codeAlign,int* numInstrs);
+
 
 
 #endif

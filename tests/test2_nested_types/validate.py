@@ -6,7 +6,7 @@ def validate(logname):
     return False
 
   regexValues="alpha: (42),\(foo: (111,128)\),(69)"
-  regexNewFields="v1: foo\.field2 is (0) and field3 is (0)"
+  regexNewFields="v1: foo\.field_extra is (0) and field3 is (0)"
   linecount=0
   patchingHappened=False
   for line in f:

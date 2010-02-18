@@ -14,7 +14,7 @@
 #include <libdwarf.h>
 #include <dwarf.h>
 #include <assert.h>
-
+#include "util/logging.h"
 
 
 
@@ -23,8 +23,7 @@ Dwarf_Signed fdeElementCount = 0;
 Dwarf_Cie *cieData = NULL;
 Dwarf_Signed cieElementCount = 0;
 CIE cie;
-FDE* fdes;
-int numFdes;
+
 
 //the returned memory should be freed
 RegInstruction* parseFDEInstructions(Dwarf_Debug dbg,unsigned char* bytes,int len,
@@ -112,6 +111,34 @@ RegInstruction* parseFDEInstructions(Dwarf_Debug dbg,unsigned char* bytes,int le
         bytes+=uleblen;
         len-=uleblen;
         break;
+      case DW_CFA_KATANA_do_fixups:
+        logprintf(ELL_INFO_V2,ELS_DWARF_FRAME,"Reading CW_CFA_KATANA_do_fixups\n");
+        if(isPoRegType(bytes[1]))
+        {
+          result[*numInstrs].arg1Reg=readRegFromLEB128(bytes + 1,&uleblen);
+        }
+        else
+        {
+          death("register of unexpected format for po\n");
+        }
+        bytes+=uleblen;
+        len-=uleblen;
+        if(isPoRegType(bytes[1]))
+        {
+          result[*numInstrs].arg2Reg=readRegFromLEB128(bytes + 1,&uleblen);
+        }
+        else
+        {
+          death("register of unexpected format for po\n");
+        }
+        bytes+=uleblen;
+        len-=uleblen;
+        //todo: is this 64-bit safe?
+        result[*numInstrs].arg3=leb128ToUInt(bytes+1,&uleblen);
+        logprintf(ELL_INFO_V4,ELS_DWARF_FRAME,"len was %i\n",uleblen);
+        bytes+=uleblen;
+        len-=uleblen;
+        break;
       case DW_CFA_def_cfa:
         if(isPoRegType(bytes[1]))
         {
@@ -139,6 +166,7 @@ RegInstruction* parseFDEInstructions(Dwarf_Debug dbg,unsigned char* bytes,int le
         bytes+=uleblen;
         len-=uleblen;
         break;
+
       case DW_CFA_def_cfa_offset:
         result[*numInstrs].arg1=leb128ToUInt(bytes + 1, &uleblen);
         bytes+=uleblen;
@@ -148,8 +176,7 @@ RegInstruction* parseFDEInstructions(Dwarf_Debug dbg,unsigned char* bytes,int le
         (*numInstrs)--;//since not actually using up an instruction here
         break;
       default:
-        fprintf(stderr,"dwarf cfa instruction 0x%x not yet handled\n",(uint)low);
-        death(NULL);
+        death("dwarf cfa instruction 0x%x not yet handled in parseFDEInstructions\n",(uint)low);
       }
     }
   }
@@ -203,16 +230,16 @@ Map* readDebugFrame(ElfInfo* elf)
   //todo: bizarre bug, it keeps coming out as -1, which is wrong
   cie.codeAlign=1;
   
-  fdes=zmalloc(fdeElementCount*sizeof(FDE));
-  numFdes=fdeElementCount;
+  elf->fdes=zmalloc(fdeElementCount*sizeof(FDE));
+  elf->numFdes=fdeElementCount;
   for (int i = 0; i < fdeElementCount; i++)
   {
     Dwarf_Fde dfde=fdeData[i];
-    fdes[i].dfde=dfde;
+    elf->fdes[i].dfde=dfde;
     Dwarf_Ptr instrs;
     Dwarf_Unsigned ilen;
     dwarf_get_fde_instr_bytes(dfde, &instrs, &ilen, &err);
-    fdes[i].instructions=parseFDEInstructions(dbg,instrs,ilen,cie.dataAlign,cie.codeAlign,&fdes[i].numInstructions);
+    elf->fdes[i].instructions=parseFDEInstructions(dbg,instrs,ilen,cie.dataAlign,cie.codeAlign,&elf->fdes[i].numInstructions);
     Dwarf_Addr lowPC = 0;
     Dwarf_Unsigned funcLength = 0;
     Dwarf_Ptr fdeBytes = NULL;
@@ -226,12 +253,12 @@ Map* readDebugFrame(ElfInfo* elf)
                         &fdeBytesLength,
                         &cieOffset, &cie_index,
                         &fdeOffset, &err);
-    fdes[i].lowpc=lowPC;
-    fdes[i].highpc=lowPC+funcLength;
-    fdes[i].offset=fdeOffset;
+    elf->fdes[i].lowpc=lowPC;
+    elf->fdes[i].highpc=lowPC+funcLength;
+    elf->fdes[i].offset=fdeOffset;
     int* key=zmalloc(sizeof(int));
-    *key=fdes[i].offset;
-    mapInsert(result,key,fdes+i);
+    *key=elf->fdes[i].offset;
+    mapInsert(result,key,elf->fdes+i);
   }
   return result;
 }

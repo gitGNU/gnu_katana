@@ -70,4 +70,7 @@ void loggingDefaults()
   lvlEnabled=ELL_INFO_V3;
   sourceEnables[ELS_MISC]=true;
   sourceEnables[ELS_CODEDIFF]=true;
+  sourceEnables[ELS_TYPEDIFF]=true;
+  sourceEnables[ELS_DWARF_FRAME]=true;
+  sourceEnables[ELS_HOTPATCH_DATA]=true;
 }

@@ -40,6 +40,8 @@ typedef struct
   int fd;//file descriptor for elf file
   char* fname;//file name associated with descriptor
   DwarfInfo* dwarfInfo;
+  struct FDE* fdes;
+  int numFdes;
 } ElfInfo;
 
 
@@ -61,8 +63,6 @@ void writeOut(ElfInfo* e,char* outfname,bool keepLayout);
 void findELFSections(ElfInfo* e);
 Elf_Scn* getSectionByName(ElfInfo* e,char* name);
 char* getSectionNameFromIdx(ElfInfo* e,int idx);
-
-
 char* getScnHdrString(ElfInfo* e,int idx);
 char* getString(ElfInfo* e,int idx);
 #endif

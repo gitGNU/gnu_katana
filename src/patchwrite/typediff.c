@@ -19,7 +19,7 @@ int getOffsetForField(TypeInfo* type,char* name)
   {
     if(!strcmp(name,type->fields[i]))
     {
-      logprintf(ELL_INFO_V1,ELS_MISC,"offset for field returning %i for field %s\n",offset,name);
+      logprintf(ELL_INFO_V4,ELS_MISC,"offset for field returning %i for field %s\n",offset,name);
       return offset;
     }
     offset+=type->fieldLengths[i];
@@ -87,6 +87,7 @@ bool compareTypesAndGenTransforms(TypeInfo* a,TypeInfo* b)
   {
     //now build the offsets array
     transform->fieldOffsets=zmalloc(sizeof(int)*a->numFields);
+    transform->fieldTransformTypes=zmalloc(sizeof(int)*a->numFields);
     for(int i=0;i<a->numFields;i++)
     {
       int idxInB=getIndexForField(b,a->fields[i]);
@@ -98,6 +99,7 @@ bool compareTypesAndGenTransforms(TypeInfo* a,TypeInfo* b)
         //so we can't really patch that
         //todo: issue a warning?
         transform->fieldOffsets[i]=FIELD_DELETED;
+        transform->fieldTransformTypes[i]=EFTT_DELETE;
         continue;
       }
       int offset;
@@ -105,9 +107,11 @@ bool compareTypesAndGenTransforms(TypeInfo* a,TypeInfo* b)
       {
       case TT_BASE:
         offset=getOffsetForField(b,a->fields[i]);
+        transform->fieldTransformTypes[i]=EFTT_COPY;
         break;
       case TT_STRUCT:
-        offset=FIELD_RECURSE;
+        offset=getOffsetForField(b,a->fields[i]);
+        transform->fieldTransformTypes[i]=EFTT_RECURSE;
         break;
       default:
         death("unsupported type in generating transform in compareTypes. Poke james to write in support\n");
@@ -116,7 +120,7 @@ bool compareTypesAndGenTransforms(TypeInfo* a,TypeInfo* b)
       {
         death("Cannot transform a type to two different types\n");
       }
-      if(FIELD_RECURSE==offset && !fieldTypeOld->transformer)
+      if(EFTT_RECURSE==transform->fieldTransformTypes[i] && !fieldTypeOld->transformer)
       {
         if(!compareTypesAndGenTransforms(fieldTypeOld,fieldTypeNew))
         {

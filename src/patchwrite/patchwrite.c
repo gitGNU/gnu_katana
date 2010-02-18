@@ -20,6 +20,7 @@
 #include "relocation.h"
 #include "symbol.h"
 #include "typediff.h"
+#include "util/logging.h"
 
 ElfInfo* oldBinary=NULL;
 ElfInfo* newBinary=NULL;
@@ -263,8 +264,11 @@ void writeTransformationToDwarf(TypeTransform* trans)
     DwarfInstruction inst;
     int off=trans->fieldOffsets[i];
     int size=trans->from->fieldTypes[i]->length;
-    if(FIELD_DELETED==off)
+    E_FIELD_TRANSFORM_TYPE transformType=trans->fieldTransformTypes[i];
+
+    if(EFTT_DELETE==transformType)
     {
+      logprintf(ELL_INFO_V3,ELS_DWARF_FRAME,"not addingfield to fde\n");
       oldBytesSoFar+=trans->from->fieldLengths[i];
       continue;
     }
@@ -275,28 +279,32 @@ void writeTransformationToDwarf(TypeTransform* trans)
     //todo: waste of space, whole point of LEB128, could put this in one
     //byte instead of 4 most of the time
     assert(sizeof(int)==4);
+    logprintf(ELL_INFO_V3,ELS_DWARF_FRAME,"field offset for field %i is %i\n",i,off);
     memcpy(bytes+2,&off,4);
     inst.arg1Bytes=encodeAsLEB128(bytes,6,false,&inst.arg1NumBytes);
-    if(FIELD_RECURSE==off)
+    bytes[0]=ERT_CURR_TARG_OLD;
+    memcpy(bytes+2,&oldBytesSoFar,4);
+    inst.arg2Bytes=encodeAsLEB128(bytes,6,false,&inst.arg2NumBytes);
+    if(EFTT_RECURSE==transformType)
     {
+      logprintf(ELL_INFO_V3,ELS_DWARF_FRAME,"adding recurse field to fde\n");
       inst.opcode=DW_CFA_KATANA_do_fixups;
       if(!trans->from->fieldTypes[i]->transformer->onDisk)
       {
         writeTransformationToDwarf(trans->from->fieldTypes[i]->transformer);
       }
       Dwarf_Unsigned fdeIdx=trans->from->fieldTypes[i]->transformer->fdeIdx;
-      inst.arg2Bytes=encodeAsLEB128((byte*)&fdeIdx,sizeof(fdeIdx),false,&inst.arg2NumBytes);
+      inst.arg3=fdeIdx;//might as well make both valid
+      inst.arg3Bytes=encodeAsLEB128((byte*)&fdeIdx,sizeof(fdeIdx),false,&inst.arg3NumBytes);
       addInstruction(&instrs,&inst);
+      free(inst.arg1Bytes);
       oldBytesSoFar+=trans->from->fieldLengths[i];
       continue;
     }
-    printf("adding normal field to fde\n");
+    logprintf(ELL_INFO_V3,ELS_DWARF_FRAME,"adding normal field to fde\n");
     //transforming a struct with fields that are base types, nice and easy
     inst.opcode=DW_CFA_register;
     
-    bytes[0]=ERT_CURR_TARG_OLD;
-    memcpy(bytes+2,&oldBytesSoFar,4);
-    inst.arg2Bytes=encodeAsLEB128(bytes,6,false,&inst.arg2NumBytes);
     addInstruction(&instrs,&inst);
     free(inst.arg1Bytes);
     oldBytesSoFar+=trans->from->fieldLengths[i];

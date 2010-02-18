@@ -10,8 +10,12 @@
 #include "register.h"
 #include <dwarf.h>
 #include "util/dictionary.h"
-#include "target.h"
+#include "patcher/target.h"
 #include <assert.h>
+#include "util/logging.h"
+
+//returns a list of PatchData objects
+List* generatePatchesFromFDEAndState(FDE* fde,SpecialRegsState* state,ElfInfo* patch);
 
 //evaluates the given instructions and stores them in the output regarray
 //the initial condition of regarray IS taken into account
@@ -40,7 +44,7 @@ void evaluateInstructions(RegInstruction* instrs,int numInstrs,Dictionary* rules
       if(!rule)
       {
         rule=zmalloc(sizeof(PoRegRule));
-        rule->reg=inst.arg1Reg;
+        rule->regLH=inst.arg1Reg;
         dictInsert(rules,strForReg(inst.arg1Reg),rule);
       }
     }
@@ -69,26 +73,30 @@ void evaluateInstructions(RegInstruction* instrs,int numInstrs,Dictionary* rules
       break;
     case DW_CFA_register:
       rule->type=ERRT_REGISTER;
-      rule->reg2=inst.arg2Reg;
+      rule->regRH=inst.arg2Reg;
       break;
     case DW_CFA_def_cfa:
       cfaRule->type=ERRT_CFA;
-      cfaRule->reg2=inst.arg1Reg;
+      cfaRule->regRH=inst.arg1Reg;
       cfaRule->offset=inst.arg2;
       break;
     case DW_CFA_def_cfa_register:
       cfaRule->type=ERRT_CFA;
-      cfaRule->reg2=inst.arg1Reg;
+      cfaRule->regRH=inst.arg1Reg;
       break;
     case DW_CFA_def_cfa_offset:
       cfaRule->type=ERRT_CFA;
       cfaRule->offset=inst.arg1;
       break;
+    case DW_CFA_KATANA_do_fixups:
+      rule->type=ERRT_RECURSE_FIXUP;
+      rule->regRH=inst.arg2Reg;
+      rule->index=inst.arg3;
     case DW_CFA_nop:
       //do nothing, nothing changed
       break;
     default:
-      death("unexpected instruction");
+      death("unexpected instruction in evaluateInstructions");
     }
   }
 }
@@ -102,61 +110,89 @@ typedef struct
   addr_t addr;//address to copy the data to
 } PatchData;
 
-PatchData* makePatchData(PoRegRule* rule,SpecialRegsState* state)
+//returns a list of PatchData objects
+//this list generally only has one item unless a recurse rule
+//was encountered
+List* makePatchData(PoRegRule* rule,SpecialRegsState* state,ElfInfo* patch)
 {
-  PatchData* result=zmalloc(sizeof(PatchData));
+  List* head=NULL;
+  PatchData* result=NULL;
   byte* addrBytes;
-  int numAddrBytes=resolveRegisterValue(&rule->reg,state,&addrBytes,true);
+  int numAddrBytes=resolveRegisterValue(&rule->regLH,state,&addrBytes,ERRF_ASSIGN);
+  addr_t resultAddr;
   if(sizeof(addr_t)!=numAddrBytes)
   {
-    death("right hand register must always yield an address");
+    death("left hand register must always yield an address");
   }
-  memcpy(&result->addr,addrBytes,sizeof(addr_t));
+  memcpy(&resultAddr,addrBytes,sizeof(addr_t));
+
+  if(ERRT_OFFSET==rule->type || ERRT_REGISTER==rule->type || ERRT_EXPR==rule->type)
+  {
+    head=zmalloc(sizeof(List));
+    result=zmalloc(sizeof(PatchData));
+    head->value=result;
+    result->addr=resultAddr;
+  }
+  
   switch(rule->type)
   {
   case ERRT_UNDEF:
     free(result);
+    free(head);
     fprintf(stderr,"WARNING: undefined register, not doing anything. This is odd\n");
     return NULL;
     break;
   case ERRT_OFFSET:
     {
       addr_t addr=state->cfaValue+rule->offset;
-      result->len=rule->reg.size?rule->reg.size:sizeof(word_t);
+      result->len=rule->regLH.size?rule->regLH.size:sizeof(word_t);
       result->data=zmalloc(result->len);
       memcpyFromTarget(result->data,addr,result->len);
     }
     break;
   case ERRT_REGISTER:
-    result->len=resolveRegisterValue(&rule->reg2,state,&result->data,false);
+    result->len=resolveRegisterValue(&rule->regRH,state,&result->data,ERRF_DEREFERENCE);
     break;
   case ERRT_CFA:
     death("cfa should have been handled earlier\n");
     break;
   case ERRT_EXPR:
     death("expressions not handled yet. todo: implement them\n");
+    break;
+  case ERRT_RECURSE_FIXUP:
+    {
+      SpecialRegsState tmpState=*state;
+      tmpState.currAddrNew=resultAddr;
+      byte* rhAddrBytes=NULL;
+      //pass true because don't want to dereference it
+      int size=resolveRegisterValue(&rule->regRH,state,&rhAddrBytes,ERRF_NONE);
+      assert(size==sizeof(addr_t));
+      memcpy(&tmpState.currAddrOld,rhAddrBytes,sizeof(addr_t));
+      //fde indices seem to be 1-based and we store them zero-based
+      head=generatePatchesFromFDEAndState(&patch->fdes[rule->index-1],&tmpState,patch);
+    }
+    break;
   default:
     death("unknown register rule type\n");
   }
-  printf("patching 0x%x with the following bytes:\n{",(uint)result->addr);
-  for(int i=0;i<result->len;i++)
+  #ifdef DEBUG
+  if(result)
   {
-    printf("%u%s",(uint)result->data[i],i+1<result->len?",":"");
+    logprintf(ELL_INFO_V2,ELS_HOTPATCH_DATA,"patching 0x%x with the following bytes:\n{",(uint)result->addr);
+    for(int i=0;i<result->len;i++)
+    {
+      logprintf(ELL_INFO_V2,ELS_HOTPATCH_DATA,"%u%s",(uint)result->data[i],i+1<result->len?",":"");
+    }
+    logprintf(ELL_INFO_V2,ELS_HOTPATCH_DATA,"}\n");
   }
-  printf("}\n");
-  return result;
+  #endif
+  return head;
 }
 
-//patchBin is the elf object we're mirroring all the changes
-//we made to memory in so that it's possible to do successive patching
-void patchDataWithFDE(VarInfo* var,FDE* fde,ElfInfo* oldBinaryElf)
+//returns a list of PatchData objects
+List* generatePatchesFromFDEAndState(FDE* fde,SpecialRegsState* state,ElfInfo* patch)
 {
-  SpecialRegsState state;
-  memset(&state,0,sizeof(state));
-  state.currAddrOld=var->oldLocation;
-  state.currAddrNew=var->newLocation;
-  state.oldBinaryElf=oldBinaryElf;
-  //we build up rules for each register from the FD_CFA instructions
+  //we build up rules for each register from the DW_CFA instructions
   Dictionary* rulesDict=dictCreate(100);//todo: get rid of arbitrary constant 100
   //todo: versioning?
   evaluateInstructions(fde->instructions,fde->numInstructions,rulesDict,fde->highpc);
@@ -176,41 +212,43 @@ void patchDataWithFDE(VarInfo* var,FDE* fde,ElfInfo* oldBinaryElf)
   {
     addr_t addr;
     byte* cfaBytes;
-    int nbytes=resolveRegisterValue(&cfaRule->reg2,&state,&cfaBytes,false);
+    int nbytes=resolveRegisterValue(&cfaRule->regRH,state,&cfaBytes,ERRF_NONE);
     assert(sizeof(addr_t)==nbytes);
     memcpy(&addr,cfaBytes,sizeof(addr_t));
-    state.cfaValue=addr+cfaRule->offset;
+    state->cfaValue=addr+cfaRule->offset;
   }
   else
   {
-    state.cfaValue=0;
+    state->cfaValue=0;
   }
   List* liStart=NULL;
   List* liEnd=NULL;
   for(int i=0;rules[i];i++)
   {
-    PatchData* pd=makePatchData(rules[i],&state);
-    if(pd)
-    {
-      List* li=zmalloc(sizeof(List));
-      li->value=pd;
-      if(NULL==liStart)
-      {
-        liStart=li;
-      }
-      else
-      {
-        liEnd->next=li;
-      }
-      liEnd=li;
-    }
+    List* patchList=makePatchData(rules[i],state,patch);
+    liStart=concatLists(liStart,liEnd,patchList,NULL,&liEnd);
   }
+  return liStart;
+}
+
+//patchBin is the elf object we're mirroring all the changes
+//we made to memory in so that it's possible to do successive patching
+void patchDataWithFDE(VarInfo* var,FDE* fde,ElfInfo* oldBinaryElf,ElfInfo* patch)
+{
+  SpecialRegsState state;
+  memset(&state,0,sizeof(state));
+  state.currAddrOld=var->oldLocation;
+  state.currAddrNew=var->newLocation;
+  state.oldBinaryElf=oldBinaryElf;
+
+  List* patchesList=generatePatchesFromFDEAndState(fde,&state,patch);
   //now that we've made all the patch data, apply it
-  List* li=liStart;
+  List* li=patchesList;
   for(;li;li=li->next)
   {
     PatchData* pd=li->value;
     memcpyToTarget(pd->addr,pd->data,pd->len);
   }
-  deleteList(liStart,free);
+  //todo: not right, need a free patch data function
+  deleteList(patchesList,free);
 }

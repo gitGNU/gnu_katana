@@ -37,6 +37,9 @@ typedef struct
   usint arg2NumBytes;
   int arg1;
   int arg2;
+  byte* arg3Bytes;
+  usint arg3NumBytes;
+  int arg3;
   //both the integer and bytes values for an argument are not valid at any one time
   //which is valid depends on the opcode
 } DwarfInstruction;
@@ -46,24 +49,26 @@ typedef struct
   int type;//one of DW_CFA_
   int arg1;
   PoReg arg1Reg;//whether used depends on the type
-  int arg2;
+  word_t arg2;//whether used depends on the type
   PoReg arg2Reg;//whether used depends on the type
+  word_t arg3;//used only for DW_CFA_KATANA_do_fixups
 } RegInstruction;
 
 
 //add a new instruction to an array of instructions
 void addInstruction(DwarfInstructions* instrs,DwarfInstruction* instr);
-//the returned memory should be freed
-RegInstruction* parseFDEPatchInstructions(Dwarf_Debug dbg,unsigned char* bytes,int len,
-                                     int dataAlign,int codeAlign,int* numInstrs);
+
+void printInstruction(RegInstruction inst);
+
 //some versions of dwarf.h have a misspelling
 #ifndef DW_CFA_lo_user
 #define DW_CFA_lo_user DW_CFA_low_user
 #endif
 //specifies that the value for the given register should be computed
-//by applying the fixups in the given FDE
-//It therefore takes two operands, the first is a register number and the
-//second is an FDE number (index of the FDE to use for fixups)
+//by applying the fixups in the given FDE It therefore takes three
+//LEB128 operands, the first is a register number to be assigned, the
+//second is a register to use as the "CURR_TARG_OLD" during the fixup,
+//and the third is an FDE number (index of the FDE to use for fixups)
 #define DW_CFA_KATANA_do_fixups DW_CFA_lo_user+0x5
 
 #endif
