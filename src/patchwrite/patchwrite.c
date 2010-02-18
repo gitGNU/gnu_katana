@@ -19,6 +19,7 @@
 #include "codediff.h"
 #include "relocation.h"
 #include "symbol.h"
+#include "typediff.h"
 
 ElfInfo* oldBinary=NULL;
 ElfInfo* newBinary=NULL;
@@ -253,7 +254,7 @@ void writeTransformationToDwarf(TypeTransform* trans)
   Dwarf_Error err;
   Dwarf_P_Fde fde=dwarf_new_fde(dbg,&err);
   assert(trans->to->die);
-  dwarf_add_frame_fde(dbg,fde,trans->to->die,cie,0,0,0,&err);
+  trans->fdeIdx=dwarf_add_frame_fde(dbg,fde,trans->to->die,cie,0,0,0,&err);
   DwarfInstructions instrs;
   memset(&instrs,0,sizeof(DwarfInstructions));
   int oldBytesSoFar=0;
@@ -261,28 +262,12 @@ void writeTransformationToDwarf(TypeTransform* trans)
   {
     DwarfInstruction inst;
     int off=trans->fieldOffsets[i];
+    int size=trans->from->fieldTypes[i]->length;
     if(FIELD_DELETED==off)
     {
       oldBytesSoFar+=trans->from->fieldLengths[i];
       continue;
     }
-    else if(FIELD_RECURSE==off)
-    {
-      inst.opcode=DW_CFA_KATANA_do_fixups;
-      inst.arg1=0;//todo: this is wrong. Really need to refer to another FDE, but we
-                  //may have to convert to disk representation first before
-                  //we can get that info
-      //todo: probably will need to build up lists of these
-      //and add them in at the end. Could potentially refer to DIE instead
-      //and just get all dies set before dealing with FDEs at all
-      addInstruction(&instrs,&inst);
-      oldBytesSoFar+=trans->from->fieldLengths[i];
-      continue;
-    }
-    printf("adding normal field to fde\n");
-    //transforming a struct with fields that are base types, nice and easy
-    inst.opcode=DW_CFA_register;
-    int size=trans->from->fieldTypes[i]->length;
     byte bytes[6];
     bytes[0]=ERT_CURR_TARG_NEW;
     assert(size<256);
@@ -292,6 +277,23 @@ void writeTransformationToDwarf(TypeTransform* trans)
     assert(sizeof(int)==4);
     memcpy(bytes+2,&off,4);
     inst.arg1Bytes=encodeAsLEB128(bytes,6,false,&inst.arg1NumBytes);
+    if(FIELD_RECURSE==off)
+    {
+      inst.opcode=DW_CFA_KATANA_do_fixups;
+      if(!trans->from->fieldTypes[i]->transformer->onDisk)
+      {
+        writeTransformationToDwarf(trans->from->fieldTypes[i]->transformer);
+      }
+      Dwarf_Unsigned fdeIdx=trans->from->fieldTypes[i]->transformer->fdeIdx;
+      inst.arg2Bytes=encodeAsLEB128((byte*)&fdeIdx,sizeof(fdeIdx),false,&inst.arg2NumBytes);
+      addInstruction(&instrs,&inst);
+      oldBytesSoFar+=trans->from->fieldLengths[i];
+      continue;
+    }
+    printf("adding normal field to fde\n");
+    //transforming a struct with fields that are base types, nice and easy
+    inst.opcode=DW_CFA_register;
+    
     bytes[0]=ERT_CURR_TARG_OLD;
     memcpy(bytes+2,&oldBytesSoFar,4);
     inst.arg2Bytes=encodeAsLEB128(bytes,6,false,&inst.arg2NumBytes);
@@ -334,8 +336,10 @@ List* getTypeTransformationInfoForCU(CompilationUnit* cuOld,CompilationUnit* cuN
 {
   List* varTransHead=NULL;
   List* varTransTail=NULL;
+  #ifdef type_transformers_dict
   TransformationInfo* trans=zmalloc(sizeof(TransformationInfo));
   trans->typeTransformers=dictCreate(100);//todo: get rid of magic # 100
+  #endif
   printf("Examining compilation unit %s\n",cuOld->name);
   VarInfo** vars1=(VarInfo**)dictValues(cuOld->tv->globalVars);
   //todo: handle addition of variables in the patch
@@ -354,18 +358,24 @@ List* getTypeTransformationInfoForCU(CompilationUnit* cuOld,CompilationUnit* cuN
     TypeInfo* ti1=var->type;
     TypeInfo* ti2=patchedVar->type;
     bool needsTransform=false;
+    #ifdef type_transformers_dict
     if(dictExists(trans->typeTransformers,ti1->name))
     {
       needsTransform=true;
     }
+    #else
+    if(ti1->transformer)
+    {
+      needsTransform=true;
+    }
+    #endif
     else
     {
       //todo: should have some sort of caching for types we've already
       //determined to be equal
-      TypeTransform* transform=NULL;
-      if(!compareTypes(ti1,ti2,&transform))
+      if(!compareTypesAndGenTransforms(ti1,ti2))
       {
-        if(!transform)
+        if(!ti1->transformer)
         {
           //todo: may not want to actually abort, may just want to issue
           //an error
@@ -374,7 +384,9 @@ List* getTypeTransformationInfoForCU(CompilationUnit* cuOld,CompilationUnit* cuN
           abort();
         }
         printf("generated type transformation for type %s\n",ti1->name);
+        #ifdef type_transformers_dict
         dictInsert(trans->typeTransformers,ti1->name,transform);
+        #endif
         needsTransform=true;
       }
     }
@@ -383,7 +395,11 @@ List* getTypeTransformationInfoForCU(CompilationUnit* cuOld,CompilationUnit* cuN
       List* li=zmalloc(sizeof(List));
       VarTransformation* vt=zmalloc(sizeof(VarTransformation));
       vt->var=patchedVar;
+      #ifdef type_transformers_dict
       vt->transform=(TypeTransform*)dictGet(trans->typeTransformers,var->type->name);
+      #else
+      vt->transform=var->type->transformer;
+      #endif
       vt->cu=cuNew;
       if(!vt->transform)
       {

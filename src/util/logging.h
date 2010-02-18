@@ -23,6 +23,7 @@ typedef enum
 {
   ELS_MISC,
   ELS_CODEDIFF,
+  ELS_TYPEDIFF,
   ELS_CNT
 } E_LOG_SOURCE;//describes what subsystem the message came from
 
