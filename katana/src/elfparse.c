@@ -103,11 +103,11 @@ int getSymtabIdx(ElfInfo* e,char* symbolName)
   int nbucket, nchain;
   memcpy(&nbucket,hashTableData->d_buf,sizeof(Elf32_Word));
   memcpy(&nchain,hashTableData->d_buf+sizeof(Elf32_Word),sizeof(Elf32_Word));
-  logprintf(ELL_INFO_V1,ELS_MISC,"there are %i buckets, %i chain entries, and total size of %i\n",nbucket,nchain,hashTableData->d_size);
+  logprintf(ELL_INFO_V4,ELS_MISC,"there are %i buckets, %i chain entries, and total size of %i\n",nbucket,nchain,hashTableData->d_size);
 
 
   unsigned long int hash=elf_hash(symbolName)%nbucket;
-  logprintf(ELL_INFO_V1,ELS_MISC,"hash is %lu\n",hash);
+  logprintf(ELL_INFO_V4,ELS_MISC,"hash is %lu\n",hash);
   //get the index from the bucket
   int idx;
   memcpy(&idx,hashTableData->d_buf+sizeof(Elf32_Word)*(2+hash),sizeof(Elf32_Word));
@@ -116,7 +116,7 @@ int getSymtabIdx(ElfInfo* e,char* symbolName)
   while(strcmp(symname,symbolName))
   {
     idx=nextIdx;
-    logprintf(ELL_INFO_V1,ELS_MISC,"idx is %i\n",idx);
+    logprintf(ELL_INFO_V4,ELS_MISC,"idx is %i\n",idx);
     if(STN_UNDEF==idx)
     {
       fprintf(stderr,"Symbol '%s' not defined\n",symbolName);
@@ -155,13 +155,13 @@ int getSymtabIdx(ElfInfo* e,char* symbolName)
 
 void printSymTab(ElfInfo* e)
 {
-  logprintf(ELL_INFO_V1,ELS_MISC,"symbol table:\n");
+  logprintf(ELL_INFO_V4,ELS_MISC,"symbol table:\n");
   /* print the symbol names */
   for (int i = 0; i < e->symTabCount; ++i)
   {
     GElf_Sym sym;
     gelf_getsym(e->symTabData, i, &sym);
-    logprintf(ELL_INFO_V1,ELS_MISC,"%i. %s\n", i,elf_strptr(e->e, e->strTblIdx, sym.st_name));
+    logprintf(ELL_INFO_V4,ELS_MISC,"%i. %s\n", i,elf_strptr(e->e, e->strTblIdx, sym.st_name));
   }
 
 }
@@ -266,7 +266,7 @@ void findELFSections(ElfInfo* e)
     char* name=elf_strptr(e->e,e->sectionHdrStrTblIdx,shdr.sh_name);
     if(!strcmp(".hash",name))
     {
-      logprintf(ELL_INFO_V1,ELS_MISC,"found symbol hash table\n");
+      logprintf(ELL_INFO_V4,ELS_MISC,"found symbol hash table\n");
       e->hashTableData=elf_getdata(scn,NULL);
     }
     else if(!strcmp(".symtab",name))

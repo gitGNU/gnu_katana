@@ -38,7 +38,7 @@ void allocateMemoryForVarRelocation(VarInfo* var,TransformationInfo* trans)
   //todo: handle errors
 }
 
-void transformVarData(VarInfo* var,Map* fdeMap)
+void transformVarData(VarInfo* var,Map* fdeMap,ElfInfo* patch)
 {
   printf("transforming var %s\n",var->name);
   FDE* transformerFDE=mapGet(fdeMap,&var->type->fde);
@@ -47,7 +47,7 @@ void transformVarData(VarInfo* var,Map* fdeMap)
     //todo: roll back atomically
     death("could not find transformer for variable\n");
   }
-  patchDataWithFDE(var,transformerFDE,targetBin);
+  patchDataWithFDE(var,transformerFDE,targetBin,patch);
 }
 
 void relocateVar(VarInfo* var,ElfInfo* targetBin)
@@ -338,7 +338,8 @@ void writeOutPatchedBin(bool flushToDisk)
 
 void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch)
 {
-    targetBin=targetBin_;
+  startPtrace();
+  targetBin=targetBin_;
   //we create an on-disk version of the patched binary
   //setting this up is much easier than modifying the in-memory ELF
   //structures. It does, however, allow us to write an accurate symbol table,
@@ -451,7 +452,7 @@ void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch)
       {
         allocateMemoryForVarRelocation(vars[i],&trans);
       }
-      transformVarData(vars[i],fdeMap);
+      transformVarData(vars[i],fdeMap,patch);
       if(relocate)
       {
         relocateVar(vars[i],targetBin);
@@ -495,6 +496,6 @@ void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch)
   writeOutPatchedBin(true);
   elf_end(patchedBin->e);
   close(patchedBin->fd);
-  
+  endPtrace();
   printf("completed application of patch successfully\n");
 }

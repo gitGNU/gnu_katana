@@ -23,7 +23,7 @@ byte* encodeAsLEB128(byte* bytes,int numBytes,bool signed_,usint* numBytesOut)
   int bitOffset=0;//offset into the current byte
   for(int i=0;i<numSeptets;i++)
   {
-    //logprintf(ELL_INFO_V1,ELS_MISC,"byte offset is %i and bitOffset is %i\n",byteOffset,bitOffset);
+    //logprintf(ELL_INFO_V4,ELS_MISC,"byte offset is %i and bitOffset is %i\n",byteOffset,bitOffset);
     //shift down to the bits we actually want, then shift up to
     //the position we want them in
     int bitsRetrieved=min(7,8-bitOffset);
@@ -33,9 +33,9 @@ byte* encodeAsLEB128(byte* bytes,int numBytes,bool signed_,usint* numBytesOut)
     {
       mask|=1<<(bitOffset+i);
     }
-    //logprintf(ELL_INFO_V1,ELS_MISC,"mask is %i and shift is %i\n",mask,shift);
+    //logprintf(ELL_INFO_V4,ELS_MISC,"mask is %i and shift is %i\n",mask,shift);
     byte val=(mask&bytes[byteOffset])>>shift;
-    //logprintf(ELL_INFO_V1,ELS_MISC,"bits retrieved is %i and that value is %i\n",bitsRetrieved,(int)val);
+    //logprintf(ELL_INFO_V4,ELS_MISC,"bits retrieved is %i and that value is %i\n",bitsRetrieved,(int)val);
     if(bitsRetrieved<7 && byteOffset+1<numBytes) //didn't get a full 7 bits before
                                                  //and have room to get more
     {
@@ -46,8 +46,8 @@ byte* encodeAsLEB128(byte* bytes,int numBytes,bool signed_,usint* numBytesOut)
       {
         mask|=1<<i;
       }
-      //logprintf(ELL_INFO_V1,ELS_MISC,"getting %i more bits. previously val was %i\n",bitsToGet,(int)val);
-      //logprintf(ELL_INFO_V1,ELS_MISC,"next byte is %i, masking it with %i\n",(int)bytes[byteOffset+1],mask);
+      //logprintf(ELL_INFO_V4,ELS_MISC,"getting %i more bits. previously val was %i\n",bitsToGet,(int)val);
+      //logprintf(ELL_INFO_V4,ELS_MISC,"next byte is %i, masking it with %i\n",(int)bytes[byteOffset+1],mask);
       //here we're putting them in the MSB of the septet
       val|=(mask&bytes[byteOffset+1])<<(bitsRetrieved);
     }
@@ -89,18 +89,18 @@ byte* encodeAsLEB128(byte* bytes,int numBytes,bool signed_,usint* numBytesOut)
   }
   *numBytesOut=numSeptets;
   
-  /*  logprintf(ELL_INFO_V1,ELS_MISC,"encoded into LEB as follows:\n");
-  logprintf(ELL_INFO_V1,ELS_MISC,"bytes : {");
+  /*  logprintf(ELL_INFO_V4,ELS_MISC,"encoded into LEB as follows:\n");
+  logprintf(ELL_INFO_V4,ELS_MISC,"bytes : {");
   for(int i=0;i<numBytes;i++)
   {
-    logprintf(ELL_INFO_V1,ELS_MISC,"%i%s ",(int)bytes[i],i+1<numBytes?",":"");
+    logprintf(ELL_INFO_V4,ELS_MISC,"%i%s ",(int)bytes[i],i+1<numBytes?",":"");
   }
-  logprintf(ELL_INFO_V1,ELS_MISC,"}\n become: {");
+  logprintf(ELL_INFO_V4,ELS_MISC,"}\n become: {");
   for(int i=0;i<numSeptets;i++)
   {
-    logprintf(ELL_INFO_V1,ELS_MISC,"%i(%i)%s ",(int)result[i],(int)result[i]&0x7F,i+1<numSeptets?",":"");
+    logprintf(ELL_INFO_V4,ELS_MISC,"%i(%i)%s ",(int)result[i],(int)result[i]&0x7F,i+1<numSeptets?",":"");
   }
-  logprintf(ELL_INFO_V1,ELS_MISC,"}\n");*/
+  logprintf(ELL_INFO_V4,ELS_MISC,"}\n");*/
   return result;
 }
 
@@ -110,13 +110,14 @@ byte* decodeLEB128(byte* bytes,bool signed_,usint* numBytesOut,usint* numSeptets
   //do a first pass to determine the number of septets
   int numSeptets=0;
   while(bytes[numSeptets++]&(1<<7)){}
-  int numBytes=(int)floor(numSeptets*7.0/8.0);//floor because may have been sign extended
+  int numBytes=max(1,(int)floor(numSeptets*7.0/8.0));//floor because may have been sign extended. max because otherwise if only one septet this will give 0 bytes
+  //todo: not positive the above is correct
   byte* result=zmalloc(numBytes);
   int byteOffset=0;
   int bitOffset=0;//offset into the current byte
   for(int i=0;i<numSeptets;i++)
   {
-    //logprintf(ELL_INFO_V1,ELS_MISC,"byte offset is %i and bitOffset is %i\n",byteOffset,bitOffset);
+    //logprintf(ELL_INFO_V4,ELS_MISC,"byte offset is %i and bitOffset is %i\n",byteOffset,bitOffset);
     //if there is a bit offset into the byte, will be filling
     //starting above the LSB
     //construct a mask as appropriate to mask out parts of LEB value we don't want
@@ -128,22 +129,22 @@ byte* decodeLEB128(byte* bytes,bool signed_,usint* numBytesOut,usint* numSeptets
     }
     byte val=bytes[i]&mask;
     int shift=0==bitOffset?0:8-bitsRetrieved;
-    //logprintf(ELL_INFO_V1,ELS_MISC,"mask is %i and val is %i, and shift is %i\n",mask,(int)val,shift);
+    //logprintf(ELL_INFO_V4,ELS_MISC,"mask is %i and val is %i, and shift is %i\n",mask,(int)val,shift);
     result[byteOffset]|=val<<shift;
-    //logprintf(ELL_INFO_V1,ELS_MISC,"byte so far is %i\n",(int)result[byteOffset]);
+    //logprintf(ELL_INFO_V4,ELS_MISC,"byte so far is %i\n",(int)result[byteOffset]);
     if(bitsRetrieved<7 && byteOffset+1<numBytes)
     {
       int bitsToGet=7-bitsRetrieved;
-      //logprintf(ELL_INFO_V1,ELS_MISC,"need to get %i additional bits from this septet with val %i(%i)\n",bitsToGet,(int)val,(int)bytes[i]&0x7F);
+      //logprintf(ELL_INFO_V4,ELS_MISC,"need to get %i additional bits from this septet with val %i(%i)\n",bitsToGet,(int)val,(int)bytes[i]&0x7F);
       //need to construct mask so we don't read too much
       byte mask=0;
       for(int j=0;j<bitsToGet;j++)
       {
         mask|=1<<(bitsRetrieved+j);
       }
-      //logprintf(ELL_INFO_V1,ELS_MISC,"mask for additional bytes is %u\n",(uint)mask);
+      //logprintf(ELL_INFO_V4,ELS_MISC,"mask for additional bytes is %u\n",(uint)mask);
       result[byteOffset+1]=(mask&bytes[i])>>bitsRetrieved;
-      //logprintf(ELL_INFO_V1,ELS_MISC,"after getting those bits, next byte is %i\n",result[byteOffset+1]);
+      //logprintf(ELL_INFO_V4,ELS_MISC,"after getting those bits, next byte is %i\n",result[byteOffset+1]);
     }
     bitOffset+=7;
     if(bitOffset>=8)
@@ -154,18 +155,18 @@ byte* decodeLEB128(byte* bytes,bool signed_,usint* numBytesOut,usint* numSeptets
   }
   *numBytesOut=numBytes;
   *numSeptetsRead=numSeptets;
-  /*logprintf(ELL_INFO_V1,ELS_MISC,"decoded from LEB as follows:\n");
-  /logprintf(ELL_INFO_V1,ELS_MISC,"leb bytes : {");
+  /*logprintf(ELL_INFO_V4,ELS_MISC,"decoded from LEB as follows:\n");
+  /logprintf(ELL_INFO_V4,ELS_MISC,"leb bytes : {");
   for(int i=0;i<numSeptets;i++)
   {
-    logprintf(ELL_INFO_V1,ELS_MISC,"%i(%i)%s ",(int)bytes[i],(int)bytes[i]&0x7F,i+1<numSeptets?",":"");
+    logprintf(ELL_INFO_V4,ELS_MISC,"%i(%i)%s ",(int)bytes[i],(int)bytes[i]&0x7F,i+1<numSeptets?",":"");
   }
-  logprintf(ELL_INFO_V1,ELS_MISC,"}\n become: {");
+  logprintf(ELL_INFO_V4,ELS_MISC,"}\n become: {");
   for(int i=0;i<numBytes;i++)
   {
-    logprintf(ELL_INFO_V1,ELS_MISC,"%i%s ",(int)result[i],i+1<numBytes?",":"");
+    logprintf(ELL_INFO_V4,ELS_MISC,"%i%s ",(int)result[i],i+1<numBytes?",":"");
   }
-  logprintf(ELL_INFO_V1,ELS_MISC,"}\n");*/
+  logprintf(ELL_INFO_V4,ELS_MISC,"}\n");*/
   return result;
 }
 
@@ -225,7 +226,19 @@ void addInstruction(DwarfInstructions* instrs,DwarfInstruction* instr)
     memcpy(bytes+1+instr->arg1NumBytes,instr->arg2Bytes,instr->arg2NumBytes);
     addBytes(instrs,bytes,1+instr->arg1NumBytes+instr->arg2NumBytes);
     break;
-  
+
+    //we can take care of all instructions taking two operands both of which
+    //are either LEB128 or DW_FORM_block
+  case DW_CFA_KATANA_do_fixups:
+    bytes=zmalloc(1+instr->arg1NumBytes+instr->arg2NumBytes+instr->arg3NumBytes);
+    bytes[0]=instr->opcode;
+    memcpy(bytes+1,instr->arg1Bytes,instr->arg1NumBytes);
+    memcpy(bytes+1+instr->arg1NumBytes,instr->arg2Bytes,instr->arg2NumBytes);
+    memcpy(bytes+1+instr->arg1NumBytes+instr->arg2NumBytes,instr->arg3Bytes,
+           instr->arg3NumBytes);
+    addBytes(instrs,bytes,1+instr->arg1NumBytes+instr->arg2NumBytes+instr->arg3NumBytes);
+    break;
+    
     
     //location has no meaning (yet anyway) in patches
   case DW_CFA_set_loc:
@@ -239,6 +252,7 @@ void addInstruction(DwarfInstructions* instrs,DwarfInstruction* instr)
     //remember and restore state have no meaning
   case DW_CFA_remember_state:
   case DW_CFA_restore_state:
+  default:
     {
       char buf[32];
       snprintf(buf,32,"Dwarf instruction with opcode %i not supported\n",instr->opcode);
@@ -257,135 +271,103 @@ uint leb128ToUInt(byte* bytes,usint* outLEBBytesRead)
   return val;
 }
 
-//the returned memory should be freed
-RegInstruction* parseFDEPatchInstructions(Dwarf_Debug dbg,unsigned char* bytes,int len,
-                                     int dataAlign,int codeAlign,int* numInstrs)
+void printInstruction(RegInstruction inst)
 {
-  *numInstrs=0;
-  //allocate more mem than we'll actually need
-  //we can free some later
-  RegInstruction* result=zmalloc(sizeof(RegInstruction)*len);
-  for(;len>0;len--,bytes++,(*numInstrs)++)
+  switch(inst.type)
   {
-    //as dwarfdump does, separate out high and low portions
-    //of the byte based on the boundaries of the instructions that
-    //encode an operand with the instruction
-    //all other instructions are accounted for only by the bottom part of the byte
-    unsigned char byte=*bytes;
-    int high = byte & 0xc0;
-    int low = byte & 0x3f;
-    usint uleblen;
-    result[*numInstrs].arg1Reg.type=ERT_NONE;//not using reg unless we set its type
-    result[*numInstrs].arg2Reg.type=ERT_NONE;//not using reg unless we set its type
-    switch(high)
+  case DW_CFA_set_loc:
+    printf("DW_CFA_set_loc %i\n",inst.arg1);
+    break;
+  case DW_CFA_advance_loc:
+    printf("DW_CFA_advance_loc %i\n",inst.arg1);
+    break;
+  case DW_CFA_advance_loc1:
+    printf("DW_CFA_advance_loc_1 %i\n",inst.arg1);
+    break;
+  case DW_CFA_advance_loc2:
+    printf("DW_CFA_advance_loc_2 %i\n",inst.arg1);
+    break;
+  case DW_CFA_offset:
+    printf("DW_CFA_offset r%i %i\n",inst.arg1,inst.arg2);
+    break;
+  case DW_CFA_register:
+    printf("DW_CFA_register ");
+    if(ERT_NONE==inst.arg1Reg.type)
     {
-    case DW_CFA_advance_loc:
-      result[*numInstrs].type=high;
-      result[*numInstrs].arg1=low*codeAlign;
-      break;
-    case DW_CFA_offset:
-      result[*numInstrs].type=high;
-      result[*numInstrs].arg1=low;
-      result[*numInstrs].arg2=leb128ToUInt(bytes + 1, &uleblen)*dataAlign;
-      bytes+=uleblen;
-      len-=uleblen;
-      break;
-    case DW_CFA_restore:
-      death("DW_CFA_restore not handled\n");
-      break;
-    default:
-      //deal with the things encoded by the bottom portion
-      result[*numInstrs].type=low;
-      switch(low)
-      {
-      case DW_CFA_set_loc:
-        //todo: this assumes 32-bit
-        memcpy(&result[*numInstrs].arg1,bytes+1,sizeof(int));
-        bytes+=sizeof(int);
-        len-=sizeof(int);
-        break;
-      case DW_CFA_advance_loc1:
-        {
-        unsigned char delta = (unsigned char) *(bytes + 1);
-        result[*numInstrs].arg1=delta*codeAlign;
-        bytes+=1;
-        len -= 1;
-        }
-      case DW_CFA_advance_loc2:
-        {
-        unsigned short delta = (unsigned short) *(bytes + 1);
-        result[*numInstrs].arg1=delta*codeAlign;
-        bytes+=2;
-        len -= 2;
-        }
-        break;
-      case DW_CFA_register:
-        logprintf(ELL_INFO_V1,ELS_MISC,"Reading CW_CFA_register\n");
-        if(isPoRegType(bytes[1]))
-        {
-          result[*numInstrs].arg1Reg=readRegFromLEB128(bytes + 1,&uleblen);
-        }
-        else
-        {
-          death("register of unexpected format for po\n");
-        }
-        logprintf(ELL_INFO_V1,ELS_MISC,"len was %i\n",uleblen);
-        bytes+=uleblen;
-        len-=uleblen;
-        logprintf(ELL_INFO_V1,ELS_MISC,"byte is %i,%i,%i\n",(int)bytes[1],(int)bytes[1],(int)bytes[3]);
-        if(isPoRegType(bytes[1]))
-        {
-          result[*numInstrs].arg2Reg=readRegFromLEB128(bytes + 1,&uleblen);
-        }
-        else
-        {
-          death("register of unexpected format for po\n");
-        }
-        logprintf(ELL_INFO_V1,ELS_MISC,"len was %i\n",uleblen);
-        bytes+=uleblen;
-        len-=uleblen;
-        break;
-      case DW_CFA_def_cfa:
-        if(isPoRegType(bytes[1]))
-        {
-          result[*numInstrs].arg1Reg=readRegFromLEB128(bytes + 1,&uleblen);
-        }
-        else
-        {
-          death("register of unexpected format for po\n");
-        }
-        bytes+=uleblen;
-        len-=uleblen;
-        result[*numInstrs].arg2=leb128ToUInt(bytes + 1,&uleblen);
-        bytes+=uleblen;
-        len-=uleblen;
-        break;
-      case DW_CFA_def_cfa_register:
-        if(isPoRegType(bytes[1]))
-        {
-          result[*numInstrs].arg1Reg=readRegFromLEB128(bytes + 1,&uleblen);
-        }
-        else
-        {
-          death("register of unexpected format for po\n");
-        }
-        bytes+=uleblen;
-        len-=uleblen;
-        break;
-      case DW_CFA_def_cfa_offset:
-        result[*numInstrs].arg1=leb128ToUInt(bytes + 1, &uleblen);
-        bytes+=uleblen;
-        len-=uleblen;
-        break;
-      case DW_CFA_nop:
-        break;
-      default:
-        fprintf(stderr,"dwarf cfa instruction 0x%x not yet handled\n",(uint)low);
-        death(NULL);
-      }
+      printf("r%i ",inst.arg1);
     }
+    else
+    {
+      printReg(inst.arg1Reg,stdout);
+      printf(" ");
+    }
+    if(ERT_NONE==inst.arg2Reg.type)
+    {
+      printf("r%i ",inst.arg2);
+    }
+    else
+    {
+      printReg(inst.arg2Reg,stdout);
+      printf(" ");
+    }
+    printf("\n");
+    break;
+  case DW_CFA_KATANA_do_fixups:
+    printf("DW_CFA_KATANA_do_fixups ");
+    if(ERT_NONE==inst.arg1Reg.type)
+    {
+      printf("r%i ",inst.arg1);
+    }
+    else
+    {
+      printReg(inst.arg1Reg,stdout);
+      printf(" ");
+    }
+    if(ERT_NONE==inst.arg2Reg.type)
+    {
+      printf("r%i ",inst.arg2);
+    }
+    else
+    {
+      printReg(inst.arg2Reg,stdout);
+      printf(" ");
+    }
+    printf("fde#%i ",inst.arg3);
+    printf("\n");
+    break;
+
+  case DW_CFA_def_cfa:
+    printf("DW_CFA_def_cfa ");
+    if(ERT_NONE==inst.arg1Reg.type)
+    {
+      printf("r%i ",inst.arg1);
+    }
+    else
+    {
+      printReg(inst.arg1Reg,stdout);
+      printf(" ");
+    }
+    printf("%i \n",inst.arg2);
+    break;
+  case DW_CFA_def_cfa_register:
+    printf("DW_CFA_def_cfa_register");
+    if(ERT_NONE==inst.arg1Reg.type)
+    {
+      printf("r%i\n",inst.arg1);
+    }
+    else
+    {
+      printReg(inst.arg1Reg,stdout);
+      printf("\n");
+    }
+    break;
+  case DW_CFA_def_cfa_offset:
+    printf("DW_CFA_def_cfa_offset %i\n",inst.arg1);
+    break;
+  case DW_CFA_nop:
+    printf("DW_CFA_nop\n");
+    break;
+  default:
+    death("unsupported instruction");
   }
-  //realloc to free mem we didn't actually use
-  result=realloc(result,sizeof(RegInstruction)*(*numInstrs));
-  return result;
 }

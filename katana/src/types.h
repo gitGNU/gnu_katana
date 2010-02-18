@@ -114,7 +114,12 @@ typedef struct TypeInfo_
 void freeTypeInfo(TypeInfo* t);
 
 #define FIELD_DELETED -2
-#define FIELD_RECURSE -3
+typedef enum
+{
+  EFTT_DELETE=FIELD_DELETED,
+  EFTT_COPY=1,
+  EFTT_RECURSE
+}E_FIELD_TRANSFORM_TYPE;
 
 //holds information on how to transform one type to another
 typedef struct TypeTransform_
@@ -125,9 +130,9 @@ typedef struct TypeTransform_
   //contains the new offset of that field from the start of the new structure
   //this can be used to relocate fields within structures
   //the value FIELD_DELETED indicates that the field is no longer
-  //present in the structure. The value FIELD_RECURSE means to look for a type
-  //transformation for that type
+  //present in the structure.
   int* fieldOffsets;
+  E_FIELD_TRANSFORM_TYPE* fieldTransformTypes;//normal copy, field deleted, or recurse
   bool onDisk;//used when writing patch info to disk
   Dwarf_Unsigned fdeIdx;//index of FDE corresponding to the transformation
 } TypeTransform;

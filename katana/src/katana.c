@@ -29,9 +29,7 @@
 #include "dwarf.h"
 #include "dwarftypes.h"
 #include "types.h"
-#include "patcher/target.h"
 #include "elfparse.h"
-#include "patcher/hotpatch.h"
 #include <signal.h>
 #include "patchwrite/patchwrite.h"
 int pid;//pid of running process
@@ -44,22 +42,33 @@ ElfInfo* oldBinElfInfo=NULL;
 #include "patcher/versioning.h"
 #include "util/logging.h"
 #include "patchwrite/typediff.h"
+#include "info/fdedump.h"
 
 void sigsegReceived(int signum)
 {
   death("katana segfaulting. . .\n");
 }
 
+typedef enum
+{
+  EKM_NONE,
+  EKM_GEN_PATCH,
+  EKM_APPLY_PATCH,
+  EKM_PATCH_INFO
+} E_KATANA_MODE;
 
 int main(int argc,char** argv)
 {
   #ifdef DEBUG
   system("rm -rf /tmp/katana-$USER/patched/*");
   #endif
-  if(argc<3)
+  /*if(argc<3)
   {
-    death("Usage: katana -g [-o OUT_FILE] OLD_BINARY NEW_BINARY \n\tOr: katana -p PATCH_FILE PID");
-  }
+    msg="Usage: katana -g [-o OUT_FILE] OLD_BINARY NEW_BINARY \n\t\
+Or: katana -p PATCH_FILE PID\n\t\
+Or: katana -l PATCH_FILE"
+    death(msg);
+  }*/
 
   loggingDefaults();
   
@@ -68,37 +77,48 @@ int main(int argc,char** argv)
   act.sa_handler=&sigsegReceived;
   sigaction(SIGSEGV,&act,NULL);
   int opt;
-  bool genPatch=false;
-  bool applyPatch=false;
+  E_KATANA_MODE mode=EKM_NONE;
   char* outfile=NULL;
-  while((opt=getopt(argc,argv,"gpo:"))>0)
+  while((opt=getopt(argc,argv,"lgpo:"))>0)
   {
     switch(opt)
     {
     case 'g':
-      genPatch=true;
+      if(mode!=EKM_NONE)
+      {
+        death("only one of g,p,l may be specified\n");
+      }
+      mode=EKM_GEN_PATCH;
       break;
     case 'p':
-      applyPatch=true;
+      if(mode!=EKM_NONE)
+      {
+        death("only one of g,p,l may be specified\n");
+      }
+      mode=EKM_APPLY_PATCH;
       break;
     case 'o':
       outfile=optarg;
       break;
+    case 'l':
+      if(mode!=EKM_NONE)
+      {
+        death("only one of g,p,l may be specified\n");
+      }
+      mode=EKM_PATCH_INFO;
+      break;
+      
     }
   }
-  if(applyPatch && genPatch)
+  if(EKM_NONE==mode)
   {
-    death("cannot both generate and apply a patch in a single run\n");
-  }
-  if(!(applyPatch | genPatch))
-  {
-    death("One of -g (gen patch) or -p (apply patch) must be specified\n");
+    death("One of -g (gen patch) or -p (apply patch) or -l (list info about patch) must be specified\n");
   }
   if(elf_version(EV_CURRENT)==EV_NONE)
   {
     death("Failed to init ELF library\n");
   }
-  if(genPatch)
+  if(EKM_GEN_PATCH==mode)
   {
     if(argc-optind<2)
     {
@@ -125,7 +145,7 @@ int main(int argc,char** argv)
     endELF(oldBinElfInfo);
     endELF(newBinaryElfInfo);
   }
-  else //applyPatch
+  else if(EKM_APPLY_PATCH==mode)
   {
     if(argc-optind<2)
     {
@@ -138,9 +158,22 @@ int main(int argc,char** argv)
     findELFSections(oldBinElfInfo);
     ElfInfo* patch=openELFFile(patchFile);
     findELFSections(patch);
-    startPtrace();
     readAndApplyPatch(pid,oldBinElfInfo,patch);
-    endPtrace();
+  }
+  else if(EKM_PATCH_INFO==mode)
+  {
+    if(argc-optind<1)
+    {
+      death("Usage to list patch info: katana -l PATCH_FILE");
+    }
+    char* patchFile=argv[optind];
+    logprintf(ELL_INFO_V3,ELS_MISC,"patch file is %s\n",patchFile);
+    ElfInfo* patch=openELFFile(patchFile);
+    printPatchFDEInfo(patch);
+  }
+  else
+  {
+    death("unhandled katana mode");
   }
   return 0;
 }

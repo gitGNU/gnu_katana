@@ -14,31 +14,31 @@ void testManualRelocateBar()
 {
   int barSymIdx=getSymtabIdx("bar");
   int barAddress=getSymAddress(barSymIdx);
-  logprintf(ELL_INFO_V1,ELS_MISC,"bar located at %x\n",(unsigned int)barAddress);
+  logprintf(ELL_INFO_V4,ELS_MISC,"bar located at %x\n",(unsigned int)barAddress);
 
   List* relocItems=getRelocationItemsFor(barSymIdx);
   //allocate a new page for us to put the new variable in
   long newPageAddr=mmapTarget(sysconf(_SC_PAGE_SIZE),PROT_READ|PROT_WRITE);
-  logprintf(ELL_INFO_V1,ELS_MISC,"mapped in a new page at 0x%x\n",(uint)newPageAddr);
+  logprintf(ELL_INFO_V4,ELS_MISC,"mapped in a new page at 0x%x\n",(uint)newPageAddr);
 
   //now set the data in that page
   //first get it from the old address
   uint barData[4];
   memcpyFromTarget((char*)barData,barAddress,sizeof(int)*3);
-  logprintf(ELL_INFO_V1,ELS_MISC,"read data %i,%i,%i\n",barData[0],barData[1],barData[2]);
+  logprintf(ELL_INFO_V4,ELS_MISC,"read data %i,%i,%i\n",barData[0],barData[1],barData[2]);
   //copy it to the new address
   memcpyToTarget(newPageAddr,(char*)barData,sizeof(int)*3);
 
   //now test to make sure we copied it correctly
   memcpyFromTarget((char*)barData,newPageAddr,sizeof(int)*3);
-  logprintf(ELL_INFO_V1,ELS_MISC,"read new data %i,%i,%i\n",barData[0],barData[1],barData[2]);
+  logprintf(ELL_INFO_V4,ELS_MISC,"read new data %i,%i,%i\n",barData[0],barData[1],barData[2]);
   
   for(List* li=relocItems;li;li=li->next)
   {
     GElf_Rel* rel=li->value;
-    logprintf(ELL_INFO_V1,ELS_MISC,"relocation for bar at %x with type %i\n",(unsigned int)rel->r_offset,(unsigned int)ELF64_R_TYPE(rel->r_info));
+    logprintf(ELL_INFO_V4,ELS_MISC,"relocation for bar at %x with type %i\n",(unsigned int)rel->r_offset,(unsigned int)ELF64_R_TYPE(rel->r_info));
     addr_t oldAddr=getTextAtRelOffset(rel->r_offset);
-    logprintf(ELL_INFO_V1,ELS_MISC,"old addr is 0x%x\n",(uint)oldAddr);
+    logprintf(ELL_INFO_V4,ELS_MISC,"old addr is 0x%x\n",(uint)oldAddr);
     uint newAddr=newPageAddr+(oldAddr-barAddress);
     //*oldAddr=newAddr;
     modifyTarget(rel->r_offset,newAddr);
