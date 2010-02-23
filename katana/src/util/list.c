@@ -174,3 +174,18 @@ List* sortList(List* lst,int (*cmpfunc)(void*,void*))
   List* b=sortList(middle,cmpfunc);
   return mergeSortedLists(a,b,cmpfunc);
 }
+
+void listAppend(List** head,List** tail,List* li)
+{
+  li->next=NULL;
+  if(*head)
+  {
+    (*tail)->next=li;
+  }
+  else
+  {
+    *head=li;
+  }
+  *tail=li;
+
+}

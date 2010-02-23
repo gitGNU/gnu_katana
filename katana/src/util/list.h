@@ -23,4 +23,6 @@ void deleteList(List* start,void (*delFunc)(void*));
 List* sortList(List* lst,int (*cmpfunc)(void*,void*));
 
 int listLength(List* lst);
+
+void listAppend(List** head,List** tail,List* li);
 #endif
