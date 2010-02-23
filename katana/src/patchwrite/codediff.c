@@ -12,6 +12,7 @@
 #include "util/list.h"
 #include "symbol.h"
 #include "util/logging.h"
+#include <assert.h>
 
 //compares two relocations based on r_offset
 int cmpRelocs(void* a,void* b)
@@ -42,8 +43,36 @@ bool areSubprogramsIdentical(SubprogramInfo* patcheeFunc,SubprogramInfo* patched
      variable of a changed type.
   2. If there is no relocation, return false if the bytes differ
   */
-  List* oldRelocations=getRelocationItemsInRange(oldBinary,getSectionByName(oldBinary,".rel.text"),patcheeFunc->lowpc,patcheeFunc->highpc);
-  List* newRelocations=getRelocationItemsInRange(newBinary,getSectionByName(newBinary,".rel.text"),patchedFunc->lowpc,patchedFunc->highpc);
+  Elf_Scn* relocScn=NULL;
+  //if -ffunction-sections is specified,
+  //each function will have its own relocation section,
+  //check this out first
+  char buf[1024];
+  snprintf(buf,1024,".rel.text.%s",patcheeFunc->name);
+  relocScn=getSectionByName(oldBinary,buf);
+  if(!relocScn)
+  {
+    relocScn=getSectionByName(oldBinary,".rel.text");
+  }
+  if(!relocScn)
+  {
+    death("%s does not have a .rel.text section\n");
+  }
+  List* oldRelocations=getRelocationItemsInRange(oldBinary,relocScn,patcheeFunc->lowpc,patcheeFunc->highpc);
+  //if -ffunction-sections is specified,
+  //each function will have its own relocation section,
+  //check this out first
+  snprintf(buf,1024,".rel.text.%s",patchedFunc->name);
+  relocScn=getSectionByName(newBinary,buf);
+  if(!relocScn)
+  {
+    relocScn=getSectionByName(newBinary,".rel.text");
+  }
+  if(!relocScn)
+  {
+    death("%s does not have a .rel.text section\n");
+  }
+  List* newRelocations=getRelocationItemsInRange(newBinary,relocScn,patchedFunc->lowpc,patchedFunc->highpc);
 
   if(listLength(oldRelocations) != listLength(newRelocations))
   {
@@ -56,8 +85,25 @@ bool areSubprogramsIdentical(SubprogramInfo* patcheeFunc,SubprogramInfo* patched
   //sort both lists
   sortList(oldRelocations,&cmpRelocs);
   sortList(newRelocations,&cmpRelocs);
-  byte* textOld=getTextDataAtAbs(oldBinary,patcheeFunc->lowpc,IN_MEM);
-  byte* textNew=getTextDataAtAbs(newBinary,patchedFunc->lowpc,IN_MEM);
+  //if -ffunction-sections is used, the function might have its own text section
+  Elf_Scn* textScn=NULL;
+  snprintf(buf,1024,".text.%s",patcheeFunc->name);
+  textScn=getSectionByName(oldBinary,buf);
+  if(!textScn)
+  {
+    textScn=getSectionByERS(oldBinary,ERS_TEXT);
+  }
+  assert(textScn);
+  byte* textOld=getDataAtAbs(textScn,patcheeFunc->lowpc,IN_MEM);
+  //if -ffunction-sections is used, the function might have its own text section
+  snprintf(buf,1024,".text.%s",patcheeFunc->name);
+  textScn=getSectionByName(oldBinary,buf);
+  if(!textScn)
+  {
+    textScn=getSectionByERS(oldBinary,ERS_TEXT);
+  }
+  assert(textScn);
+  byte* textNew=getDataAtAbs(textScn,patchedFunc->lowpc,IN_MEM);
   List* oldLi=oldRelocations;
   List* newLi=newRelocations;
   bool retval=true;
