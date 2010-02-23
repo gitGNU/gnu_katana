@@ -30,3 +30,13 @@ void death(char* reason,...)
   fflush(stdout);
   abort();
 }
+
+bool strEndsWith(char* str,char* suffix)
+{
+  int suffixLen=strlen(suffix);
+  int strLen=strlen(str);
+  if(suffixLen > strLen)
+  {return false;}
+  int start=strLen-suffixLen;
+  return !strcmp(str+start,suffix);
+}

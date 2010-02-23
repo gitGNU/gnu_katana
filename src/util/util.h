@@ -13,7 +13,7 @@
 #include <string.h> //for memset in BZERO
 #include <stdio.h> //for fprintf
 #include <stdlib.h>
-
+#include <stdbool.h>
 
 
 typedef unsigned char byte;
@@ -39,5 +39,7 @@ void death(char* reason,...);
 #define BZERO(n,m)  memset(n, 0, m)
 
 #define GARBAGE 0xCC //204 decimal
+
+bool strEndsWith(char* str,char* suffix);
 
 #endif
