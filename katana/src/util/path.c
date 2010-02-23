@@ -10,15 +10,6 @@
 #include <stdbool.h>
 #include "util.h"
 
-bool strEndsWith(char* str,char* suffix)
-{
-  int suffixLen=strlen(suffix);
-  int strLen=strlen(str);
-  if(suffixLen > strLen)
-  {return false;}
-  int start=strLen-suffixLen;
-  return !strcmp(str+start,suffix);
-}
 
 
 char* joinPaths(char* path1,char* path2)
