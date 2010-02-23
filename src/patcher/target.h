@@ -25,8 +25,10 @@ void continuePtrace();
 void endPtrace();
 void modifyTarget(addr_t addr,uint value);
 //copies numBytes from data to addr in target
+//todo: does addr have to be aligned
 void memcpyToTarget(long addr,byte* data,int numBytes);
 //copies numBytes to data from addr in target
+//todo: does addr have to be aligned
 void memcpyFromTarget(byte* data,long addr,int numBytes);
 void getTargetRegs(struct user_regs_struct* regs);
 void setTargetRegs(struct user_regs_struct* regs);
