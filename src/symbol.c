@@ -207,8 +207,9 @@ int reindexSymbol(ElfInfo* old,ElfInfo* new,int oldIdx,int flags)
 
   //do it once first without fuzzy matching
   //because always prefer exact match
-  idx_t idx=findSymbol(new,&sym,old,flags & ~ESFF_MANGLED_OK);
-  if(STN_UNDEF==idx && (flags & ESFF_MANGLED_OK))
+  int flagsNoFuzzy=flags & ~ESFF_FUZZY_MATCHING_OK;
+  idx_t idx=findSymbol(new,&sym,old,flagsNoFuzzy);
+  if(STN_UNDEF==idx && flags!=flagsNoFuzzy)
   {
     idx=findSymbol(new,&sym,old,flags);
   }

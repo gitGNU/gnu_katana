@@ -410,7 +410,15 @@ void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch)
     Elf32_Rela* rela=((Elf32_Rela*)data->d_buf)+i;
     int symIdx=ELF32_R_SYM(rela->r_info);
     int type=ELF32_R_TYPE(rela->r_info);
-    int reindex=reindexSymbol(patch,patchedBin,symIdx,ESFF_FUZZY_MATCHING_OK);
+    GElf_Sym sym;
+    if(!getSymbol(patch,symIdx,&sym))
+    {death("getSymbol failed in readAndApplyPatch\n");}
+    int flags=ESFF_MANGLED_OK;
+    if(ELF64_ST_TYPE(sym.st_info)!=STT_SECTION)
+    {
+      flags|=ESFF_VERSIONED_SECTIONS_OK;
+    }
+    int reindex=reindexSymbol(patch,patchedBin,symIdx,flags);
     printf("reindexed to %i at 0x%x\n",reindex,(uint)getSymAddress(patchedBin,reindex));
     if(STN_UNDEF==reindex)
     {
