@@ -8,5 +8,5 @@
 
 #ifndef patchwrite_h
 #define patchwrite_h
-void writePatch(DwarfInfo* diPatchee,DwarfInfo* diPatched,char* fname,ElfInfo* oldBinary,ElfInfo* newBinary_);
+void writePatch(char* oldSourceTree,char* newSourceTree,char* oldBinaryName,char* newBinaryName,char* patchOutName);
 #endif

@@ -17,8 +17,9 @@ validateModule=__import__("validate")
 
 vlogf.write("############################\n")
 vlogf.write("Validator running in dir: "+sys.argv[1]+"\n")
-prog=os.path.join(sys.argv[1],"v0","test")
-newProg=os.path.join(sys.argv[1],"v1","test")
+oldTree=os.path.join(sys.argv[1],"v0")
+newTree=os.path.join(sys.argv[1],"v1")
+execName="test"
 logfname=os.path.join(sys.argv[1],"log")
 logf=open(logfname,"w")
 logf.truncate()
@@ -28,10 +29,10 @@ klogfname=os.path.join(sys.argv[1],"katana_log")
 hotlogf=open(klogfname,"w")
 klogerrfname=os.path.join(sys.argv[1],"katana_err_log")
 hotlogerrf=open(klogerrfname,"w")
-hotlogf.write("\nStarting patch of "+prog+"\n-------------------------------------------\n")
+hotlogf.write("\nStarting patch of "+os.path.join(oldTree,execName)+"\n-------------------------------------------\n")
 hotlogf.flush()
 patchOut=os.sys.argv[1]+".po"
-args=["./katana","-g","-o",patchOut,prog,newProg]
+args=["./katana","-g","-o",patchOut,oldTree,newTree,execName]
 vlogf.write("running:\n "+string.join(args," ")+"\n")
 kproc=subprocess.Popen(args,stdout=hotlogf,stderr=hotlogerrf)
 if 0!=kproc.wait():
@@ -41,7 +42,7 @@ if 0!=kproc.wait():
   vlogf.close()
   sys.exit(1)
 
-proc=subprocess.Popen([prog],stdout=logf)
+proc=subprocess.Popen([os.path.join(oldTree,execName)],stdout=logf)
 #sleep for a moment to let the process run
 time.sleep(0.5)
 #now start the hotpatcher

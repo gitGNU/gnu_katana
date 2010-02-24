@@ -21,104 +21,25 @@
 #include "symbol.h"
 #include "typediff.h"
 #include "util/logging.h"
+#include "elfwriter.h"
+#include "sourcetree.h"
 
 ElfInfo* oldBinary=NULL;
 ElfInfo* newBinary=NULL;
 
 
-ElfInfo patch;
+ElfInfo* patch;
+addr_t rodataOffset;//used to keep track of how much rodata we've used
 Elf *outelf;
 
-//Elf_Data* patch_syms_rel_data=NULL;
-//Elf_Data* patch_syms_new_data=NULL;
-Elf_Data* patch_rules_data=NULL;
-Elf_Data* patch_expr_data=NULL;
-Elf_Data* strtab_data=NULL;
-Elf_Data* symtab_data=NULL;
-Elf_Data* text_data=NULL;//for storing new versions of functions
-Elf_Data* rodata_data=NULL;
-Elf_Data* rela_text_data=NULL;
-//Elf_Data* old_symtab_data=NULL;
-bool dataFinalized=false;//determines whether we're misusing d_size and d_off or not
 
-//Elf_Scn* patch_syms_rel_scn=NULL;
-//Elf_Scn* patch_syms_new_scn=NULL;
-
-Elf_Scn* patch_rules_scn=NULL;
-Elf_Scn* patch_expr_scn=NULL;
-Elf_Scn* strtab_scn=NULL;
-Elf_Scn* symtab_scn=NULL;
-Elf_Scn* text_scn=NULL;//for storing new versions of functions
-Elf_Scn* rodata_scn=NULL;//hold the new rodata from the patch
-Elf_Scn* rela_text_scn=NULL;
-//now not writing old symbols b/c
-//better to get the from /proc/PID/exe
-/*Elf_Scn* old_symtab_scn=NULL;//relevant symbols from the symbol table of the old binary
-                             //we must store this in the patch object in case the object
-                             //in memory does not have a symbol table loaded in memory
-                             */
 Dwarf_P_Debug dbg;
 Dwarf_P_Die firstCUDie=NULL;
 Dwarf_P_Die lastCUDie=NULL;//keep track of for sibling purposes
 Dwarf_Unsigned cie;//index of cie we're using
 
 
-void addDataToScn(Elf_Data* dataDest,void* data,int size)
-{
-  //using offset field incorrectly here, coopting it for our
-  //bookkeeping purposes to avoid reallocating too often
-  if(size>dataDest->d_size-dataDest->d_off)
-  {
-    //ran out of space, allocate more
-    dataDest->d_size=max(dataDest->d_size*2,size*2);
-    dataDest->d_buf=realloc(dataDest->d_buf,dataDest->d_size);
-  }
-  memcpy((byte*)dataDest->d_buf+dataDest->d_off,data,size);
-  dataDest->d_off+=size;
-}
 
-//adds an entry to the string table, return its offset
-int addStrtabEntry(char* str)
-{
-  int len=strlen(str)+1;
-  //we have co-opted the d_off field of Elf_Data to determine
-  //where in the d_buf to start writing. It will be zeroed before
-  //the elf file is actually written. We allocate larger memory
-  //for d_buf as needed
-  if(len>strtab_data->d_size-strtab_data->d_off)
-  {
-    //ran out of space, allocate more
-    strtab_data->d_size=max(strtab_data->d_size*2,len*2);
-    strtab_data->d_buf=realloc(strtab_data->d_buf,strtab_data->d_size);
-  }
-  memcpy((char*)strtab_data->d_buf+strtab_data->d_off,str,len);
-  strtab_data->d_off+=len;
-  elf_flagdata(strtab_data,ELF_C_SET,ELF_F_DIRTY);
-  return strtab_data->d_off-len;
-}
-
-//return index of entry in symbol table
-int addSymtabEntry(Elf_Data* data,Elf32_Sym* sym)
-{
-  int len=sizeof(Elf32_Sym);
-  //we have co-opted the d_off field of Elf_Data to determine
-  //where in the d_buf to start writing. It will be zeroed before
-  //the elf file is actually written. We allocate larger memory
-  //for d_buf as needed
-  if(len>data->d_size-data->d_off)
-  {
-    //ran out of space, allocate more
-    data->d_size=max(data->d_size*2,len*2);
-    data->d_buf=realloc(data->d_buf,data->d_size);
-  }
-  memcpy((char*)data->d_buf+data->d_off,sym,len);
-  data->d_off+=len;
-  if(data==symtab_data)
-  {
-    patch.symTabCount=data->d_off/len;
-  }
-  return (data->d_off-len)/len;
-}
 
 void writeCUToDwarf(CompilationUnit* cu)
 {
@@ -429,22 +350,22 @@ List* getTypeTransformationInfoForCU(CompilationUnit* cuOld,CompilationUnit* cuN
   return varTransHead;
 }
 
-int reindexSectionForPatch(int scnIdx)
-{
-  char* scnName=getSectionNameFromIdx(newBinary,scnIdx);
-  if(!strcmp(".rodata",scnName))
-  {
-    return elf_ndxscn(rodata_scn);
-  }
-  else
-  {
-    death("don't yet support functions referring to sections other than rodata\n");
-  }
-  return STN_UNDEF;
-}
 
-idx_t addSymbolFromNewBinaryToPatch(idx_t symIdx)
+
+idx_t addSymbolFromBinaryToPatch(ElfInfo* binary,idx_t symIdx)
 {
+  assert(STN_UNDEF!=symIdx);
+  //we expect this function to be called with binary equal to the
+  //ELF object for one of the .o files. There may in fact, however,
+  //be more information about the symbol in the new binary
+
+  symIdx=reindexSymbol(binary,newBinary,symIdx,ESFF_FUZZY_MATCHING_OK);
+  if(STN_UNDEF==symIdx)
+  {
+    death("could not reindex symbol from .o file to newBinary\n");
+  }
+
+  
   GElf_Sym symInNewBin;
   getSymbol(newBinary,symIdx,&symInNewBin);
   char* symname=elf_strptr(newBinary->e, newBinary->strTblIdx,
@@ -461,7 +382,7 @@ idx_t addSymbolFromNewBinaryToPatch(idx_t symIdx)
   sym.st_shndx=SHN_UNDEF;        
   if(STT_SECTION==symType)
   {
-    sym.st_shndx=reindexSectionForPatch(symInNewBin.st_shndx);
+    sym.st_shndx=reindexSectionForPatch(newBinary,symInNewBin.st_shndx);
   }
   sym.st_info=ELF32_ST_INFO(ELF64_ST_BIND(symInNewBin.st_info),
                             symType);
@@ -469,20 +390,19 @@ idx_t addSymbolFromNewBinaryToPatch(idx_t symIdx)
 
   //we might have already added this same symbol to the patch
   GElf_Sym gsym=symToGELFSym(sym);
-  int reindex=findSymbol(&patch,&gsym,&patch);
+  int reindex=findSymbol(patch,&gsym,patch,false);
   if(SHN_UNDEF==reindex)
   {
-    reindex=addSymtabEntry(symtab_data,&sym);
+    reindex=addSymtabEntry(getDataByERS(patch,ERS_SYMTAB),&sym);
   }
-  printf("reindex is %i\n",reindex);
   return reindex;
 }
 
 //segmentBase should be the start of the text that these relocations refer to
 void writeRelocationsInRange(addr_t lowpc,addr_t highpc,Elf_Scn* scn,
-                             addr_t segmentBase)
+                             addr_t segmentBase,ElfInfo* binary)
 {
-  List* relocs=getRelocationItemsInRange(newBinary,scn,lowpc,highpc);
+  List* relocs=getRelocationItemsInRange(binary,scn,lowpc,highpc);
   
   List* li=relocs;
   for(;li;li=li->next)
@@ -496,42 +416,44 @@ void writeRelocationsInRange(addr_t lowpc,addr_t highpc,Elf_Scn* scn,
     //will be valid, but we need to make sure we don't insert
     //a single symbol too many times, it wastes space
     int symIdx=reloc->symIdx;
-
-    idx_t reindex=addSymbolFromNewBinaryToPatch(symIdx);
+    idx_t reindex=addSymbolFromBinaryToPatch(binary,symIdx);
     
     //now look at the relocation itself
     byte type=reloc->relocType;
-    rela.r_info=ELF32_R_INFO(reindex,type);
     rela.r_offset=reloc->r_offset;
     addr_t oldRelOffset=rela.r_offset;
     //now rebase the offset based on where in the data this text is going
     GElf_Shdr shdr;
-    gelf_getshdr(rela_text_scn,&shdr);
+    gelf_getshdr(scn,&shdr);
+    
     //note: this relies on our current incorrect usage of the offset field
     //for bookkeeping
+    //todo: don't do that
     addr_t newRelOffset=rela.r_offset-lowpc+segmentBase;
-
-    if(ERT_REL==reloc->type)
-    {
-      rela.r_addend=computeAddend(newBinary,type,symIdx,reloc->r_offset);
-    }
-    else
-    {
-      rela.r_addend=reloc->r_addend;
-    }
 
     //now depending on the type we may have to do some additional fixups
     switch(type)
     {
       case R_386_PC32:
         {
-          word_t addrAccessed=getTextAtAbs(newBinary,oldRelOffset,IN_MEM);
-          //this is a pc-relative relocation but we're changing the address
-          //of the instruction, therefore the addend is not what it would be
+          word_t addrAccessed=getWordAtAbs(elf_getscn(binary->e,reloc->scnIdx)
+                                           ,oldRelOffset,IN_MEM);
+          //this is a pc-relative relocation but we're changing the
+          //address of the instruction. If we're not accessing
+          //something inside the current function, then we might think
+          //we actually want the type to be absolute, not relative. The problem
+          //with that is often a R_386_PC32 deals with a value at r_offset
+          //that is not an address itself but an offset from the current address
+          //and we must keep it that way, for example for relative calls
+          //therefore we try to fix things up as best we can, although
+          //in many cases we'll be dealing with something in the PLT,
+          //and it will get relocated properly for that symbol
+          //and we can ignore most of the relocation entry anyway
           if(addrAccessed < lowpc || addrAccessed > highpc)
           {
             addr_t diff=newRelOffset-oldRelOffset;
-            setTextAtAbs(newBinary,oldRelOffset,addrAccessed+diff,IN_MEM);
+            //that doesn't look right, look into this. Why are we writing it
+            setWordAtAbs(elf_getscn(binary->e,reloc->scnIdx),oldRelOffset,addrAccessed+diff,IN_MEM);
           
             //we're not just accessing something in the current function
             //tweak the addend so that even with the new value
@@ -544,10 +466,35 @@ void writeRelocationsInRange(addr_t lowpc,addr_t highpc,Elf_Scn* scn,
         }
         break;
     }
+
+    rela.r_info=ELF32_R_INFO(reindex,type);
     
+    if(ERT_REL==reloc->type)
+    {
+      rela.r_addend=computeAddend(binary,type,symIdx,reloc->r_offset,reloc->scnIdx);
+    }
+    else
+    {
+      rela.r_addend=reloc->r_addend;
+    }
+
+    //special handling for rodata, because each object has its own rodata
+    //and we're no lumping them all together, we have to increase the addend
+    //to fit where rodata actually goes
+    GElf_Sym sym;
+    if(!gelf_getsym(getDataByERS(binary,ERS_SYMTAB),symIdx,&sym))
+    {death("gelf_getsym failed in writeRelocationsInRange\n");}
+    if(sym.st_shndx==elf_ndxscn(getSectionByERS(patch,ERS_RODATA)))
+    {
+      rela.r_addend+=rodataOffset;//increase it by the amount we're up to
+
+    }
+    //end special handling for rodata
+
+ 
     rela.r_offset=newRelOffset;
     printf("adding reloc for offset 0x%x\n",rela.r_offset);
-    addDataToScn(rela_text_data,&rela,sizeof(Elf32_Rela));
+    addDataToScn(getDataByERS(patch,ERS_RELA_TEXT),&rela,sizeof(Elf32_Rela));
   }
   deleteList(relocs,free);
 }
@@ -565,44 +512,65 @@ void writeFuncTransformationInfoForCU(CompilationUnit* cuOld,CompilationUnit* cu
       fprintf(stderr,"WARNING: function %s was removed from the patched version of compilation unit %s\n",func->name,cuNew->name);
       continue;
     }
-    if(!areSubprogramsIdentical(func,patchedFunc,oldBinary,newBinary))
+    if(!areSubprogramsIdentical(func,patchedFunc,cuOld->elf,cuNew->elf))
     {
       printf("writing transformation info for function %s\n",func->name);
       int len=patchedFunc->highpc-patchedFunc->lowpc;
-      if(len>text_data->d_size-text_data->d_off)
-      {
-        //ran out of space, allocate more
-        text_data->d_size=max(text_data->d_size*2,len*2);
-        text_data->d_buf=realloc(text_data->d_buf,text_data->d_size);
-      }
+      Elf_Scn* textScn=getSectionByERS(patch,ERS_TEXT);
+      Elf_Data* textData=getDataByERS(patch,ERS_TEXT);
       GElf_Shdr shdr;
-      gelf_getshdr(text_scn,&shdr);
-      addr_t funcSegmentBase=text_data->d_off+shdr.sh_addr;//where text for this function is based
-      memcpy(text_data->d_buf+text_data->d_off,getTextDataAtAbs(newBinary,patchedFunc->lowpc,IN_MEM),len);
+      gelf_getshdr(textScn,&shdr);
+      addr_t funcSegmentBase=textData->d_off+shdr.sh_addr;//where text for this function is based
+      //if -ffunction-sections is used, the function might have its own text section
+      Elf_Scn* textScnPatched=NULL;
+      char buf[1024];
+      snprintf(buf,1024,".text.%s",patchedFunc->name);
+      textScnPatched=getSectionByName(cuNew->elf,buf);
+      if(!textScnPatched)
+      {
+        textScnPatched=getSectionByERS(cuNew->elf,ERS_TEXT);
+      }
+      assert(textScnPatched);
+      addDataToScn(textData,getDataAtAbs(textScnPatched,patchedFunc->lowpc,IN_MEM),len);
       Elf32_Sym sym;
       sym.st_name=addStrtabEntry(func->name);
-      sym.st_value=text_data->d_off;//is it ok that this is section-relative, since
+      sym.st_value=textData->d_off;//is it ok that this is section-relative, since
       //we set st_shndx to be the text section
       sym.st_size=0;
       sym.st_info=ELF32_ST_INFO(STB_GLOBAL,STT_FUNC);
       sym.st_other=0;
-      sym.st_shndx=elf_ndxscn(text_scn);
-      idx_t idx=addSymtabEntry(symtab_data,&sym);
+      sym.st_shndx=elf_ndxscn(textScn);
+      idx_t idx=addSymtabEntry(getDataByERS(patch,ERS_SYMTAB),&sym);
 
       //we also have to add an entry into debug info, so that
       //we know to patch the function
-      writeFuncToDwarf(func->name,text_data->d_off,len,idx,cuNew);
-      text_data->d_off+=len;
+      writeFuncToDwarf(func->name,textData->d_off,len,idx,cuNew);
+      textData->d_off+=len;
 
       //also include any relocations which exist for anything inside this function
-      writeRelocationsInRange(patchedFunc->lowpc,patchedFunc->highpc,getSectionByName(newBinary,".rel.text"),funcSegmentBase);
+      //if -ffunction-sections is specified,
+      //each function will have its own relocation section,
+      //check this out first
+      snprintf(buf,1024,".rel.text.%s",patchedFunc->name);
+      Elf_Scn* relocScn=getSectionByName(cuNew->elf,buf);
+      if(!relocScn)
+      {
+        relocScn=getSectionByName(cuNew->elf,".rel.text");
+      }
+      if(!relocScn)
+      {
+        death("%s does not have a .rel.text section\n");
+      }
+      writeRelocationsInRange(patchedFunc->lowpc,patchedFunc->highpc,relocScn,funcSegmentBase,cuNew->elf);
     }
   }
 }
 
   
-void writeTypeAndFuncTransformationInfo(DwarfInfo* diPatchee,DwarfInfo* diPatched)
+void writeTypeAndFuncTransformationInfo(ElfInfo* patchee,ElfInfo* patched)
 {
+  DwarfInfo* diPatchee=patchee->dwarfInfo;
+  DwarfInfo* diPatched=patched->dwarfInfo;
   List* varTransHead=NULL;
   List* varTransTail=NULL;
   
@@ -658,407 +626,35 @@ void writeTypeAndFuncTransformationInfo(DwarfInfo* diPatchee,DwarfInfo* diPatche
   writeVarTransforms(varTransHead);
 }
 
-void createSections(Elf* outelf)
+//takes an elf object that only has a pached version, no patchee version
+//and writes it all out
+void writeAllTypeAndFuncTransformationInfo(ElfInfo* elf)
 {
-  //first create the string table
-  strtab_scn=elf_newscn(outelf);
-  strtab_data=elf_newdata(strtab_scn);
-  strtab_data->d_align=1;
-  strtab_data->d_buf=malloc(8);//arbitrary starting size, more will be allocced as needed
-  strtab_data->d_off=0;
-  strtab_data->d_size=8;//again, will increase as needed
-  strtab_data->d_version=EV_CURRENT;
-  
-  Elf32_Shdr* shdr ;
-  shdr=elf32_getshdr(strtab_scn);
-  shdr->sh_type=SHT_STRTAB;
-  shdr->sh_link=SHN_UNDEF;
-  shdr->sh_info=SHN_UNDEF;
-  shdr->sh_addralign=1;
-  shdr->sh_name=1;//first real entry in the string table
-
-
-  
-  addStrtabEntry("");//first entry in stringtab null so can have normal unnamed null section
-                     //todo: what is the purpose of this?
-  addStrtabEntry(".strtab");
-
-  /*
-  //now create the patch syms to relocate
-  patch_syms_rel_scn=elf_newscn(outelf);
-  patch_syms_rel_data=elf_newdata(patch_syms_rel_scn);
-  patch_syms_rel_data->d_align=1;
-  patch_syms_rel_data->d_buf=malloc(8);//arbitrary starting size, more
-                                       //will be allocced as needed
-  patch_syms_rel_data->d_off=0;
-  patch_syms_rel_data->d_size=8;//again, will increase as needed
-  patch_syms_rel_data->d_version=EV_CURRENT;
-  
-  shdr=elf32_getshdr(patch_syms_rel_scn);
-  shdr->sh_type=SHT_SYMTAB;
-  shdr->sh_link=1;//index of string table
-  shdr->sh_info=0;//todo: p.1-13 of ELF format describes this,
-                          //but I don't quite understand it
-  shdr->sh_addralign=4;//32-bit
-  shdr->sh_entsize=sizeof(Elf32_Sym);
-  shdr->sh_name=addStrtabEntry(".patch_syms_rel");
-
-  //now create the patch syms for new variables/functions
-  patch_syms_new_scn=elf_newscn(outelf);
-  patch_syms_new_data=elf_newdata(patch_syms_new_scn);
-  patch_syms_new_data->d_align=1;
-  patch_syms_new_data->d_buf=malloc(8);//arbitrary starting size, more
-                                       //will be allocced as needed
-  patch_syms_new_data->d_off=0;
-  patch_syms_new_data->d_size=8;//again, will increase as needed
-  patch_syms_new_data->d_version=EV_CURRENT;
-  
-  shdr=elf32_getshdr(patch_syms_new_scn);
-  shdr->sh_type=SHT_SYMTAB;
-  shdr->sh_link=1;//index of string table
-  shdr->sh_info=0;//todo: p.1-13 of ELF format describes this,
-                          //but I don't quite understand it
-  shdr->sh_addralign=4;//32-bit
-  shdr->sh_entsize=sizeof(Elf32_Sym);
-  shdr->sh_name=addStrtabEntry(".patch_syms_new");*/
-
-  #ifdef RENAMED_DWARF_SCNS
-  
-  //now create patch rules
-  patch_rules_scn=elf_newscn(outelf);
-  patch_rules_data=elf_newdata(patch_rules_scn);
-  patch_rules_data->d_align=1;
-  patch_rules_data->d_buf=zmalloc(8);//arbitrary starting size, more
-                                       //will be allocced as needed
-  patch_rules_data->d_off=0;
-  patch_rules_data->d_size=8;//again, will increase as needed
-  patch_rules_data->d_version=EV_CURRENT;
-  
-  shdr=elf32_getshdr(patch_rules_scn);
-  shdr->sh_type=SHT_PROGBITS;
-  shdr->sh_link=1;//index of string table
-  shdr->sh_info=SHN_UNDEF;
-  shdr->sh_addralign=1;
-  shdr->sh_name=addStrtabEntry(".patch_rules");
-
-  //now create patch expressions
-  patch_expr_scn=elf_newscn(outelf);
-  patch_expr_data=elf_newdata(patch_expr_scn);
-  patch_expr_data->d_align=1;
-  patch_expr_data->d_buf=zmalloc(8);//arbitrary starting size, more
-                                       //will be allocced as needed
-  patch_expr_data->d_off=0;
-  patch_expr_data->d_size=8;//again, will increase as needed
-  patch_expr_data->d_version=EV_CURRENT;
-  
-  shdr=elf32_getshdr(patch_expr_scn);
-  shdr->sh_type=SHT_PROGBITS;
-  shdr->sh_link=1;//index of string table
-  shdr->sh_info=SHN_UNDEF;
-  shdr->sh_addralign=1;
-  shdr->sh_name=addStrtabEntry(".patch_expr");
-
-  #endif
-
-  //ordinary symtab
-  symtab_scn=elf_newscn(outelf);
-  symtab_data=elf_newdata(symtab_scn);
-  symtab_data->d_align=1;
-  symtab_data->d_buf=malloc(8);//arbitrary starting size, more
-                                       //will be allocced as needed
-  symtab_data->d_off=0;
-  symtab_data->d_size=8;//again, will increase as needed
-  symtab_data->d_version=EV_CURRENT;
-  
-  shdr=elf32_getshdr(symtab_scn);
-  shdr->sh_type=SHT_SYMTAB;
-  shdr->sh_link=1;//index of string table
-  shdr->sh_info=0;//todo: p.1-13 of ELF format describes this,
-                          //but I don't quite understand it
-  shdr->sh_addralign=4;//32-bit
-  shdr->sh_entsize=sizeof(Elf32_Sym);
-  shdr->sh_name=addStrtabEntry(".symtab");
-
-  //first symbol in symtab should be all zeros
-  Elf32_Sym sym;
-  memset(&sym,0,sizeof(Elf32_Sym));
-  addSymtabEntry(symtab_data,&sym);
-
-  //now not using old symtab b/c better to get old symbols from
-  // /proc/PID/exe
-  /*
-  //symtab for symbols we care about in old binary
-  old_symtab_scn=elf_newscn(outelf);
-  old_symtab_data=elf_newdata(old_symtab_scn);
-  old_symtab_data->d_align=1;
-  old_symtab_data->d_buf=malloc(8);//arbitrary starting size, more
-                                       //will be allocced as needed
-  old_symtab_data->d_off=0;
-  old_symtab_data->d_size=8;//again, will increase as needed
-  old_symtab_data->d_version=EV_CURRENT;
-  
-  shdr=elf32_getshdr(old_symtab_scn);
-  shdr->sh_type=SHT_SYMTAB;
-  shdr->sh_link=1;//index of string table
-  shdr->sh_info=0;//todo: p.1-13 of ELF format describes this,
-                          //but I don't quite understand it
-  shdr->sh_addralign=4;//32-bit
-  shdr->sh_entsize=sizeof(Elf32_Sym);
-  shdr->sh_name=addStrtabEntry(".symtab.v0");
-  */
-
-  //text section for new functions
-  text_scn=elf_newscn(outelf);
-  text_data=elf_newdata(text_scn);
-  text_data->d_align=1;
-  text_data->d_buf=malloc(8);//arbitrary starting size, more
-                                       //will be allocced as needed
-  text_data->d_off=0;
-  text_data->d_size=8;//will increase as needed
-  text_data->d_version=EV_CURRENT;
-  
-  shdr=elf32_getshdr(text_scn);
-  shdr->sh_type=SHT_PROGBITS;
-  shdr->sh_link=0;
-  shdr->sh_info=0;
-  shdr->sh_addralign=1;//normally text is aligned, but we never actually execute from this section
-  shdr->sh_name=addStrtabEntry(".text.new");
-  shdr->sh_addr=0;//going to have to relocate anyway so no point in trying to keep the same address
-
-  //rodata section for new strings, constants, etc
-  //(note that in many cases these may not actually be "new" ones,
-  //but unfortunately because .rodata is so unstructured, it can
-  //be difficult to determine what is needed and what is not
-  rodata_scn=elf_newscn(outelf);
-  rodata_data=elf_newdata(rodata_scn);
-  rodata_data->d_align=1;
-  rodata_data->d_buf=malloc(8);//arbitrary starting size, more
-                                       //will be allocced as needed
-  rodata_data->d_off=0;
-  rodata_data->d_size=8;//will increase as needed
-  rodata_data->d_version=EV_CURRENT;
-  
-  shdr=elf32_getshdr(rodata_scn);
-  shdr->sh_type=SHT_PROGBITS;
-  shdr->sh_link=0;
-  shdr->sh_info=0;
-  shdr->sh_addralign=1;//normally text is aligned, but we never actually execute from this section
-  shdr->sh_name=addStrtabEntry(".rodata.new");
-
-  //rel.text.new
-  rela_text_scn=elf_newscn(outelf);
-  rela_text_data=elf_newdata(rela_text_scn);
-  rela_text_data->d_align=1;
-  rela_text_data->d_buf=malloc(8);//mem will be allocated as needed
-  rela_text_data->d_off=0;
-  rela_text_data->d_size=8;
-  rela_text_data->d_version=EV_CURRENT;
-  shdr=elf32_getshdr(rela_text_scn);
-  shdr->sh_type=SHT_RELA;
-  shdr->sh_addralign=4;//todo: diff for 64-bit
-  shdr->sh_name=addStrtabEntry(".rela.text.new");
-
-  //write symbols for sections
-  sym.st_info=ELF32_ST_INFO(STB_LOCAL,STT_SECTION);
-  sym.st_name=elf32_getshdr(text_scn)->sh_name;
-  sym.st_shndx=elf_ndxscn(text_scn);
-  addSymtabEntry(symtab_data,&sym);
-  sym.st_name=elf32_getshdr(strtab_scn)->sh_name;
-  sym.st_shndx=elf_ndxscn(strtab_scn);
-  addSymtabEntry(symtab_data,&sym);
-  sym.st_name=elf32_getshdr(symtab_scn)->sh_name;
-  sym.st_shndx=elf_ndxscn(symtab_scn);
-  addSymtabEntry(symtab_data,&sym);
-  sym.st_name=elf32_getshdr(rela_text_scn)->sh_name;
-  sym.st_shndx=elf_ndxscn(rela_text_scn);
-  addSymtabEntry(symtab_data,&sym);
+  death("This function isn't written yet b/c James is an idiot\n");
 }
 
-void finalizeDataSize(Elf_Scn* scn,Elf_Data* data)
-{
-  data->d_size=data->d_off;//what was actually used
-  data->d_off=0;
-  data->d_buf=realloc(data->d_buf,
-                      data->d_size);
-  Elf32_Shdr* shdr=elf32_getshdr(scn);
-  shdr->sh_size=data->d_size;
-}
 
-void finalizeDataSizes()
-{
-  //our functions for dealing with dynamically increasing the size of the data
-  //sections coopted some of the fields for their own use. Now put them back
-  //to what they should be
-
-  //first strtab
-  strtab_data->d_size=strtab_data->d_off;//what was actually used
-  strtab_data->d_off=0;
-  strtab_data->d_buf=realloc(strtab_data->d_buf,strtab_data->d_size);
-  Elf32_Shdr* shdr=elf32_getshdr(strtab_scn);
-  shdr->sh_size=strtab_data->d_size;
-
-  /* //then patch syms rel
-  patch_syms_rel_data->d_size=patch_syms_rel_data->d_off;//what was actually used
-  patch_syms_rel_data->d_off=0;
-  patch_syms_rel_data->d_buf=realloc(patch_syms_rel_data->d_buf,
-                                     patch_syms_rel_data->d_size);
-  shdr=elf32_getshdr(patch_syms_rel_scn);
-  shdr->sh_size=patch_syms_rel_data->d_size;
-
-  //then patch syms new
-  patch_syms_new_data->d_size=patch_syms_new_data->d_off;//what was actually used
-  patch_syms_new_data->d_off=0;
-  patch_syms_new_data->d_buf=realloc(patch_syms_new_data->d_buf,
-                                     patch_syms_new_data->d_size);
-  shdr=elf32_getshdr(patch_syms_new_scn);
-  shdr->sh_size=patch_syms_new_data->d_size;*/
-
-  #ifdef RENAMED_DWARF_SCNS
-  
-  //then patch expressions
-  patch_expr_data->d_size=patch_expr_data->d_off;//what was actually used
-  patch_expr_data->d_off=0;
-  patch_expr_data->d_buf=realloc(patch_expr_data->d_buf,patch_expr_data->d_size);
-  shdr=elf32_getshdr(patch_expr_scn);
-  shdr->sh_size=patch_expr_data->d_size;
-
-  #endif
-
-  //ordinary symtab
-  symtab_data->d_size=symtab_data->d_off;//what was actually used
-  symtab_data->d_off=0;
-  symtab_data->d_buf=realloc(symtab_data->d_buf,
-                                     symtab_data->d_size);
-  shdr=elf32_getshdr(symtab_scn);
-  shdr->sh_size=symtab_data->d_size;
-
-  //now not using old symtab b/c better to get old symbols from
-  // /proc/PID/exe
-  /*
-  //symtab from old binary
-  old_symtab_data->d_size=old_symtab_data->d_off;//what was actually used
-  old_symtab_data->d_off=0;
-  old_symtab_data->d_buf=realloc(old_symtab_data->d_buf,
-                                     old_symtab_data->d_size);
-  shdr=elf32_getshdr(old_symtab_scn);
-  shdr->sh_size=old_symtab_data->d_size;
-  */
-
-  finalizeDataSize(text_scn,text_data);
-  finalizeDataSize(rela_text_scn,rela_text_data);
-  finalizeDataSize(rodata_scn,rodata_data);
-
-  dataFinalized=true;
-}
-
-int dwarfWriteSectionCallback(char* name,int size,Dwarf_Unsigned type,
-                              Dwarf_Unsigned flags,Dwarf_Unsigned link,
-                              Dwarf_Unsigned info,int* sectNameIdx,int* error)
-{
-  //look through all the sections for one which matches to
-  //see if we've already created this section
-  Elf_Scn* scn=elf_nextscn(outelf,NULL);
-  int nameLen=strlen(name);
-  for(;scn;scn=elf_nextscn(outelf,scn))
-  {
-    Elf32_Shdr* shdr=elf32_getshdr(scn);
-    if(!strncmp(strtab_data->d_buf+shdr->sh_name,name,nameLen))
-    {
-      //ok, we found the section we want, now have to find its symbol
-      int symtabSize=dataFinalized?symtab_data->d_size:symtab_data->d_off;
-      for(int i=0;i<symtabSize/sizeof(Elf32_Sym);i++)
-      {
-        Elf32_Sym* sym=(Elf32_Sym*)(symtab_data->d_buf+i*sizeof(Elf32_Sym));
-        int idx=elf_ndxscn(scn);
-        //printf("we're on section with index %i and symbol for index %i\n",idx,sym->st_shndx);
-        if(STT_SECTION==ELF32_ST_TYPE(sym->st_info) && idx==sym->st_shndx)
-        {
-          *sectNameIdx=i;
-          return idx;
-        }
-      }
-      fprintf(stderr,"finding existing section for %s\n",name);
-      death("found section already existing but had no symbol, this should be impossible\n");
-    }
-  }
-
-  //section doesn't already exist, create it
- 
-  //todo: write this section
-  scn=elf_newscn(outelf);
-  Elf32_Shdr* shdr=elf32_getshdr(scn);
-  shdr->sh_name=addStrtabEntry(name);
-  shdr->sh_type=type;
-  shdr->sh_flags=flags;
-  shdr->sh_size=size;
-  shdr->sh_link=link;
-  if(0==link && SHT_REL==type)
-  {
-    //make symtab the link
-    shdr->sh_link=elf_ndxscn(symtab_scn);
-  }
-  shdr->sh_info=info;
-  Elf32_Sym sym;
-  sym.st_name=shdr->sh_name;
-  sym.st_value=0;//don't yet know where this symbol will end up. todo: fix this, so relocations can theoretically be done
-  sym.st_size=0;
-  sym.st_info=ELF32_ST_INFO(STB_LOCAL,STT_SECTION);
-  sym.st_other=0;
-  sym.st_shndx=elf_ndxscn(scn);
-  *sectNameIdx=addSymtabEntry(symtab_data,&sym);
-  printf("symbol index is %i\n",*sectNameIdx);
-  *error=0;  
-  return sym.st_shndx;
-}
 
 
 //todo: in the future only copy rodata from object files which changed,
 //don't necessarily need *all* the rodata
-void writeROData()
+void writeROData(ElfInfo* binary)
 {
-  uint len=newBinary->roData->d_size;
-  rodata_data->d_buf=zmalloc(len);
-  rodata_data->d_size=rodata_data->d_off=len;
-  memcpy(rodata_data->d_buf,newBinary->roData->d_buf,len);
+  Elf_Data* roData=getDataByERS(binary,ERS_RODATA);
+  Elf_Data* roDataPatch=getDataByERS(patch,ERS_RODATA);
+  uint len=roData->d_size;
+  addDataToScn(roDataPatch,roData->d_buf,len);
 }
 
 
-void writePatch(DwarfInfo* diPatchee,DwarfInfo* diPatched,char* fname,ElfInfo* oldBinary_,ElfInfo* newBinary_)
+void writePatch(char* oldSourceTree,char* newSourceTree,char* oldBinName,char* newBinName,char* patchOutName)
 {
+  newBinary=openELFFile(newBinName);
+  findELFSections(newBinary);
+  oldBinary=openELFFile(oldBinName);
+  findELFSections(oldBinary);
   memset(&patch,0,sizeof(ElfInfo));
-  oldBinary=oldBinary_;
-  newBinary=newBinary_;
-  int outfd = creat(fname, 0666);
-  if (outfd < 0)
-  {
-    fprintf(stderr,"cannot open output file '%s'", fname);
-  }
-
-  outelf = elf_begin (outfd, ELF_C_WRITE, NULL);
-  patch.e=outelf;
-  Elf32_Ehdr* ehdr=elf32_newehdr(outelf);
-  if(!ehdr)
-  {
-    death("Unable to create new ehdr\n");
-  }
-  ehdr->e_ident[EI_MAG0]=ELFMAG0;
-  ehdr->e_ident[EI_MAG1]=ELFMAG1;
-  ehdr->e_ident[EI_MAG2]=ELFMAG2;
-  ehdr->e_ident[EI_MAG3]=ELFMAG3;
-  ehdr->e_ident[EI_CLASS]=ELFCLASS32;
-  ehdr->e_ident[EI_DATA]=ELFDATA2LSB;
-  ehdr->e_ident[EI_VERSION]=EV_CURRENT;
-  ehdr->e_ident[EI_OSABI]=ELFOSABI_NONE;
-  ehdr->e_machine=EM_386;
-  ehdr->e_type=ET_NONE;//not relocatable, or executable, or shared object, or core, etc
-  ehdr->e_version=EV_CURRENT;
-
-  createSections(outelf);
-  ehdr->e_shstrndx=elf_ndxscn(strtab_scn);//set strtab in elf header
-  //todo: perhaps the two string tables should be separate
-  patch.strTblIdx=patch.sectionHdrStrTblIdx=ehdr->e_shstrndx;
-  patch.symTabData=symtab_data;
-
+  patch=startPatchElf(patchOutName);
   Dwarf_Error err;
   dbg=dwarf_producer_init(DW_DLC_WRITE,dwarfWriteSectionCallback,dwarfErrorHandler,NULL,&err);
   Dwarf_P_Die tmpRootDie=dwarf_new_die(dbg,DW_TAG_compile_unit,NULL,NULL,NULL,NULL,&err);
@@ -1074,13 +670,50 @@ void writePatch(DwarfInfo* diPatchee,DwarfInfo* diPatched,char* fname,ElfInfo* o
 
   //so far there should be only local sections in symtab. Can set sh_info
   //apropriately
-  Elf32_Shdr* shdr=elf32_getshdr(symtab_scn);
-  shdr->sh_info=symtab_data->d_off/sizeof(Elf32_Sym)+1;
+  Elf32_Shdr* shdr=elf32_getshdr(getSectionByERS(patch,ERS_SYMTAB));
+  shdr->sh_info=getDataByERS(patch,ERS_SYMTAB)->d_off/sizeof(Elf32_Sym)+1;
   printf("set symtab sh_info to %i\n",shdr->sh_info);
   
   //now that we've created the necessary things, actually run through
   //the stuff to write in our data
-  writeTypeAndFuncTransformationInfo(diPatchee,diPatched);
+  List* objFiles=getChangedObjectFilesInSourceTree(oldSourceTree,newSourceTree);
+  List* li=objFiles;
+  for(;li;li=li->next)
+  {
+    ObjFileInfo* obj=li->value;
+    switch(obj->state)
+    {
+    case EOS_MODIFIED:
+      {
+        ElfInfo* elf1=getOriginalObject(obj);
+        readDWARFTypes(elf1);
+        ElfInfo* elf2=getModifiedObject(obj);
+        readDWARFTypes(elf2);
+        writeTypeAndFuncTransformationInfo(elf1,elf2);
+        //all the object files had their own roData sections
+        //and now we're lumping them together
+        //note that we do this after writing everything else,
+        //this allows the value of the global
+        //rodataOffset to be what we want it to during
+        //writeTypeAndFuncTransformationInfo
+        writeROData(elf2);
+
+        endELF(elf1);
+        endELF(elf2);
+      }
+    break;
+    case EOS_NEW:
+      {
+        ElfInfo* elf=getModifiedObject(obj);
+        readDWARFTypes(elf);
+        writeAllTypeAndFuncTransformationInfo(elf);
+      }
+    default:
+      death("should only be seeing changed object files\n");
+    }
+
+
+  }
 
   dwarf_add_die_to_debug(dbg,firstCUDie,&err);
   int numSections=dwarf_transform_to_disk_form(dbg,&err);
@@ -1099,19 +732,10 @@ void writePatch(DwarfInfo* diPatchee,DwarfInfo* diPatched,char* fname,ElfInfo* o
     data->d_buf=zmalloc(length);
     memcpy(data->d_buf,buf,length);
   }
-  writeROData();
-  finalizeDataSizes();
 
-
-  if(elf_update (outelf, ELF_C_WRITE) <0)
-  {
-    fprintf(stderr,"Failed to write out elf file: %s\n",elf_errmsg (-1));
-    exit(1);
-  }
-  
-
-  elf_end (outelf);
-  close (outfd);
-  printf("wrote elf file %s\n",fname);
+  endPatchElf();
+  printf("wrote elf file %s\n",patchOutName);
+  endELF(oldBinary);
+  endELF(newBinary);
 }
 

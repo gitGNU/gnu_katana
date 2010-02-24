@@ -58,7 +58,8 @@ void relocateVar(VarInfo* var,ElfInfo* targetBin)
   getSymbol(targetBin,symIdx,&sym);
   sym.st_value=var->newLocation;
   //now we write the symbol to the new binary
-  gelf_update_sym(patchedBin->symTabData,symIdx,&sym);
+  Elf_Data* symTabData=getDataByERS(patchedBin,ERS_SYMTAB);
+  gelf_update_sym(symTabData,symIdx,&sym);
   
   //todo: how much do we need to do as long as we're patching code
   //at the moment not patching code
@@ -115,7 +116,8 @@ void applyFunctionPatch(SubprogramInfo* func,int pid,ElfInfo* targetBin,ElfInfo*
   sym.st_value=addr;
   //now we write the symbol to the new binary to keep
   //track of where it is for future patches
-  gelf_update_sym(patchedBin->symTabData,idx,&sym);
+  Elf_Data* symTabData=getDataByERS(patchedBin,ERS_SYMTAB);
+  gelf_update_sym(symTabData,idx,&sym);
   insertTrampolineJump(oldAddr,addr);
 }
 
@@ -148,7 +150,7 @@ int addStrtabEntryToExisting(ElfInfo* e,char* str,bool header)
 
 int addSymtabEntryToExisting(ElfInfo* e,Elf32_Sym* sym)
 {
-  Elf_Data* data=e->symTabData;
+  Elf_Data* data=getDataByERS(e,ERS_SYMTAB);
   int len=sizeof(Elf32_Sym);
   int newSize=data->d_size+len;
   data->d_buf=realloc(data->d_buf,newSize);
@@ -399,17 +401,28 @@ void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch)
   
   addr_t oldTextNewStart=shdr.sh_addr;
   printf("old start is 0x%x\n",(uint)oldTextNewStart);
+
   Elf_Scn* textScn=getSectionByName(patch,".text.new");
   Elf_Data* textData=elf_getdata(textScn,NULL);
+ 
   for(int i=0;i<numRelocs;i++)
   {
     Elf32_Rela* rela=((Elf32_Rela*)data->d_buf)+i;
     int symIdx=ELF32_R_SYM(rela->r_info);
     int type=ELF32_R_TYPE(rela->r_info);
-    int reindex=reindexSymbol(patch,patchedBin,symIdx);
+    int reindex=reindexSymbol(patch,patchedBin,symIdx,ESFF_FUZZY_MATCHING_OK);
     printf("reindexed to %i at 0x%x\n",reindex,(uint)getSymAddress(patchedBin,reindex));
+    if(STN_UNDEF==reindex)
+    {
+      death("Could not reindex symbol from patch to patchedBin\n");
+    }
     rela->r_info=ELF32_R_INFO(reindex,type);
     addr_t newOffset=rela->r_offset-oldTextNewStart+patchTextAddr;
+
+    //fix up PC32-relocations so we keep the same absolute address
+    //hopefully most of them will be properly fixed up by PLT or GOT
+    //todo: even allow this at all? Issue warning later
+    //if some not taken care of?
     switch(type)
     {
     case R_386_PC32:
@@ -421,10 +434,9 @@ void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch)
         //todo: don't do this if the relocation was actually
         //for something relative to the patch
         addr_t diff=patchTextAddr-oldTextNewStart;
-        printf("for PC32 relocation, modifying access at 0x%x to access 0x%x\n",(uint)newOffset,(uint)(addrAccessed+diff));
+        printf("for PC32 relocation, modifying access at 0x%x to access 0x%x by adding 0x%x\n",(uint)newOffset,(uint)(addrAccessed+diff),(uint)diff);
         modifyTarget(newOffset,addrAccessed+diff);
       }
-      //todo: apply other sorts of relocations too? I'm confused
     }
     rela->r_offset=newOffset;
   }

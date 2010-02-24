@@ -11,5 +11,6 @@
 #include "elfparse.h"
 ElfInfo* getElfRepresentingProc(int pid);
 int calculateVersionAfterPatch(int pid,ElfInfo* patch);
+char* getVersionStringOfPatchSections();
 char* createKatanaDirs(int pid,int version);
 #endif

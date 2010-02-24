@@ -43,6 +43,8 @@ ElfInfo* oldBinElfInfo=NULL;
 #include "util/logging.h"
 #include "patchwrite/typediff.h"
 #include "info/fdedump.h"
+#include "util/path.h"
+#include "config.h"
 
 void sigsegReceived(int signum)
 {
@@ -62,15 +64,8 @@ int main(int argc,char** argv)
   #ifdef DEBUG
   system("rm -rf /tmp/katana-$USER/patched/*");
   #endif
-  /*if(argc<3)
-  {
-    msg="Usage: katana -g [-o OUT_FILE] OLD_BINARY NEW_BINARY \n\t\
-Or: katana -p PATCH_FILE PID\n\t\
-Or: katana -l PATCH_FILE"
-    death(msg);
-  }*/
-
   loggingDefaults();
+  setDefaultConfig();
   
   struct sigaction act;
   memset(&act,0,sizeof(struct sigaction));
@@ -120,30 +115,26 @@ Or: katana -l PATCH_FILE"
   }
   if(EKM_GEN_PATCH==mode)
   {
-    if(argc-optind<2)
+    if(argc-optind<3)
     {
-      death("Usage to generate patch: katana -g [-o OUT_FILE] OLD_BINARY NEW_BINARY");
+      death("Usage to generate patch: katana -g [-o OUT_FILE] OLD_SOURCE_TREE NEW_SOURCE_TREEEXEC");
     }
-    char* oldBinary=argv[optind];
-    char* newBinary=argv[optind+1];
+    char* oldSourceTree=argv[optind];
+    char* newSourceTree=argv[optind+1];
+    char* execRelName=argv[optind+2];
+    char* oldBinPath=joinPaths(oldSourceTree,execRelName);
+    char* newBinPath=joinPaths(newSourceTree,execRelName);
+    
     if(!outfile)
     {
-      outfile=zmalloc(strlen(oldBinary)+5);
-      strcpy(outfile,oldBinary);
+      outfile=zmalloc(strlen(oldBinPath)+5);
+      strcpy(outfile,oldBinPath);
       strcat(outfile,".po");
     }
-    ElfInfo* newBinaryElfInfo=openELFFile(newBinary);
-    findELFSections(newBinaryElfInfo);
     printf("reading dwarf types from new binary\n############################################\n");
-    DwarfInfo* diPatched=readDWARFTypes(newBinaryElfInfo);
-    oldBinElfInfo=openELFFile(oldBinary);
-    findELFSections(oldBinElfInfo);
-    printf("reading dwarf types from old binary\n#############################################\n");
-    DwarfInfo* diPatchee=readDWARFTypes(oldBinElfInfo);
+
     printf("outfile is %s",outfile);
-    writePatch(diPatchee,diPatched,outfile,oldBinElfInfo,newBinaryElfInfo);
-    endELF(oldBinElfInfo);
-    endELF(newBinaryElfInfo);
+    writePatch(oldSourceTree,newSourceTree,oldBinPath,newBinPath,outfile);
   }
   else if(EKM_APPLY_PATCH==mode)
   {

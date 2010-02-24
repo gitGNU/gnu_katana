@@ -12,12 +12,12 @@
 #include <assert.h>
 
 E_LOG_LEVEL lvlEnabled;
-bool sourceEnables[ELS_CNT];
+E_LOG_LEVEL sourceEnables[ELS_CNT];
 
 int logprintf(E_LOG_LEVEL lvl,E_LOG_SOURCE src,char* fmt,...)
 {
 
-  if(!sourceEnables[src] || lvl>lvlEnabled)
+  if(lvl > sourceEnables[src] || lvl>lvlEnabled)
   {
     return 0;
   }
@@ -51,26 +51,31 @@ int logprintf(E_LOG_LEVEL lvl,E_LOG_SOURCE src,char* fmt,...)
 
 //all messages at this level or more important than this level (see the ordering in
 //E_LOG_LEVEL definition) will be logged. Others will be dropped
-void setLogLevel(E_LOG_LEVEL lvl);
+void setMasterLogLevel(E_LOG_LEVEL lvl)
+{
+  lvlEnabled=lvl;
+}
 
-void enableLogSource(E_LOG_SOURCE src)
+void enableLogSource(E_LOG_SOURCE src,E_LOG_LEVEL lvl)
 {
   assert(0<=src && src<ELS_CNT);
-  sourceEnables[src]=true;
+  sourceEnables[src]=lvl;
 }
 
 void disableLogSource(E_LOG_SOURCE src)
 {
-  assert(0<=src && src<ELS_CNT);
-  sourceEnables[src]=true;
+  enableLogSource(src,ELL_DISABLE);
 }
 
 void loggingDefaults()
 {
   lvlEnabled=ELL_INFO_V3;
-  sourceEnables[ELS_MISC]=true;
-  sourceEnables[ELS_CODEDIFF]=true;
-  sourceEnables[ELS_TYPEDIFF]=true;
-  sourceEnables[ELS_DWARF_FRAME]=true;
-  sourceEnables[ELS_HOTPATCH_DATA]=true;
+  sourceEnables[ELS_MISC]=ELL_DISABLE;
+  sourceEnables[ELS_CODEDIFF]=ELL_CNT;
+  sourceEnables[ELS_TYPEDIFF]=ELL_CNT;
+  sourceEnables[ELS_DWARF_FRAME]=ELL_CNT;
+  sourceEnables[ELS_HOTPATCH]=ELL_INFO_V3;
+  sourceEnables[ELS_SOURCETREE]=ELL_CNT;
+  sourceEnables[ELS_SYMBOL]=ELL_INFO_V1;
+  sourceEnables[ELS_RELOCATION]=ELL_CNT;
 }
