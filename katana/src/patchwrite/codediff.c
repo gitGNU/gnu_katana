@@ -126,8 +126,7 @@ bool areSubprogramsIdentical(SubprogramInfo* patcheeFunc,SubprogramInfo* patched
       if(strcmp(getString(oldBinary,symOld.st_name),getString(newBinary,symNew.st_name)) ||
          symOld.st_size != symNew.st_size ||
          symOld.st_info != symNew.st_info ||
-         symOld.st_other != symNew.st_other ||
-         symOld.st_shndx != symNew.st_shndx)
+         symOld.st_other != symNew.st_other)
       {
         //the symbols differ in some important regard
         //todo: the test against st_shndx isn't necessarily valid, sections
@@ -136,6 +135,23 @@ bool areSubprogramsIdentical(SubprogramInfo* patcheeFunc,SubprogramInfo* patched
         logprintf(ELL_INFO_V1,ELS_CODEDIFF,"subprogram for %s changed, symbols differ (in more than value)\n",patcheeFunc->name);
         break;
       }
+
+      /*
+      //check sections for the symbols
+      Elf_Scn* scnOld=elf_getscn(oldBinary->e,symOld.st_shndx);
+      Elf_Scn* scnNew=elf_getscn(newBinary->e,symNew.st_shndx);
+      GElf_Shdr shdrOld;
+      GElf_Shdr shdrNew;
+      gelf_getshdr(scnOld,&shdrOld);
+      gelf_getshdr(scnNew,&shdrNew);
+      char* scnNameOld=getScnHdrString(oldBinary,shdrOld.sh_name);
+      char* scnNameNew=getScnHdrString(newBinary,shdrNew.sh_name);
+      if(strcmp(scnNameOld,scnNameNew))
+      {
+        retval=false;
+        logprintf(ELL_INFO_V1,ELS_CODEDIFF,"subprogram for %s changed, symbols differ in section (%s vs %s\n",patcheeFunc->name,scnNameOld,scnNameNew);
+        break;
+      }*/
 
       //check the addend
       if(getAddendForReloc(relocOld) != getAddendForReloc(relocNew))

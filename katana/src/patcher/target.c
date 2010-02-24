@@ -18,8 +18,8 @@
 #include <sys/user.h>
 #include <unistd.h>
 #include <sys/mman.h>
-
-
+#include "config.h"
+#include "util/logging.h"
 
 
 //todo: bad programming
@@ -77,13 +77,31 @@ void endPtrace()
 }
 
 
-void modifyTarget(addr_t addr,uint value)
+void modifyTarget(addr_t addr,word_t value)
 {
   if(ptrace(PTRACE_POKEDATA,pid,addr,value)<0)
   {
     fprintf(stderr,"Trying to poke data at 0x%x\n",(uint)addr);
     perror("ptrace POKEDATA failed in modifyTarget\n");
     death(NULL);
+  }
+  //test to make sure the write went through
+  if(isFlag(EKCF_CHECK_PTRACE_WRITES))
+  {
+    uint val=ptrace(PTRACE_PEEKDATA,pid,addr);
+    if(errno)
+    {
+      perror("ptrace PEEKDATA failed\n");
+      death(NULL);
+    }
+    if(val!=value)
+    {
+      death("modifyTarget failed, failed to validate result of write\n");
+    }
+    else
+    {
+      logprintf(ELL_INFO_V4,ELS_HOTPATCH,"modifyTarget validated write\n");
+    }
   }
 }
 
@@ -94,19 +112,45 @@ void modifyTarget(addr_t addr,uint value)
 //copies numBytes from data to addr in target
 void memcpyToTarget(long addr,byte* data,int numBytes)
 {
+  //ptrace requires all addresses to be word-aligned
+  addr_t misalignment=addr%PTRACE_WORD_SIZE;
+  if(misalignment)
+  {
+    logprintf(ELL_INFO_V4,ELS_HOTPATCH,"misalignment is %i, addr is 0x%x\n",misalignment,addr);
+    byte firstWord[PTRACE_WORD_SIZE];
+    assert(PTRACE_WORD_SIZE==sizeof(word_t));
+    //we'll be copying back a few bytes that already existed
+    memcpyFromTarget(firstWord,addr-misalignment,PTRACE_WORD_SIZE);
+    logprintf(ELL_INFO_V4,ELS_HOTPATCH,"copied bytes {0x%x,0x%x,0x%x,0%x} from 0x%x\n",(uint)firstWord[0],(uint)firstWord[1],(uint)firstWord[2],(uint)firstWord[3],(uint)(addr-misalignment));
+    int bytesInWd=PTRACE_WORD_SIZE-misalignment;
+    logprintf(ELL_INFO_V4,ELS_HOTPATCH,"copying in %i patch bytes in first wd\n",bytesInWd);
+    memcpy(&firstWord[misalignment],data,bytesInWd);
+    logprintf(ELL_INFO_V4,ELS_HOTPATCH,"now copying bytes {0x%x,0x%x,0x%x,0x%x} to 0x%x\n",(uint)firstWord[0],(uint)firstWord[1],(uint)firstWord[2],(uint)firstWord[3],addr-misalignment);
+    word_t wd;
+    memcpy(&wd,firstWord,sizeof(word_t));
+    modifyTarget(addr-misalignment,wd);
+    data+=bytesInWd;
+    numBytes-=bytesInWd;
+    addr+=bytesInWd;
+    logprintf(ELL_INFO_V4,ELS_HOTPATCH,"addr is now 0x%x\n",addr);
+    //now we're all set to carry on copying normally from an aligned address
+  }
+
+  assert(0==addr%PTRACE_WORD_SIZE);
+  
   for(int i=0;i<numBytes;i+=PTRACE_WORD_SIZE)
   {
     if(i+PTRACE_WORD_SIZE<=numBytes)
     {
-      uint val;
+      word_t val;
       memcpy(&val,data+i,4);
       modifyTarget(addr+i,val);
     }
     else
     {
-      //printf("only copying partially\n");
-      assert(sizeof(uint)==PTRACE_WORD_SIZE);
-      uint tmp=0;
+      assert(sizeof(word_t)==PTRACE_WORD_SIZE);
+      word_t tmp=0;
+      memcpyFromTarget((byte*)&tmp,addr+i,sizeof(word_t));
       memcpy(&tmp,data+i,numBytes-i);
       modifyTarget(addr+i,tmp);
     }
@@ -117,6 +161,8 @@ void memcpyToTarget(long addr,byte* data,int numBytes)
 //copies numBytes to data from addr in target
 void memcpyFromTarget(byte* data,long addr,int numBytes)
 {
+  logprintf(ELL_INFO_V4,ELS_HOTPATCH,"memcpyFromTarget: getting %i bytes from 0x%x\n",numBytes,(uint)addr);
+  //todo: force address to be aligned
   for(int i=0;i<numBytes;i+=4)
   {
     uint val=ptrace(PTRACE_PEEKDATA,pid,addr+i);
@@ -131,7 +177,7 @@ void memcpyFromTarget(byte* data,long addr,int numBytes)
     }
     else
     {
-      //printf("memcpyFromTarget: wasn't aligned\n");
+      logprintf(ELL_INFO_V4,ELS_HOTPATCH,"memcpyFromTarget: wasn't aligned\n");
       //at the end and wasn't aligned
       memcpy(data+i,&val,numBytes-i);
     }

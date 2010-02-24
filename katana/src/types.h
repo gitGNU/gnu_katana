@@ -14,13 +14,13 @@
 #include "util/map.h"
 #include "util/list.h"
 #include <libdwarf.h>
-
+#include <string.h>
 
 typedef unsigned int uint;
-typedef unsigned long addr_t;
-typedef uint word_t;
+typedef size_t addr_t;
+typedef size_t word_t;
 typedef short unsigned int usint;
-typedef int idx_t;
+typedef size_t idx_t;
 
 //we keep track of the type information
 //from on ELF file in a TypesInfo struct

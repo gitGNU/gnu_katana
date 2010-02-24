@@ -1,3 +1,4 @@
+include ../../Makefile_vars
 SRC=main.c
 all : $(EXEC)
 

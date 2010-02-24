@@ -178,12 +178,12 @@ List* makePatchData(PoRegRule* rule,SpecialRegsState* state,ElfInfo* patch)
   #ifdef DEBUG
   if(result)
   {
-    logprintf(ELL_INFO_V2,ELS_HOTPATCH_DATA,"patching 0x%x with the following bytes:\n{",(uint)result->addr);
+    logprintf(ELL_INFO_V2,ELS_HOTPATCH,"patching 0x%x with the following bytes:\n{",(uint)result->addr);
     for(int i=0;i<result->len;i++)
     {
-      logprintf(ELL_INFO_V2,ELS_HOTPATCH_DATA,"%u%s",(uint)result->data[i],i+1<result->len?",":"");
+      logprintf(ELL_INFO_V2,ELS_HOTPATCH,"%u%s",(uint)result->data[i],i+1<result->len?",":"");
     }
-    logprintf(ELL_INFO_V2,ELS_HOTPATCH_DATA,"}\n");
+    logprintf(ELL_INFO_V2,ELS_HOTPATCH,"}\n");
   }
   #endif
   return head;

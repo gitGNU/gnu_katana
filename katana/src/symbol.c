@@ -8,18 +8,22 @@
 
 #include "symbol.h"
 #include <assert.h>
+#include "util/util.h"
+#include "util/logging.h"
+#include <string.h>
+#include "patcher/versioning.h"
 
 bool getSymbol(ElfInfo* e,int symIdx,GElf_Sym* outSym)
 {
-  assert(e->symTabData);
-  return gelf_getsym(e->symTabData,symIdx,outSym);
+  Elf_Data* symTabData=getDataByERS(e,ERS_SYMTAB);
+  return gelf_getsym(symTabData,symIdx,outSym);
 }
 
 addr_t getSymAddress(ElfInfo* e,int symIdx)
 {
-  assert(e->symTabData);
+  Elf_Data* symTabData=getDataByERS(e,ERS_SYMTAB);
   GElf_Sym sym;
-  if(!gelf_getsym(e->symTabData,symIdx,&sym))
+  if(!gelf_getsym(symTabData,symIdx,&sym))
   {
     death("gelf_getsym failed in getSymAddress\n");
   }
@@ -27,43 +31,77 @@ addr_t getSymAddress(ElfInfo* e,int symIdx)
 }
 
 //find the symbol matching the given symbol
-int findSymbol(ElfInfo* e,GElf_Sym* sym,ElfInfo* ref)
+int findSymbol(ElfInfo* e,GElf_Sym* sym,ElfInfo* ref,int flags)
 {
-  char* symbolName=getString(ref,sym->st_name);
+  Elf_Data* symTabData=NULL;
+  char* (*getstrfunc)(ElfInfo*,int)=NULL;
+  if(flags & ESFF_NEW_DYNAMIC)
+  {
+    symTabData=getDataByERS(e,ERS_DYNSYM);
+    getstrfunc=&getDynString;
+  }
+  else
+  {
+    symTabData=getDataByERS(e,ERS_SYMTAB);
+    getstrfunc=&getString;
+  }
+  char* symbolName=getString(ref,sym->st_name);//todo not supporting ESFF_OLD_DYNAMIC yet
+  char* symbolNameUnmangled=symbolName;
+  if(flags & ESFF_MANGLED_OK)
+  {
+    char* atSignPtr=strchr(symbolName,'@');
+    if(atSignPtr)
+    {
+      int atSignIdx=atSignPtr-symbolName;
+      symbolNameUnmangled=zmalloc(strlen(symbolName)+1);
+      strcpy(symbolNameUnmangled,symbolName);
+      symbolNameUnmangled[atSignIdx]='\0';
+    }
+  }
+  char* symbolNameDot=zmalloc(strlen(symbolName)+2);//for --fdata-sections and --ffunction-sections
+  strcpy(symbolNameDot,".");
+  strcat(symbolNameDot,symbolName);
   //traverse the symbol table to find the symbol we're looking for. Yes this is slow
   //todo: build our own hash table since the .hash section seems incomplete
-  for (int i = 0; i < e->symTabCount; ++i)
+  //start at 1 because never trying to match symbol 0
+   int bind=ELF64_ST_BIND(sym->st_info);
+   int type=ELF64_ST_TYPE(sym->st_info);
+  int numEntries=symTabData->d_size/sizeof(Elf32_Sym);//todo: diff for 64 bit
+  for (int i = 1; i < numEntries; ++i)
   {
     Elf32_Sym sym2;
     //get the symbol in an unsave manner because
     //we may be getting it from a data buffer we're in the process of filling
-    memcpy(&sym2,e->symTabData->d_buf+i*sizeof(Elf32_Sym),sizeof(Elf32_Sym));
-    char* symname=getString(e, sym2.st_name);
-    if((!symname && !symbolName) ||
+    memcpy(&sym2,symTabData->d_buf+i*sizeof(Elf32_Sym),sizeof(Elf32_Sym));
+    char* symname=(*getstrfunc)(e, sym2.st_name);
+    int bind2=ELF32_ST_BIND(sym2.st_info);
+    int type2=ELF32_ST_TYPE(sym2.st_info);
+    //todo: bug with symbols with names substrings of other names, need to properly unmangle symname
+    if( (STT_SECTION==type && STT_SECTION==type2) ||
+       (!symname && !symbolName) ||
        (!symname && !strlen(symbolName)) ||
        (!strlen(symname) && !symbolName) ||
-       (symname && symbolName && !strcmp(symname,symbolName)))
+       (symname && symbolName && !strncmp(symname,symbolNameUnmangled,strlen(symbolNameUnmangled))))
     {
       if(symname && strlen(symname))
       {
-        printf("[%i] cmatches name %s\n",i,symname);
+        logprintf(ELL_INFO_V1,ELS_SYMBOL,"[%i] cmatches name %s\n",i,symname);
       }
       else
       {
         //printf("[%i] both have no name. They might be the same section\n",i);
       }
       //ok, the right name, but are other things right too?
-      int bind=ELF64_ST_BIND(sym->st_info);
-      int type=ELF64_ST_TYPE(sym->st_info);
-      int bind2=ELF32_ST_BIND(sym2.st_info);
-      int type2=ELF32_ST_TYPE(sym2.st_info);
+     
+      
       if(bind != bind2)
       {
         printf("fails on bind\n");
         continue;
       }
-      if(type != type2)
+      if(type!= STT_NOTYPE && type2!=STT_NOTYPE && type != type2)
       {
+        printf("fails on type\n");
         continue;
       }
 
@@ -92,18 +130,48 @@ int findSymbol(ElfInfo* e,GElf_Sym* sym,ElfInfo* ref)
         gelf_getshdr(scnNew,&shdrNew);
         char* scnNameRef=getScnHdrString(ref,shdrRef.sh_name);
         char* scnNameNew=getScnHdrString(e,shdrNew.sh_name);
+        //if -fdata-sections or -ffunction-sections is used then
+        //we might have issues with section names having the name of the
+        //var/function appended, so we strip these
+        if(strEndsWith(scnNameRef,symbolNameDot))
+        {
+          scnNameRef[strlen(scnNameRef)-strlen(symbolNameDot)]='\0';
+        }
+        if(strEndsWith(scnNameNew,symbolNameDot))
+        {
+          scnNameNew[strlen(scnNameNew)-strlen(symbolNameDot)]='\0';
+        }
+
+        //also strip versioning from the section names if allowed
+        if(flags & ESFF_VERSIONED_SECTIONS_OK)
+        {
+          char* vers=getVersionStringOfPatchSections();
+          char* buf=zmalloc(strlen(vers)+2);
+          sprintf(buf,".%s",vers);
+          if(strEndsWith(scnNameRef,buf))
+          {
+            scnNameRef[strlen(scnNameRef)-strlen(buf)]='\0';
+          }
+          if(strEndsWith(scnNameNew,buf))
+          {
+            scnNameNew[strlen(scnNameNew)-strlen(buf)]='\0';
+          }
+
+        }
+        
         //printf("old refers to section name %s and new refers to section name %s\n",scnNameRef,scnNameNew);
         if((scnNameRef && !scnNameNew) || (!scnNameNew && scnNameNew) ||
            (scnNameRef && scnNameNew && strcmp(scnNameRef,scnNameNew)))
         {
+          logprintf(ELL_INFO_V2,ELS_SYMBOL,"symbol match fails on section name\n");
           continue;
         }
       }
+      logprintf(ELL_INFO_V1,ELS_SYMBOL,"found symbol %s at index %i\n",symbolName,i);
       return i;
     }
     //free(symname);//todo: is this right?
   }
-  fprintf(stderr,"Symbol '%s' not defined\n",symbolName);
   return STN_UNDEF;
 }
 
@@ -121,9 +189,8 @@ GElf_Sym symToGELFSym(Elf32_Sym sym)
 }
 
 //from an index of a symbol in the old ELF structure,
-//find it's index in the new ELF structure. Return -1 if it cannot be found
-//The matching is done solely on name
-int reindexSymbol(ElfInfo* old,ElfInfo* new,int oldIdx)
+//find it's index in the new ELF structure. Return STN_UNDEF if it cannot be found
+int reindexSymbol(ElfInfo* old,ElfInfo* new,int oldIdx,int flags)
 {
   //todo: need a method of apropriately handling local/week symbols
   //(other than section ones, which aren't really a big deal to handle)
@@ -137,7 +204,19 @@ int reindexSymbol(ElfInfo* old,ElfInfo* new,int oldIdx)
   {
     death("invalid symbol index in reindexSymbol\n");
   }
-  int idx=findSymbol(new,&sym,old);
+
+  //do it once first without fuzzy matching
+  //because always prefer exact match
+  idx_t idx=findSymbol(new,&sym,old,flags & ~ESFF_MANGLED_OK);
+  if(STN_UNDEF==idx && (flags & ESFF_MANGLED_OK))
+  {
+    idx=findSymbol(new,&sym,old,flags);
+  }
+  if(STN_UNDEF==idx)
+  {
+    char* symbolName=getString(old,sym.st_name);
+    fprintf(stderr,"Symbol '%s' could not be reindexed\n",symbolName);
+  }
   return idx;
 }
 

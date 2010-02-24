@@ -71,3 +71,9 @@ int calculateVersionAfterPatch(int pid,ElfInfo* patch)
   //todo: versioning (hardcoded patching to version 1 here)
   return 1;
 }
+
+char* getVersionStringOfPatchSections()
+{
+  //todo: figure out an actual versioning system
+  return "new";
+}

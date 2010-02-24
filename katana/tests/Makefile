@@ -5,7 +5,7 @@ export CC
 export CFLAGS
 export EXEC
 
-SUBDIRS=test1_basic test2_nested_types test3_multiple_cu
+SUBDIRS=test1_basic test2_nested_types test3_multiple_cu test4_new_var
 .PHONY: $(SUBDIRS)
 
 all : $(SUBDIRS)
