@@ -197,7 +197,7 @@ void applyRelocation(RelocInfo* rel,GElf_Sym* oldSym,ELF_STORAGE_TYPE type)
     }
     else //RELA
     {
-      logprintf(ELL_INFO_V2,ELS_RELOCATION,"applying RELA relocation at 0x%x\n",(uint)addrToBeRelocated);
+      logprintf(ELL_INFO_V2,ELS_RELOCATION,"applying RELA relocation at 0x%x for symbol %s\n",(uint)addrToBeRelocated,getString(rel->e,sym.st_name));
       switch(rel->relocType)
       {
       case R_386_32:

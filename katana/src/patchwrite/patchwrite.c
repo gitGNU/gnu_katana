@@ -403,8 +403,8 @@ void writeRelocationsInRange(addr_t lowpc,addr_t highpc,Elf_Scn* scn,
                              addr_t segmentBase,ElfInfo* binary)
 {
   List* relocs=getRelocationItemsInRange(binary,scn,lowpc,highpc);
-  
   List* li=relocs;
+  idx_t rodataScnIdx=elf_ndxscn(getSectionByERS(binary,ERS_RODATA));//for special handling of rodata because lump rodata from several binaries into one section
   for(;li;li=li->next)
   {
     //we always use RELA rather than REL in the patch file
@@ -484,7 +484,7 @@ void writeRelocationsInRange(addr_t lowpc,addr_t highpc,Elf_Scn* scn,
     GElf_Sym sym;
     if(!gelf_getsym(getDataByERS(binary,ERS_SYMTAB),symIdx,&sym))
     {death("gelf_getsym failed in writeRelocationsInRange\n");}
-    if(sym.st_shndx==elf_ndxscn(getSectionByERS(patch,ERS_RODATA)))
+    if(sym.st_shndx==rodataScnIdx)
     {
       rela.r_addend+=rodataOffset;//increase it by the amount we're up to
 
@@ -643,6 +643,7 @@ void writeROData(ElfInfo* binary)
   Elf_Data* roData=getDataByERS(binary,ERS_RODATA);
   Elf_Data* roDataPatch=getDataByERS(patch,ERS_RODATA);
   uint len=roData->d_size;
+  rodataOffset=roDataPatch->d_size;//offset to put things off of now
   addDataToScn(roDataPatch,roData->d_buf,len);
 }
 
@@ -689,15 +690,10 @@ void writePatch(char* oldSourceTree,char* newSourceTree,char* oldBinName,char* n
         readDWARFTypes(elf1);
         ElfInfo* elf2=getModifiedObject(obj);
         readDWARFTypes(elf2);
-        writeTypeAndFuncTransformationInfo(elf1,elf2);
         //all the object files had their own roData sections
         //and now we're lumping them together
-        //note that we do this after writing everything else,
-        //this allows the value of the global
-        //rodataOffset to be what we want it to during
-        //writeTypeAndFuncTransformationInfo
         writeROData(elf2);
-
+        writeTypeAndFuncTransformationInfo(elf1,elf2);
         endELF(elf1);
         endELF(elf2);
       }
