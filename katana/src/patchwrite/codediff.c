@@ -136,7 +136,7 @@ bool areSubprogramsIdentical(SubprogramInfo* patcheeFunc,SubprogramInfo* patched
         break;
       }
 
-      /*
+      
       //check sections for the symbols
       Elf_Scn* scnOld=elf_getscn(oldBinary->e,symOld.st_shndx);
       Elf_Scn* scnNew=elf_getscn(newBinary->e,symNew.st_shndx);
@@ -151,7 +151,7 @@ bool areSubprogramsIdentical(SubprogramInfo* patcheeFunc,SubprogramInfo* patched
         retval=false;
         logprintf(ELL_INFO_V1,ELS_CODEDIFF,"subprogram for %s changed, symbols differ in section (%s vs %s\n",patcheeFunc->name,scnNameOld,scnNameNew);
         break;
-      }*/
+      }
 
       //check the addend
       if(getAddendForReloc(relocOld) != getAddendForReloc(relocNew))
