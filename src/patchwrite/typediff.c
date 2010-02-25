@@ -39,6 +39,7 @@ int getIndexForField(TypeInfo* type,char* name)
   return FIELD_DELETED;
 }
 
+//this function may no longer be needed, but it works just fine
 //sets a's transformer field to a transformer
 //which just copies everything over
 void genStraightCopyTransform(TypeInfo* a,TypeInfo* b)
@@ -55,12 +56,21 @@ void genStraightCopyTransform(TypeInfo* a,TypeInfo* b)
 //if the types are not identical, store in type a
 //the necessary transformation info to convert it to type b,
 //if possible
+//todo: this function is struct centric, need to support other things
 bool compareTypesAndGenTransforms(TypeInfo* a,TypeInfo* b)
 {
   TypeTransform* transform=NULL;
   if(a->type!=b->type)
   {
     //don't know how to perform the transformation
+    return false;
+  }
+  if(a->transformer)
+  {
+    if(a->transformer->to!=b)
+    {
+      death("cannot transform a type to two different types\n");
+    }
     return false;
   }
   bool retval=true;
@@ -96,6 +106,10 @@ bool compareTypesAndGenTransforms(TypeInfo* a,TypeInfo* b)
 
   if(transform)
   {
+    a->transformer=transform;//do it up here in case we recurse on this type
+    transform->from=a;
+    transform->to=b;
+    
     //now build the offsets array
     transform->fieldOffsets=zmalloc(sizeof(int)*a->numFields);
     transform->fieldTransformTypes=zmalloc(sizeof(int)*a->numFields);
@@ -114,14 +128,38 @@ bool compareTypesAndGenTransforms(TypeInfo* a,TypeInfo* b)
         continue;
       }
       int offset=getOffsetForField(b,a->fields[i]);
+
+
+      
       switch(fieldTypeOld->type)
       {
       case TT_BASE:
         transform->fieldTransformTypes[i]=EFTT_COPY;
         break;
       case TT_STRUCT:
-      case TT_POINTER:
         transform->fieldTransformTypes[i]=EFTT_RECURSE;
+        break;
+      case TT_POINTER:
+        if(!compareTypesAndGenTransforms(fieldTypeOld->pointedType,fieldTypeNew->pointedType))
+        {
+          if(!fieldTypeOld->pointedType->transformer)
+          {
+            freeTypeTransform(transform);
+            logprintf(ELL_WARN,ELS_TYPEDIFF,"Unable to generate transformation for field types");
+            return false;
+          }
+        }
+        if(fieldTypeOld->pointedType->transformer)
+        {
+          //points to something that needs dealing with
+          transform->fieldTransformTypes[i]=EFTT_RECURSE;
+        }
+        else
+        {
+          //points to something that's fine, so we can just go ahead and copy the pointer,
+          //no need to relocate everything
+          transform->fieldTransformTypes[i]=EFTT_COPY;
+        } 
         break;
       default:
         death("unsupported type %i in generating transform in compareTypes. Poke james to write in support\n",fieldTypeOld->type);
@@ -130,7 +168,8 @@ bool compareTypesAndGenTransforms(TypeInfo* a,TypeInfo* b)
       {
         death("Cannot transform a type to two different types\n");
       }
-      if(EFTT_RECURSE==transform->fieldTransformTypes[i] && !fieldTypeOld->transformer)
+      
+      if(EFTT_RECURSE==transform->fieldTransformTypes[i])
       {
         if(!compareTypesAndGenTransforms(fieldTypeOld,fieldTypeNew))
         {
@@ -141,12 +180,6 @@ bool compareTypesAndGenTransforms(TypeInfo* a,TypeInfo* b)
             return false;
           }
         }
-        else if(TT_POINTER==fieldTypeOld->type && !fieldTypeOld->pointedType->transformer)
-        {
-          //we need to be able to create a transformation anyway,
-          //even if nothing changed, because the pointer has to have some FDE to refer to
-          genStraightCopyTransform(fieldTypeOld->pointedType,fieldTypeNew->pointedType);
-        }
       }
       transform->fieldOffsets[i]=offset;
       //todo: how exactly to handle base type changing if different size
@@ -156,12 +189,6 @@ bool compareTypesAndGenTransforms(TypeInfo* a,TypeInfo* b)
       //todo: in general need to be able to support fields of struct type,
       //they're not really supported right now
     }
-    transform->from=a;
-    transform->to=b;
   }
-  
-
-  //todo: support pointer types
-  a->transformer=transform;
   return retval;
 }
