@@ -116,11 +116,8 @@ bool areSubprogramsIdentical(SubprogramInfo* patcheeFunc,SubprogramInfo* patched
     {
       GElf_Sym symOld;
       GElf_Sym symNew;
-      if(!getSymbol(oldBinary,relocOld->symIdx,&symOld) ||
-         !getSymbol(newBinary,relocNew->symIdx,&symNew))
-      {
-        death("Could not get symbols for relocations\n");
-      }
+      getSymbol(oldBinary,relocOld->symIdx,&symOld);
+      getSymbol(newBinary,relocNew->symIdx,&symNew);
 
       //check basic symbol stuff to make sure it's the same symbol
       if(strcmp(getString(oldBinary,symOld.st_name),getString(newBinary,symNew.st_name)) ||

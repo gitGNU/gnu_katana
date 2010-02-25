@@ -151,8 +151,8 @@ void applyRelocation(RelocInfo* rel,GElf_Sym* oldSym,ELF_STORAGE_TYPE type)
   addr_t newAddrAccessed;
   int symIdx=rel->symIdx;
   GElf_Sym sym;
-  if(!getSymbol(rel->e,symIdx,&sym))
-  {death("getSymbol failed in applyRelocation\n");}
+  getSymbol(rel->e,symIdx,&sym);
+
   byte symType=ELF64_ST_TYPE(sym.st_info);
   if(sym.st_shndx==SHN_UNDEF && 0==sym.st_value && STT_FUNC==symType)
   {
