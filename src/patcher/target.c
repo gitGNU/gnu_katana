@@ -230,19 +230,7 @@ long mmapTarget(int size,int prot)
   long code4Bytes;
   assert(sizeof(code4Bytes)==4);
   memcpy(&code4Bytes,code,4);
-  //printf("inserting code at eip 0x%x\n",newRegs.eip);
-  #ifdef OLD_MMAP_TARGET
-  modifyTarget(newRegs.esp,code4Bytes);
-  printf("inserted syscall call\n");
-  newRegs.eip=newRegs.esp;//we put our code on the stack, so direct the pc to it
-  long returnAddr=newRegs.esp+2;//the int3 instruction
-  #else
-  byte oldText[4];
-  memcpyFromTarget(oldText,newRegs.eip,4);
-  modifyTarget(newRegs.eip,code4Bytes);
-  printf("inserted syscall call\n");
-  long returnAddr=newRegs.eip+2;//the int3 instruction
-  #endif
+
   
   //the call we want to make is
   //mmap(NULL,size,prot,MAP_PRIVATE|MAP_ANONYMOUS,-1,0)
