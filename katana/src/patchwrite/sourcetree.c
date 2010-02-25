@@ -116,6 +116,7 @@ List* getChangedObjectFilesInSourceTree(char* origSourceTree,char* modSourceTree
       else
       {
         logprintf(ELL_INFO_V1,ELS_SOURCETREE,"Object file %s does not differ between versions\n",fullPathOrig);
+        i++,j++;
       }
     }
     else if(cmp<0)
