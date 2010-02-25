@@ -447,10 +447,6 @@ List* getTypeTransformationInfoForCU(CompilationUnit* cuOld,CompilationUnit* cuN
 {
   List* varTransHead=NULL;
   List* varTransTail=NULL;
-  #ifdef type_transformers_dict
-  TransformationInfo* trans=zmalloc(sizeof(TransformationInfo));
-  trans->typeTransformers=dictCreate(100);//todo: get rid of magic # 100
-  #endif
   printf("Examining compilation unit %s\n",cuOld->name);
   VarInfo** vars1=(VarInfo**)dictValues(cuOld->tv->globalVars);
 
@@ -468,17 +464,11 @@ List* getTypeTransformationInfoForCU(CompilationUnit* cuOld,CompilationUnit* cuN
     TypeInfo* ti1=var->type;
     TypeInfo* ti2=patchedVar->type;
     bool needsTransform=false;
-    #ifdef type_transformers_dict
-    if(dictExists(trans->typeTransformers,ti1->name))
-    {
-      needsTransform=true;
-    }
-    #else
+
     if(ti1->transformer)
     {
       needsTransform=true;
     }
-    #endif
     else
     {
       //todo: should have some sort of caching for types we've already
@@ -494,9 +484,6 @@ List* getTypeTransformationInfoForCU(CompilationUnit* cuOld,CompilationUnit* cuN
           abort();
         }
         printf("generated type transformation for type %s\n",ti1->name);
-        #ifdef type_transformers_dict
-        dictInsert(trans->typeTransformers,ti1->name,transform);
-        #endif
         needsTransform=true;
       }
     }
@@ -505,11 +492,7 @@ List* getTypeTransformationInfoForCU(CompilationUnit* cuOld,CompilationUnit* cuN
       List* li=zmalloc(sizeof(List));
       VarTransformation* vt=zmalloc(sizeof(VarTransformation));
       vt->var=patchedVar;
-      #ifdef type_transformers_dict
-      vt->transform=(TypeTransform*)dictGet(trans->typeTransformers,var->type->name);
-      #else
       vt->transform=var->type->transformer;
-      #endif
       vt->cu=cuNew;
       if(!vt->transform)
       {
