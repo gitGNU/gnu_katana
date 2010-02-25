@@ -23,6 +23,7 @@ typedef struct _Foo
 
 Foo bar={42,66,111};
 
+#define MILLISECOND 1000
 
 void printThings()
 {
@@ -37,7 +38,7 @@ int main(int argc,char** argv)
   while(1)
   {
     printThings();
-    usleep(100000);
+    usleep(100*MILLISECOND);
   }
   return 0;
 }
