@@ -127,6 +127,7 @@ typedef struct TypeTransform_
 {
   TypeInfo* from;
   TypeInfo* to;
+  bool straightCopy;//just copy byte for byte, ignore any structure. If true, all other fields besides from are ignored
   //for each field in the 'from' typeinfo,
   //contains the new offset of that field from the start of the new structure
   //this can be used to relocate fields within structures

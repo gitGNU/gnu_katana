@@ -39,6 +39,17 @@ int getIndexForField(TypeInfo* type,char* name)
   return FIELD_DELETED;
 }
 
+//sets a's transformer field to a transformer
+//which just copies everything over
+void genStraightCopyTransform(TypeInfo* a,TypeInfo* b)
+{
+  assert(!a->transformer);
+  a->transformer=zmalloc(sizeof(TypeTransform));
+  a->transformer->from=a;
+  a->transformer->to=b;
+  a->transformer->straightCopy=true;
+}
+
 //return false if the two types are not
 //identical in all regards
 //if the types are not identical, store in type a
@@ -102,19 +113,18 @@ bool compareTypesAndGenTransforms(TypeInfo* a,TypeInfo* b)
         transform->fieldTransformTypes[i]=EFTT_DELETE;
         continue;
       }
-      int offset;
+      int offset=getOffsetForField(b,a->fields[i]);
       switch(fieldTypeOld->type)
       {
       case TT_BASE:
-        offset=getOffsetForField(b,a->fields[i]);
         transform->fieldTransformTypes[i]=EFTT_COPY;
         break;
       case TT_STRUCT:
-        offset=getOffsetForField(b,a->fields[i]);
+      case TT_POINTER:
         transform->fieldTransformTypes[i]=EFTT_RECURSE;
         break;
       default:
-        death("unsupported type in generating transform in compareTypes. Poke james to write in support\n");
+        death("unsupported type %i in generating transform in compareTypes. Poke james to write in support\n",fieldTypeOld->type);
       }
       if(fieldTypeOld->transformer && fieldTypeOld->transformer->to != fieldTypeNew)
       {
@@ -130,6 +140,12 @@ bool compareTypesAndGenTransforms(TypeInfo* a,TypeInfo* b)
             logprintf(ELL_WARN,ELS_TYPEDIFF,"Unable to generate transformation for field types");
             return false;
           }
+        }
+        else if(TT_POINTER==fieldTypeOld->type && !fieldTypeOld->pointedType->transformer)
+        {
+          //we need to be able to create a transformation anyway,
+          //even if nothing changed, because the pointer has to have some FDE to refer to
+          genStraightCopyTransform(fieldTypeOld->pointedType,fieldTypeNew->pointedType);
         }
       }
       transform->fieldOffsets[i]=offset;
