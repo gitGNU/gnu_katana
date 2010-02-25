@@ -1,3 +1,4 @@
+
 \documentclass[a4paper,12pt]{article}
 \usepackage[total={6.7in,10in}, top=1.0in, left=0.9in, includefoot]{geometry}
 \usepackage{color}
@@ -24,13 +25,7 @@
   the original paper says)}
 
 \textcolor{red}{We \emph{are} handling relocations for code patches,
-  but full support for the PLT is currently \emph{not} implemented
-  (it's soon on my to-do list)}
-
-\textcolor{red}{The addition of new symbols is not actually fully
-  supported at the moment, as my first couple examples only patched
-  existing variables. I could get this working in an hour or two
-  though}
+  including support for the PLT}
 
 \subsubsection{Patch Application}
 \textcolor{red}{Code patching with trampoline jumps \emph{is}
@@ -169,7 +164,7 @@ to be properly relocated after it is adjusted. While System V based
 systems use only relocation sections of type \texttt{SHT\_REL}, we
 chose to use \texttt{SHT\_RELA} in our patch objects because they make
 addends much easier to keep track of as we relocate from patched
-binary to patch object to patched process in memory. This is all
+binary to patch objectp to patched process in memory. This is all
 really nothing new, storing ELF sections to be injected in-memory has
 been done before in other systems. What is new in our patch object is
 the inclusion of DWARF sections. The \texttt{.debug\_info} section in
