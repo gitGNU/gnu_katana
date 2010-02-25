@@ -230,6 +230,12 @@ long mmapTarget(int size,int prot)
   long code4Bytes;
   assert(sizeof(code4Bytes)==4);
   memcpy(&code4Bytes,code,4);
+  //printf("inserting code at eip 0x%x\n",newRegs.eip);
+  byte oldText[4];
+  memcpyFromTarget(oldText,newRegs.eip,4);
+  modifyTarget(newRegs.eip,code4Bytes);
+  printf("inserted syscall call\n");
+  long returnAddr=newRegs.eip+2;//the int3 instruction
 
   
   //the call we want to make is
