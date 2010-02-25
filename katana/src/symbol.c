@@ -123,7 +123,11 @@ int findSymbol(ElfInfo* e,GElf_Sym* sym,ElfInfo* ref,int flags)
       int shndxNew=sym2.st_shndx;
       //allowing undefined to be a wildcard because may be bringing
       //in a symbol from a relocatable object
-      if(shndxRef!=SHN_UNDEF && shndxNew!=SHN_UNDEF)
+      //also allowing imprecise matching on common,
+      //because symbols may be common in a .o file and then
+      //get put in a section in the fully linked binary
+      if(shndxRef!=SHN_UNDEF && shndxNew!=SHN_UNDEF &&
+         shndxRef!=SHN_COMMON && shndxNew!=SHN_COMMON)
       {
         Elf_Scn* scnRef=elf_getscn(ref->e,shndxRef);
         Elf_Scn* scnNew=elf_getscn(e->e,shndxNew);
