@@ -39,6 +39,152 @@ Dwarf_P_Die lastCUDie=NULL;//keep track of for sibling purposes
 Dwarf_Unsigned cie;//index of cie we're using
 
 
+idx_t addSymbolFromBinaryToPatch(ElfInfo* binary,idx_t symIdx)
+{
+  assert(STN_UNDEF!=symIdx);
+  //we expect this function to be called with binary equal to the
+  //ELF object for one of the .o files. There may in fact, however,
+  //be more information about the symbol in the new binary
+
+  symIdx=reindexSymbol(binary,newBinary,symIdx,ESFF_FUZZY_MATCHING_OK);
+  if(STN_UNDEF==symIdx)
+  {
+    death("could not reindex symbol from .o file to newBinary\n");
+  }
+
+  
+  GElf_Sym symInNewBin;
+  getSymbol(newBinary,symIdx,&symInNewBin);
+  char* symname=elf_strptr(newBinary->e, newBinary->strTblIdx,
+                           symInNewBin.st_name);
+  //create a symbol to represent the symbol in newBinary
+  //that this relocation refers to. If we don't already have a corresponding
+  //symbol in the patch file, we may have to add this one
+  Elf32_Sym sym;
+  sym.st_name=addStrtabEntry(symname);
+  sym.st_value=symInNewBin.st_value;
+  sym.st_size=symInNewBin.st_size;
+  sym.st_info=symInNewBin.st_info;
+  int symType=ELF64_ST_TYPE(symInNewBin.st_info);
+  sym.st_shndx=SHN_UNDEF;        
+  if(STT_SECTION==symType)
+  {
+    sym.st_shndx=reindexSectionForPatch(newBinary,symInNewBin.st_shndx);
+  }
+  sym.st_info=ELF32_ST_INFO(ELF64_ST_BIND(symInNewBin.st_info),
+                            symType);
+  sym.st_other=symInNewBin.st_other;
+
+  //we might have already added this same symbol to the patch
+  GElf_Sym gsym=symToGELFSym(sym);
+  int reindex=findSymbol(patch,&gsym,patch,false);
+  if(SHN_UNDEF==reindex)
+  {
+    reindex=addSymtabEntry(getDataByERS(patch,ERS_SYMTAB),&sym);
+  }
+  return reindex;
+}
+
+//segmentBase should be the start of the text that these relocations refer to
+void writeRelocationsInRange(addr_t lowpc,addr_t highpc,Elf_Scn* scn,
+                             addr_t segmentBase,ElfInfo* binary)
+{
+  List* relocs=getRelocationItemsInRange(binary,scn,lowpc,highpc);
+  List* li=relocs;
+  idx_t rodataScnIdx=elf_ndxscn(getSectionByERS(binary,ERS_RODATA));//for special handling of rodata because lump rodata from several binaries into one section
+  for(;li;li=li->next)
+  {
+    //we always use RELA rather than REL in the patch file
+    //because having the addend recorded makes some
+    //things much easier to work with
+    Elf32_Rela rela;//what we actually write to the file
+    RelocInfo* reloc=li->value;
+    //todo: we insert symbols so that the relocations
+    //will be valid, but we need to make sure we don't insert
+    //a single symbol too many times, it wastes space
+    int symIdx=reloc->symIdx;
+    idx_t reindex=addSymbolFromBinaryToPatch(binary,symIdx);
+    
+    //now look at the relocation itself
+    byte type=reloc->relocType;
+    rela.r_offset=reloc->r_offset;
+    addr_t oldRelOffset=rela.r_offset;
+    //now rebase the offset based on where in the data this text is going
+    GElf_Shdr shdr;
+    gelf_getshdr(scn,&shdr);
+    
+    //note: this relies on our current incorrect usage of the offset field
+    //for bookkeeping
+    //todo: don't do that
+    addr_t newRelOffset=rela.r_offset-lowpc+segmentBase;
+
+    //now depending on the type we may have to do some additional fixups
+    switch(type)
+    {
+      case R_386_PC32:
+        {
+          word_t addrAccessed=getWordAtAbs(elf_getscn(binary->e,reloc->scnIdx)
+                                           ,oldRelOffset,IN_MEM);
+          //this is a pc-relative relocation but we're changing the
+          //address of the instruction. If we're not accessing
+          //something inside the current function, then we might think
+          //we actually want the type to be absolute, not relative. The problem
+          //with that is often a R_386_PC32 deals with a value at r_offset
+          //that is not an address itself but an offset from the current address
+          //and we must keep it that way, for example for relative calls
+          //therefore we try to fix things up as best we can, although
+          //in many cases we'll be dealing with something in the PLT,
+          //and it will get relocated properly for that symbol
+          //and we can ignore most of the relocation entry anyway
+          if(addrAccessed < lowpc || addrAccessed > highpc)
+          {
+            addr_t diff=newRelOffset-oldRelOffset;
+            //that doesn't look right, look into this. Why are we writing it
+            setWordAtAbs(elf_getscn(binary->e,reloc->scnIdx),oldRelOffset,addrAccessed+diff,IN_MEM);
+          
+            //we're not just accessing something in the current function
+            //tweak the addend so that even with the new value
+            //we can access the same absolute address, which is what
+            //we really want to do. The text segment will never get
+            //relocated on linux x86 so the reasons for making this
+            //relative in the first place are gone
+            //rela.r_addend=addrAccessed-(newRelOffset+1)-sym.st_value;
+          }
+        }
+        break;
+    }
+
+    rela.r_info=ELF32_R_INFO(reindex,type);
+    
+    if(ERT_REL==reloc->type)
+    {
+      rela.r_addend=computeAddend(binary,type,symIdx,reloc->r_offset,reloc->scnIdx);
+    }
+    else
+    {
+      rela.r_addend=reloc->r_addend;
+    }
+
+    //special handling for rodata, because each object has its own rodata
+    //and we're no lumping them all together, we have to increase the addend
+    //to fit where rodata actually goes
+    GElf_Sym sym;
+    if(!gelf_getsym(getDataByERS(binary,ERS_SYMTAB),symIdx,&sym))
+    {death("gelf_getsym failed in writeRelocationsInRange\n");}
+    if(sym.st_shndx==rodataScnIdx)
+    {
+      rela.r_addend+=rodataOffset;//increase it by the amount we're up to
+
+    }
+    //end special handling for rodata
+
+ 
+    rela.r_offset=newRelOffset;
+    printf("adding reloc for offset 0x%x\n",rela.r_offset);
+    addDataToScn(getDataByERS(patch,ERS_RELA_TEXT),&rela,sizeof(Elf32_Rela));
+  }
+  deleteList(relocs,free);
+}
 
 
 void writeCUToDwarf(CompilationUnit* cu)
@@ -261,6 +407,22 @@ void writeVarTransforms(List* varTrans)
   }
 }
 
+void writeNewVarsForCU(CompilationUnit* cuOld,CompilationUnit* cuNew)
+{
+  VarInfo** patchVars=(VarInfo**)dictValues(cuNew->tv->globalVars);
+  Dictionary* oldVars=cuOld->tv->globalVars;
+  VarInfo* var=patchVars[0];
+  for(int i=0;var;i++,var=patchVars[i])
+  {
+    VarInfo* oldVar=dictGet(oldVars,var->name);
+    if(!oldVar)
+    {
+      logprintf(ELL_INFO_V1,ELS_TYPEDIFF,"Found new variable %s\n",var->name);
+      writeVarToDwarf(var,cuNew);
+    }
+  }
+}
+
 List* getTypeTransformationInfoForCU(CompilationUnit* cuOld,CompilationUnit* cuNew)
 {
   List* varTransHead=NULL;
@@ -271,12 +433,11 @@ List* getTypeTransformationInfoForCU(CompilationUnit* cuOld,CompilationUnit* cuN
   #endif
   printf("Examining compilation unit %s\n",cuOld->name);
   VarInfo** vars1=(VarInfo**)dictValues(cuOld->tv->globalVars);
-  //todo: handle addition of variables in the patch
+
   VarInfo* var=vars1[0];
   Dictionary* patchVars=cuNew->tv->globalVars;
   for(int i=0;var;i++,var=vars1[i])
   {
-    printf("Found variable %s \n",var->name);
     VarInfo* patchedVar=dictGet(patchVars,var->name);
     if(!patchedVar)
     {
@@ -350,154 +511,6 @@ List* getTypeTransformationInfoForCU(CompilationUnit* cuOld,CompilationUnit* cuN
   return varTransHead;
 }
 
-
-
-idx_t addSymbolFromBinaryToPatch(ElfInfo* binary,idx_t symIdx)
-{
-  assert(STN_UNDEF!=symIdx);
-  //we expect this function to be called with binary equal to the
-  //ELF object for one of the .o files. There may in fact, however,
-  //be more information about the symbol in the new binary
-
-  symIdx=reindexSymbol(binary,newBinary,symIdx,ESFF_FUZZY_MATCHING_OK);
-  if(STN_UNDEF==symIdx)
-  {
-    death("could not reindex symbol from .o file to newBinary\n");
-  }
-
-  
-  GElf_Sym symInNewBin;
-  getSymbol(newBinary,symIdx,&symInNewBin);
-  char* symname=elf_strptr(newBinary->e, newBinary->strTblIdx,
-                           symInNewBin.st_name);
-  //create a symbol to represent the symbol in newBinary
-  //that this relocation refers to. If we don't already have a corresponding
-  //symbol in the patch file, we may have to add this one
-  Elf32_Sym sym;
-  sym.st_name=addStrtabEntry(symname);
-  sym.st_value=symInNewBin.st_value;
-  sym.st_size=symInNewBin.st_size;
-  sym.st_info=symInNewBin.st_info;
-  int symType=ELF64_ST_TYPE(symInNewBin.st_info);
-  sym.st_shndx=SHN_UNDEF;        
-  if(STT_SECTION==symType)
-  {
-    sym.st_shndx=reindexSectionForPatch(newBinary,symInNewBin.st_shndx);
-  }
-  sym.st_info=ELF32_ST_INFO(ELF64_ST_BIND(symInNewBin.st_info),
-                            symType);
-  sym.st_other=symInNewBin.st_other;
-
-  //we might have already added this same symbol to the patch
-  GElf_Sym gsym=symToGELFSym(sym);
-  int reindex=findSymbol(patch,&gsym,patch,false);
-  if(SHN_UNDEF==reindex)
-  {
-    reindex=addSymtabEntry(getDataByERS(patch,ERS_SYMTAB),&sym);
-  }
-  return reindex;
-}
-
-//segmentBase should be the start of the text that these relocations refer to
-void writeRelocationsInRange(addr_t lowpc,addr_t highpc,Elf_Scn* scn,
-                             addr_t segmentBase,ElfInfo* binary)
-{
-  List* relocs=getRelocationItemsInRange(binary,scn,lowpc,highpc);
-  List* li=relocs;
-  idx_t rodataScnIdx=elf_ndxscn(getSectionByERS(binary,ERS_RODATA));//for special handling of rodata because lump rodata from several binaries into one section
-  for(;li;li=li->next)
-  {
-    //we always use RELA rather than REL in the patch file
-    //because having the addend recorded makes some
-    //things much easier to work with
-    Elf32_Rela rela;//what we actually write to the file
-    RelocInfo* reloc=li->value;
-    //todo: we insert symbols so that the relocations
-    //will be valid, but we need to make sure we don't insert
-    //a single symbol too many times, it wastes space
-    int symIdx=reloc->symIdx;
-    idx_t reindex=addSymbolFromBinaryToPatch(binary,symIdx);
-    
-    //now look at the relocation itself
-    byte type=reloc->relocType;
-    rela.r_offset=reloc->r_offset;
-    addr_t oldRelOffset=rela.r_offset;
-    //now rebase the offset based on where in the data this text is going
-    GElf_Shdr shdr;
-    gelf_getshdr(scn,&shdr);
-    
-    //note: this relies on our current incorrect usage of the offset field
-    //for bookkeeping
-    //todo: don't do that
-    addr_t newRelOffset=rela.r_offset-lowpc+segmentBase;
-
-    //now depending on the type we may have to do some additional fixups
-    switch(type)
-    {
-      case R_386_PC32:
-        {
-          word_t addrAccessed=getWordAtAbs(elf_getscn(binary->e,reloc->scnIdx)
-                                           ,oldRelOffset,IN_MEM);
-          //this is a pc-relative relocation but we're changing the
-          //address of the instruction. If we're not accessing
-          //something inside the current function, then we might think
-          //we actually want the type to be absolute, not relative. The problem
-          //with that is often a R_386_PC32 deals with a value at r_offset
-          //that is not an address itself but an offset from the current address
-          //and we must keep it that way, for example for relative calls
-          //therefore we try to fix things up as best we can, although
-          //in many cases we'll be dealing with something in the PLT,
-          //and it will get relocated properly for that symbol
-          //and we can ignore most of the relocation entry anyway
-          if(addrAccessed < lowpc || addrAccessed > highpc)
-          {
-            addr_t diff=newRelOffset-oldRelOffset;
-            //that doesn't look right, look into this. Why are we writing it
-            setWordAtAbs(elf_getscn(binary->e,reloc->scnIdx),oldRelOffset,addrAccessed+diff,IN_MEM);
-          
-            //we're not just accessing something in the current function
-            //tweak the addend so that even with the new value
-            //we can access the same absolute address, which is what
-            //we really want to do. The text segment will never get
-            //relocated on linux x86 so the reasons for making this
-            //relative in the first place are gone
-            //rela.r_addend=addrAccessed-(newRelOffset+1)-sym.st_value;
-          }
-        }
-        break;
-    }
-
-    rela.r_info=ELF32_R_INFO(reindex,type);
-    
-    if(ERT_REL==reloc->type)
-    {
-      rela.r_addend=computeAddend(binary,type,symIdx,reloc->r_offset,reloc->scnIdx);
-    }
-    else
-    {
-      rela.r_addend=reloc->r_addend;
-    }
-
-    //special handling for rodata, because each object has its own rodata
-    //and we're no lumping them all together, we have to increase the addend
-    //to fit where rodata actually goes
-    GElf_Sym sym;
-    if(!gelf_getsym(getDataByERS(binary,ERS_SYMTAB),symIdx,&sym))
-    {death("gelf_getsym failed in writeRelocationsInRange\n");}
-    if(sym.st_shndx==rodataScnIdx)
-    {
-      rela.r_addend+=rodataOffset;//increase it by the amount we're up to
-
-    }
-    //end special handling for rodata
-
- 
-    rela.r_offset=newRelOffset;
-    printf("adding reloc for offset 0x%x\n",rela.r_offset);
-    addDataToScn(getDataByERS(patch,ERS_RELA_TEXT),&rela,sizeof(Elf32_Rela));
-  }
-  deleteList(relocs,free);
-}
 
 
 void writeFuncTransformationInfoForCU(CompilationUnit* cuOld,CompilationUnit* cuNew)
@@ -618,6 +631,7 @@ void writeTypeAndFuncTransformationInfo(ElfInfo* patchee,ElfInfo* patched)
     List* li=getTypeTransformationInfoForCU(cuOld,cuNew);
     varTransHead=concatLists(varTransHead,varTransTail,li,NULL,&varTransTail);
     writeFuncTransformationInfoForCU(cuOld,cuNew);
+    writeNewVarsForCU(cuOld,cuNew);
 
     printf("completed all transformations for compilation unit %s\n",cuOld->name);
     //freeTransformationInfo(trans);//this was causing memory errors. todo: debug it
