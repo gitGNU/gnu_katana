@@ -53,12 +53,13 @@ ScnInProgress scnInfo[ERS_CNT];
 ElfInfo* patch=NULL;
 Elf* outelf;
 
-void addDataToScn(Elf_Data* dataDest,void* data,int size)
+addr_t addDataToScn(Elf_Data* dataDest,void* data,int size)
 {
   dataDest->d_buf=realloc(dataDest->d_buf,dataDest->d_size+size);
   MALLOC_CHECK(dataDest->d_buf);
   memcpy((byte*)dataDest->d_buf+dataDest->d_size,data,size);
   dataDest->d_size=dataDest->d_size+size;
+  return dataDest->d_size-size;
 }
 
 //adds an entry to the string table, return its offset
@@ -103,11 +104,32 @@ void createSections(Elf* outelf)
   shdr->sh_addralign=1;
   shdr->sh_name=1;//first real entry in the string table
 
-
+  
   
   addStrtabEntry("");//first entry in stringtab null so can have normal unnamed null section
                      //todo: what is the purpose of this?
   addStrtabEntry(".strtab");
+
+  //create the data section
+  //we use this for holding initializers for new variables or for new fields
+  //for existing variables. At present, for simplicity's sake, we have a full
+  //entry in here for data objects we are going to transform although in the future
+  //it might possible make sense to have a bss section for them so they don't take
+  //up too much space in the patch
+  Elf_Scn* scn=scnInfo[ERS_DATA].scn=elf_newscn(outelf);
+
+  Elf_Data* data=scnInfo[ERS_DATA].data=elf_newdata(scn);
+  data->d_align=1;
+  data->d_version=EV_CURRENT;
+  shdr=elf32_getshdr(scn);
+  shdr->sh_type=SHT_PROGBITS;
+  shdr->sh_link=SHN_UNDEF;
+  shdr->sh_info=SHN_UNDEF;
+  shdr->sh_addralign=1;  //todo: should this be word-aligned? It seems
+                         //that it is in the ELF files I've examined,
+                         //but does it have to be?
+  shdr->sh_name=addStrtabEntry(".data.new");
+  
 
   /*
   //now create the patch syms to relocate
@@ -280,11 +302,17 @@ void createSections(Elf* outelf)
 
   //write symbols for sections
   sym.st_info=ELF32_ST_INFO(STB_LOCAL,STT_SECTION);
+  for(int i=0;i<ERS_CNT;i++)
+  {
+    if(scnInfo[i].scn)
+    {
+      sym.st_name=elf32_getshdr(scnInfo[i].scn)->sh_name;
+      sym.st_shndx=elf_ndxscn(scnInfo[i].scn);
+      addSymtabEntry(symtab_data,&sym);
+    }
+  }
   sym.st_name=elf32_getshdr(text_scn)->sh_name;
   sym.st_shndx=elf_ndxscn(text_scn);
-  addSymtabEntry(symtab_data,&sym);
-  sym.st_name=elf32_getshdr(strtab_scn)->sh_name;
-  sym.st_shndx=elf_ndxscn(strtab_scn);
   addSymtabEntry(symtab_data,&sym);
   sym.st_name=elf32_getshdr(symtab_scn)->sh_name;
   sym.st_shndx=elf_ndxscn(symtab_scn);
@@ -302,6 +330,7 @@ void createSections(Elf* outelf)
   patch->sectionIndices[ERS_STRTAB]=elf_ndxscn(strtab_scn);
   patch->sectionIndices[ERS_RODATA]=elf_ndxscn(rodata_scn);
   patch->sectionIndices[ERS_RELA_TEXT]=elf_ndxscn(rela_text_scn);
+  patch->sectionIndices[ERS_DATA]=elf_ndxscn(scnInfo[ERS_DATA].scn);
 }
 
 //must be called before any other routines
@@ -377,14 +406,45 @@ void finalizeDataSizes()
 
 void endPatchElf()
 {
-  #ifdef legacy
+
   finalizeDataSizes();
-  #endif
-  if(elf_update (outelf, ELF_C_WRITE) <0)
+  
+      //don't actually have to reindex symbols because everything is set up with a zero address
+
+  /*
+  if(elf_update (outelf, ELF_C_NULL) <0)
   {
-    fprintf(stderr,"Failed to write out elf file: %s\n",elf_errmsg (-1));
+    death("Failed to write out elf file: %s\n",elf_errmsg (-1));
     exit(1);
   }
+
+
+  //all symbols created so far that were relative to sections
+  //assumed that their sections started at location 0. This obviously
+  //can't be true of all sections. We now relocate the symbols appropriately
+  int numEntries=symtab_data->d_size/sizeof(Elf32_Sym);//todo: diff for 64 bit
+  for(int i=1;i<numEntries;i++)
+  {
+    Elf32_Sym* sym=symtab_data->d_buf+i*sizeof(Elf32_Sym);
+    if(sym->st_shndx!=SHN_UNDEF && sym->st_shndx!=SHN_ABS && sym->st_shndx!=SHN_COMMON)
+    {
+      //symbol needs rebasing
+      Elf_Scn* scn=elf_getscn(outelf,sym->st_shndx);
+      assert(scn);
+      GElf_Shdr shdr;
+      if(!gelf_getshdr(scn,&shdr))
+      {death("gelf_getshdr failed\n");}
+      sym->st_value+=shdr.sh_addr;
+    }
+    }*/
+
+  if(elf_update (outelf, ELF_C_WRITE) <0)
+  {
+    death("Failed to write out elf file: %s\n",elf_errmsg (-1));
+    exit(1);
+  }
+  
+  
   endELF(patch);
   patch_rules_data=patch_expr_data=strtab_data=text_data=rodata_data=rela_text_data=NULL;
   patch_rules_scn=patch_expr_scn=strtab_scn=text_scn=rodata_scn=rela_text_scn=NULL;
