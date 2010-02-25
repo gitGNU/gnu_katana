@@ -13,8 +13,8 @@
 #include "elfparse.h"
 
 addr_t getSymAddress(ElfInfo* e,int symIdx);
-//return false if symbol with the given index doesn't exist
-bool getSymbol(ElfInfo* e,int symIdx,GElf_Sym* outSym);
+//gets the symbol at the given idx, dies if it doesn't exist
+void getSymbol(ElfInfo* e,int symIdx,GElf_Sym* outSym);
 
 typedef enum
 {
@@ -27,7 +27,8 @@ typedef enum
 //find the symbol matching the given symbol
 int findSymbol(ElfInfo* e,GElf_Sym* sym,ElfInfo* ref,int flags);
 
-GElf_Sym symToGELFSym(Elf32_Sym sym);
+GElf_Sym nativeSymToGELFSym(Elf32_Sym sym);
+Elf32_Sym gelfSymToNativeSym(GElf_Sym);
 
 //from an index of a symbol in the old ELF structure,
 //find it's index in the new ELF structure. Return -1 if it cannot be found

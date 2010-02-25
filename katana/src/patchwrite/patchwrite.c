@@ -76,7 +76,7 @@ idx_t addSymbolFromBinaryToPatch(ElfInfo* binary,idx_t symIdx)
   sym.st_other=symInNewBin.st_other;
 
   //we might have already added this same symbol to the patch
-  GElf_Sym gsym=symToGELFSym(sym);
+  GElf_Sym gsym=nativeSymToGELFSym(sym);
   int reindex=findSymbol(patch,&gsym,patch,false);
   if(SHN_UNDEF==reindex)
   {
@@ -381,6 +381,24 @@ void writeTransformationToDwarf(TypeTransform* trans)
   dwarf_insert_fde_inst_bytes(dbg,fde,instrs.numBytes,instrs.instrs,&err);
 }
 
+void writeVarToData(VarInfo* var)
+{
+  //todo: store address within var?
+  int symIdx=getSymtabIdx(newBinary,var->name);
+  if(STN_UNDEF==symIdx)
+  {death("could not get symbol for var %s\n",var->name);}
+  GElf_Sym sym;
+  getSymbol(newBinary,symIdx,&sym);
+  byte* data=getDataAtAbs(getSectionByERS(newBinary,ERS_DATA),sym.st_value,IN_MEM);
+  addr_t addr=addDataToScn(getDataByERS(patch,ERS_DATA),data,var->type->length);
+  //now we must create a symbol for it as well
+  Elf32_Sym symNew=gelfSymToNativeSym(sym);
+  symNew.st_name=addStrtabEntry(var->name);
+  symNew.st_value=addr;//will get relocated later once the data section in the patch has a fixed address
+  symNew.st_shndx=elf_ndxscn(getSectionByERS(patch,ERS_DATA));
+  addSymtabEntry(getDataByERS(patch,ERS_SYMTAB),&symNew);
+}
+
 //takes a list of var transformations and actually constructs the ELF sections
 void writeVarTransforms(List* varTrans)
 {
@@ -389,6 +407,7 @@ void writeVarTransforms(List* varTrans)
   {
     VarTransformation* vt=li->value;
     writeVarToDwarf(vt->var,vt->cu);
+    writeVarToData(vt->var);
     writeTransformationToDwarf(vt->transform);
     printf("writing transformation for var %s\n",vt->var->name);
     /*
@@ -419,6 +438,7 @@ void writeNewVarsForCU(CompilationUnit* cuOld,CompilationUnit* cuNew)
     {
       logprintf(ELL_INFO_V1,ELS_TYPEDIFF,"Found new variable %s\n",var->name);
       writeVarToDwarf(var,cuNew);
+      writeVarToData(var);
     }
   }
 }
@@ -584,8 +604,8 @@ void writeTypeAndFuncTransformationInfo(ElfInfo* patchee,ElfInfo* patched)
 {
   DwarfInfo* diPatchee=patchee->dwarfInfo;
   DwarfInfo* diPatched=patched->dwarfInfo;
-  List* varTransHead=NULL;
-  List* varTransTail=NULL;
+  //  List* varTransHead=NULL;
+  //  List* varTransTail=NULL;
   
       //todo: handle addition of variables and also handle
   //      things moving between compilation units,
@@ -629,15 +649,18 @@ void writeTypeAndFuncTransformationInfo(ElfInfo* patchee,ElfInfo* patched)
     cuOld->presentInOtherVersion=true;
     cuNew->presentInOtherVersion=true;
     List* li=getTypeTransformationInfoForCU(cuOld,cuNew);
-    varTransHead=concatLists(varTransHead,varTransTail,li,NULL,&varTransTail);
-    writeFuncTransformationInfoForCU(cuOld,cuNew);
+    //varTransHead=concatLists(varTransHead,varTransTail,li,NULL,&varTransTail);
     writeNewVarsForCU(cuOld,cuNew);
+    writeVarTransforms(li);
+    //note that this must be done after dealing with the data
+    //so that dealing with the data writes out the appropriate symbols
+    writeFuncTransformationInfoForCU(cuOld,cuNew);
+
 
     printf("completed all transformations for compilation unit %s\n",cuOld->name);
     //freeTransformationInfo(trans);//this was causing memory errors. todo: debug it
     //I think it's needed for writeVarTransforms later. Should do reference counting
   }
-  writeVarTransforms(varTransHead);
 }
 
 //takes an elf object that only has a pached version, no patchee version
@@ -742,6 +765,8 @@ void writePatch(char* oldSourceTree,char* newSourceTree,char* oldBinName,char* n
     data->d_buf=zmalloc(length);
     memcpy(data->d_buf,buf,length);
   }
+
+  
 
   endPatchElf();
   printf("wrote elf file %s\n",patchOutName);

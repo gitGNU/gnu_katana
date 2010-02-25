@@ -13,10 +13,13 @@
 #include <string.h>
 #include "patcher/versioning.h"
 
-bool getSymbol(ElfInfo* e,int symIdx,GElf_Sym* outSym)
+void getSymbol(ElfInfo* e,int symIdx,GElf_Sym* outSym)
 {
   Elf_Data* symTabData=getDataByERS(e,ERS_SYMTAB);
-  return gelf_getsym(symTabData,symIdx,outSym);
+  if(!gelf_getsym(symTabData,symIdx,outSym))
+  {
+    death("gelf_getsym failed trying to get symbol at index %i\n",symIdx);
+  }
 }
 
 addr_t getSymAddress(ElfInfo* e,int symIdx)
@@ -70,7 +73,7 @@ int findSymbol(ElfInfo* e,GElf_Sym* sym,ElfInfo* ref,int flags)
   for (int i = 1; i < numEntries; ++i)
   {
     Elf32_Sym sym2;
-    //get the symbol in an unsave manner because
+    //get the symbol in an unsafe manner because
     //we may be getting it from a data buffer we're in the process of filling
     memcpy(&sym2,symTabData->d_buf+i*sizeof(Elf32_Sym),sizeof(Elf32_Sym));
     char* symname=(*getstrfunc)(e, sym2.st_name);
@@ -175,7 +178,7 @@ int findSymbol(ElfInfo* e,GElf_Sym* sym,ElfInfo* ref,int flags)
   return STN_UNDEF;
 }
 
-GElf_Sym symToGELFSym(Elf32_Sym sym)
+GElf_Sym nativeSymToGELFSym(Elf32_Sym sym)
 {
   GElf_Sym res;
   res.st_name=sym.st_name;
@@ -183,6 +186,20 @@ GElf_Sym symToGELFSym(Elf32_Sym sym)
   res.st_size=sym.st_size;
   res.st_info=ELF64_ST_INFO(ELF32_ST_BIND(sym.st_info),
                             ELF32_ST_TYPE(sym.st_info));
+  res.st_other=sym.st_other;
+  res.st_shndx=sym.st_shndx;
+  return res;
+}
+
+
+Elf32_Sym gelfSymToNativeSym(GElf_Sym sym)
+{
+  Elf32_Sym res;
+  res.st_name=sym.st_name;
+  res.st_value=sym.st_value;
+  res.st_size=sym.st_size;
+  res.st_info=ELF32_ST_INFO(ELF64_ST_BIND(sym.st_info),
+                            ELF64_ST_TYPE(sym.st_info));
   res.st_other=sym.st_other;
   res.st_shndx=sym.st_shndx;
   return res;
@@ -200,10 +217,7 @@ int reindexSymbol(ElfInfo* old,ElfInfo* new,int oldIdx,int flags)
   GElf_Sym sym;
   //todo: in the future we could match on other things beside name
   //in case name was duplicated for some reason
-  if(!getSymbol(old,oldIdx,&sym))
-  {
-    death("invalid symbol index in reindexSymbol\n");
-  }
+  getSymbol(old,oldIdx,&sym);
 
   //do it once first without fuzzy matching
   //because always prefer exact match
@@ -283,3 +297,5 @@ int getSymtabIdx(ElfInfo* e,char* symbolName)
   logprintf(ELL_INFO_V1,ELS_SYMBOL,"Symbol '%s' not defined yet. This may or may not be a problem\n",symbolName);
   return STN_UNDEF;
 }
+
+

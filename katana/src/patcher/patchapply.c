@@ -26,6 +26,7 @@ ElfInfo* targetBin=NULL;
 addr_t patchTextAddr=0;
 addr_t patchRodataAddr=0;
 addr_t patchRelTextAddr=0;
+addr_t patchDataAddr=0;
 
 void allocateMemoryForVarRelocation(VarInfo* var,TransformationInfo* trans)
 {
@@ -365,8 +366,8 @@ void fixupPatchRelocations(ElfInfo* patch)
     int symIdx=ELF32_R_SYM(rela->r_info);
     int type=ELF32_R_TYPE(rela->r_info);
     GElf_Sym sym;
-    if(!getSymbol(patch,symIdx,&sym))
-    {death("getSymbol failed in readAndApplyPatch\n");}
+    getSymbol(patch,symIdx,&sym);
+
     int flags=ESFF_MANGLED_OK;
     if(ELF64_ST_TYPE(sym.st_info)!=STT_SECTION)
     {
@@ -450,6 +451,8 @@ void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch)
 
   //map in entirety of .rodata.new
   patchRodataAddr=copyInEntireSection(patch,".rodata.new",&trans);
+
+  patchDataAddr=copyInEntireSection(patch,".data.new",&trans);
   
   writeOutPatchedBin(false);
 
@@ -463,11 +466,11 @@ void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch)
     VarInfo** vars=(VarInfo**) dictValues(cu->tv->globalVars);
     for(int i=0;vars[i];i++)
     {
-      GElf_Sym sym;
       //todo: return value checking
       int idx=getSymtabIdx(targetBin,vars[i]->name);
       if(idx!=STN_UNDEF)
       {
+        GElf_Sym sym;
         //todo: should make space for the variable in .data.new or something
         getSymbol(targetBin,idx,&sym);
         vars[i]->oldLocation=sym.st_value;
@@ -486,14 +489,13 @@ void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch)
       else
       {
         logprintf(ELL_INFO_V1,ELS_PATCHAPPLY,"Creating new variable %s\n",vars[i]->name);
-                
-        size_t length=vars[i]->type->length;
-        //we have to create a new variable
-        addr_t addr=getFreeSpaceForTransformation(&trans,length);
-        //todo: allow custom initializers, possible
-        //through a dwarf attribute that specifies a default value
-        byte* buf=zmalloc(length);
-        memcpyToTarget(addr,buf,length);
+        int symIdxInPatch=getSymtabIdx(patch,vars[i]->name);
+        if(STN_UNDEF==symIdxInPatch)
+        {
+          death("patch symbol table didn't have symbol for new variable %s\n",vars[i]->name);
+        }
+        GElf_Sym symInPatch;
+        getSymbol(patch,symIdxInPatch,&symInPatch);
         //create a symbol for our variable
         //todo: really should abstract this out
         Elf32_Sym sym;
@@ -501,8 +503,8 @@ void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch)
         //todo: might not always be the case that it's global
         sym.st_info=ELF32_ST_INFO(STB_GLOBAL,STT_OBJECT);
         sym.st_name=addStrtabEntryToExisting(patchedBin,vars[i]->name,false);
-        sym.st_shndx=SHN_UNDEF;//todo: should put it in .data.new or something
-        sym.st_value=addr;
+        sym.st_shndx=elf_ndxscn(getSectionByName(patchedBin,".data.new"));
+        sym.st_value=patchDataAddr+symInPatch.st_value;
         addSymtabEntryToExisting(patchedBin,&sym);
       }
     }
