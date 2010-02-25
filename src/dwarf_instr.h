@@ -69,6 +69,10 @@ void printInstruction(RegInstruction inst);
 //LEB128 operands, the first is a register number to be assigned, the
 //second is a register to use as the "CURR_TARG_OLD" during the fixup,
 //and the third is an FDE number (index of the FDE to use for fixups)
-#define DW_CFA_KATANA_do_fixups DW_CFA_lo_user+0x5
+#define DW_CFA_KATANA_fixups DW_CFA_lo_user+0x5
+
+//same thing except it is understood that the register to be assigned actually
+//corresponds to a pointer to a type given by the index of the FDE
+#define DW_CFA_KATANA_fixups_pointer DW_CFA_lo_user+0x6
 
 #endif

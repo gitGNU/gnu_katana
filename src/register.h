@@ -36,7 +36,7 @@ static inline bool isPoRegType(byte b)
 typedef struct
 {
   E_REG_TYPE type;
-  byte size;//used for ERT_CURR_TARG_*
+  word_t size;//used for ERT_CURR_TARG_*
   union
   {
     int offset;//for ERT_CURR_TARG_*, ERT_EXPR
@@ -59,7 +59,8 @@ typedef enum
   ERRT_REGISTER,
   ERRT_CFA,
   ERRT_EXPR,
-  ERRT_RECURSE_FIXUP
+  ERRT_RECURSE_FIXUP,
+  ERRT_RECURSE_FIXUP_POINTER
 } E_REG_RULE_TYPE;
 
 typedef struct

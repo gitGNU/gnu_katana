@@ -28,11 +28,13 @@ PoReg readRegFromLEB128(byte* leb,usint* bytesRead)
   {
   case ERT_CURR_TARG_NEW:
   case ERT_CURR_TARG_OLD:
-    assert(6==numBytes);//todo: diff for 64bit
-    result.size=bytes[1];
-    memcpy(&result.u.offset,bytes+2,4);
+    assert(numBytes>=1+sizeof(word_t) && numBytes<=1+2*sizeof(word_t));
+    memcpy(&result.size,bytes+1,sizeof(word_t));
+    result.u.offset=0;
+    memcpy(&result.u.offset,bytes+1+sizeof(word_t),min(numBytes-1-sizeof(word_t),sizeof(word_t)));
     break;
   case ERT_EXPR:
+    //todo: I forget what I was doing here
     assert(5==numBytes);//todo: diff for 64bit
     result.size=0;//not used
     memcpy(&result.u.offset,bytes+1,4);
@@ -183,6 +185,9 @@ void printRule(PoRegRule rule,int regnum)
     break;
   case ERRT_RECURSE_FIXUP:
     printf("%s = recurse fixup with FDE#%i based at %s\n",regStr,rule.index,strForReg(rule.regRH));
+    break;
+  case ERRT_RECURSE_FIXUP_POINTER:
+    printf("%s = recurse fixup pointer with FDE#%i based at %s\n",regStr,rule.index,strForReg(rule.regRH));
     break;
   default:
     death("unknown rule type\n");

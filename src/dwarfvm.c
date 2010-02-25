@@ -88,10 +88,16 @@ void evaluateInstructions(RegInstruction* instrs,int numInstrs,Dictionary* rules
       cfaRule->type=ERRT_CFA;
       cfaRule->offset=inst.arg1;
       break;
-    case DW_CFA_KATANA_do_fixups:
+    case DW_CFA_KATANA_fixups:
       rule->type=ERRT_RECURSE_FIXUP;
       rule->regRH=inst.arg2Reg;
       rule->index=inst.arg3;
+      break;
+    case DW_CFA_KATANA_fixups_pointer:
+      rule->type=ERRT_RECURSE_FIXUP_POINTER;
+      rule->regRH=inst.arg2Reg;
+      rule->index=inst.arg3;
+      break;
     case DW_CFA_nop:
       //do nothing, nothing changed
       break;
@@ -164,7 +170,6 @@ List* makePatchData(PoRegRule* rule,SpecialRegsState* state,ElfInfo* patch)
       SpecialRegsState tmpState=*state;
       tmpState.currAddrNew=resultAddr;
       byte* rhAddrBytes=NULL;
-      //pass true because don't want to dereference it
       int size=resolveRegisterValue(&rule->regRH,state,&rhAddrBytes,ERRF_NONE);
       assert(size==sizeof(addr_t));
       memcpy(&tmpState.currAddrOld,rhAddrBytes,sizeof(addr_t));
