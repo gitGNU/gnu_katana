@@ -78,4 +78,5 @@ void loggingDefaults()
   sourceEnables[ELS_SOURCETREE]=ELL_CNT;
   sourceEnables[ELS_SYMBOL]=ELL_INFO_V1;
   sourceEnables[ELS_RELOCATION]=ELL_CNT;
+  sourceEnables[ELS_PATCHAPPLY]=ELL_CNT;
 }
