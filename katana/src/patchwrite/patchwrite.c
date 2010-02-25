@@ -311,6 +311,7 @@ void writeVarToDwarf(VarInfo* var,CompilationUnit* cu)
   cu->lastDie=die;
 }
 
+
 void writeTransformationToDwarf(TypeTransform* trans)
 {
   if(trans->onDisk)
@@ -325,57 +326,88 @@ void writeTransformationToDwarf(TypeTransform* trans)
   trans->fdeIdx=dwarf_add_frame_fde(dbg,fde,trans->to->die,cie,0,0,0,&err);
   DwarfInstructions instrs;
   memset(&instrs,0,sizeof(DwarfInstructions));
-  int oldBytesSoFar=0;
-  for(int i=0;i<trans->from->numFields;i++)
+  if(trans->straightCopy)
   {
     DwarfInstruction inst;
-    int off=trans->fieldOffsets[i];
-    int size=trans->from->fieldTypes[i]->length;
-    E_FIELD_TRANSFORM_TYPE transformType=trans->fieldTransformTypes[i];
-
-    if(EFTT_DELETE==transformType)
-    {
-      logprintf(ELL_INFO_V3,ELS_DWARF_FRAME,"not addingfield to fde\n");
-      oldBytesSoFar+=trans->from->fieldLengths[i];
-      continue;
-    }
-    byte bytes[6];
+    inst.opcode=DW_CFA_register;
+    byte bytes[1+sizeof(word_t)];
     bytes[0]=ERT_CURR_TARG_NEW;
-    assert(size<256);
-    bytes[1]=(byte)size;
-    //todo: waste of space, whole point of LEB128, could put this in one
-    //byte instead of 4 most of the time
-    assert(sizeof(int)==4);
-    logprintf(ELL_INFO_V3,ELS_DWARF_FRAME,"field offset for field %i is %i\n",i,off);
-    memcpy(bytes+2,&off,4);
-    inst.arg1Bytes=encodeAsLEB128(bytes,6,false,&inst.arg1NumBytes);
+    assert(trans->from->length==trans->to->length);
+    memcpy(bytes+1,&trans->from->length,sizeof(word_t));
+    //offset on the register is always 0, doing a complete copy of everything
+    inst.arg1Bytes=encodeAsLEB128(bytes,1+sizeof(word_t),false,&inst.arg1NumBytes);
     bytes[0]=ERT_CURR_TARG_OLD;
-    memcpy(bytes+2,&oldBytesSoFar,4);
-    inst.arg2Bytes=encodeAsLEB128(bytes,6,false,&inst.arg2NumBytes);
-    if(EFTT_RECURSE==transformType)
+    inst.arg2Bytes=encodeAsLEB128(bytes,1+sizeof(word_t),false,&inst.arg2NumBytes);
+    addInstruction(&instrs,&inst);
+    free(inst.arg1Bytes);
+    free(inst.arg2Bytes);
+  }
+  else //look at structure, not just straight copy
+  {
+    int oldBytesSoFar=0;
+    for(int i=0;i<trans->from->numFields;i++)
     {
-      logprintf(ELL_INFO_V3,ELS_DWARF_FRAME,"adding recurse field to fde\n");
-      inst.opcode=DW_CFA_KATANA_do_fixups;
-      if(!trans->from->fieldTypes[i]->transformer->onDisk)
+      DwarfInstruction inst;
+      int off=trans->fieldOffsets[i];
+      int size=trans->from->fieldTypes[i]->length;
+      E_FIELD_TRANSFORM_TYPE transformType=trans->fieldTransformTypes[i];
+
+      if(EFTT_DELETE==transformType)
       {
-        writeTransformationToDwarf(trans->from->fieldTypes[i]->transformer);
+        logprintf(ELL_INFO_V3,ELS_DWARF_FRAME,"not addingfield to fde\n");
+        oldBytesSoFar+=trans->from->fieldLengths[i];
+        continue;
       }
-      Dwarf_Unsigned fdeIdx=trans->from->fieldTypes[i]->transformer->fdeIdx;
-      inst.arg3=fdeIdx;//might as well make both valid
-      inst.arg3Bytes=encodeAsLEB128((byte*)&fdeIdx,sizeof(fdeIdx),false,&inst.arg3NumBytes);
+#define NUM_BYTES 1+2*sizeof(word_t)
+      byte bytes[NUM_BYTES];
+      bytes[0]=ERT_CURR_TARG_NEW;
+      memcpy(bytes+1,&size,sizeof(word_t));
+      //todo: waste of space, whole point of LEB128, could put this in one
+      //byte instead of 4 most of the time
+      logprintf(ELL_INFO_V3,ELS_DWARF_FRAME,"field offset for field %i is %i\n",i,off);
+      memcpy(bytes+1+sizeof(word_t),&off,sizeof(word_t));
+      inst.arg1Bytes=encodeAsLEB128(bytes,NUM_BYTES,false,&inst.arg1NumBytes);
+      bytes[0]=ERT_CURR_TARG_OLD;
+      memcpy(bytes+1+sizeof(word_t),&oldBytesSoFar,sizeof(word_t));
+      inst.arg2Bytes=encodeAsLEB128(bytes,NUM_BYTES,false,&inst.arg2NumBytes);
+      if(EFTT_RECURSE==transformType)
+      {
+        logprintf(ELL_INFO_V3,ELS_DWARF_FRAME,"adding recurse field to fde\n");
+        TypeInfo* fieldTypeFrom=trans->from->fieldTypes[i];
+        TypeTransform* transformer=NULL;
+        if(TT_POINTER==fieldTypeFrom->type)
+        {
+          inst.opcode=DW_CFA_KATANA_fixups_pointer;
+          assert(fieldTypeFrom->pointedType);
+          transformer=fieldTypeFrom->pointedType->transformer;
+        }
+        else
+        {
+          inst.opcode=DW_CFA_KATANA_fixups;
+          transformer=fieldTypeFrom->transformer;
+        }
+        assert(transformer);
+        if(!transformer->onDisk)
+        {
+          writeTransformationToDwarf(transformer);
+        }
+        Dwarf_Unsigned fdeIdx=transformer->fdeIdx;
+        inst.arg3=fdeIdx;//might as well make both valid
+        inst.arg3Bytes=encodeAsLEB128((byte*)&fdeIdx,sizeof(fdeIdx),false,&inst.arg3NumBytes);
+        addInstruction(&instrs,&inst);
+        free(inst.arg1Bytes);
+        oldBytesSoFar+=trans->from->fieldLengths[i];
+        continue;
+      }
+      logprintf(ELL_INFO_V3,ELS_DWARF_FRAME,"adding normal field to fde\n");
+      //transforming a struct with fields that are base types, nice and easy
+      inst.opcode=DW_CFA_register;
+    
       addInstruction(&instrs,&inst);
       free(inst.arg1Bytes);
       oldBytesSoFar+=trans->from->fieldLengths[i];
-      continue;
-    }
-    logprintf(ELL_INFO_V3,ELS_DWARF_FRAME,"adding normal field to fde\n");
-    //transforming a struct with fields that are base types, nice and easy
-    inst.opcode=DW_CFA_register;
-    
-    addInstruction(&instrs,&inst);
-    free(inst.arg1Bytes);
-    oldBytesSoFar+=trans->from->fieldLengths[i];
 
+    }
   }
   printf("adding %i bytes to fde\n",instrs.numBytes);
   dwarf_insert_fde_inst_bytes(dbg,fde,instrs.numBytes,instrs.instrs,&err);
@@ -389,7 +421,23 @@ void writeVarToData(VarInfo* var)
   {death("could not get symbol for var %s\n",var->name);}
   GElf_Sym sym;
   getSymbol(newBinary,symIdx,&sym);
-  byte* data=getDataAtAbs(getSectionByERS(newBinary,ERS_DATA),sym.st_value,IN_MEM);
+  Elf_Scn* scn=elf_getscn(newBinary->e,sym.st_shndx);
+  GElf_Shdr shdr;
+  if(!gelf_getshdr(scn,&shdr))
+  {death("gelf_shdr failed\n");}
+  byte* data=NULL;
+  if(shdr.sh_type==SHT_PROGBITS)
+  {
+    data=getDataAtAbs(scn,sym.st_value,IN_MEM);
+  }
+  else if(shdr.sh_type==SHT_NOBITS)
+  {
+    data=zmalloc(var->type->length);
+  }
+  else
+  {
+    death("variable lives in unexpected section\n");
+  }
   addr_t addr=addDataToScn(getDataByERS(patch,ERS_DATA),data,var->type->length);
   //now we must create a symbol for it as well
   Elf32_Sym symNew=gelfSymToNativeSym(sym);

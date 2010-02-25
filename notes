@@ -751,7 +751,7 @@ to be the case.
     |               | into the .patch_expr               | executed              |                    |
     |               | section                            |                       |                    |
     |---------------+------------------------------------+-----------------------+--------------------|
-    | CURR_TARG_OLD | the first byte determines          | the values in memory  |                    |
+    | CURR_TARG_OLD | the first 4 bytes determine        | the values in memory  |                    |
     |               | the size of the region addressed.  | of dereferencing      |                    |
     |               | The following bytes specify an     | the current object +  |                    |
     |               | offset from the old address of the | offset                |                    |
