@@ -33,7 +33,8 @@ typedef enum
   ERS_REL_PLT,
   ERS_DYNSYM,
   ERS_DYNSTR,
-  ERS_CNT
+  ERS_CNT,
+  ERS_INVALID
 } E_RECOGNIZED_SECTION;
 
 typedef struct ElfInfo
