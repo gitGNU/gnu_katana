@@ -5,6 +5,8 @@
 
 import subprocess,sys,os,os.path,time,string
 
+proc=None
+
 def cleanup():
   hotlogf.close()
   hotlogerrf.close()
@@ -76,7 +78,17 @@ hotlogf.close()
 #sleep for a moment to let the process print out new values now that
 #it's been patched
 time.sleep(0.5)
+if proc.poll():
+  logf.close()
+  vlogf.write("Validator failed because the target program crashed\n")
+  vlogf.close()
+  space=string.join([' ' for x in range(0,5)],'')
+  sys.stdout.write(space)
+  sys.exit(1)
 proc.terminate() #kill it
+dots=string.join(['.' for x in range(0,5)],'')
+sys.stdout.write(dots)
+sys.stdout.flush()
 oldstdout=sys.stdout
 oldstderr=sys.stderr
 sys.stdout=vlogf
@@ -88,12 +100,7 @@ if not result:
   logf.close()
   vlogf.write("Validator failed because output from target program was unexpected\n")
   vlogf.close()
-  space=string.join([' ' for x in range(0,5)],'')
-  sys.stdout.write(space)
   sys.exit(1)
 
-dots=string.join(['.' for x in range(0,5)],'')
-sys.stdout.write(dots)
-sys.stdout.flush()
 logf.close()
 
