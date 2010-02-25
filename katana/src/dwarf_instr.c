@@ -227,9 +227,10 @@ void addInstruction(DwarfInstructions* instrs,DwarfInstruction* instr)
     addBytes(instrs,bytes,1+instr->arg1NumBytes+instr->arg2NumBytes);
     break;
 
-    //we can take care of all instructions taking two operands both of which
-    //are either LEB128 or DW_FORM_block
-  case DW_CFA_KATANA_do_fixups:
+  //we can take care of all instructions taking three operands all of which
+  //are either LEB128 or DW_FORM_block
+  case DW_CFA_KATANA_fixups:
+  case DW_CFA_KATANA_fixups_pointer:
     bytes=zmalloc(1+instr->arg1NumBytes+instr->arg2NumBytes+instr->arg3NumBytes);
     bytes[0]=instr->opcode;
     memcpy(bytes+1,instr->arg1Bytes,instr->arg1NumBytes);
@@ -312,8 +313,12 @@ void printInstruction(RegInstruction inst)
     }
     printf("\n");
     break;
-  case DW_CFA_KATANA_do_fixups:
-    printf("DW_CFA_KATANA_do_fixups ");
+  case DW_CFA_KATANA_fixups:
+    printf("DW_CFA_KATANA_fixups ");
+  case DW_CFA_KATANA_fixups_pointer:
+    {
+      printf("DW_CFA_KATANA_fixups_pointer ");
+    }
     if(ERT_NONE==inst.arg1Reg.type)
     {
       printf("r%i ",inst.arg1);

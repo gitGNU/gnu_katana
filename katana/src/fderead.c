@@ -111,8 +111,9 @@ RegInstruction* parseFDEInstructions(Dwarf_Debug dbg,unsigned char* bytes,int le
         bytes+=uleblen;
         len-=uleblen;
         break;
-      case DW_CFA_KATANA_do_fixups:
-        logprintf(ELL_INFO_V2,ELS_DWARF_FRAME,"Reading CW_CFA_KATANA_do_fixups\n");
+      case DW_CFA_KATANA_fixups:
+      case DW_CFA_KATANA_fixups_pointer:
+        logprintf(ELL_INFO_V2,ELS_DWARF_FRAME,"Reading CW_CFA_KATANA_fixups or DW_CFA_KATANA_fixups_pointer\n");
         if(isPoRegType(bytes[1]))
         {
           result[*numInstrs].arg1Reg=readRegFromLEB128(bytes + 1,&uleblen);
@@ -166,7 +167,6 @@ RegInstruction* parseFDEInstructions(Dwarf_Debug dbg,unsigned char* bytes,int le
         bytes+=uleblen;
         len-=uleblen;
         break;
-
       case DW_CFA_def_cfa_offset:
         result[*numInstrs].arg1=leb128ToUInt(bytes + 1, &uleblen);
         bytes+=uleblen;
