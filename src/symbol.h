@@ -33,5 +33,6 @@ GElf_Sym symToGELFSym(Elf32_Sym sym);
 //find it's index in the new ELF structure. Return -1 if it cannot be found
 int reindexSymbol(ElfInfo* old,ElfInfo* new,int oldIdx,int flags);
 
+int getSymtabIdx(ElfInfo* e,char* symbolName);
 #endif
 
