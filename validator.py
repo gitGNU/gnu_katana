@@ -5,6 +5,14 @@
 
 import subprocess,sys,os,os.path,time,string
 
+def cleanup():
+  hotlogf.close()
+  hotlogerrf.close()
+  vlogf.close()
+  if proc:
+    proc.terminate() #kill it if it is still active
+  sys.stdout.flush()
+
 vlogf=open("validator_log","a")
 
 if len(sys.argv)!=2:
@@ -36,11 +44,15 @@ args=["./katana","-g","-o",patchOut,oldTree,newTree,execName]
 vlogf.write("running:\n "+string.join(args," ")+"\n")
 kproc=subprocess.Popen(args,stdout=hotlogf,stderr=hotlogerrf)
 if 0!=kproc.wait():
-  hotlogf.close()
-  hotlogerrf.close()
   vlogf.write("Validator failed because katana exited with failure while generating patch.\nSee "+klogfname+" and "+klogerrfname+" for more information\n")
-  vlogf.close()
+  space=string.join([' ' for x in range(0,22)],'')
+  sys.stdout.write(space)
+  cleanup()
   sys.exit(1)
+
+
+sys.stdout.write("...gen...|")
+sys.stdout.flush()
 
 proc=subprocess.Popen([os.path.join(oldTree,execName)],stdout=logf)
 #sleep for a moment to let the process run
@@ -51,12 +63,15 @@ vlogf.write("running "+string.join(args," ")+"\n")
 kproc=subprocess.Popen(args,stdout=hotlogf,stderr=hotlogerrf)
 
 if 0!=kproc.wait():
-  hotlogf.close()
-  hotlogerrf.close()
   vlogf.write("Validator failed because katana exited with failure while applying patch.\nSee "+klogfname+" and "+klogerrfname+" for more information\n")
-  proc.terminate() #kill it
-  vlogf.close()
+  space=string.join([' ' for x in range(0,17)],'')
+  sys.stdout.write(space)
+  cleanup()
   sys.exit(1)
+
+sys.stdout.write("...patch...|")
+sys.stdout.flush()
+  
 hotlogf.close()
 #sleep for a moment to let the process print out new values now that
 #it's been patched
@@ -73,7 +88,12 @@ if not result:
   logf.close()
   vlogf.write("Validator failed because output from target program was unexpected\n")
   vlogf.close()
+  space=string.join([' ' for x in range(0,5)],'')
+  sys.stdout.write(space)
   sys.exit(1)
 
+dots=string.join(['.' for x in range(0,5)],'')
+sys.stdout.write(dots)
+sys.stdout.flush()
 logf.close()
 

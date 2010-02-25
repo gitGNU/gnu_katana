@@ -18,8 +18,8 @@ if os.path.exists("validator_log"):
 
 def runTestInDir(dir):
   msg="running test "+os.path.basename(dir)
-  dots=string.join(['.' for x in range(0,50-len(msg))],'')
-  sys.stdout.write(msg+dots)
+  dots=string.join(['.' for x in range(0,35-len(msg))],'')
+  sys.stdout.write(msg+dots+'|')
   sys.stdout.flush()
   if 0==subprocess.call(["python","validator.py",dir]):
     sys.stdout.write("PASSED\n")
