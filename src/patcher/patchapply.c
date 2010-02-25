@@ -19,7 +19,8 @@
 #include "versioning.h"
 #include <assert.h>
 #include "symbol.h"
-
+#include "util/logging.h"
+ 
 ElfInfo* patchedBin=NULL;
 ElfInfo* targetBin=NULL;
 addr_t patchTextAddr=0;
@@ -338,56 +339,9 @@ void writeOutPatchedBin(bool flushToDisk)
   }
 }
 
-void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch)
+
+void fixupPatchRelocations(ElfInfo* patch)
 {
-  startPtrace();
-  targetBin=targetBin_;
-  //we create an on-disk version of the patched binary
-  //setting this up is much easier than modifying the in-memory ELF
-  //structures. It does, however, allow us to write an accurate symbol table,
-  //relocation info, etc. This allows applying a patch to
-  //an executable that's already had a patch applied to it.
-  int version=calculateVersionAfterPatch(pid,patch);
-  char* dir=createKatanaDirs(pid,version);
-  char patchedBinFname[256];
-  snprintf(patchedBinFname,256,"%s/exe",dir);
-  free(dir);
-  elf_flagelf(targetBin->e,ELF_C_SET,ELF_F_LAYOUT);
-  patchedBin=duplicateElf(targetBin,patchedBinFname,false,true);
-  
-  elf_flagelf(patchedBin->e,ELF_C_SET,ELF_F_LAYOUT);//we assume all responsibility
-  //for layout. For some reason libelf seems to have issues with some of the program
-  //headers such that the program can't execute if we don't do this.
-  //I suspect either a bug in libelf or something wrong with my own usage, but
-  //I have no idea what I might be doing wrong and don't have the patience to debug libelf
-  //right now, so we'll just work around this by doing layout manually
-  //see http://uw713doc.sco.com/en/man/html.3elf/elf_update.3elf.html (or some
-  //other manpage on elf_update) for a description of what we now
-  //have to take care of manually
-  //note: this actually isn't working, I can't get the ELF
-  //file written out in such a way that it executes. I need to figure
-  //this out more
-
-  //go through variables in the patch file and apply their fixups
-  //todo: we're assuming for now that symbols in the binary the patch was generated
-  //with and in the target binary are going to have the same values
-  //this isn't necessarily going to be the case
-  DwarfInfo* diPatch=readDWARFTypes(patch);
-  Map* fdeMap=readDebugFrame(patch);//get mapping between fde offsets and fde structures
-
-  TransformationInfo trans;
-  memset(&trans,0,sizeof(trans));
-
-  
-  //map in the entirety of .text.new
-  patchTextAddr=copyInEntireSection(patch,".text.new",&trans);
-
-  //map in entirety of .rodata.new
-  patchRodataAddr=copyInEntireSection(patch,".rodata.new",&trans);
-  
-  writeOutPatchedBin(false);
-
-  
   Elf_Scn* relTextScn=getSectionByName(patch,".rela.text.new");
   //go through and reindex all of the symbols
   Elf_Data* data=elf_getdata(relTextScn,NULL);
@@ -448,8 +402,56 @@ void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch)
     }
     rela->r_offset=newOffset;
   }
+}
+
+void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch)
+{
+  startPtrace();
+  targetBin=targetBin_;
+  //we create an on-disk version of the patched binary
+  //setting this up is much easier than modifying the in-memory ELF
+  //structures. It does, however, allow us to write an accurate symbol table,
+  //relocation info, etc. This allows applying a patch to
+  //an executable that's already had a patch applied to it.
+  int version=calculateVersionAfterPatch(pid,patch);
+  char* dir=createKatanaDirs(pid,version);
+  char patchedBinFname[256];
+  snprintf(patchedBinFname,256,"%s/exe",dir);
+  free(dir);
+  elf_flagelf(targetBin->e,ELF_C_SET,ELF_F_LAYOUT);
+  patchedBin=duplicateElf(targetBin,patchedBinFname,false,true);
   
-  patchRelTextAddr=copyInEntireSection(patch,".rela.text.new",&trans);
+  elf_flagelf(patchedBin->e,ELF_C_SET,ELF_F_LAYOUT);//we assume all responsibility
+  //for layout. For some reason libelf seems to have issues with some of the program
+  //headers such that the program can't execute if we don't do this.
+  //I suspect either a bug in libelf or something wrong with my own usage, but
+  //I have no idea what I might be doing wrong and don't have the patience to debug libelf
+  //right now, so we'll just work around this by doing layout manually
+  //see http://uw713doc.sco.com/en/man/html.3elf/elf_update.3elf.html (or some
+  //other manpage on elf_update) for a description of what we now
+  //have to take care of manually
+  //note: this actually isn't working, I can't get the ELF
+  //file written out in such a way that it executes. I need to figure
+  //this out more
+
+  //go through variables in the patch file and apply their fixups
+  //todo: we're assuming for now that symbols in the binary the patch was generated
+  //with and in the target binary are going to have the same values
+  //this isn't necessarily going to be the case
+  DwarfInfo* diPatch=readDWARFTypes(patch);
+  Map* fdeMap=readDebugFrame(patch);//get mapping between fde offsets and fde structures
+
+  TransformationInfo trans;
+  memset(&trans,0,sizeof(trans));
+
+  
+  //map in the entirety of .text.new
+  patchTextAddr=copyInEntireSection(patch,".text.new",&trans);
+
+  //map in entirety of .rodata.new
+  patchRodataAddr=copyInEntireSection(patch,".rodata.new",&trans);
+  
+  writeOutPatchedBin(false);
 
   printf("======Applying patches=======\n");
   for(List* cuLi=diPatch->compilationUnits;cuLi;cuLi=cuLi->next)
@@ -464,18 +466,44 @@ void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch)
       GElf_Sym sym;
       //todo: return value checking
       int idx=getSymtabIdx(targetBin,vars[i]->name);
-      getSymbol(targetBin,idx,&sym);
-      vars[i]->oldLocation=sym.st_value;
-      bool relocate=sym.st_size < vars[i]->type->length;
-      printf("need to relocated is %i as st_size is %i and new size is %i\n",relocate,(int)sym.st_size,vars[i]->type->length);
-      if(relocate)
+      if(idx!=STN_UNDEF)
       {
-        allocateMemoryForVarRelocation(vars[i],&trans);
+        //todo: should make space for the variable in .data.new or something
+        getSymbol(targetBin,idx,&sym);
+        vars[i]->oldLocation=sym.st_value;
+        bool relocate=sym.st_size < vars[i]->type->length;
+        printf("need to relocated is %i as st_size is %i and new size is %i\n",relocate,(int)sym.st_size,vars[i]->type->length);
+        if(relocate)
+        {
+          allocateMemoryForVarRelocation(vars[i],&trans);
+        }
+        transformVarData(vars[i],fdeMap,patch);
+        if(relocate)
+        {
+          relocateVar(vars[i],targetBin);
+        }
       }
-      transformVarData(vars[i],fdeMap,patch);
-      if(relocate)
+      else
       {
-        relocateVar(vars[i],targetBin);
+        logprintf(ELL_INFO_V1,ELS_PATCHAPPLY,"Creating new variable %s\n",vars[i]->name);
+                
+        size_t length=vars[i]->type->length;
+        //we have to create a new variable
+        addr_t addr=getFreeSpaceForTransformation(&trans,length);
+        //todo: allow custom initializers, possible
+        //through a dwarf attribute that specifies a default value
+        byte* buf=zmalloc(length);
+        memcpyToTarget(addr,buf,length);
+        //create a symbol for our variable
+        //todo: really should abstract this out
+        Elf32_Sym sym;
+        memset(&sym,0,sizeof(Elf32_Sym));
+        //todo: might not always be the case that it's global
+        sym.st_info=ELF32_ST_INFO(STB_GLOBAL,STT_OBJECT);
+        sym.st_name=addStrtabEntryToExisting(patchedBin,vars[i]->name,false);
+        sym.st_shndx=SHN_UNDEF;//todo: should put it in .data.new or something
+        sym.st_value=addr;
+        addSymtabEntryToExisting(patchedBin,&sym);
       }
     }
     free(vars);
@@ -488,11 +516,15 @@ void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch)
     }
   }
 
+  fixupPatchRelocations(patch);
+  patchRelTextAddr=copyInEntireSection(patch,".rela.text.new",&trans);
 
+  writeOutPatchedBin(false);
+  
   //now perform relocations to our functions to give them a chance
   //of working
-  relTextScn=getSectionByName(patchedBin,".rela.text.new");
-  data=elf_getdata(relTextScn,NULL);
+  Elf_Scn* relTextScn=getSectionByName(patchedBin,".rela.text.new");
+  Elf_Data* data=elf_getdata(relTextScn,NULL);
   
   RelocInfo reloc;
   memset(&reloc,0,sizeof(reloc));
@@ -500,6 +532,7 @@ void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch)
   reloc.type=ERT_RELA;
   reloc.scnIdx=elf_ndxscn(getSectionByName(patchedBin,".text.new"));
   GElf_Rela rela;
+  int numRelocs=data->d_size/sizeof(Elf32_Rela);
   for(int i=0;i<numRelocs;i++)
   {
     if(!gelf_getrela(data,i,&rela))
