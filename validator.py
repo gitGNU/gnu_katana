@@ -47,7 +47,7 @@ vlogf.write("running:\n "+string.join(args," ")+"\n")
 kproc=subprocess.Popen(args,stdout=hotlogf,stderr=hotlogerrf)
 if 0!=kproc.wait():
   vlogf.write("Validator failed because katana exited with failure while generating patch.\nSee "+klogfname+" and "+klogerrfname+" for more information\n")
-  space=string.join([' ' for x in range(0,22)],'')
+  space=string.join([' ' for x in range(0,27)],'')
   sys.stdout.write(space)
   cleanup()
   sys.exit(1)
