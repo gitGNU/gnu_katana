@@ -17,7 +17,10 @@
 //for each patch object to create
 ElfInfo* startPatchElf(char* fname);
 
-void addDataToScn(Elf_Data* dataDest,void* data,int size);
+//adds data to a section and returns the offset of that
+//data in the section
+addr_t addDataToScn(Elf_Data* dataDest,void* data,int size);
+
 //adds an entry to the string table, return its offset
 int addStrtabEntry(char* str);
 //return index of entry in symbol table
