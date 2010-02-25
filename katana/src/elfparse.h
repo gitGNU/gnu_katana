@@ -65,7 +65,6 @@ word_t getWordAtAbs(Elf_Scn* scn,addr_t addr,ELF_STORAGE_TYPE type);
 void* getDataAtAbs(Elf_Scn* scn,addr_t addr,ELF_STORAGE_TYPE type);
 void* getTextDataAtRelOffset(ElfInfo* e,int offset);
 word_t getTextAtRelOffset(ElfInfo* e,int offset);
-int getSymtabIdx(ElfInfo* e,char* symbolName);
 void printSymTab(ElfInfo* e);
 //have to pass the name that the elf file will originally get written
 //out to, because of the way elf_begin is set up

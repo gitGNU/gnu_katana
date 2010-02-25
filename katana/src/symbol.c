@@ -221,3 +221,65 @@ int reindexSymbol(ElfInfo* old,ElfInfo* new,int oldIdx,int flags)
   return idx;
 }
 
+
+int getSymtabIdx(ElfInfo* e,char* symbolName)
+{
+  //todo: need to consider endianness?
+  //assert(e->hashTableData);
+  assert(e->strTblIdx>0);
+  
+  //Hash table only contains dynamic symbols, don't use it here
+  /*
+  int nbucket, nchain;
+  memcpy(&nbucket,hashTableData->d_buf,sizeof(Elf32_Word));
+  memcpy(&nchain,hashTableData->d_buf+sizeof(Elf32_Word),sizeof(Elf32_Word));
+  logprintf(ELL_INFO_V4,ELS_MISC,"there are %i buckets, %i chain entries, and total size of %i\n",nbucket,nchain,hashTableData->d_size);
+
+
+  unsigned long int hash=elf_hash(symbolName)%nbucket;
+  logprintf(ELL_INFO_V4,ELS_MISC,"hash is %lu\n",hash);
+  //get the index from the bucket
+  int idx;
+  memcpy(&idx,hashTableData->d_buf+sizeof(Elf32_Word)*(2+hash),sizeof(Elf32_Word));
+  int nextIdx=idx;
+  char* symname="";
+  while(strcmp(symname,symbolName))
+  {
+    idx=nextIdx;
+    logprintf(ELL_INFO_V4,ELS_MISC,"idx is %i\n",idx);
+    if(STN_UNDEF==idx)
+    {
+      fprintf(stderr,"Symbol '%s' not defined\n",symbolName);
+      return STN_UNDEF;
+    }
+    GElf_Sym sym;
+    
+    if(!gelf_getsym(symTabData,idx,&sym))
+    {
+      fprintf(stderr,"Error getting symbol with idx %i from symbol table. Error is: %s\n",idx,elf_errmsg(-1));
+      
+    }
+    symname=elf_strptr(e,strTblIdx,sym.st_name);
+    //update index for the next go-around if need be from the chain table
+    memcpy(&nextIdx,hashTableData->d_buf+sizeof(Elf32_Word)*(2+nbucket+idx),sizeof(Elf32_Word));
+  }
+  return idx;
+  */
+  
+  //traverse the symbol table to find the symbol we're looking for. Yes this is slow
+  //todo: build our own hash table since the .hash section seems incomplete
+  for (int i = 0; i < e->symTabCount; ++i)
+  {
+    GElf_Sym sym;
+    Elf_Data* symTabData=getDataByERS(e,ERS_SYMTAB);
+    gelf_getsym(symTabData,i,&sym);
+    char* symname=elf_strptr(e->e, e->strTblIdx, sym.st_name);
+    if(!strcmp(symname,symbolName))
+    {
+      return i;
+    }
+    //free(symname);//todo: is this right?
+  }
+  logprintf(ELL_INFO_V1,ELS_SYMBOL,"Symbol '%s' not defined yet. This may or may not be a problem\n",symbolName);
+  return STN_UNDEF;
+}
