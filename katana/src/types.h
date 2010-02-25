@@ -144,8 +144,8 @@ typedef struct
 {
   char* name;
   TypeInfo* type;
-  addr_t newLocation;
-  addr_t oldLocation;
+  addr_t newLocation;//used in applying the patch
+  addr_t oldLocation;//used in applying the patch
   bool declaration;//true for example for a variable declared extern.
                    //The declaration copy is discarded if a real copy is found
 } VarInfo;
