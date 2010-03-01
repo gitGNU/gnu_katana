@@ -74,6 +74,10 @@ int main(int argc,char** argv)
   int opt;
   E_KATANA_MODE mode=EKM_NONE;
   char* outfile=NULL;
+  if(elf_version(EV_CURRENT)==EV_NONE)
+  {
+    death("Failed to init ELF library\n");
+  }
   while((opt=getopt(argc,argv,"lgpo:"))>0)
   {
     switch(opt)
@@ -108,10 +112,6 @@ int main(int argc,char** argv)
   if(EKM_NONE==mode)
   {
     death("One of -g (gen patch) or -p (apply patch) or -l (list info about patch) must be specified\n");
-  }
-  if(elf_version(EV_CURRENT)==EV_NONE)
-  {
-    death("Failed to init ELF library\n");
   }
   if(EKM_GEN_PATCH==mode)
   {
