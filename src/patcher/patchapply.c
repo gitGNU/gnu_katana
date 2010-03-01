@@ -28,17 +28,18 @@ addr_t patchRodataAddr=0;
 addr_t patchRelTextAddr=0;
 addr_t patchDataAddr=0;
 
-void allocateMemoryForVarRelocation(VarInfo* var,TransformationInfo* trans)
+void allocateMemoryForVarRelocation(VarInfo* var)
 {
   printf("allocating memory for relocating variabl %s\n",var->name);
   int length=var->type->length;
-  var->newLocation=getFreeSpaceForTransformation(trans,length);
+  var->newLocation=getFreeSpaceInTarget(length);
   byte* zeros=zmalloc(length);
   printf("zeroing out new memory\n");
   memcpyToTarget(var->newLocation,zeros,length);
   free(zeros);
   //todo: handle errors
 }
+
 
 void transformVarData(VarInfo* var,Map* fdeMap,ElfInfo* patch)
 {
@@ -49,7 +50,7 @@ void transformVarData(VarInfo* var,Map* fdeMap,ElfInfo* patch)
     //todo: roll back atomically
     death("could not find transformer for variable\n");
   }
-  patchDataWithFDE(var,transformerFDE,targetBin,patch);
+  patchDataWithFDE(var,transformerFDE,targetBin,patch,patchedBin);
 }
 
 void relocateVar(VarInfo* var,ElfInfo* targetBin)
@@ -93,8 +94,7 @@ void insertTrampolineJump(addr_t insertAt,addr_t jumpTo)
 
 
 
-void applyFunctionPatch(SubprogramInfo* func,int pid,ElfInfo* targetBin,ElfInfo* patch,
-                        TransformationInfo* trans)
+void applyFunctionPatch(SubprogramInfo* func,int pid,ElfInfo* targetBin,ElfInfo* patch)
 {
   printf("patching function %s\n",func->name);
   //int len=func->highpc-func->lowpc;
@@ -165,12 +165,12 @@ int addSymtabEntryToExisting(ElfInfo* e,Elf32_Sym* sym)
 }
 
 
-addr_t copyInEntireSection(ElfInfo* patch,char* name,TransformationInfo* trans)
+addr_t copyInEntireSection(ElfInfo* patch,char* name)
 {
   //todo: perhaps might make more sense to mmap that part of the file?
   Elf_Scn* scn=getSectionByName(patch,name);
   Elf_Data* data=elf_getdata(scn,NULL);
-  addr_t addr=getFreeSpaceForTransformation(trans,data->d_size);
+  addr_t addr=getFreeSpaceInTarget(data->d_size);
   printf("mapping in the entirety of %s Copying %i bytes to 0x%x\n",name,data->d_size,(uint)addr);
   memcpyToTarget(addr,data->d_buf,data->d_size);
   //and create a section for it
@@ -368,7 +368,7 @@ void fixupPatchRelocations(ElfInfo* patch)
     GElf_Sym sym;
     getSymbol(patch,symIdx,&sym);
 
-    int flags=ESFF_MANGLED_OK;
+    int flags=ESFF_MANGLED_OK | ESFF_BSS_MATCH_DATA_OK;
     if(ELF64_ST_TYPE(sym.st_info)!=STT_SECTION)
     {
       flags|=ESFF_VERSIONED_SECTIONS_OK;
@@ -399,6 +399,7 @@ void fixupPatchRelocations(ElfInfo* patch)
         addr_t diff=patchTextAddr-oldTextNewStart;
         printf("for PC32 relocation, modifying access at 0x%x to access 0x%x by adding 0x%x\n",(uint)newOffset,(uint)(addrAccessed+diff),(uint)diff);
         modifyTarget(newOffset,addrAccessed+diff);
+        //todo: I'm not sure this is necessary here, since we do relocations later
       }
     }
     rela->r_offset=newOffset;
@@ -442,21 +443,18 @@ void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch)
   DwarfInfo* diPatch=readDWARFTypes(patch);
   Map* fdeMap=readDebugFrame(patch);//get mapping between fde offsets and fde structures
 
-  TransformationInfo trans;
-  memset(&trans,0,sizeof(trans));
-
   
   //map in the entirety of .text.new
-  patchTextAddr=copyInEntireSection(patch,".text.new",&trans);
+  patchTextAddr=copyInEntireSection(patch,".text.new");
 
   //map in entirety of .rodata.new
-  patchRodataAddr=copyInEntireSection(patch,".rodata.new",&trans);
+  patchRodataAddr=copyInEntireSection(patch,".rodata.new");
 
-  patchDataAddr=copyInEntireSection(patch,".data.new",&trans);
+  patchDataAddr=copyInEntireSection(patch,".data.new");
   
   writeOutPatchedBin(false);
 
-  printf("======Applying patches=======\n");
+  logprintf(ELL_INFO_V1,ELS_PATCHAPPLY,"======Applying patches=======\n");
   for(List* cuLi=diPatch->compilationUnits;cuLi;cuLi=cuLi->next)
   {
     CompilationUnit* cu=cuLi->value;
@@ -478,7 +476,7 @@ void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch)
         printf("need to relocated is %i as st_size is %i and new size is %i\n",relocate,(int)sym.st_size,vars[i]->type->length);
         if(relocate)
         {
-          allocateMemoryForVarRelocation(vars[i],&trans);
+          allocateMemoryForVarRelocation(vars[i]);
         }
         transformVarData(vars[i],fdeMap,patch);
         if(relocate)
@@ -514,15 +512,18 @@ void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch)
     SubprogramInfo** subprograms=(SubprogramInfo**)dictValues(cu->subprograms);
     for(int i=0;subprograms[i];i++)
     {
-      applyFunctionPatch(subprograms[i],pid,targetBin,patch,&trans);
+      applyFunctionPatch(subprograms[i],pid,targetBin,patch);
     }
   }
 
+  logprintf(ELL_INFO_V1,ELS_PATCHAPPLY,"======Fixup Patch Relocations=======\n");
   fixupPatchRelocations(patch);
-  patchRelTextAddr=copyInEntireSection(patch,".rela.text.new",&trans);
+  patchRelTextAddr=copyInEntireSection(patch,".rela.text.new");
 
   writeOutPatchedBin(false);
-  
+
+  logprintf(ELL_INFO_V1,ELS_PATCHAPPLY,"======Performing Patch Relocations=======\n");
+    
   //now perform relocations to our functions to give them a chance
   //of working
   Elf_Scn* relTextScn=getSectionByName(patchedBin,".rela.text.new");

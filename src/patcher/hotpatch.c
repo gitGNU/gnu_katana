@@ -12,6 +12,12 @@
 #include "hotpatch.h"
 #include "relocation.h"
 #include "symbol.h"
+#include <math.h>
+
+addr_t addrFreeSpace;
+addr_t freeSpaceLeft;
+
+
 
 int getIdxForField(TypeInfo* type,char* name)
 {
@@ -25,7 +31,29 @@ int getIdxForField(TypeInfo* type,char* name)
   return FIELD_DELETED;
 }
 
+addr_t getFreeSpaceInTarget(uint howMuch)
+{
+  uint numPages=(uint)ceil((double)howMuch/(double)sysconf(_SC_PAGE_SIZE));
+  //todo: support situation where need more than a page
+  addr_t retval;
+  if(howMuch<=freeSpaceLeft)
+  {
+    retval=addrFreeSpace;
+  }
+  else
+  {
+    //todo: separate out different function/structure for executable code
+    retval=addrFreeSpace=mmapTarget(numPages=sysconf(_SC_PAGE_SIZE),PROT_READ|PROT_WRITE|PROT_EXEC);
+    freeSpaceLeft=sysconf(_SC_PAGE_SIZE);
+  }
+  freeSpaceLeft-=howMuch;
+  addrFreeSpace+=howMuch;
+  return retval;
+  //todo: if there's a little bit of free space left,
+  //we just discard it. This is wasteful
+}
 
+#ifdef legacy
 addr_t getFreeSpaceForTransformation(TransformationInfo* trans,uint howMuch)
 {
   //todo: support situation where need more than a page
@@ -46,6 +74,7 @@ addr_t getFreeSpaceForTransformation(TransformationInfo* trans,uint howMuch)
   //todo: if there's a little bit of free space left,
   //we just discard it. This is wasteful
 }
+#endif
 
 void performRelocations(ElfInfo* e,VarInfo* var)
 {
