@@ -33,9 +33,7 @@ void dwarfErrorHandler(Dwarf_Error err,Dwarf_Ptr arg)
   {
     fprintf(stderr,"%s\n",(char*)arg);
   }
-  fprintf(stderr,"Dwarf error: %s\n",dwarf_errmsg(err));
-  fflush(stderr);
-  abort();
+  death("Dwarf error: %s\n",dwarf_errmsg(err));
 }
 
 int readAttributeAsInt(Dwarf_Attribute attr)
@@ -125,6 +123,44 @@ void setIdentifierForCU(CompilationUnit* cu,Dwarf_Die die)
   dictInsert(cuIdentifiers,cu->id,cu->id);
 }
 
+void getRangeFromDie(Dwarf_Debug dbg,Dwarf_Die die,int* lowerBound,int* upperBound)
+{
+  Dwarf_Error err;
+  *lowerBound=0;
+  *upperBound=0;
+  Dwarf_Die child;
+  int res=dwarf_child(die,&child,&err);
+  if(res==DW_DLV_OK)
+  {
+    do
+    {
+      //todo: support bounds of different types, dwarf allows the type
+      //of the subrange to be specified
+      Dwarf_Half tag = 0;
+      dwarf_tag(child,&tag,&err);
+      if(tag!=DW_TAG_subrange_type)
+      {
+        fprintf(stderr,"within array type found tag not a subrange, this is bizarre\n");
+        continue;
+      }
+      Dwarf_Attribute attr;
+      
+      int res=dwarf_attr(child,DW_AT_lower_bound,&attr,&err);
+      if(res==DW_DLV_OK)
+      {
+        *lowerBound=readAttributeAsInt(attr);
+      }
+      res=dwarf_attr(child,DW_AT_upper_bound,&attr,&err);
+      if(res==DW_DLV_OK)
+      {
+        *upperBound=readAttributeAsInt(attr);
+      }
+      
+    }while(DW_DLV_OK==dwarf_siblingof(dbg,child,&child,&err));
+  }
+
+}
+
 
 //the returned pointer should be freed
 char* getNameForDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
@@ -186,10 +222,9 @@ char* getNameForDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
         {
           death("the type that DW_TAG_array_type references does not exist\n");
         }
-        //offset is still needed to make the name unique as arrays
-        //of the same type but different bounds will come out differently in
-        //the dwarf type information
-        snprintf(buf,2048,"%s[]_%i",name,(int)offset);
+        int lowerBound=0,upperBound=0;
+        getRangeFromDie(dbg,die,&lowerBound,&upperBound);
+        snprintf(buf,2048,"%s[]_%i_%i",name,lowerBound,upperBound);
       }
       break;
     case DW_TAG_subprogram:
@@ -453,55 +488,27 @@ void addPointerTypeFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
 }
 
 
-
 void addArrayTypeFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
 {
   logprintf(ELL_INFO_V4,ELS_MISC,"reading array type\n");
   TypeInfo* type=zmalloc(sizeof(TypeInfo));
   type->type=TT_ARRAY;
+  type->name=getNameForDie(dbg,die,cu);
   type->cu=cu;
   Dwarf_Error err=0;
-  type->name=getNameForDie(dbg,die,cu);
+  
   TypeInfo* pointedType=getTypeInfoFromATType(dbg,die,cu);
   if(!pointedType)
   {
     death("ERROR: cannot add array with no type\n");
   }
   type->pointedType=pointedType;
-  type->lowerBound=0;
-  type->upperBound=0;
-  Dwarf_Die child;
-  int res=dwarf_child(die,&child,&err);
-  if(res==DW_DLV_OK)
-  {
-    do
-    {
-      Dwarf_Half tag = 0;
-      dwarf_tag(child,&tag,&err);
-      if(tag!=DW_TAG_subrange_type)
-      {
-        fprintf(stderr,"within array type found tag not a subrange, this is bizarre\n");
-        continue;
-      }
-      Dwarf_Attribute attr;
-      
-      int res=dwarf_attr(child,DW_AT_lower_bound,&attr,&err);
-      if(res==DW_DLV_OK)
-      {
-        type->lowerBound=readAttributeAsInt(attr);
-      }
-      res=dwarf_attr(child,DW_AT_upper_bound,&attr,&err);
-      if(res==DW_DLV_OK)
-      {
-        type->upperBound=readAttributeAsInt(attr);
-      }
-      
-    }while(DW_DLV_OK==dwarf_siblingof(dbg,child,&child,&err));
-  }
+  getRangeFromDie(dbg,die,&type->lowerBound,&type->upperBound);
+
 
   //check for fde info for transformation
   Dwarf_Attribute attr;
-  res=dwarf_attr(die,DW_AT_MIPS_fde,&attr,&err);
+  int res=dwarf_attr(die,DW_AT_MIPS_fde,&attr,&err);
   if(DW_DLV_OK==res)
   {
     type->fde=readAttributeAsInt(attr);
@@ -688,6 +695,8 @@ void parseDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit** cu,bool* parseChil
     break;
   case DW_TAG_subprogram:
     addSubprogramFromDie(dbg,die,*cu);
+    *parseChildren=false;//no need to read things inside a function, if it changes
+    //it will be detected by other analysis means anyway
     break;
   case DW_TAG_formal_parameter: //ignore because if a function change will be recompiled and won't modify function while executing it
     break;
