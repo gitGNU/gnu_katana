@@ -157,23 +157,6 @@ void freeVarInfo(VarInfo* v);
 //wrapper
 void freeVarInfoVoid(void* v);
 
-//todo: get rid of this structure
-//structure to hold information about transformation
-//necessary to hotpatch types
-typedef struct
-{
-  Dictionary* typeTransformers;//map type name to transformation info
-  //the following two variables are so that
-  //we can mmap in page-sized chunks of space
-  //at a time and use them for multiple variables
-  //they are set at the hot-patching stage
-  //rather than at the patch calculation stage
-  long addrFreeSpace;
-  uint freeSpaceLeft;
-} TransformationInfo;
-
-void freeTransformationInfo(TransformationInfo* ti);
-
 
 typedef struct
 {

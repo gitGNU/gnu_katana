@@ -105,8 +105,3 @@ void freeTypeTransform(TypeTransform* t)
   free(t);
 }
 
-void freeTransformationInfo(TransformationInfo* ti)
-{
-  dictDelete(ti->typeTransformers,freeTypeTransformVoid);
-  free(ti);
-}
