@@ -88,7 +88,7 @@ int findSymbol(ElfInfo* e,GElf_Sym* sym,ElfInfo* ref,int flags)
     {
       if(symname && strlen(symname))
       {
-        logprintf(ELL_INFO_V1,ELS_SYMBOL,"[%i] cmatches name %s\n",i,symname);
+        logprintf(ELL_INFO_V1,ELS_SYMBOL,"[%i] matches name %s\n",i,symname);
       }
       else
       {
@@ -170,8 +170,17 @@ int findSymbol(ElfInfo* e,GElf_Sym* sym,ElfInfo* ref,int flags)
         if((scnNameRef && !scnNameNew) || (!scnNameNew && scnNameNew) ||
            (scnNameRef && scnNameNew && strcmp(scnNameRef,scnNameNew)))
         {
-          logprintf(ELL_INFO_V2,ELS_SYMBOL,"symbol match fails on section name\n");
-          continue;
+          //we might still be saved by considering data and bss to be the same section
+          if((type!= STT_SECTION) && 
+             (!(flags & ESFF_BSS_MATCH_DATA_OK) ||
+              !((!strncmp(scnNameRef,".data",strlen(".data")) &&
+                 !strncmp(scnNameNew,".bss",strlen(".bss"))) ||
+                (!strncmp(scnNameRef,".bss",strlen(".bss")) &&
+                 !strncmp(scnNameNew,".data",strlen(".data"))))))
+          {
+            logprintf(ELL_INFO_V2,ELS_SYMBOL,"symbol match fails on section name\n");
+            continue;
+          }
         }
       }
       logprintf(ELL_INFO_V1,ELS_SYMBOL,"found symbol %s at index %i\n",symbolName,i);
@@ -286,10 +295,10 @@ int getSymtabIdx(ElfInfo* e,char* symbolName)
   
   //traverse the symbol table to find the symbol we're looking for. Yes this is slow
   //todo: build our own hash table since the .hash section seems incomplete
+  Elf_Data* symTabData=getDataByERS(e,ERS_SYMTAB);
   for (int i = 0; i < e->symTabCount; ++i)
   {
     GElf_Sym sym;
-    Elf_Data* symTabData=getDataByERS(e,ERS_SYMTAB);
     gelf_getsym(symTabData,i,&sym);
     char* symname=elf_strptr(e->e, e->strTblIdx, sym.st_name);
     if(!strcmp(symname,symbolName))
@@ -302,4 +311,27 @@ int getSymtabIdx(ElfInfo* e,char* symbolName)
   return STN_UNDEF;
 }
 
+//find the index of a symbol whose st_value is addr or where
+//addr>st_value && addr<st_value+st_size
+//only match symbols whose type is type
+//todo: this is slow. Could do smth much faster with interval tress or something
+idx_t findSymbolContainingAddress(ElfInfo* e,addr_t addr,byte type)
+{
+  Elf_Data* symTabData=getDataByERS(e,ERS_SYMTAB);
+  for (int i = 1; i < e->symTabCount; ++i)
+  {
+    GElf_Sym sym;
+    if(!gelf_getsym(symTabData,i,&sym))
+    {death("gelf_getsym failed\n");}
+    if(ELF32_ST_TYPE(sym.st_info)==type &&
+       (sym.st_value==addr || 
+        (sym.st_value<=addr &&
+         sym.st_value+sym.st_size > addr)))
+       
+    {
+      return i;
+    }
+  }
+  return STN_UNDEF;
+}
 
