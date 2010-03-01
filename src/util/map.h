@@ -35,6 +35,8 @@ typedef struct _MAP {
   int (*cmpfunc)(void*,void*);//comparison function on key type
 } __MAP;
 
+typedef unsigned int uint;
+
 typedef struct _MAP MAP;
 typedef struct _MAP Map;
 
@@ -48,6 +50,14 @@ Map* mapCreate(int bucketCnt,unsigned long (*hashfunc)(void*),int (*cmpfunc)(voi
 //! helper function for creating a map
 //! with int (well, int*), keys
 Map* integerMapCreate(int bucketCount);
+
+//! helper function for creating a map
+//! with uint (well, uint*), keys
+Map* uintMapCreate(int bucketCount);
+
+//! helper function for creating a map
+//! with size_t (well, size_t*), keys
+Map* size_tMapCreate(int bucketCount);
 
 //! clean up a map that's no longer needed
 //! If deleteData is non-NULL it is called for each data element

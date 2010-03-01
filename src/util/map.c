@@ -40,10 +40,33 @@ int intCmp(void* a,void* b)
   return ai-bi;
 }
 
-//passthrough for integer has function in the right form
+//integer comparison function
+int uintCmp(void* a,void* b)
+{
+  uint ai=*((uint*)a);
+  uint bi=*((uint*)b);
+  return ai-bi;
+}
+
+//size_t comparison function
+int size_tCmp(void* a,void* b)
+{
+  size_t ai=*((uint*)a);
+  size_t bi=*((uint*)b);
+  return ai-bi;
+}
+
+
+//passthrough for integer hash function in the right form
 unsigned long intHash(void* integer)
 {
   return hashInt(*((int*)integer));
+}
+
+//passthrough for size_t hash function in the right form
+unsigned long size_tHash(void* sizet)
+{
+  return hashSizeT(*((size_t*)sizet));
 }
 
 //! helper function for creating a map
@@ -51,6 +74,20 @@ unsigned long intHash(void* integer)
 Map* integerMapCreate(int bucketCount)
 {
   return mapCreate(bucketCount,intHash,intCmp); 
+}
+
+//! helper function for creating a map
+//! with uint (well, uint*), keys
+Map* uintMapCreate(int bucketCount)
+{
+  return mapCreate(bucketCount,intHash,uintCmp); 
+}
+
+//! helper function for creating a map
+//! with size_t (well, size_t*), keys
+Map* size_tMapCreate(int bucketCount)
+{
+  return mapCreate(bucketCount,size_tHash,size_tCmp); 
 }
 
 //! clean up a map that's no longer needed
