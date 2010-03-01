@@ -56,7 +56,7 @@ void genStraightCopyTransform(TypeInfo* a,TypeInfo* b)
 //if the types are not identical, store in type a
 //the necessary transformation info to convert it to type b,
 //if possible
-//todo: this function is struct centric, need to support other things
+//todo: cache results for determining that a transformation isn't needed
 bool compareTypesAndGenTransforms(TypeInfo* a,TypeInfo* b)
 {
   TypeTransform* transform=NULL;
@@ -75,37 +75,56 @@ bool compareTypesAndGenTransforms(TypeInfo* a,TypeInfo* b)
   }
   bool retval=true;
   if(strcmp(a->name,b->name) ||
-     a->numFields!=b->numFields)
+     a->numFields!=b->numFields ||
+     a->length != b->length)
   {
     retval=false;
-    if(!transform)
-    {
-      transform=zmalloc(sizeof(TypeTransform));
-    }
   }
 
-  //first for loop was just to determine if we needed to build the
-  //offsets array
-  for(int i=0;retval && i<a->numFields;i++)
+  switch(a->type)
   {
-    //todo: do we need to update if just the name changes?
-    //certainly won't need to relocate
-    if(a->fieldLengths[i]!=b->fieldLengths[i] ||
-       strcmp(a->fieldTypes[i]->name,b->fieldTypes[i]->name))
+  case TT_STRUCT:
+    //first for loop was just to determine if we needed to build the
+    //offsets array
+    for(int i=0;retval && i<a->numFields;i++)
     {
-      retval=false;
-      if(!transform)
+      //todo: do we need to update if just the name changes?
+      //certainly won't need to relocate
+      if(a->fieldLengths[i]!=b->fieldLengths[i] ||
+         strcmp(a->fieldTypes[i]->name,b->fieldTypes[i]->name))
       {
-        transform=zmalloc(sizeof(TypeTransform));
+        retval=false;
+        break;
       }
-    }
     
     //todo: what if a field stays the same type, but that type changes
     //need to be able to support that
+    }
+    break;
+  case TT_ARRAY:
+    if(a->lowerBound != b->lowerBound || a->upperBound!=b->upperBound)
+    {
+      retval=false;
+      death("haven't actually figured out how to properly write a type transformer for arrays yet. Poke James to do this\n");
+      break;
+    }
+    //deliberately no break here because want to check pointed type too
+  case TT_POINTER:
+    if(!compareTypesAndGenTransforms(a->pointedType,b->pointedType))
+    {
+      retval=false;
+      break;
+    }
+    break;
+  case TT_BASE:
+  case TT_VOID:
+    break;
   }
+    
 
-  if(transform)
+  if(!retval)
   {
+    transform=zmalloc(sizeof(TypeTransform));
     a->transformer=transform;//do it up here in case we recurse on this type
     transform->from=a;
     transform->to=b;
