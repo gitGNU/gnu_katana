@@ -241,20 +241,21 @@ Map* readDebugFrame(ElfInfo* elf)
     dwarf_get_fde_instr_bytes(dfde, &instrs, &ilen, &err);
     elf->fdes[i].instructions=parseFDEInstructions(dbg,instrs,ilen,cie.dataAlign,cie.codeAlign,&elf->fdes[i].numInstructions);
     Dwarf_Addr lowPC = 0;
-    Dwarf_Unsigned funcLength = 0;
+    Dwarf_Unsigned addrRange = 0;
     Dwarf_Ptr fdeBytes = NULL;
     Dwarf_Unsigned fdeBytesLength = 0;
     Dwarf_Off cieOffset = 0;
     Dwarf_Signed cie_index = 0;
     Dwarf_Off fdeOffset = 0;
     dwarf_get_fde_range(dfde,
-                        &lowPC, &funcLength,
+                        &lowPC, &addrRange,
                         &fdeBytes,
                         &fdeBytesLength,
                         &cieOffset, &cie_index,
                         &fdeOffset, &err);
     elf->fdes[i].lowpc=lowPC;
-    elf->fdes[i].highpc=lowPC+funcLength;
+    elf->fdes[i].highpc=lowPC+addrRange;
+    elf->fdes[i].memSize=addrRange;
     elf->fdes[i].offset=fdeOffset;
     int* key=zmalloc(sizeof(int));
     *key=elf->fdes[i].offset;
