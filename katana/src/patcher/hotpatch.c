@@ -53,29 +53,6 @@ addr_t getFreeSpaceInTarget(uint howMuch)
   //we just discard it. This is wasteful
 }
 
-#ifdef legacy
-addr_t getFreeSpaceForTransformation(TransformationInfo* trans,uint howMuch)
-{
-  //todo: support situation where need more than a page
-  addr_t retval;
-  if(howMuch<=trans->freeSpaceLeft)
-  {
-    retval=trans->addrFreeSpace;
-  }
-  else
-  {
-    //todo: separate out different function/structure for executable code
-    retval=trans->addrFreeSpace=mmapTarget(sysconf(_SC_PAGE_SIZE),PROT_READ|PROT_WRITE|PROT_EXEC);
-    trans->freeSpaceLeft=sysconf(_SC_PAGE_SIZE);
-  }
-  trans->freeSpaceLeft-=howMuch;
-  trans->addrFreeSpace+=howMuch;
-  return retval;
-  //todo: if there's a little bit of free space left,
-  //we just discard it. This is wasteful
-}
-#endif
-
 void performRelocations(ElfInfo* e,VarInfo* var)
 {
   int symIdx=getSymtabIdx(e,var->name);
