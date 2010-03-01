@@ -170,7 +170,8 @@ void applyRelocation(RelocInfo* rel,GElf_Sym* oldSym,ELF_STORAGE_TYPE type)
     case R_386_32:
       break;
     case R_386_PC32:
-      newAddrAccessed=newAddrAccessed-rel->r_offset;
+      //-sizeof(addr_t) because relative to PC of next instruction
+      newAddrAccessed=newAddrAccessed-rel->r_offset-sizeof(addr_t);
       break;
     default:
       death("relocation type %i we can't handle yet\n",rel->relocType);
@@ -186,8 +187,11 @@ void applyRelocation(RelocInfo* rel,GElf_Sym* oldSym,ELF_STORAGE_TYPE type)
       switch(rel->relocType)
       {
       case R_386_32:
-        //todo: we're assuming we're in the text section
-        oldAddrAccessed=getTextAtAbs(rel->e,rel->r_offset,IN_MEM);
+        assert(sym.st_shndx!=SHN_UNDEF &&
+               sym.st_shndx!=SHN_ABS &&
+               sym.st_shndx!=SHN_COMMON);
+        //todo: support abs and common sections
+        oldAddrAccessed=getWordAtAbs(elf_getscn(rel->e->e,sym.st_shndx),rel->r_offset,IN_MEM);
         break;
       default:
         death("relocation type we can't handle yet (for REL)\n");
@@ -395,6 +399,7 @@ List* getRelocationItemsFor(ElfInfo* e,int symIdx)
 addr_t computeAddend(ElfInfo* e,byte type,idx_t symIdx,addr_t r_offset,idx_t scnIdx)
 {
   addr_t symVal=getSymAddress(e,symIdx);
+  assert(sizeof(addr_t)==sizeof(word_t));
   word_t addrAccessed=getWordAtAbs(elf_getscn(e->e,scnIdx),r_offset,IN_MEM);
   switch(type)
   {
@@ -402,9 +407,22 @@ addr_t computeAddend(ElfInfo* e,byte type,idx_t symIdx,addr_t r_offset,idx_t scn
     return addrAccessed-symVal;
     break;
   case R_386_PC32:
-
-    return addrAccessed-symVal+r_offset+1;
-    //+1 because it's pc at next instruction
+    {
+      addr_t computation=addrAccessed-symVal+r_offset+sizeof(addr_t);
+      //+sizeof(addr_t) because it's pc at next instruction
+      if(0==symVal && computation==r_offset)
+      {
+        //todo: is this right? Empircally it seems to be right,
+        //because setting a relative address to itself seems to be
+        //GNU binutils convention for accessing something that hasn't
+        //been set up yet, as the 0 for symVal also indicates,
+        //and we certainly have no reason to think that any addend is called for
+        //(addends are never really used with functions, except perhaps
+        //with goto-style programming, need to check that out)
+        return 0;
+      }
+      return computation;
+    }
     break;
   default:
     death("unhandled relocation type in computeAddend\n");

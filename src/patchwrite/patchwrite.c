@@ -108,7 +108,6 @@ void writeRelocationsInRange(addr_t lowpc,addr_t highpc,Elf_Scn* scn,
     //now look at the relocation itself
     byte type=reloc->relocType;
     rela.r_offset=reloc->r_offset;
-    addr_t oldRelOffset=rela.r_offset;
     //now rebase the offset based on where in the data this text is going
     GElf_Shdr shdr;
     gelf_getshdr(scn,&shdr);
@@ -118,6 +117,8 @@ void writeRelocationsInRange(addr_t lowpc,addr_t highpc,Elf_Scn* scn,
     //todo: don't do that
     addr_t newRelOffset=rela.r_offset-lowpc+segmentBase;
 
+    #ifdef legacy
+    addr_t oldRelOffset=rela.r_offset;
     //now depending on the type we may have to do some additional fixups
     switch(type)
     {
@@ -140,7 +141,7 @@ void writeRelocationsInRange(addr_t lowpc,addr_t highpc,Elf_Scn* scn,
           {
             addr_t diff=newRelOffset-oldRelOffset;
             //that doesn't look right, look into this. Why are we writing it
-            setWordAtAbs(elf_getscn(binary->e,reloc->scnIdx),oldRelOffset,addrAccessed+diff,IN_MEM);
+            //setWordAtAbs(elf_getscn(binary->e,reloc->scnIdx),oldRelOffset,addrAccessed+diff,IN_MEM);
           
             //we're not just accessing something in the current function
             //tweak the addend so that even with the new value
@@ -153,6 +154,7 @@ void writeRelocationsInRange(addr_t lowpc,addr_t highpc,Elf_Scn* scn,
         }
         break;
     }
+    #endif
 
     rela.r_info=ELF32_R_INFO(reindex,type);
     
@@ -323,7 +325,7 @@ void writeTransformationToDwarf(TypeTransform* trans)
   Dwarf_Error err;
   Dwarf_P_Fde fde=dwarf_new_fde(dbg,&err);
   assert(trans->to->die);
-  trans->fdeIdx=dwarf_add_frame_fde(dbg,fde,trans->to->die,cie,0,0,0,&err);
+  trans->fdeIdx=dwarf_add_frame_fde(dbg,fde,trans->to->die,cie,0,trans->to->length,0,&err);
   DwarfInstructions instrs;
   memset(&instrs,0,sizeof(DwarfInstructions));
   if(trans->straightCopy)
