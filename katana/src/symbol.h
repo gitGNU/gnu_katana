@@ -21,6 +21,7 @@ typedef enum
   ESFF_MANGLED_OK=1,//permit matching mangled names
   ESFF_NEW_DYNAMIC=2,//look in the dynamic symbol table instead for the new symbol
   ESFF_VERSIONED_SECTIONS_OK=4,//permit fuzzy matching names in versioned sections
+  ESFF_BSS_MATCH_DATA_OK=8,
   ESFF_FUZZY_MATCHING_OK=ESFF_MANGLED_OK | ESFF_VERSIONED_SECTIONS_OK
 } E_SYMBOL_FIND_FLAGS;
 
@@ -35,5 +36,7 @@ Elf32_Sym gelfSymToNativeSym(GElf_Sym);
 int reindexSymbol(ElfInfo* old,ElfInfo* new,int oldIdx,int flags);
 
 int getSymtabIdx(ElfInfo* e,char* symbolName);
+
+idx_t findSymbolContainingAddress(ElfInfo* e,addr_t addr,byte type);
 #endif
 
