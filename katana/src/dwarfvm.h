@@ -10,7 +10,7 @@
 #define dwarfvm_h
 #include "types.h"
 #include "fderead.h"
-void patchDataWithFDE(VarInfo* var,FDE* transformerFDE,ElfInfo* targetBin,ElfInfo* patch);
+void patchDataWithFDE(VarInfo* var,FDE* transformerFDE,ElfInfo* targetBin,ElfInfo* patch,ElfInfo* patchedBin);
 //evaluates the given instructions and stores them in the output regarray
 //the initial condition of regarray IS taken into account
 //execution continues until the end of the instructions or until the location is advanced

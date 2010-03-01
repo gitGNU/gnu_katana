@@ -36,8 +36,10 @@ typedef struct FDE
   CIE* cie;
   RegInstruction* instructions;
   int numInstructions;
-  int lowpc;//not using currently. May use for versioning in the future
-  int highpc;//not using currently. May use for versioning in the future
+  int memSize;//size of memory area the FDE describes. Used when fixing
+           //up pointers to know how much mem to allocate
+  int lowpc;
+  int highpc;
   int offset;//offset from beginning of debug frame
 } FDE;
 

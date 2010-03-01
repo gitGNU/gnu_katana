@@ -13,9 +13,15 @@
 #include "patcher/target.h"
 #include <assert.h>
 #include "util/logging.h"
+#include "symbol.h"
+#include "util/map.h"
+#include "patcher/hotpatch.h"
 
 //returns a list of PatchData objects
-List* generatePatchesFromFDEAndState(FDE* fde,SpecialRegsState* state,ElfInfo* patch);
+List* generatePatchesFromFDEAndState(FDE* fde,SpecialRegsState* state,ElfInfo* patch,ElfInfo* patchedBin);
+
+//keys are old addresses of data objects (variables). Values are the new addresses
+Map* dataMoved=NULL;
 
 //evaluates the given instructions and stores them in the output regarray
 //the initial condition of regarray IS taken into account
@@ -109,6 +115,11 @@ void evaluateInstructions(RegInstruction* instrs,int numInstrs,Dictionary* rules
 
 //structure for holding one contiguous chunk of data
 //to be put into the target process
+//todo: there is a problem with our current scheme. We do not do patches immediately
+//but batch them together for application later. This is the reason this data structure exists
+//that in itself is not a bad thing, but it can happen that what's being read and what's been written
+//get out of step in a way that perhaps they shouldn't be. Perhaps PatchData could hold another address to read from the
+//target instead of data stored in memory? This would cut down on data stored in memory and it could help keep things in sync
 typedef struct
 {
   byte* data;//data to be poked into the target
@@ -119,8 +130,12 @@ typedef struct
 //returns a list of PatchData objects
 //this list generally only has one item unless a recurse rule
 //was encountered
-List* makePatchData(PoRegRule* rule,SpecialRegsState* state,ElfInfo* patch)
+List* makePatchData(PoRegRule* rule,SpecialRegsState* state,ElfInfo* patch,ElfInfo* patchedBin)
 {
+  if(!dataMoved)
+  {
+    dataMoved=size_tMapCreate(100);//todo: get rid of arbitrary constant 100
+  }
   List* head=NULL;
   PatchData* result=NULL;
   byte* addrBytes;
@@ -174,7 +189,96 @@ List* makePatchData(PoRegRule* rule,SpecialRegsState* state,ElfInfo* patch)
       assert(size==sizeof(addr_t));
       memcpy(&tmpState.currAddrOld,rhAddrBytes,sizeof(addr_t));
       //fde indices seem to be 1-based and we store them zero-based
-      head=generatePatchesFromFDEAndState(&patch->fdes[rule->index-1],&tmpState,patch);
+      head=generatePatchesFromFDEAndState(&patch->fdes[rule->index-1],&tmpState,patch,patchedBin);
+    }
+    break;
+  case ERRT_RECURSE_FIXUP_POINTER:
+    {
+      //there are some special challenges when fixing up a pointer
+      //1. we have to make sure we have't already fixed up at that location yet
+      //2. if the location corresponds to a symbol then it might perhaps be supposed
+      //   to be relocated to a .data.new section or something like that. On the other hand, if
+      //   it doesn't, then we can just allocate memory for it anywhere we like
+      //before we actually call generate PatchesFromFDEAndState
+      addr_t* existingDataMove=NULL;
+      if((existingDataMove=mapGet(dataMoved,&resultAddr)))
+      {
+        //we've already fixed up the location,
+        //just have to set the pointer to point where we want it to
+        head=zmalloc(sizeof(List));
+        result=zmalloc(sizeof(PatchData));
+        head->value=result;
+        result->addr=resultAddr;
+        result->data=zmalloc(sizeof(addr_t));
+        memcpy(result->data,existingDataMove,sizeof(addr_t));
+        result->len=sizeof(addr_t);
+        break;
+      }
+
+      addr_t pointedObjectNewLocation=0;
+      
+      //now we have to see if the location corresponds to a symbol
+      //that may be being relocated to a .data.new section or something
+      idx_t symIdxOld=findSymbolContainingAddress(state->oldBinaryElf,resultAddr,STT_OBJECT);
+      if(symIdxOld!=STN_UNDEF)
+      {
+        //ok, so it was in a symbol in the executing binary, Now we have to find
+        //out where it might have been moved to. This will be the new location of
+        //the .data.new section plus the value of the symbol in the patch
+        idx_t symIdxPatch=reindexSymbol(state->oldBinaryElf,patch,symIdxOld,ESFF_FUZZY_MATCHING_OK);
+        if(STN_UNDEF==symIdxOld)
+        {
+          death("need to fix up a pointer that is supposedly part of a variable (rather than arbitrary stuff on the heap) but the patch doesn't seem to contain this variable\n");
+        }
+
+        GElf_Sym sym;
+        getSymbol(patch,symIdxPatch,&sym);
+        assert(sym.st_shndx==elf_ndxscn(getSectionByERS(patch,ERS_DATA)));
+        Elf_Scn* scn=getSectionByName(patchedBin,".data.new");
+        assert(scn);
+        GElf_Shdr shdr;
+        if(!gelf_getshdr(scn,&shdr))
+        {death("gelf_getshdr failed\n");}
+        pointedObjectNewLocation=shdr.sh_addr+sym.st_value;
+      }
+      else
+      {
+        //no variable associated with this, it's just some random data
+        //on the heap. So we just allocate some random space for it
+        //the problem now is, we have to know how much space to allocate
+        //for this purpose we can use the address_range field
+        //of the fde we're targeting
+        pointedObjectNewLocation=getFreeSpaceInTarget(patch->fdes[rule->index-1].memSize);
+      }
+
+      addr_t* value=zmalloc(sizeof(addr_t));
+      *value=pointedObjectNewLocation;
+      mapInsert(dataMoved,&resultAddr,value);
+      
+      SpecialRegsState tmpState=*state;
+      tmpState.currAddrNew=pointedObjectNewLocation;
+      byte* rhAddrBytes=NULL;
+      //remember that ERRF_DEREFERENCE means only that we look up the value
+      //at the mem location indicated by the register, not that we then dereference
+      //that mem location
+      int size=resolveRegisterValue(&rule->regRH,state,&rhAddrBytes,ERRF_DEREFERENCE);
+      assert(size==sizeof(addr_t));
+      memcpy(&tmpState.currAddrOld,rhAddrBytes,sizeof(addr_t));
+      if(tmpState.currAddrOld)
+      {
+        //fde indices seem to be 1-based and we store them zero-based
+        head=generatePatchesFromFDEAndState(&patch->fdes[rule->index-1],&tmpState,patch,patchedBin);
+      }
+      else
+      {
+        head=zmalloc(sizeof(List));
+        result=zmalloc(sizeof(PatchData));
+        head->value=result;
+        result->addr=resultAddr;
+        //NULL pointer, can't recurse on it. Just make sure 0 gets copied to the new location
+        result->data=zmalloc(sizeof(addr_t));
+        result->len=sizeof(addr_t);
+      }
     }
     break;
   default:
@@ -195,7 +299,7 @@ List* makePatchData(PoRegRule* rule,SpecialRegsState* state,ElfInfo* patch)
 }
 
 //returns a list of PatchData objects
-List* generatePatchesFromFDEAndState(FDE* fde,SpecialRegsState* state,ElfInfo* patch)
+  List* generatePatchesFromFDEAndState(FDE* fde,SpecialRegsState* state,ElfInfo* patch,ElfInfo* patchedBin)
 {
   //we build up rules for each register from the DW_CFA instructions
   Dictionary* rulesDict=dictCreate(100);//todo: get rid of arbitrary constant 100
@@ -230,7 +334,7 @@ List* generatePatchesFromFDEAndState(FDE* fde,SpecialRegsState* state,ElfInfo* p
   List* liEnd=NULL;
   for(int i=0;rules[i];i++)
   {
-    List* patchList=makePatchData(rules[i],state,patch);
+    List* patchList=makePatchData(rules[i],state,patch,patchedBin);
     liStart=concatLists(liStart,liEnd,patchList,NULL,&liEnd);
   }
   return liStart;
@@ -238,7 +342,7 @@ List* generatePatchesFromFDEAndState(FDE* fde,SpecialRegsState* state,ElfInfo* p
 
 //patchBin is the elf object we're mirroring all the changes
 //we made to memory in so that it's possible to do successive patching
-void patchDataWithFDE(VarInfo* var,FDE* fde,ElfInfo* oldBinaryElf,ElfInfo* patch)
+void patchDataWithFDE(VarInfo* var,FDE* fde,ElfInfo* oldBinaryElf,ElfInfo* patch,ElfInfo* patchedBin)
 {
   SpecialRegsState state;
   memset(&state,0,sizeof(state));
@@ -246,7 +350,7 @@ void patchDataWithFDE(VarInfo* var,FDE* fde,ElfInfo* oldBinaryElf,ElfInfo* patch
   state.currAddrNew=var->newLocation;
   state.oldBinaryElf=oldBinaryElf;
 
-  List* patchesList=generatePatchesFromFDEAndState(fde,&state,patch);
+  List* patchesList=generatePatchesFromFDEAndState(fde,&state,patch,patchedBin);
   //now that we've made all the patch data, apply it
   List* li=patchesList;
   for(;li;li=li->next)

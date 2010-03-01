@@ -67,9 +67,9 @@ typedef struct
 {
   PoReg regLH;
   E_REG_RULE_TYPE type;
-  PoReg regRH;//only valid if type is ERRT_REGISTER or ERRT_CFA
+  PoReg regRH;//not valid if type is ERRT_OFFSET
   int offset;//only valid if type is ERRT_OFFSET or ERRT_CFA or ERRT_EXPR
-  idx_t index;//only valid if type is ERRT_RECURSE_FIXUP
+  idx_t index;//only valid if type is ERRT_RECURSE_FIXUP or ERRT_RECURSE_FIXUP_POINTER
 } PoRegRule;
 
 //rules are of type PoRegRule
