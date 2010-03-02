@@ -21,6 +21,7 @@ def validate(logname):
   regexGammaOtherOtherLives="gamma\.other\.other lives at 0x([a-f0-9])"
   regexGammaOtherOtherVal="gamma\.other\.other: 33, 22, 11"
   regexGammaOtherOtherOther="gamma\.other\.other has no other member"
+  regexName="name is (alpha|beta|gamma)"
 
   
   linecount=0
@@ -58,7 +59,13 @@ def validate(logname):
       sys.stderr.write("Offending line is:\n")
       sys.stderr.write(line)
     if line.startswith("has pid"):
-      continue;
+      continue
+    elif line.startswith("printThings old version") or line.startswith("printThings new version"):
+      continue
+    elif line.startswith("layout is"):
+      continue
+    elif line.startswith("name is"):
+      pattern=regexName
     elif line.startswith("alpha lives"):
       pattern=regexAlphaLives
     elif line.startswith("alpha:"):

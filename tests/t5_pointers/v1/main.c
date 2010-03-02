@@ -38,6 +38,8 @@ void printFoo(char* name,Foo* foo)
   printf("name is %s\n",name);
   fflush(stdout);
   printf("%s lives at 0x%x\n",name,(unsigned int)foo);
+  printf("layout is {%x,%x,%x,%x,%x}\n",(unsigned int)foo->field1,(unsigned int)foo->field_extra,(unsigned int)foo->field2,(unsigned int)foo->field3,(unsigned int)foo->other);
+  fflush(stdout);
   printf("%s: %i, %i, %i\n",name,*(foo->field1),*(foo->field2),*(foo->field3));
   if(foo->other)
   {
@@ -54,13 +56,8 @@ void printFoo(char* name,Foo* foo)
 void printThings()
 {
   printf("printThings new version starting\n");
-  char* name="alpha";
-  printf("about to call printFoo with name %s located at 0x%x\n",name,(unsigned int)name);
   fflush(stdout);
-  printFoo(name,&alpha);
-  name="beta";
-  printf("about to call printFoo with name %s\n",name);
-  fflush(stdout);
+  printFoo("alpha",&alpha);
   printFoo("beta",&beta);
   printFoo("gamma",gamma);
   fflush(stdout);
