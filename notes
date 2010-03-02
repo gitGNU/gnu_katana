@@ -123,6 +123,8 @@ type that pointer is, we can't really patch it
 ** x86
 *** x86 calling conventions http://unixwiz.net/techtips/win32-callconv-asm.html
 *** x86 instruction set reference http://download.intel.com/design/PentiumII/manuals/24319102.PDF
+*** x86-64 ABI
+    http://www.x86-64.org/documentation/abi.pdf
 ** ELF basics
 *** http://developers.sun.com/solaris/articles/elf.html
 *** http://www.linuxjournal.com/node/1060/print
@@ -132,6 +134,8 @@ type that pointer is, we can't really patch it
 *** ELF format reference  http://www.skyfree.org/linux/references/ELF_Format.pdf
 *** http://www.ibm.com/developerworks/power/library/pa-spec12/
 *** powerpoint on ELF http://www.trunix.org/programlama/os/sp13.ppt
+*** x86-64 ABI
+    http://www.x86-64.org/documentation/abi.pdf
 ** ELF hacking
 *** ELFsh/ERESI papers
 *** http://phrack.org/issues.html?issue=61&id=8&mode=txt
@@ -154,8 +158,18 @@ type that pointer is, we can't really patch it
     misc tools for patching into elf files. I think it patches stationary files rather
     than running ones, but the same techniques could be extrapolated. Therefore, it could
     be used for example purposes
-*** Phrack on runtime code injection
+*** Phrack on runtime code injec
+tion
     http://phrack.org/issues.html?issue=59&id=8#article
+*** Linux x86 run-time process manipulation
+    http://www.hick.org/code/skape/papers/needle.txt
+*** Cheating the ELF Subversive Dynamic Linking to Libraries
+    http://althing.cs.dartmouth.edu/local/subversiveld.pdf
+
+    better technique then explained by the same author on
+    http://seclists.org/bugtraq/2002/May/249
+
+    Author of Elfsh says he has better explanation
 ** Academic Systems
 *** Practical Dynamic Software Updating for C
     http://www.cs.umd.edu/~neamtiu/pubs/pldi06neamtiu.pdf
