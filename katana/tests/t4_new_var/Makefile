@@ -1,1 +1,1 @@
-../test1_basic/Makefile
+../t1_basic/Makefile
