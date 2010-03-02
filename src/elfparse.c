@@ -333,6 +333,10 @@ void findELFSections(ElfInfo* e)
     {
       e->sectionIndices[ERS_DYNSTR]=elf_ndxscn(scn);
     }
+    else if(!strcmp(".dynamic",name))
+    {
+      e->sectionIndices[ERS_DYNAMIC]=elf_ndxscn(scn);
+    }
   }
 }
 
