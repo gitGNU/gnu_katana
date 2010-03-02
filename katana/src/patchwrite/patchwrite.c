@@ -38,6 +38,7 @@ Dwarf_P_Die firstCUDie=NULL;
 Dwarf_P_Die lastCUDie=NULL;//keep track of for sibling purposes
 Dwarf_Unsigned cie;//index of cie we're using
 
+void writeOldTypeToDwarf(TypeInfo* type,CompilationUnit* cuToWriteIn);
 
 idx_t addSymbolFromBinaryToPatch(ElfInfo* binary,idx_t symIdx)
 {
@@ -266,7 +267,15 @@ void writeTypeToDwarf(TypeInfo* type)
   dwarf_add_AT_unsigned_const(dbg,die,DW_AT_byte_size,type->length,&err);
   if((TT_POINTER==type->type || TT_ARRAY==type->type) && TT_VOID!=type->pointedType->type)
   {
-    writeTypeToDwarf(type->pointedType);
+    if(strEndsWith(type->name,"~"))
+    {
+      //writing old type
+      writeOldTypeToDwarf(type->pointedType,type->cu);
+    }
+    else
+    {
+      writeTypeToDwarf(type->pointedType);
+    }
     dwarf_add_AT_reference(dbg,die,DW_AT_type,type->pointedType->die,&err);
   }
   if(TT_ARRAY==type->type)
@@ -279,7 +288,14 @@ void writeTypeToDwarf(TypeInfo* type)
     Dwarf_P_Die lastMemberDie=NULL;
     for(int i=0;i<type->numFields;i++)
     {
-      writeTypeToDwarf(type->fieldTypes[i]);
+      if(strEndsWith(type->name,"~"))
+      {
+        writeOldTypeToDwarf(type->fieldTypes[i],type->cu);
+      }
+      else
+      {
+        writeTypeToDwarf(type->fieldTypes[i]);
+      }
       parent=0==i?die:NULL;
       Dwarf_P_Die memberDie=dwarf_new_die(dbg,DW_TAG_member,parent,NULL,lastMemberDie,NULL,&err);
       dwarf_add_AT_name(memberDie,type->fields[i],&err);
@@ -290,6 +306,27 @@ void writeTypeToDwarf(TypeInfo* type)
     }
   }
 }
+
+
+//generally we write only the new types,
+//except we need the old types around for
+//some things, such as figuring out the size
+//of the old variable, which isn't always
+//available (pointer issues)
+//We note old types by appending a ~ to the name
+void writeOldTypeToDwarf(TypeInfo* type,CompilationUnit* cuToWriteIn)
+{
+  CompilationUnit* oldCu=type->cu;
+  type->cu=cuToWriteIn;
+  char* oldName=type->name;
+  type->name=zmalloc(strlen(type->name)+2);
+  sprintf(type->name,"%s~",oldName);
+  writeTypeToDwarf(type);//detects that we're doing an old type and takes care of the rest
+  type->name=oldName;//restore the name
+  type->cu=oldCu;
+
+}
+
 
 void writeVarToDwarf(VarInfo* var,CompilationUnit* cu)
 {
@@ -456,6 +493,7 @@ void writeVarTransforms(List* varTrans)
   for(;li;li=li->next)
   {
     VarTransformation* vt=li->value;
+    writeOldTypeToDwarf(vt->transform->from,vt->var->type->cu);
     writeVarToDwarf(vt->var,vt->cu);
     writeVarToData(vt->var);
     writeTransformationToDwarf(vt->transform);
