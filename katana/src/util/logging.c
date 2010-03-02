@@ -11,7 +11,7 @@
 #include <stdbool.h>
 #include <assert.h>
 
-E_LOG_LEVEL lvlEnabled;
+E_LOG_LEVEL lvlEnabled=ELL_INFO_V4;
 E_LOG_LEVEL sourceEnables[ELS_CNT];
 
 int logprintf(E_LOG_LEVEL lvl,E_LOG_SOURCE src,char* fmt,...)
@@ -69,7 +69,7 @@ void disableLogSource(E_LOG_SOURCE src)
 
 void loggingDefaults()
 {
-  lvlEnabled=ELL_INFO_V3;
+  lvlEnabled=ELL_INFO_V4;
   sourceEnables[ELS_MISC]=ELL_DISABLE;
   sourceEnables[ELS_CODEDIFF]=ELL_CNT;
   sourceEnables[ELS_TYPEDIFF]=ELL_CNT;
@@ -77,6 +77,7 @@ void loggingDefaults()
   sourceEnables[ELS_HOTPATCH]=ELL_INFO_V3;
   sourceEnables[ELS_SOURCETREE]=ELL_CNT;
   sourceEnables[ELS_SYMBOL]=ELL_INFO_V1;
-  sourceEnables[ELS_RELOCATION]=ELL_CNT;
+  sourceEnables[ELS_RELOCATION]=ELL_INFO_V3;
   sourceEnables[ELS_PATCHAPPLY]=ELL_CNT;
+  sourceEnables[ELS_LINKMAP]=ELL_INFO_V3;
 }
