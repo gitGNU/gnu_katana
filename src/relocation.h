@@ -83,4 +83,7 @@ addr_t computeAddend(ElfInfo* e,byte type,idx_t symIdx,addr_t r_offset,idx_t scn
 
 //if the reloc has an addend, return it, otherwise compute it
 addr_t getAddendForReloc(RelocInfo* reloc);
+
+//todo: does this belong in this module?
+addr_t getPLTEntryForSym(ElfInfo* e,int symIdx);
 #endif

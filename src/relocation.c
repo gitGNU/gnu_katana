@@ -160,7 +160,7 @@ void applyRelocation(RelocInfo* rel,GElf_Sym* oldSym,ELF_STORAGE_TYPE type)
     //get the index of the symbol in the dynamic symbol table, because
     //that's what we'll be matching against when looking at the symbols
     //referenced in .rel.plt
-    int symIdxDynamic=reindexSymbol(rel->e,rel->e,symIdx,ESFF_FUZZY_MATCHING_OK | ESFF_NEW_DYNAMIC);
+    idx_t symIdxDynamic=reindexSymbol(rel->e,rel->e,symIdx,ESFF_FUZZY_MATCHING_OK | ESFF_NEW_DYNAMIC);
 
     newAddrAccessed=getPLTEntryForSym(rel->e,symIdxDynamic);
     logprintf(ELL_INFO_V2,ELS_RELOCATION,"Relocated address at 0x%x to 0x%x\n",(uint)addrToBeRelocated,newAddrAccessed);
@@ -210,7 +210,8 @@ void applyRelocation(RelocInfo* rel,GElf_Sym* oldSym,ELF_STORAGE_TYPE type)
       case R_386_PC32:
         //off by one?
         //printf("addrNew is 0x%x, addend ix 0x%x, offset is 0x%x\n",addrNew,rel->rela.r_addend,rel->rela.r_offset);
-        newAddrAccessed=addrNew+rel->r_addend-rel->r_offset;
+         //-sizeof(addr_t) because relative to PC of next instruction
+        newAddrAccessed=addrNew+rel->r_addend-rel->r_offset-sizeof(addr_t);
         break;
       default:
         death("relocation type %i we can't handle yet (for RELA)\n",type);
