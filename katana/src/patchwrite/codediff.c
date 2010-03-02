@@ -97,10 +97,10 @@ bool areSubprogramsIdentical(SubprogramInfo* patcheeFunc,SubprogramInfo* patched
   byte* textOld=getDataAtAbs(textScn,patcheeFunc->lowpc,IN_MEM);
   //if -ffunction-sections is used, the function might have its own text section
   snprintf(buf,1024,".text.%s",patcheeFunc->name);
-  textScn=getSectionByName(oldBinary,buf);
+  textScn=getSectionByName(newBinary,buf);
   if(!textScn)
   {
-    textScn=getSectionByERS(oldBinary,ERS_TEXT);
+    textScn=getSectionByERS(newBinary,ERS_TEXT);
   }
   assert(textScn);
   byte* textNew=getDataAtAbs(textScn,patchedFunc->lowpc,IN_MEM);
@@ -161,8 +161,10 @@ bool areSubprogramsIdentical(SubprogramInfo* patcheeFunc,SubprogramInfo* patched
       //todo: should we explicitly check the type of the variable the symbol refers
       //to and see if it's changed? Or should we assume that anything important is
       //taken care of by checking the addend?
-      
+
+      logprintf(ELL_INFO_V4,ELS_CODEDIFF,"Relocations at byte 0x%x determined to be the same\n",i);
       i+=sizeof(addr_t)-1;//since we compared on a whole address, not just the one byte
+      continue;
     }
     else if(patcheeFunc->lowpc+i==relocOld->r_offset) //somehow just one matches
     {
@@ -177,6 +179,8 @@ bool areSubprogramsIdentical(SubprogramInfo* patcheeFunc,SubprogramInfo* patched
       break;
     }
     //ok, no relocation applies, just compare normally
+    logprintf(ELL_INFO_V4,ELS_CODEDIFF,"Bytes at 0x%x are %x/%x\n",i,textOld[i],textNew[i]);
+
     if(textOld[i]!=textNew[i])
     {
       retval=false;
