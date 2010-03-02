@@ -35,14 +35,19 @@ addr_t getSymAddress(ElfInfo* e,int symIdx)
 
 char* unmangleSymbolName(char* name)
 {
-  char* symbolNameUnmangled=zmalloc(strlen(name)+1);
+  char* symbolNameUnmangled=NULL;
   char* atSignPtr=strchr(name,'@');
   if(atSignPtr)
   {
+    symbolNameUnmangled=zmalloc(strlen(name)+1);
     int atSignIdx=atSignPtr-name;
     symbolNameUnmangled=zmalloc(strlen(name)+1);
     strcpy(symbolNameUnmangled,name);
     symbolNameUnmangled[atSignIdx]='\0';
+  }
+  else
+  {
+    symbolNameUnmangled=strdup(name);
   }
   return symbolNameUnmangled;
 }
@@ -95,23 +100,23 @@ int findSymbol(ElfInfo* e,GElf_Sym* sym,ElfInfo* ref,int flags)
     {
       if(symname && strlen(symname))
       {
-        logprintf(ELL_INFO_V1,ELS_SYMBOL,"[%i] matches name %s\n",i,symname);
+        logprintf(ELL_INFO_V2,ELS_SYMBOL,"[%i] matches %s, has name %s\n",i,symbolName,symname);
       }
       else
       {
-        //printf("[%i] both have no name. They might be the same section\n",i);
+        logprintf(ELL_INFO_V2,ELS_SYMBOL,"[%i] both have no name. They might be the same section\n",i);
       }
       //ok, the right name, but are other things right too?
      
       
       if(bind != bind2)
       {
-        printf("fails on bind\n");
+        logprintf(ELL_INFO_V2,ELS_SYMBOL,"fails on bind\n");
         continue;
       }
       if(type!= STT_NOTYPE && type2!=STT_NOTYPE && type != type2)
       {
-        printf("fails on type\n");
+        logprintf(ELL_INFO_V2,ELS_SYMBOL,"fails on type\n");
         continue;
       }
 
@@ -120,7 +125,7 @@ int findSymbol(ElfInfo* e,GElf_Sym* sym,ElfInfo* ref,int flags)
       
       if(sym->st_other!=sym2.st_other)
       {
-        printf("fails on other\n");
+        logprintf(ELL_INFO_V2,ELS_SYMBOL,"fails on other\n");
         continue;
       }
       //now the hard one to deal with: section index. This is especially
@@ -185,7 +190,7 @@ int findSymbol(ElfInfo* e,GElf_Sym* sym,ElfInfo* ref,int flags)
                 (!strncmp(scnNameRef,".bss",strlen(".bss")) &&
                  !strncmp(scnNameNew,".data",strlen(".data"))))))
           {
-            logprintf(ELL_INFO_V2,ELS_SYMBOL,"symbol match fails on section name\n");
+            logprintf(ELL_INFO_V2,ELS_SYMBOL,"symbol match fails on section name (%s vs %s)\n",scnNameRef,scnNameNew);
             continue;
           }
         }
