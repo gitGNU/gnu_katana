@@ -202,6 +202,7 @@ void applyRelocation(RelocInfo* rel,GElf_Sym* oldSym,ELF_STORAGE_TYPE type)
     else //RELA
     {
       logprintf(ELL_INFO_V2,ELS_RELOCATION,"applying RELA relocation at 0x%x for symbol %s\n",(uint)addrToBeRelocated,getString(rel->e,sym.st_name));
+      logprintf(ELL_INFO_V3,ELS_RELOCATION,"Relocation type is %i and addend is 0x%x\n",rel->relocType,rel->r_addend);
       switch(rel->relocType)
       {
       case R_386_32:
@@ -399,7 +400,18 @@ List* getRelocationItemsFor(ElfInfo* e,int symIdx)
 //scnIdx is section the relocation refers to
 addr_t computeAddend(ElfInfo* e,byte type,idx_t symIdx,addr_t r_offset,idx_t scnIdx)
 {
-  addr_t symVal=getSymAddress(e,symIdx);
+  GElf_Sym sym;
+  getSymbol(e,symIdx,&sym);
+  addr_t symVal=sym.st_value;
+  if(SHN_COMMON==sym.st_shndx)
+  {
+    //if no space has been allocated, st_value is invalid as an address
+    //and actually holds alignment constraints
+    //(see http://www.sco.com/developers/gabi/latest/ch4.symtab.html#stt_common)
+    //relocatable code will use 0 as the address for common symbols, so
+    //we do too.
+    symVal=0;
+  }
   assert(sizeof(addr_t)==sizeof(word_t));
   word_t addrAccessed=getWordAtAbs(elf_getscn(e->e,scnIdx),r_offset,IN_MEM);
   switch(type)
