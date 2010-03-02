@@ -24,6 +24,12 @@
 
 //todo: bad programming
 extern int pid;
+addr_t mallocPLTAddress=0;
+
+void setMallocPLTAddress(addr_t addr)
+{
+  mallocPLTAddress=addr;
+}
 
 void startPtrace()
 {
@@ -157,9 +163,10 @@ void memcpyToTarget(long addr,byte* data,int numBytes)
   }
 }
 
-
-//copies numBytes to data from addr in target
-void memcpyFromTarget(byte* data,long addr,int numBytes)
+//like memcpyFromTarget except doesn't kill katana
+//if ptrace fails
+//returns true if it succeseds
+bool memcpyFromTargetNoDeath(byte* data,long addr,int numBytes)
 {
   logprintf(ELL_INFO_V4,ELS_HOTPATCH,"memcpyFromTarget: getting %i bytes from 0x%x\n",numBytes,(uint)addr);
   //todo: force address to be aligned
@@ -168,8 +175,7 @@ void memcpyFromTarget(byte* data,long addr,int numBytes)
     uint val=ptrace(PTRACE_PEEKDATA,pid,addr+i);
     if(errno)
     {
-      perror("ptrace PEEKDATA failed\n");
-      death(NULL);
+      return false;
     }
     if(i+PTRACE_WORD_SIZE<=numBytes)
     {
@@ -182,6 +188,17 @@ void memcpyFromTarget(byte* data,long addr,int numBytes)
       memcpy(data+i,&val,numBytes-i);
     }
   }
+  return true;
+}
+
+//copies numBytes to data from addr in target
+void memcpyFromTarget(byte* data,long addr,int numBytes)
+{
+  if(!memcpyFromTargetNoDeath(data,addr,numBytes))
+  {
+    perror("ptrace PEEKDATA failed\n");
+    death(NULL);
+  }      
 }
 
 void getTargetRegs(struct user_regs_struct* regs)
@@ -201,12 +218,69 @@ void setTargetRegs(struct user_regs_struct* regs)
     death(NULL);
   }
 }
+
+//allocate a region of memory in the target using malloc
+//should be used for when creating objects to be used in the program,
+//as opposed to mmapTarget which should be used when mapping in new sections
+//inspiration for some of this code came from
+//http://www.hick.org/code/skape/papers/needle.txt
+addr_t mallocTarget(word_t len)
+{
+  struct user_regs_struct oldRegs,newRegs;
+  getTargetRegs(&oldRegs);
+  getTargetRegs(&oldRegs);
+  newRegs=oldRegs;
+
+  //so we have to do two things
+  //1. we have to push the amount to malloc onto the stack (5-byte instr)
+  //2. we have to call malloc (5-byte instr).
+  //  This is tricky because we have to know where
+  //  malloc lives. We're going to have to find it in the PLT. That's
+  //  outside the scope of this module though. We rely on it to be set
+  //  from outside the module using the setMallocPLTAddress method
+  //3. we have to restore the stack (3 byte instr)
+  if(!mallocPLTAddress)
+  {
+    death("location of malloc is unknown\n");
+  }
+
+  //todo: diff for 64 bit
+  //68 xx xx xx xx pushes amount to malloc onto the stack
+  //e8 xx xx xx xx calls malloc
+  //83 c4 04       adds 4 to esp (popping the stack without storing anywhere)
+  #define codeLen 13
+  byte code[codeLen]={0x68,0x00,0x00,0x00,0x00,
+                      0xe8,0x00,0x00,0x00,0x00,
+                      0x83,0xc4, 0x04};
+  memcpy(code+1,&len,sizeof(word_t));
+  addr_t relativeMallocPTAddr=mallocPLTAddress-newRegs.eip-10;
+  memcpy(code+6,&relativeMallocPTAddr,sizeof(addr_t));
+  byte oldText[13];
+  memcpyFromTarget(oldText,newRegs.eip,codeLen);
+  memcpyToTarget(newRegs.eip,code,codeLen);
   
+  //and run the code
+  continuePtrace();
+  wait(NULL);
+  getTargetRegs(&newRegs);//get the return value from the syscall
+  int retval=newRegs.eax;
+  printf("retval is 0x%x\n",(uint)retval);
+  if((void*)retval==NULL)
+  {
+    death("malloc in target of size %i failed\n",len);
+  }
+  //printf("now at eip 0x%x\n",newRegs.eip);
+  //restore the old code
+  memcpyToTarget(oldRegs.eip,oldText,codeLen);
+  //restore the old registers
+  setTargetRegs(&oldRegs);
+  return retval;
+}
 
 //allocate a region of memory in the target
 //return the address (in the target) of the region
 //or NULL if the operation failed
-long mmapTarget(int size,int prot)
+addr_t mmapTarget(int size,int prot)
 {
   printf("requesting mmap of page of size %i\n",size);
   //map code influenced by code from livepatch
@@ -281,3 +355,17 @@ long mmapTarget(int size,int prot)
   return retval;
 }
 
+
+//compare a string to a string located
+//at a certain address in the target
+//return true if the strings match up to strlen(str) characters
+bool strnmatchTarget(char* str,addr_t strInTarget)
+{
+  //todo: need robust error checking to make sure not
+  //accessing memory out of bounds
+  int len=strlen(str);
+  char* buf=zmalloc(len+1);
+  memcpyFromTarget((byte*)buf,strInTarget,len+1);
+  buf[len]=0;
+  return !strcmp(buf,str);
+}
