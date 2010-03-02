@@ -147,7 +147,8 @@ List* makePatchData(PoRegRule* rule,SpecialRegsState* state,ElfInfo* patch,ElfIn
   }
   memcpy(&resultAddr,addrBytes,sizeof(addr_t));
 
-  if(ERRT_OFFSET==rule->type || ERRT_REGISTER==rule->type || ERRT_EXPR==rule->type)
+  if(ERRT_OFFSET==rule->type || ERRT_REGISTER==rule->type || ERRT_EXPR==rule->type ||
+     ERRT_RECURSE_FIXUP_POINTER==rule->type)
   {
     head=zmalloc(sizeof(List));
     result=zmalloc(sizeof(PatchData));
@@ -195,21 +196,41 @@ List* makePatchData(PoRegRule* rule,SpecialRegsState* state,ElfInfo* patch,ElfIn
   case ERRT_RECURSE_FIXUP_POINTER:
     {
       //there are some special challenges when fixing up a pointer
+      //0. make sure it isn't a NULL pointer
       //1. we have to make sure we have't already fixed up at that location yet
-      //2. if the location corresponds to a symbol then it might perhaps be supposed
-      //   to be relocated to a .data.new section or something like that. On the other hand, if
-      //   it doesn't, then we can just allocate memory for it anywhere we like
-      //before we actually call generate PatchesFromFDEAndState
+      //2. if the location corresponds to a symbol then it might
+      //   perhaps be supposed to be relocated to a .data.new section
+      //   or something like that. On the other hand, if it doesn't,
+      //   then we can just allocate memory for it anywhere we like
+      //   before we actually call generate PatchesFromFDEAndState
+
+      //check for null pointer first,
+      //smth will always get written to patch data,
+      //whether it's the new memory address or
+      //whether it's left NULL if it's a NULL pointer
+      result->data=zmalloc(sizeof(addr_t));
+      result->len=sizeof(addr_t);
+      SpecialRegsState tmpState=*state;
+      byte* rhAddrBytes=NULL;
+      //remember that ERRF_DEREFERENCE means only that we look up the value
+      //at the mem location indicated by the register, not that we then dereference
+      //that mem location
+      int size=resolveRegisterValue(&rule->regRH,state,&rhAddrBytes,ERRF_DEREFERENCE);
+      assert(size==sizeof(addr_t));
+      memcpy(&tmpState.currAddrOld,rhAddrBytes,sizeof(addr_t));
+      if(!tmpState.currAddrOld)
+      {
+        //NULL pointer, can't recurse on it. Just make sure 0 gets copied to the new location
+        //we've already created the patch data as zero though, so we're all set
+        break;
+      }
+      
+
       addr_t* existingDataMove=NULL;
       if((existingDataMove=mapGet(dataMoved,&resultAddr)))
       {
         //we've already fixed up the location,
         //just have to set the pointer to point where we want it to
-        head=zmalloc(sizeof(List));
-        result=zmalloc(sizeof(PatchData));
-        head->value=result;
-        result->addr=resultAddr;
-        result->data=zmalloc(sizeof(addr_t));
         memcpy(result->data,existingDataMove,sizeof(addr_t));
         result->len=sizeof(addr_t);
         break;
@@ -263,30 +284,12 @@ List* makePatchData(PoRegRule* rule,SpecialRegsState* state,ElfInfo* patch,ElfIn
       *value=pointedObjectNewLocation;
       mapInsert(dataMoved,&resultAddr,value);
       
-      SpecialRegsState tmpState=*state;
+      
       tmpState.currAddrNew=pointedObjectNewLocation;
-      byte* rhAddrBytes=NULL;
-      //remember that ERRF_DEREFERENCE means only that we look up the value
-      //at the mem location indicated by the register, not that we then dereference
-      //that mem location
-      int size=resolveRegisterValue(&rule->regRH,state,&rhAddrBytes,ERRF_DEREFERENCE);
-      assert(size==sizeof(addr_t));
-      memcpy(&tmpState.currAddrOld,rhAddrBytes,sizeof(addr_t));
-      if(tmpState.currAddrOld)
-      {
-        //fde indices seem to be 1-based and we store them zero-based
-        head=generatePatchesFromFDEAndState(&patch->fdes[rule->index-1],&tmpState,patch,patchedBin);
-      }
-      else
-      {
-        head=zmalloc(sizeof(List));
-        result=zmalloc(sizeof(PatchData));
-        head->value=result;
-        result->addr=resultAddr;
-        //NULL pointer, can't recurse on it. Just make sure 0 gets copied to the new location
-        result->data=zmalloc(sizeof(addr_t));
-        result->len=sizeof(addr_t);
-      }
+      memcpy(result->data,&pointedObjectNewLocation,sizeof(addr_t));
+      
+      //fde indices seem to be 1-based and we store them zero-based
+      head->next=generatePatchesFromFDEAndState(&patch->fdes[rule->index-1],&tmpState,patch,patchedBin);
     }
     break;
   default:
@@ -298,7 +301,7 @@ List* makePatchData(PoRegRule* rule,SpecialRegsState* state,ElfInfo* patch,ElfIn
     logprintf(ELL_INFO_V2,ELS_HOTPATCH,"patching 0x%x with the following bytes:\n{",(uint)result->addr);
     for(int i=0;i<result->len;i++)
     {
-      logprintf(ELL_INFO_V2,ELS_HOTPATCH,"%u%s",(uint)result->data[i],i+1<result->len?",":"");
+      logprintf(ELL_INFO_V2,ELS_HOTPATCH,"%x%s",(uint)result->data[i],i+1<result->len?",":"");
     }
     logprintf(ELL_INFO_V2,ELS_HOTPATCH,"}\n");
   }
@@ -352,6 +355,7 @@ List* makePatchData(PoRegRule* rule,SpecialRegsState* state,ElfInfo* patch,ElfIn
 //we made to memory in so that it's possible to do successive patching
 void patchDataWithFDE(VarInfo* var,FDE* fde,ElfInfo* oldBinaryElf,ElfInfo* patch,ElfInfo* patchedBin)
 {
+
   SpecialRegsState state;
   memset(&state,0,sizeof(state));
   state.currAddrOld=var->oldLocation;
