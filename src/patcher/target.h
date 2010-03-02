@@ -30,11 +30,26 @@ void memcpyToTarget(long addr,byte* data,int numBytes);
 //copies numBytes to data from addr in target
 //todo: does addr have to be aligned
 void memcpyFromTarget(byte* data,long addr,int numBytes);
+
+//like memcpyFromTarget except doesn't kill katana
+//if ptrace fails
+//returns true if it succeseds
+bool memcpyFromTargetNoDeath(byte* data,long addr,int numBytes);
+
 void getTargetRegs(struct user_regs_struct* regs);
 void setTargetRegs(struct user_regs_struct* regs);
 //allocate a region of memory in the target
 //return the address (in the target) of the region
 //or NULL if the operation failed
-long mmapTarget(int size,int prot);
+addr_t mmapTarget(int size,int prot);
 
+//must be called before any calls to mallocTarget
+void setMallocPLTAddress(addr_t addr);
+addr_t mallocTarget(word_t len);
+
+//compare a string to a string located
+//at a certain address in the target
+//return true if the strings match
+//up to strlen(str) characters
+bool strnmatchTarget(char* str,addr_t strInTarget);
 #endif
