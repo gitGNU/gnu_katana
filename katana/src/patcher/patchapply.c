@@ -20,7 +20,8 @@
 #include <assert.h>
 #include "symbol.h"
 #include "util/logging.h"
- 
+#include "linkmap.h"
+
 ElfInfo* patchedBin=NULL;
 ElfInfo* targetBin=NULL;
 addr_t patchTextAddr=0;
@@ -56,7 +57,7 @@ void transformVarData(VarInfo* var,Map* fdeMap,ElfInfo* patch)
 void relocateVar(VarInfo* var,ElfInfo* targetBin)
 {
   //record in the patched binary that we're putting the variable here
-  int symIdx=getSymtabIdx(targetBin,var->name);
+  int symIdx=getSymtabIdx(targetBin,var->name,0);
   GElf_Sym sym;
   getSymbol(targetBin,symIdx,&sym);
   sym.st_value=var->newLocation;
@@ -111,7 +112,7 @@ void applyFunctionPatch(SubprogramInfo* func,int pid,ElfInfo* targetBin,ElfInfo*
   //now look up the symbol in the old binary to discover where to insert
   //the trampoline jump
   //todo: return value checking
-  int idx=getSymtabIdx(targetBin,func->name);
+  int idx=getSymtabIdx(targetBin,func->name,0);
   addr_t oldAddr=getSymAddress(targetBin,idx);
   GElf_Sym sym;
   getSymbol(targetBin,idx,&sym);
@@ -454,6 +455,28 @@ void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch)
   
   writeOutPatchedBin(false);
 
+  #ifdef legacy
+  //todo: this will not work in programs which do not use malloc directly.
+  //what to do about this?
+    idx_t symIdxDynamic=getSymtabIdx(targetBin,"malloc",ESFF_DYNAMIC|ESFF_MANGLED_OK);
+  if(STN_UNDEF==symIdxDynamic)
+  {
+    death("could not locate symbol for malloc in the target program\n");
+  }
+  setMallocPLTAddress(getPLTEntryForSym(targetBin,symIdxDynamic));
+  #endif
+
+  addr_t mallocAddr=locateRuntimeSymbolInTarget(targetBin,"malloc");
+  if(mallocAddr)
+  {
+    setMallocPLTAddress(mallocAddr);
+  }
+  else
+  {
+    death("Cannot find malloc in the target program\n");
+  }
+  
+
   logprintf(ELL_INFO_V1,ELS_PATCHAPPLY,"======Applying patches=======\n");
   for(List* cuLi=diPatch->compilationUnits;cuLi;cuLi=cuLi->next)
   {
@@ -465,7 +488,7 @@ void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch)
     for(int i=0;vars[i];i++)
     {
       //todo: return value checking
-      int idx=getSymtabIdx(targetBin,vars[i]->name);
+      int idx=getSymtabIdx(targetBin,vars[i]->name,0);
       if(idx!=STN_UNDEF)
       {
         GElf_Sym sym;
@@ -487,7 +510,7 @@ void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch)
       else
       {
         logprintf(ELL_INFO_V1,ELS_PATCHAPPLY,"Creating new variable %s\n",vars[i]->name);
-        int symIdxInPatch=getSymtabIdx(patch,vars[i]->name);
+        int symIdxInPatch=getSymtabIdx(patch,vars[i]->name,0);
         if(STN_UNDEF==symIdxInPatch)
         {
           death("patch symbol table didn't have symbol for new variable %s\n",vars[i]->name);
