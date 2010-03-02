@@ -37,7 +37,7 @@ if len(sys.argv)>1:
 else:
   print "Running all tests"
   for dir in sorted(os.listdir("tests")):
-    if os.path.isdir("tests/"+dir) and dir.startswith("test"):
+    if os.path.isdir("tests/"+dir) and dir.startswith("t"):
       if True==runTestInDir("tests/"+dir):
         passTests+=1
       totalTests+=1
