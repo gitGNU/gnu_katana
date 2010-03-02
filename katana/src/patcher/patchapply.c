@@ -29,13 +29,16 @@ addr_t patchRodataAddr=0;
 addr_t patchRelTextAddr=0;
 addr_t patchDataAddr=0;
 
+int addStrtabEntryToExisting(ElfInfo* e,char* str,bool header);
+int addSymtabEntryToExisting(ElfInfo* e,Elf32_Sym* sym);
+
 void allocateMemoryForVarRelocation(VarInfo* var)
 {
   printf("allocating memory for relocating variabl %s\n",var->name);
   int length=var->type->length;
   var->newLocation=getFreeSpaceInTarget(length);
   byte* zeros=zmalloc(length);
-  printf("zeroing out new memory\n");
+  printf("zeroing out new memory at 0x%x with length %i\n",var->newLocation,length);
   memcpyToTarget(var->newLocation,zeros,length);
   free(zeros);
   //todo: handle errors
@@ -64,10 +67,11 @@ void relocateVar(VarInfo* var,ElfInfo* targetBin)
   //now we write the symbol to the new binary
   Elf_Data* symTabData=getDataByERS(patchedBin,ERS_SYMTAB);
   gelf_update_sym(symTabData,symIdx,&sym);
+
+  logprintf(ELL_INFO_V4,ELS_PATCHAPPLY,"var new location is 0x%x\n",var->newLocation);
   
   //todo: how much do we need to do as long as we're patching code
-  //at the moment not patching code
-  performRelocations(targetBin,var);
+  //performRelocations(targetBin,var);
 }
 
 void insertTrampolineJump(addr_t insertAt,addr_t jumpTo)
@@ -93,7 +97,50 @@ void insertTrampolineJump(addr_t insertAt,addr_t jumpTo)
   }
 }
 
-
+void applyVariablePatch(VarInfo* var,Map* fdeMap,ElfInfo* patch)
+{
+  //todo: return value checking
+  int idx=getSymtabIdx(targetBin,var->name,0);
+  if(idx!=STN_UNDEF)
+  {
+    GElf_Sym sym;
+    //todo: should make space for the variable in .data.new or something
+    getSymbol(targetBin,idx,&sym);
+    var->oldLocation=sym.st_value;
+    bool relocate=sym.st_size < var->type->length;
+    printf("need to relocated is %i as st_size is %i and new size is %i\n",relocate,(int)sym.st_size,var->type->length);
+    if(relocate)
+    {
+      allocateMemoryForVarRelocation(var);
+    }
+    transformVarData(var,fdeMap,patch);
+    if(relocate)
+    {
+      relocateVar(var,targetBin);
+    }
+  }
+  else
+  {
+    logprintf(ELL_INFO_V1,ELS_PATCHAPPLY,"Creating new variable %s\n",var->name);
+    int symIdxInPatch=getSymtabIdx(patch,var->name,0);
+    if(STN_UNDEF==symIdxInPatch)
+    {
+      death("patch symbol table didn't have symbol for new variable %s\n",var->name);
+    }
+    GElf_Sym symInPatch;
+    getSymbol(patch,symIdxInPatch,&symInPatch);
+    //create a symbol for our variable
+    //todo: really should abstract this out
+    Elf32_Sym sym;
+    memset(&sym,0,sizeof(Elf32_Sym));
+    //todo: might not always be the case that it's global
+    sym.st_info=ELF32_ST_INFO(STB_GLOBAL,STT_OBJECT);
+    sym.st_name=addStrtabEntryToExisting(patchedBin,var->name,false);
+    sym.st_shndx=elf_ndxscn(getSectionByName(patchedBin,".data.new"));
+    sym.st_value=patchDataAddr+symInPatch.st_value;
+    addSymtabEntryToExisting(patchedBin,&sym);
+  }
+}
 
 void applyFunctionPatch(SubprogramInfo* func,int pid,ElfInfo* targetBin,ElfInfo* patch)
 {
@@ -375,7 +422,7 @@ void fixupPatchRelocations(ElfInfo* patch)
       flags|=ESFF_VERSIONED_SECTIONS_OK;
     }
     int reindex=reindexSymbol(patch,patchedBin,symIdx,flags);
-    printf("reindexed to %i at 0x%x\n",reindex,(uint)getSymAddress(patchedBin,reindex));
+    logprintf(ELL_INFO_V2,ELS_SYMBOL,"reindexed to %i at 0x%x\n",reindex,(uint)getSymAddress(patchedBin,reindex));
     if(STN_UNDEF==reindex)
     {
       death("Could not reindex symbol from patch to patchedBin\n");
@@ -398,7 +445,7 @@ void fixupPatchRelocations(ElfInfo* patch)
         //todo: don't do this if the relocation was actually
         //for something relative to the patch
         addr_t diff=patchTextAddr-oldTextNewStart;
-        printf("for PC32 relocation, modifying access at 0x%x to access 0x%x by adding 0x%x\n",(uint)newOffset,(uint)(addrAccessed+diff),(uint)diff);
+        logprintf(ELL_INFO_V2,ELS_RELOCATION,"for PC32 relocation, modifying access at 0x%x to access 0x%x by adding 0x%x\n",(uint)newOffset,(uint)(addrAccessed+diff),(uint)diff);
         modifyTarget(newOffset,addrAccessed+diff);
         //todo: I'm not sure this is necessary here, since we do relocations later
       }
@@ -487,47 +534,7 @@ void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch)
     VarInfo** vars=(VarInfo**) dictValues(cu->tv->globalVars);
     for(int i=0;vars[i];i++)
     {
-      //todo: return value checking
-      int idx=getSymtabIdx(targetBin,vars[i]->name,0);
-      if(idx!=STN_UNDEF)
-      {
-        GElf_Sym sym;
-        //todo: should make space for the variable in .data.new or something
-        getSymbol(targetBin,idx,&sym);
-        vars[i]->oldLocation=sym.st_value;
-        bool relocate=sym.st_size < vars[i]->type->length;
-        printf("need to relocated is %i as st_size is %i and new size is %i\n",relocate,(int)sym.st_size,vars[i]->type->length);
-        if(relocate)
-        {
-          allocateMemoryForVarRelocation(vars[i]);
-        }
-        transformVarData(vars[i],fdeMap,patch);
-        if(relocate)
-        {
-          relocateVar(vars[i],targetBin);
-        }
-      }
-      else
-      {
-        logprintf(ELL_INFO_V1,ELS_PATCHAPPLY,"Creating new variable %s\n",vars[i]->name);
-        int symIdxInPatch=getSymtabIdx(patch,vars[i]->name,0);
-        if(STN_UNDEF==symIdxInPatch)
-        {
-          death("patch symbol table didn't have symbol for new variable %s\n",vars[i]->name);
-        }
-        GElf_Sym symInPatch;
-        getSymbol(patch,symIdxInPatch,&symInPatch);
-        //create a symbol for our variable
-        //todo: really should abstract this out
-        Elf32_Sym sym;
-        memset(&sym,0,sizeof(Elf32_Sym));
-        //todo: might not always be the case that it's global
-        sym.st_info=ELF32_ST_INFO(STB_GLOBAL,STT_OBJECT);
-        sym.st_name=addStrtabEntryToExisting(patchedBin,vars[i]->name,false);
-        sym.st_shndx=elf_ndxscn(getSectionByName(patchedBin,".data.new"));
-        sym.st_value=patchDataAddr+symInPatch.st_value;
-        addSymtabEntryToExisting(patchedBin,&sym);
-      }
+      applyVariablePatch(vars[i],fdeMap,patch);
     }
     free(vars);
 
