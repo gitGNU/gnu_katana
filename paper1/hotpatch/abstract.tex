@@ -1,0 +1,63 @@
+\begin{abstract}
+Despite advances in software modularity, security, and reliability,
+offline patching remains the predominant form of updating or
+protecting commodity software.  Unfortunately, the mechanics of {\it
+  hot patching} (the process of upgrading a program while it executes)
+remain understudied, even though such a capability offers practical
+benefits for both consumer and mission-critical systems.
+%
+A reliable hot patching procedure would serve particularly well by
+reducing the downtime necessary for critical functionality or security
+upgrades.  Yet, hot patching also carries the risk -- real or
+perceived -- of leaving the system in an inconsistent state, which
+leads many owners to forego its benefits as too risky.  
+%
+%MEL:
+%entity -- an
+%application binary, library or even the kernel, while it is still in
+%execution. 
+%SB:
+% It offers enormous benefits as it helps in mitigating
+% process downtime and contributes to overall system reliability and
+% availability.
+%
+%It offers great practical benefits for mission-critical systems, by
+%reducing downtime for upgrades essential for maintaining their {\em
+%  reliability} and {\em availability}. 
+%
+In this paper, we propose a novel method for hot patching ELF binaries
+that supports {\em (a)} synchronized global data and code updates and
+{\em (b)} reasoning about the results of applying the hot patch.  We
+propose a format, which we call a {\it Patch Object}, for encoding patches as
+a special type of ELF relocatable object file.  Our tool, {\em
+  Katana}, automatically creates these patch objects as a by-product of the
+standard source build process.  Katana also allows an end-user to
+apply the Patch Objects to a running process.  In essence, our method
+can be viewed as an extension of the Application Binary Interface
+({\it ABI}), and we argue for its inclusion in future ABI standards.
+
+%MEL: tried to condense to above
+%We represent our hot patches as ELF-based Patch Objects, and we rely on the
+%standard ELF structures in the running process' image for their
+%application. 
+%These Patch Objects are a special type of ELF relocatable object files,
+%and are created automatically as a by-product of the standard source 
+%build process by the developer-side component of our tool {\em Katana}, 
+%and can then be applied by Katana's end-user binary-only component.  
+%
+
+%
+%SB: This is ``how'', and is best relocated to the Intro.
+% by first recognizing the importance of the stereotypical
+% build process in constructing a binary through intermediate object
+% files, and then delegating the overhead of maintaining object file
+% dependencies to this build process. 
+% In effect, what we are saying is
+% that, after making the necessary source-level changes for a patch or
+% an upgrade, we observe the changes to all object files and only
+% consider those that have been modified or created anew by the build
+% process. Correlating these with the original object files that were
+% used to build the previous version of the executable, we come up with
+% a mechanism to upgrade the running process with the new binary.
+\end{abstract}
+

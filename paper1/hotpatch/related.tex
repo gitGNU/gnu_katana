@@ -1,0 +1,102 @@
+\section{Related Work}
+\label{sec:related}
+
+There are several hot-patching systems preceding Katana. One of the
+most well known is probably Ginseng \cite{ginseng}. Ginseng (and
+systems drawing inspiration from it such as Polus \cite{polus}) have
+successfully demonstrated patching of such important software as
+apache and sshd. These systems perform analysis of the differences
+between the original and patched versions at the source code
+level. This introduces considerable (and we argue unnecessary)
+complexity and inability to deal well with some optimizations such as
+inlining and hand-written assembly. The complexity of analyzing the
+source code ties these systems to generally a single language (C in
+the case of both Ginseng and Polus). By contrast, Katana is language
+agnostic as it works at the level of the binary ABI, and although we
+have not yet demonstrated it doing so, it should eventually be able to
+patch binaries compiled from any language, providing the necessary
+symbol and relocation information is supplied. Ginseng also requires
+significant programmer interaction in annotating the code
+\cite{ginseng-manual} and requires compiling the code to use
+type-wrappers, allowing the patching of data types but at the cost of
+indirect access to them. The more programmer effort involved in
+generating a patch, the more likely the patch is to be incomplete or
+incorrect.
+
+Motivated by many of the points in the above paragraph, the
+successful Ksplice system \cite{ksplice} patches at the binary level, as we do. We
+claim the following differences from and improvements over Ksplice.
+\begin{itemize}
+\item Ksplice operates on the kernel. As their paper states, most of their
+  technique is not specific to the kernel, but there is no evidence
+  that it has been implemented to function on userland programs.
+  Katana operates on userland.
+\item Ksplice makes no attempt to patch data, relying entirely on
+  programmer-written transformation functions when data types do
+  change
+\item Ksplice patches are created as kernel modules. Ksplice does not
+  provide a mechanism to perform operations, such as composition,
+  on these patches.
+\end{itemize}
+
+To the best of our knowledge, Katana is the first system to utilize
+DWARF type information in patching.
+
+Maintaining continuous availability, even in the absence of disruptive
+events like patches, is both a challenging technical exercise and the
+driving need for research on dependability, reliability, and fault
+tolereance~\cite{deltaexec}. 
+%The work most closely related to Katana focuses
+%JMHO: reworded above because I don't think this is what's most
+%closely related
+Our work follows work focusing
+%JMHO end
+ on enabling a software
+application to continue providing service or survive significant
+events like errors, exploits, and patches.  This body of work includes
+research on dynamic kernel updates, software survivability, and
+software self-healing. However, other research areas also addressed the
+challenge of enabling software to adapt at runtime, e.g., the area
+of software evolution (e.g.,~\cite{software-evolution}).
+
+The concept of crash-only software~\cite{crashonly} advocates
+microrebooting: the procedure of retrofitting each component of a
+system with the ability to crash and reboot safely as the default mode
+of operation.  Despite its appeal as a design principle, such an
+approach would be difficult to retrofit to legacy software.
+Although restarting a particular service or application is disruptive
+enough, rebooting the operating system itself multiplies this
+disruption.  
+The need to avoid that kind of downtime helped drive the
+creation of frameworks like Loadable Kernel Modules for Linux, which
+allow for extending the kernel during runtime without a reboot.
+The ability to update the running kernel (as opposed to adding
+or removing modules) without rebooting was achieved at least ten years
+ago~\cite{cesare1998} and recently rediscovered, albiet mostly for
+research, rather than commodity,
+kernels~\cite{nonLKMkernpatch,baumann2007osupdate,soules2003k42}).
+Even so,
+dynamic updates of the kernel during runtime that don't require a
+reboot are difficult to apply to a commodity OS, although several
+efforts have been successful for the K42 experimental
+system~\cite{soules2003k42,baumann2005k42}.
+
+Software self-healing aims at ensuring continuous or increased
+availability for systems subjected to exploited vulnerabilities,
+either by automatically generating
+patches~\cite{weimer2009genetic,stelios2005usenix} to gradually harden
+the application or seeking to avoid a restart altogether by modifying
+certain runtime aspects ({\it e.g.,} the memory
+subsystem~\cite{rinard2004osdi}, properties of the execution
+environment~\cite{rx2005sosp}), 
+%
+or selected control
+paths~\cite{dira2005,locasto2007usenix}) of the system in response to
+attacks.
+One major risk of employing self-healing in production environments is
+that the semantics of follow-on execution remain largely uncontrolled,
+although recent work in automatically correcting memory
+errors~\cite{exterminator2008cacm} seems to achieve fairly reliable
+results.  Both automated responses and traditional patches can make it
+difficult for an administrator to understand the implications of a
+particular fix~\cite{rinard.ppp}.

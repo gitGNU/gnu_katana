@@ -1,0 +1,38 @@
+\subsection{Why Not Just Employ Redundancy?}
+\label{ssec:redundancy}
+
+Redundant infrastructure, containing replicas of nodes and service
+paths, often helps an organization bridge the service disruption
+stemming from patches.  We believe, however, that redundancy isn't
+always the best approach for ensuring availability during an upgrade
+or security-critical patching process.  Rather than an established
+best practice, we invite the reader to see redundancy as
+an extreme measure that needlessly duplicates hardware, networking, and
+software of the original system. We suggest that redundancy is: 
+
+%Such a mirrored system ensures that service remains
+%uninterrupted whenever a {\it failover} is initiated. A {\it failback}
+%scenario occurs when the redundant machine hands over control back to
+%the original. 
+
+\renewcommand{\labelenumi}{\alph{enumi}.}
+
+\begin{enumerate}
+\item {\bf expensive -} especially in medium-sized enterprises where
+  the cost of a single server, gateway, or switch is high enough to
+  outweigh the benefits of redundancy.
+
+\item {\bf wasteful -} Redundant systems are typically passive
+  bystanders, lying in wait for an active machine to
+  initiate a failover.
+
+\item {{\bf requires complicated logic -}} Transferring application
+  state (even across multiple homogenous systems) is non-trivial,
+  especially when the state transfer occurs within hardware (such as
+  for call trunks).
+
+\item {{\bf specialized -}} The process of building system redundancy
+  is not easily generalizable across heterogenous systems and requires
+  full knowledge of the underlying protocol and application state in
+  order to provide faithful failover and failback.
+\end{enumerate}

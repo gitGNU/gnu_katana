@@ -1,0 +1,95 @@
+\section{Introduction}
+\label{sec:intro}
+
+It is somewhat ironic that users and organizatations hesistate to
+apply patches whose stated purpose is to support availability or
+reliability precisely because the process of doing so can lead to
+downtime (both from the patching process itself as well as
+unanticipated issues with the patch).  Periodic reboots in desktop
+systems --- irrespective of the vendor --- are at best annoying.
+Reboots in enterprise environments ({\it e.g.,} trading, e-commerce,
+core network systems), even for a few minutes, imply large revenue
+loss or an extensive backup and failover infrastructure with rolling
+updates.  We question whether this {\em de facto} acceptence of
+significant downtime and redundant infrastructure should not be
+abandoned in favor of a reliable hot patching process.
+
+%
+% SB: This intro would fit in a larger version, but perhaps
+%       not in this strapped-for-space one?
+%
+%As computing penetrates deeper into our modern infrastructure, devices
+%(mobile or otherwise) and applications running on them are expected to
+%be safer and more reliable compared to the previous generation. 
+%SB: proposed variant:
+%Even the requirement of periodic desktop reboots is nowadays
+%perceived as annoying, whereas for the enterprise environments  
+%taking down trading, popular e-commerce,
+%or core network systems even for a few minutes implies huge
+%revenue losses.
+%
+% Server
+% uptimes are becoming ever more demanding, especially for systems
+% hosting e-commerce sites, email services or social networking
+% domains. Even personal computers are not spared the anathema of
+% "necessary" reboots whenever an application or operating system
+% service needs to be patched. Such frequent reboots interrupt both
+% network-facing services and interactive applications, thereby
+% frustrating users at both ends. More seriously, in the case of network
+% switches and routers, disconnecting them from the network for the
+% purposes of patching might render the underlying network unreachable
+% in the absence of redundancy. Trading systems need to be active all
+% through trading hours, and popular e-commerce sites suffer huge
+% revenue losses when their servers are down for even a few minutes
+% during the frenetic period of holiday shopping.
+%\paragraph{}
+
+% Despite all the foresight that goes into building what are potentially
+% thought to be safe, reliable and scalable applications, such
+% guarantees of security and availability cannot be proven or even
+% sometimes convincingly relayed to the skeptical customer. The
+% customer's trust in a system is seeded in a long-term relationship
+% with the vendor whose track-record determines the product's ultimate
+% success. We believe that all software is flawed, as all programmers
+% are flawed. It is the magnitude of the flaw that separates the expert
+% programmer from a mediocre one. As such, fixes or enhancements to
+% released software is a foregone conclusion even as the original
+% software is being deployed.
+%
+% SB: rephase and cut:
+
+Software, the product of an inherently human process, remains a flawed
+and incomplete artifact.  This reality leads to the uncomfortable
+inevitability of future fixes, upgrades, and enhancements.  Given the
+way such fixes are currently applied ({\it i.e.,} patch and reboot),
+downtime is a foregone conclusion even as the software is released.
+
+%Yet, all software is flawed, as all programmers are flawed. Thus
+%the inevitability of fixes or enhancements to
+%released software is a foregone conclusion even as the original
+%software is being deployed.
+
+%SB: small cuts
+%\paragraph{}
+%Such fixes or enhancements form what is routinely called a software
+%patch or an upgrade. 
+
+%arcane wasn't quite the right word, i think -MEL
+%barbaric, perhaps? Immature?
+While patches themselves are a necessity, we believe that the process
+of {\it applying} them remains rather crude.  First, the target
+process is terminated, the new binary and corresponding libraries (if
+any) are then written over the older versions, the system is restarted
+if necessary, and finally the upgraded application begins execution.
+Besides the appreciable loss in uptime, all context held by the
+application is also lost, unless the application had saved its
+state to persistent storage~\cite{crashonly,brown02rewind} and
+later restored it (which
+%seldom happens). 
+is expensive to design for, implement, and execute).  In the case of
+mission-critical services, even after a major flaw is unveiled and a
+patch subsequently created, administrators likely wish to apply the
+patch and upgrade the process without actually restarting the program
+and losing state and time.  This requirement serves as our
+motivation for {\it hot patching}.
+

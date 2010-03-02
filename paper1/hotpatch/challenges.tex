@@ -1,0 +1,80 @@
+\subsection{Challenges of Patching}
+\label{ssec:challenges}
+
+% ``application'' is overloaded at this point -MEL
+Requiring and encouraging the adoption of the latest security patches
+is a matter of common wisdom and prudent policy.  It appears, however,
+that this wisdom is routinely ignored in practice.  This disconnect
+suggests that we should look for the reasons underlying users'
+hesitancy to apply patches, as these reasons might be due to
+fundamental technical challenges that are not yet recognized as such.
+We believe that the current mechanics of applying patches prove to be
+just such a stumbling block, and we contend that the underlying
+challenges need to and can be addressed in a fundamental manner {\em
+  by extending the core elements of the ABI and the executable file
+  format}.
+
+%The need for such fundamental changes will become apparent as we
+%point out the problems facing the owners of software targeted by a
+%patch.
+
+Mission-critical systems seem hardest to patch.  They can ill afford
+downtime, and the owner may be reluctant to patch due to the real or
+perceived risk of the patch breaking essential functionality.  For
+example, patching a component of a distributed system might lead to a
+loss or corruption of state for the entire system.  An administrator
+might also suspect that the patch is incompatible with some legacy
+parts of the system.  Even so, the patch may target a latent
+vulnerability in a software feature that is not now in active use, but
+also cannot be easily made unreachable via configuration or module
+unloading.  The administrator is forced to accept a particularly
+thorny choice: inaction holds as much risk as a proactive
+``responsible'' approach.  Since the risks of patching must
+be weighed against those of staying unpatched, we seek to
+%In this paper, however, we will not analyze such
+%risk trade-offs, but rather concentrate on how we can 
+{\bf shift the balance of this decision toward hot patching by making
+  it not only possible, but also less risky in a broad range of
+  circumstances}. We contend that this can only be done through good
+engineering and making patching a part of the standard toolchain.
+
+%Consider the following circumstances:
+%\begin{itemize}
+%  \item The patchee is part of a distributed system and cannot afford
+%    loss of state, even though it can afford some very brief periods
+%    of response delay ({\it e.g.,} its loss of state would require the
+%    production distributed system to be restarted as whole).
+%  \item The administrator suspects that the patch might not be
+%    compatible with other parts of the system, and so non-applicable
+%    within his legacy environment.
+%  \item The patch targets an exploitable vulnerability in an
+%    application feature that is not in active use but cannot be easily
+%    made unreachable via the application's own configuration or module
+%    support.
+%\end{itemize}
+
+Our key observation is that current binary patches, whether ``hot'' or
+static, are almost entirely opaque and do not support any form of
+reasoning about the impact of the patch (short of reverse engineering
+both the patch and the targeted binary).  In particular, it is hard
+for the software owner to find out whether and how a patch would
+affect any particular subsystem or compatibility of the target with
+other software in any other way than applying the patch on the test
+system and trying it out, somehow finding a way to faithfully
+replicate the conditions of the production environment.
+
+Given these circumstances, our tool Katana and our Patch Object format
+not only seek to make possible the mechanics of hot patching, but also
+enable administrators to reduce the risk of applying a particular fix
+by providing them with enough information to support examination of
+the patch structure, reasoning\footnote{By which we mean manual,
+  human-level reasoning, although applying automated reasoning methods
+  is an interesting (and open) avenue of research.} about its
+interaction with the rest of the system, and an understanding of the
+tradeoffs involved in applying it.
+
+%Thus the case for our suggested architecture is not only ``hot
+%patching'' of running processes but also reducing the real or
+%perceived risk though the ability to examine the structure of the
+%patch and reason about its interaction with the software.
+

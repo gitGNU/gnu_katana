@@ -1,0 +1,140 @@
+Dear Sergey Bratus
+
+Apologies for the delay, but the main ARES conference has now opened the registration site and provided camera-ready instructions. The new deadline for registration and camera-ready copy is November 21st! Remember, your registration must be paid by this date!
+
+For registration, please go here: http://poland.nethotels.com/nethotels/english/Congress/cisis_2010
+
+For instructions and submission of camera-ready copy, go here: http://www.ieeeconfpublishing.org/cpir/AuthorKit.asp?Community=CPS&Facility=CPS_Feb&ERoom=ARES+2010 (Note that your camera-ready paper should be submitted here, NOT at the ConfDriver site! Also, there may be some problems with the "PDF express" tool in the next couple of days, but you don't need to worry about this for at least a week...)
+
+For your convenience, we again include the reports of the reviewers for your paper "Katana: A Hot Patching Framework for ELF Executables" below. Please consider the reviewers’ comments carefully when preparing the final version of your paper. 
+
+
+Best regards
+Your SecSE 2010 Team
+
+------------------------------------------------------------------------------
+
+
+
+
+
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+REVIEW 1 
+
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+Originality(weight 2) : Strong accept
+Quality(weight 2) : Strong accept
+Relevance(weight 1) : Strong accept
+Presentation(weight 1) : Strong accept
+Recommendation(weight 6) : Strong accept
+------------------------------
+OVERALL : 5
+
+
+COMMENTS
+===========
+The paper presents a novel approach to hot-patching
+executables. It describes how to create a patch object as a
+by-product of the build process, how to encode it as a special
+type of ELF object, and how to apply the patch at runtime in a
+synchronized manner against global data and code updates. 
+
+This is exactly the kind of paper I would like to see in this
+workshop. The approach is promising, yet not fully baked. The
+paper is well written, well structured, has novel
+contributions. 
+
+
+
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+REVIEW 2 
+
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+Originality(weight 2) : Weak accept
+Quality(weight 2) : Accept
+Relevance(weight 1) : Accept
+Presentation(weight 1) : Weak accept
+Recommendation(weight 6) : Accept
+------------------------------
+OVERALL : 4.10714
+
+
+COMMENTS
+===========
+This paper proposed a new method for hot patching and analyse its limitations. This method is very useful for automatic software updating and this work is helpful for future research work. 
+
+
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+REVIEW 3 
+
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+Originality(weight 2) : Accept
+Quality(weight 2) : Accept
+Relevance(weight 1) : Accept
+Presentation(weight 1) : Accept
+Recommendation(weight 6) : Accept
+------------------------------
+OVERALL : 4.28571
+
+
+COMMENTS
+===========
+The authors present Katana, a framework used to patch ELF executables on the fly. They created a system that is able to patch both the code and the data of an ELF executable associated to a process. I think the problem is really interesting and represents an open ISSUE in the research field. The idea is also good but while the idea to patch the code is quite straightforward  (similar to the hooking techniques) the part of the patching data is very interesting. The only problem as already explained by the authors is when the patch has to change some data related to an active function (unsafe state). For example network applications could always have a function that is always in the active state. The Authors should empirically show the convergence of the algorithm.
+
+
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+REVIEW 4 
+
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+Originality(weight 2) : Neutral
+Quality(weight 2) : Neutral
+Relevance(weight 1) : Accept
+Presentation(weight 1) : Neutral
+Recommendation(weight 6) : Weak reject
+------------------------------
+OVERALL : 2.61905
+
+
+COMMENTS
+===========
+-	It is not clear from the paper whether the approach has been applied for any software applications for patching at runtime. The experimental evaluation is missing. For this kind of approach, experimental evaluation is very important where the effectiveness and overhead can be measured.
+-	Figure 1 is difficult to read. It could be easier to understand, if the overview/working environment/usage of the proposed approach could be included in the beginning of Section III.
+-	The related work section is poorly written - the proposed work should be compared and contrasted with the related work in detail. 
+-	Too many footnotes – kind of distracting.
+
+
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+REVIEW 5 
+
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+Originality(weight 2) : Accept
+Quality(weight 2) : Accept
+Relevance(weight 1) : Accept
+Presentation(weight 1) : Accept
+Recommendation(weight 6) : Accept
+------------------------------
+OVERALL : 4.28571
+
+
+COMMENTS
+===========
+Interesting paper.
+
+Related work seems to be missing quite a lot. In particular the whole area of runtime evolution is missing, which is regrettable, as the area is concerned with precisely the same things as you are.
+
+It is unclear why you use inotify to detect updated files rather than simply compare files before and files after. The latter would seem to be more reliable and more flexible (e.g. could be done at any time, on any node, not just as the new system is being compiled).
+
+You rely on make to ensure that any code that relies on e.g. modified data layouts is recompiled (and hence part of the patch object). How reliable is this, really? Is it possible to state a set of rules that e.g. a C programmer must adhere to, to ensure that run-time patching will work?
+
+Path application relies on writing a jump instruction at the top of the modified code. Have you examined the performance penalties this might result in, not just in terms of execution, but also in terms of memory use, as old code must remain in memory? If the patch application process is repeated, how long before the accumulated performance penalties become noticeable?
+
+The limitation to code that does not call previously unused functions in dynamically loaded libraries seems quite serious. Since you have chosen not to support this, presumably you do not consider it a severe limitation of Katana. Can you explain why?
+
+In section IV.A there are tree paragraphs that start with a ":" (": Let A denote...", ": Instead, when we..." and ": Finally we note...". This needs to be corrected.
+
+Katana will only update when the program is in a safe state. In real programs, how often will the program never enter a safe state? What practical experience do you have with this? An interesting experiment might be to upgrade e.g. the Apache web server several times to successively higher numbered releases.
+
+Some programs open shared objects using e.g. dlopen. Can Katana be used to upgrade these shared objects at rumtime too?
+
+
+

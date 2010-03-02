@@ -1,0 +1,240 @@
+\section{Automated Patching}
+
+In this section, we describe our data and code patching methods.  We
+note that, compared to previous work, our PO data structures
+allow reasoning about the scope, extent, and impact of the patch ({\it
+ e.g.,} whether it affects particular subsystems within the process).
+
+%\subsection{Code Patching}
+{\bf Code Patching.} %\hskip 0.1in
+This process involves several stages.
+%\newline
+\newline
+(i) {\it Code Identification:} Katana first needs to identify the
+section(s) of text that need to be modified within the running
+process. To do this, we consider the list of all modified object files
+from our tracking step, and identify all functions (both static and
+global) within these files 
+%SB:
+from their symbol table. 
+%JMHO: removed talk of copying all functions
+Functions that differ between the original
+and modified versions of an object file are copied into the PO and
+marked as code.
+%\newline
+\newline
+(ii) {\it Symbol Resolution:} After identifying all functions that
+require a patch, we need to resolve outstanding symbol references
+within each function. Typically, symbol resolution for an application
+happens at both the linking stage (called {\it static linking}, when
+the symbol is present within another object file or archive), and the
+execution stage (or {\it dynamic linking}, when the symbol is present
+within a shared library).  All code relocations are identified in the
+ELF sections {\tt .rel.text} and {\tt .rela.text}, within the object
+files and the final executable.  Each relocation entry contains, among
+other information, the code offset that requires relocation, and the
+outstanding symbol that provides this fix-up.
+
+For each relocation entry, Katana copies the corresponding symbol into
+the PO. The actual value of the symbol is not necessary in the PO
+unless the target to be patched will be stripped, as the value of the
+symbol can be retrieved from the running target while performing the
+patching. This is key in allowing executables which have already been
+patched to be patched again.
+%Katana uses the replicated executable (from
+%{\it before} the patch) to figure out the address of the symbol.  If
+%the symbol was provided by another object file, then the symbol table
+%of the old executable contains this final address, and we update the
+%PO accordingly,
+%SB:
+%with this address as the patch target. 
+If the symbol was
+dynamic ({\it i.e.,} present in a shared library such as {\tt libc}),
+then the fixup value is the address of a corresponding entry in the
+procedure linkage table ({\it PLT}) of the executable.  The PLT is
+essentially a jump table with entries for each symbol that needs to be
+resolved at runtime by the dynamic linker.  When the process begins
+execution, the dynamic linker maps the required shared libraries into
+the address space of the process, and updates each PLT entry.
+
+For dynamic symbols, Katana traverses the PLT entries of the
+executable and compares the symbol name of each entry with
+the symbol name that requires relocation. Once a match is found, the
+symbol value can be determined. In our prototype,
+Katana is unable to handle calls to previously
+%SB:
+unused functions present in any shared libraries\footnote{This would
+  require creation of new PLT and GOT entries and either subsequent
+  re-basing of the following segments of the executable, or creation
+  of a new segment to allocate the extra entries. Although ELF
+  rewriting systems like ERESI or Diablo show that such manipulations
+  can be made practical, we chose not to complicate Katana with
+  them yet.}
+, although support for this is planned.
+
+Finally, if the outstanding symbol's definition was not found within
+the replicated executable (either within the symbol table or the PLT),
+then it was newly added by the patch; it is marked as such and added
+to the PO.
+%\newline
+\newline
+(iii) {\it Patch Application:} Applying a code patch is simple enough,
+and has been researched in other
+systems~\cite{pannus,livepatch,ksplice,kaho}.  We map the new function
+in memory, and insert a trampoline {\tt jmp} instruction at the
+beginning of the old function within the process memory image. This
+interposition allows the caller to execute our new function instead of
+the previous one at the cost of an extra jump.  It is possible to
+avoid the overhead (from branch mis-prediction) of the {\tt jmp}
+instruction by adding code in the old function which traces up the
+stack and modifies the caller's {\tt call} instruction operand to
+point to the new address instead of the old one. Although this
+optimization would ensure that all subsequent calls from the same
+caller would execute the new patched function without stepping into
+the old one, it does makes the process of rolling back a patch
+non-trivial. A simpler method to avoid the overhead would be to
+relocate all calls to the function to point to its new definition
+(although the trampoline would still be desirable, to catch calls from
+function pointers or anything of similar nature). The current
+prototype uses only the trampoline method.
+
+%\subsection{Data Patching}
+{\bf Data Patching.} %\hskip 0.1in
+Patching data within a running process is significantly harder than
+patching application code.  The primary challenge here is to
+synchronize the code and the data structures it acts on.\footnote{For
+  example, consider adding a new member to a C struct definition and
+  an additional clause to the logic that processes it.}
+
+Tracking down previously allocated data is nontrivial (one of the
+reasons why garbage collectors are interwoven with the language
+implementation).  Even after identifying the allocated chunks of
+memory, in the absence of some kind of a type specification, the {\it
+  internal structure} of memory remains opaque.  We also need a method
+for extracting only the modified data variables from the patch and a
+means to discover the actual modifications that were performed. 
+%JMHO: added the below because otherwise I don't think it's clear we
+%solved them
+Our system solves both of these problems.
+
+We first note that any code that acts on patch-modified data is
+already taken care of by Katana's code patching process. This is
+because we rely on {\tt make} to build the object files that
+correspond to all modified sources. We resolve the previously
+identified problems towards patching data by leveraging
+DWARF\footnote{\url{http://dwarfstd.org}} debugging information within the
+application executable. This requires the object files to be compiled
+with debugging support, but we do not see this as a limitation. Since
+we only need DWARF information while building the PO, all debugging
+symbols could be stripped from the executable during application
+deployment, if so desired 
+%JMHO:
+(this would require storing symbol values in the PO, however).
+%JMHO end
+We recall the representation of types in
+the DWARF format and then detail the various steps in Katana's data
+patching process.
+
+{\bf DWARF type information.} %\hskip 0.1in 
+The DWARF structure is laid
+out as a tree of DIEs ({\it Debugging Information Entries}) within the
+executable file. Each DIE has an associated tag and a set of
+attributes. The DIE that defines type information has the tag as one
+of {\tt DW\_TAG\_base\_type}, {\tt DW\_TAG\_structure\_type} or {\tt
+  DW\_TAG\_union\_type}. Typedefs and other type modifiers (such as
+{\tt const}, {\tt volatile}, {\tt pointer} {\it etc.}) are referenced
+by the DIE that defines the type. In case of structures or unions,
+each member is contained as a separate DIE within the parent DIE that
+identifies the struct/union. It is important to note that DWARF
+annotates types of {\it all} visibilities from the program sources -
+local, global and static.
+
+Katana's data patching process contains a number of steps:
+
+(i) {\it Type Discovery:} We set out to discover all newly created or
+modified data types -- those that are primarily user-defined (such as
+structures and unions in {\bf C}). Katana traverses the type information
+(as identified by the above DWARF tags) from the newly created executable,
+ and for each encountered type, it searches for
+the corresponding type-name within the {\it replicated} executable
+(from before the patch). If so found, the full types (i.e. the number,
+type and position of all member variables contained within) are
+compared to determine if they are identical. If not identical,
+a transformation between the old and new versions is generated, along
+with DWARF information identifying the type to insert into the PO as
+soon as a variable is found making use of the altered type.
+%the parent type identifying the struct/union is inserted into the PO.
+ Else, if
+the type name itself was not found within the replicated executable, then the
+current type was created by the patch, and is added as such to the PO.
+%\newline
+\newline
+(ii) {\it Data Traversal:} The next step is to traverse all variables
+defined within the new application, and for each one encountered,
+we first determine its 
+%SB:
+lexical scope.
+If the scope is
+local, then we ensure that the corresponding function (the one that
+defines this variable) does not have an activation frame on  
+the program stack while
+applying the patch. Else, the variable has been defined as either
+global or static. We first check if the replicated executable defines
+the same variable. If not, then this variable has been created by the
+patch and we need not worry about it and leave the symbol resolution upto
+the compiler (as only {\it new} code can use this variable). Otherwise,
+we verify whether the variable's type is one of the
+modified types identified during {\it type discovery}. If it is, then
+we add the variable along with its {\it original} address from the replicated
+executable, its {\it new} address from the patch, and type information to the
+PO. At the end of this stage, Katana would have identified all newly
+created or modified variables from the patch. Dealing with variable
+scope and safety is still a work in progress in the current prototype.
+%\newline
+\newline
+(iii) {\it Patch Application: } Applying a data patch consists of
+first tracking down the relevant symbols in program memory. Katana
+reads in the PO, and for each data variable encountered, it checks if
+the variable is a pointer or not. If it is, then the current validity of the
+pointer is verified (by bounds-checking the pointer value to within
+heap boundaries).  If the pointer is found to be invalid, no further
+action is taken.  If the pointer is valid, then memory for the new
+type(s) is allocated, the older structure is copied into the new one
+taking into account the difference in structure definition, the old
+memory is then freed, and the pointer is modified to point to the new
+segment (in case of structures such as lists, trees, since we have the
+type specification, we can repeat this process recursively for each
+node on the list or tree). Else if the variable is not a pointer, then
+Katana modifies all its references in the program text to the updated
+memory location from the patch. In the current prototype, Katana
+automatically zeros all {\it new} member variables within structures.
+Eventually it will support default values and programmer-written
+custom initializers.
+
+{\bf Challenges.} %\hskip 0.1in 
+Hot patching still faces a number of
+challenges, including dealing with multithreaded programs and address
+space randomization (which slight changes to the OS loader can help us
+overcome).  
+There is nothing inherent in our design which will not work with
+multithreading, but dealing with it through ptrace takes considerable
+work which we have not yet done.
+Furthermore, dynamic updates require some knowledge of the
+program's execution state so that the application is quiescent with
+respect to the code and data being altered by Katana as it applies the
+Patch Object. 
+% We consider the program to be in a safe state if all
+% activation records are free of functions contained in the PO and all
+% activition records are free of functions that $(1)$ access any global
+% or static symbols we identify during Katana's {\it Data Traversal} stage and
+% $(2)$ do not define any local variables of modified types identified
+% during our Type Discovery phase.  Katana uses the {\tt ptrace}
+% interface to pause execution and query this state.
+%
+%JMHO: We repeat this again in the discussion section, so I commented
+%it out here and added a brief note saying we discuss it more below
+We have not
+yet implemented a safety determination mechanism, but we discuss our
+approach to it in the next section.
+
+% LocalWords:  ptrace multithreading JMHO

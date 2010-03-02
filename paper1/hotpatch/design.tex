@@ -1,0 +1,49 @@
+\section{Katana Design: Tracking Object Dependencies}
+\label{sec:design}
+
+Katana leverages the typical Unix {\tt Makefile} build mechanism to track
+file-level dependencies.  Normally, after applying a source patch file
+and performing a top-level {\tt make}, only those object files whose
+underlying sources have changed are rebuilt.  Katana thus tracks
+object-level (.o) dependencies as follows.  We first replicate all
+object files and the ELF executable from the existing source tree.  We
+then apply the patch to the {\it original} source tree.  At this
+point, only source files have been modified. Next, using the Linux
+kernel's {\it inotify} mechanism\footnote{{\it inotify} allows the
+  registration of filesystem triggers. We use inotify to avoid potentially
+  expensive recursive directory comparisons.}, Katana sets up a notification
+on the original source tree, so that it knows when an object file is
+created or modified under the original tree.  Finally, we perform the
+top-level {\tt make} under this source and record all created/modified
+object files, along with the newly created executable. The use of
+inotify is not inherent to our general patching mechanism, and indeed
+our present prototype only compares two directory trees and examines
+all object files.
+
+\begin{figure}[ht]
+\begin{center}
+\includegraphics[scale=0.25]{making.pdf}
+\end{center}
+\caption{{\small {\it An Example Code Base.} From the top: each source
+    file creates a corresponding object file; multiple object files
+    are combined into intermediate compilation units (CU); and
+    multiple CUs are merged to form the executable. All shaded blocks
+    indicate modified files.}}
+\label{fig:making}
+\end{figure}
+
+Figure~\ref{fig:making} illustrates how object files are modified by
+{\tt make} as a result of source-level changes.  Katana only considers
+objects that are closest to the source files and ignores all other
+intermediate object files and compilation units (CU).  Hence, in
+Figure~\ref{fig:making}, Katana only records the shaded circle-objects
+along with the final executable.
+
+To dynamically update the running application, Katana needs to patch
+both the {\bf code} and the {\bf data} within the process.  It first
+creates a {\it patch object} (PO): an ELF file with sections that
+indicate the type of patch (code or data), the patch offsets and
+lengths within the process address space, patch data, function and
+data names, {\it etc.} 
+%The following sections explain how Katana
+%handles both code and data patching.

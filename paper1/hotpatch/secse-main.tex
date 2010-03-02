@@ -1,0 +1,81 @@
+\documentclass[10pt, conference, compsocconf]{IEEEtran}
+\IEEEoverridecommandlockouts % for \thanks
+\usepackage{graphicx}
+\usepackage{wrapfig}
+\usepackage{url}
+%\usepackage{hyperref} -- DISABLED: fails ``PDF express'' check
+
+% \usepackage{authblk} -- must use IEEE's own
+% \usepackage[margin=1in]{geometry}
+
+\title{Katana: A Hot Patching Framework for ELF Executables}
+
+\author{\IEEEauthorblockN{Sergey Bratus, James Oakley, Ashwin Ramaswamy, 
+Sean W.\ Smith\thanks{The first four authors' work was supported in part by the National
+Science Foundation, under grant CNS-0524695.  The views and
+conclusions do not necessarily represent those of the sponsors.}}
+\IEEEauthorblockA{Computer Science Dept.\\
+  Dartmouth College\\
+  Hanover, New Hampshire}
+\and
+\IEEEauthorblockN{Michael E.\ Locasto\thanks{Locasto is supported in part by grant
+2006-CS-001-000001 from the U.S. Department of Homeland Security under
+the auspices of the I3P research program. The I3P is managed by
+Dartmouth College. The opinions expressed in this paper should not be
+taken as the view of the authors' institutions, the DHS, or the I3P.}}
+\IEEEauthorblockA{Computer Science Dept.\\
+George Mason University\\
+Arlington, Virginia}}
+
+% correct bad hyphenation here
+\hyphenation{op-tical net-works semi-conduc-tor}
+
+
+\begin{document}
+
+\maketitle
+%\pagestyle{plain}
+
+\input{abstract}
+
+{\footnotesize
+\begin{quote}
+``Some reports, such as the case of the Conficker outbreak within 
+Sheffield Hospital's operating ward, suggest that even security-
+conscious environments may elect to forgo automated software patching, 
+choosing to trade off vulnerability exposure for some perceived notion 
+of platform stability...'' -- \url{http://mtc.sri.com/Conficker/}
+\end{quote}
+}
+
+\input{intro}
+
+\input{challenges}
+
+\input{likelinking}
+
+\input{redundancy}
+
+\input{design}
+
+\input{patching}
+
+\input{discussion}
+
+\input{poformat}
+
+\input{related}
+
+\input{conclusion}
+
+% Now in \thanks in author list.
+%\input{acks}
+
+{\small
+\bibliographystyle{abbrv}
+\bibliography{locasto,extras,oakley}
+}
+
+
+
+\end{document}

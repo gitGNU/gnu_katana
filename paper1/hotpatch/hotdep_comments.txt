@@ -1,0 +1,107 @@
+The reviews and comments on your paper are attached below.
+
+Christof & Rodrigo
+HotDep09 Program Chairs
+
+
+===========================================================================
+                         HotDep 2009 Review #20A
+               Updated Thursday 9 Apr 2009 8:32:44pm WEST
+---------------------------------------------------------------------------
+     Paper #20: Katana: A Hot Patching Framework for ELF Executables
+---------------------------------------------------------------------------
+
+                     Overall merit: 2. Weak reject
+                Reviewer expertise: 2. Some familiarity
+                           Novelty: 3. Incremental improvement
+                    Discussability: 3. Average
+
+                        ===== Paper summary =====
+
+This paper proposes Katana, a framework for on-line patching ELF executables. Specifically, Katana includes two components: code patching and data patching. In the code patching component, Katana uses object dependency analysis to identify all functions that need patch; it then patches the application by adding jump instructions. Data patching is more complicated, requiring data discovery, data traversal, etc.
+
+                     ===== Comments for author =====
+
+Katana aims at on-line patching C-program, which is a challenging and important issue. However, many work has been done on this topic before (many on object-oriented programs and some on C-programs). Unfortunately, none of them was mentioned or compared in the paper. Some previous proposal provides better correctness guarantee and less constraint than Katana (to my understanding) based on compiler support. It is necessary to compare Katana with previous work, e.g., "Practical Dynamic Software Updating for C" from PLDI'06.
+
+I have some concern with the data patching. As acknowledged in the paper, it is hard to handle heap objects, because even if those chunks are identified, there is no type information for them. How does Katana address this problem? 
+The paper also briefly mentioned `verify the current validity of the pointer'. How to do this? 
+
+There is one aspect that I wish the authors had explored more. In introduction, the authors present one of their `key observations': `... it is hard for software owner to find out whether and how a patch would affect any particular subsystem or compatibility of the target ...'. This IS a big problem in practice. Unfortunately, the following part of the paper does not provide any further discussion on this topic. The proposed Katana also does not address this problem.
+
+===========================================================================
+                         HotDep 2009 Review #20B
+               Updated Friday 10 Apr 2009 12:47:19pm WEST
+---------------------------------------------------------------------------
+     Paper #20: Katana: A Hot Patching Framework for ELF Executables
+---------------------------------------------------------------------------
+
+                     Overall merit: 4. Accept
+                Reviewer expertise: 3. Knowledgeable
+                           Novelty: 4. New contribution
+                    Discussability: 4. High
+
+                        ===== Paper summary =====
+
+The paper presents a framework for upgrading programs at runtime (hot patching) on Linux by introducing a new type of ELF objet file. Patch objects are produced from the old and new versions during the compilation process and can be applied to running processes by end-users.
+
+                     ===== Comments for author =====
+
+The paper is clear and well motivated. I enjoyed the depth of the technical discussion (even though some details might be too low level for the general audience), it is obvious that the problem has been well explored.
+
+Data patching is a very tough problem. The proposed approach, while sound, has limitations. It will only work well when patches only introduce small updates to the data types. Another limitation, acknowledged by the authors, is the lack of support for multithreaded programs that are nowadays the norm on Linux.
+
+In the enumeration of Section 1.2, I do not see points a) and b) as showstoppers. Point c) and d) are indeed valid arguments.
+
+I would have liked to hear about preliminary results obtained with the proposed tool: What was it tested on? How well does it work? etc.
+
+In summary, this is an interesting paper on an important and original topic that is likely to interest the audience at the workshop.
+
+===========================================================================
+                         HotDep 2009 Review #20C
+               Updated Saturday 11 Apr 2009 6:14:42pm WEST
+---------------------------------------------------------------------------
+     Paper #20: Katana: A Hot Patching Framework for ELF Executables
+---------------------------------------------------------------------------
+
+                     Overall merit: 3. Weak accept
+                Reviewer expertise: 3. Knowledgeable
+                           Novelty: 3. Incremental improvement
+                    Discussability: 4. High
+
+                        ===== Paper summary =====
+
+The paper proposes encoding software patches in a well-defined ELF relocatable object file format so that patches can be applied to running programs.
+
+                     ===== Comments for author =====
+
+
+This problem requires code and data patching. Code patching is relatively simple while data patching (e.g., patching when a data structure has been modified) is a much harder problem. A well-defined software patch file format simplifies the data patching problem (e.g., type information can be available) but the authors seems to avoid discussing some of the hard problems that still remain. For example, it is hard to handle type-unsafe operations such as accessing data structures via void pointers. Also, it seems that the programmer will need update routines for all data structures that have been modified, since simply zeroing out new fields may not be the correct behavior. The authors need to scope out the types of updates that their system will be able to handle, because in general, if an application has changed dramatically, then its existing data structures may be completely invalid (e.g., have different semantics) in the new program. 
+
+Reference 3 addresses some of these issues. The authors need to compare with this work in more detail.
+
+The authors also need to clearly describe the information that is available in their object format and how it is used.
+
+The paper is vague at times about what is done at the source vs. the binary. For example, "Data Traversal: The next step is to traverse all variables defined within the new application". Is this in terms of source variables or object memory? How is the traversal done in the source/binary format? Is it going to be accurate?
+
+===========================================================================
+                         HotDep 2009 Review #20D
+               Updated Tuesday 14 Apr 2009 6:29:17pm WEST
+---------------------------------------------------------------------------
+     Paper #20: Katana: A Hot Patching Framework for ELF Executables
+---------------------------------------------------------------------------
+
+                     Overall merit: 1. Reject
+                Reviewer expertise: 3. Knowledgeable
+                           Novelty: 1. Published before
+                    Discussability: 2. Low
+
+                        ===== Paper summary =====
+
+The paper presents a tool for dynamic program update. By using the source tree, the dependencies among the files are taken from the "make" utility to identify the parts of the object code that have been modified. Then, these codes are injected into the existing binaries, where new functions are replaced by the usual trampoline mechanism to jump to the new version. Data is also modified by coupling the code updates with the data updates.
+
+                     ===== Comments for author =====
+
+The introduction sets the reader for a major let down. While the introduction articulates well the issues involved in dynamic program updates, it gives the impression that there is a really new solution to be described. But the rest of the paper fails to meet the reader's expectations. The trampoline idea is not new, the patching appears to be done adhoc, and there is no guarantee that the major problem of hot patching, which is the creation of an inconsistent program state, is solved. So, given that this is not a new idea, and given that therer were research efforts to fix the problem as far back as the 80's, I don't see the major contribution here, and even for a workshop, the paper does not present sufficient material for a good discussion.
+In short, there is nothing new. The long standing problems are there. The paper acknowledges that. I only wish the introduction to be a bit more grounded to the work that has been done instead of the the way the paper comes across at the end.
+

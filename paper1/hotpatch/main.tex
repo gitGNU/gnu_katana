@@ -1,0 +1,62 @@
+%\documentclass[letterpaper,twocolumn,10pt]{article}
+%\usepackage{usenix}
+%\usepackage[margin=1in]{geometry}
+
+\documentclass{IEEEtran}
+
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{authblk}
+
+\title{Katana: A Hot Patching Framework for ELF Executables}
+
+\author[1]{Ashwin Ramaswamy}
+\author[1]{Sergey Bratus}
+\author[2]{Michael E.\ Locasto}
+\author[1]{Sean W. Smith}
+\affil[1]{Dartmouth College}
+\affil[2]{George Mason University}
+
+\begin{document}
+
+\maketitle
+\pagestyle{plain}
+
+\input{abstract}
+
+{\footnotesize
+\begin{quote}
+``Some reports, such as the case of the Conficker outbreak within 
+Sheffield Hospital's operating ward, suggest that even security-
+conscious environments may elect to forgo automated software patching, 
+choosing to trade off vulnerability exposure for some perceived notion 
+of platform stability...'' -- \url{http://mtc.sri.com/Conficker/}
+\end{quote}
+}
+
+\input{intro}
+
+\input{challenges}
+
+\input{redundancy}
+
+\input{design}
+
+\input{patching}
+
+%\input{discussion}
+
+\input{poformat}
+
+\input{related}
+
+\input{conclusion}
+
+{\small
+\bibliographystyle{abbrv}
+\bibliography{locasto,extras,oakley}
+}
+
+
+
+\end{document}
