@@ -248,7 +248,15 @@ List* makePatchData(PoRegRule* rule,SpecialRegsState* state,ElfInfo* patch,ElfIn
         //the problem now is, we have to know how much space to allocate
         //for this purpose we can use the address_range field
         //of the fde we're targeting
-        pointedObjectNewLocation=getFreeSpaceInTarget(patch->fdes[rule->index-1].memSize);
+
+        //todo: deal with freeing the original memory
+        //      and issues if the original var is
+        //      part of a larger block, not on its own
+        //      (this is very hard to get right because we're
+        //      lacking important information)
+        
+        //pointedObjectNewLocation=getFreeSpaceInTarget(patch->fdes[rule->index-1].memSize);
+        pointedObjectNewLocation=mallocTarget(patch->fdes[rule->index-1].memSize);
       }
 
       addr_t* value=zmalloc(sizeof(addr_t));

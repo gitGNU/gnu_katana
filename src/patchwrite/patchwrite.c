@@ -418,7 +418,7 @@ void writeTransformationToDwarf(TypeTransform* trans)
 void writeVarToData(VarInfo* var)
 {
   //todo: store address within var?
-  int symIdx=getSymtabIdx(newBinary,var->name);
+  int symIdx=getSymtabIdx(newBinary,var->name,0);
   if(STN_UNDEF==symIdx)
   {death("could not get symbol for var %s\n",var->name);}
   GElf_Sym sym;

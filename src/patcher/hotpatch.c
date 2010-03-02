@@ -55,7 +55,7 @@ addr_t getFreeSpaceInTarget(uint howMuch)
 
 void performRelocations(ElfInfo* e,VarInfo* var)
 {
-  int symIdx=getSymtabIdx(e,var->name);
+  int symIdx=getSymtabIdx(e,var->name,0);
   addr_t addr=getSymAddress(e,symIdx);
   GElf_Sym sym;
   getSymbol(e,symIdx,&sym);
