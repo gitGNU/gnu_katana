@@ -33,6 +33,20 @@ addr_t getSymAddress(ElfInfo* e,int symIdx)
   return sym.st_value;
 }
 
+char* unmangleSymbolName(char* name)
+{
+  char* symbolNameUnmangled=zmalloc(strlen(name)+1);
+  char* atSignPtr=strchr(name,'@');
+  if(atSignPtr)
+  {
+    int atSignIdx=atSignPtr-name;
+    symbolNameUnmangled=zmalloc(strlen(name)+1);
+    strcpy(symbolNameUnmangled,name);
+    symbolNameUnmangled[atSignIdx]='\0';
+  }
+  return symbolNameUnmangled;
+}
+
 //find the symbol matching the given symbol
 int findSymbol(ElfInfo* e,GElf_Sym* sym,ElfInfo* ref,int flags)
 {
@@ -52,14 +66,7 @@ int findSymbol(ElfInfo* e,GElf_Sym* sym,ElfInfo* ref,int flags)
   char* symbolNameUnmangled=symbolName;
   if(flags & ESFF_MANGLED_OK)
   {
-    char* atSignPtr=strchr(symbolName,'@');
-    if(atSignPtr)
-    {
-      int atSignIdx=atSignPtr-symbolName;
-      symbolNameUnmangled=zmalloc(strlen(symbolName)+1);
-      strcpy(symbolNameUnmangled,symbolName);
-      symbolNameUnmangled[atSignIdx]='\0';
-    }
+    symbolNameUnmangled=unmangleSymbolName(symbolName);
   }
   char* symbolNameDot=zmalloc(strlen(symbolName)+2);//for --fdata-sections and --ffunction-sections
   strcpy(symbolNameDot,".");
@@ -171,7 +178,7 @@ int findSymbol(ElfInfo* e,GElf_Sym* sym,ElfInfo* ref,int flags)
            (scnNameRef && scnNameNew && strcmp(scnNameRef,scnNameNew)))
         {
           //we might still be saved by considering data and bss to be the same section
-          if((type!= STT_SECTION) && 
+          if(type == STT_SECTION ||
              (!(flags & ESFF_BSS_MATCH_DATA_OK) ||
               !((!strncmp(scnNameRef,".data",strlen(".data")) &&
                  !strncmp(scnNameNew,".bss",strlen(".bss"))) ||
@@ -248,8 +255,9 @@ int reindexSymbol(ElfInfo* old,ElfInfo* new,int oldIdx,int flags)
   return idx;
 }
 
-
-int getSymtabIdx(ElfInfo* e,char* symbolName)
+//flags is OR'd E_SYMBOL_FIND_FLAGS
+//only ESFF_MANGLED_OK and ESFF_DYNAMIC are relevant
+int getSymtabIdx(ElfInfo* e,char* symbolName,int flags)
 {
   //todo: need to consider endianness?
   //assert(e->hashTableData);
@@ -292,20 +300,62 @@ int getSymtabIdx(ElfInfo* e,char* symbolName)
   }
   return idx;
   */
-  
+
+  Elf_Data* symTabData=NULL;
+  char* (*getstrfunc)(ElfInfo*,int)=NULL;
+  if(flags & ESFF_NEW_DYNAMIC)
+  {
+    symTabData=getDataByERS(e,ERS_DYNSYM);
+    getstrfunc=&getDynString;
+  }
+  else
+  {
+    symTabData=getDataByERS(e,ERS_SYMTAB);
+    getstrfunc=&getString;
+  }
+
+  char* symbolNameUnmangled=symbolName;
+  if(flags & ESFF_MANGLED_OK)
+  {
+    symbolNameUnmangled=unmangleSymbolName(symbolName);
+  }
+
+
+
+  bool found=false;
   //traverse the symbol table to find the symbol we're looking for. Yes this is slow
   //todo: build our own hash table since the .hash section seems incomplete
-  Elf_Data* symTabData=getDataByERS(e,ERS_SYMTAB);
-  for (int i = 0; i < e->symTabCount; ++i)
+  int i;
+  for (i = 0; i < e->symTabCount; ++i)
   {
     GElf_Sym sym;
     gelf_getsym(symTabData,i,&sym);
-    char* symname=elf_strptr(e->e, e->strTblIdx, sym.st_name);
-    if(!strcmp(symname,symbolName))
+    char* symname=(*getstrfunc)(e,sym.st_name);
+    char* symnameUnmangled=symname;
+    if(flags & ESFF_MANGLED_OK)
     {
-      return i;
+      symnameUnmangled=unmangleSymbolName(symname);
     }
-    //free(symname);//todo: is this right?
+    if(!strcmp(symnameUnmangled,symbolNameUnmangled))
+    {
+      found=true;
+    }
+    if(symnameUnmangled!=symname)
+    {
+      free(symnameUnmangled);
+    }
+    if(found)
+    {
+      break;
+    }
+  }
+  if(symbolNameUnmangled!=symbolName)
+  {
+    free(symbolNameUnmangled);
+  }
+  if(found)
+  {
+    return i;
   }
   logprintf(ELL_INFO_V1,ELS_SYMBOL,"Symbol '%s' not defined yet. This may or may not be a problem\n",symbolName);
   return STN_UNDEF;
