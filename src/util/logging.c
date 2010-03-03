@@ -80,4 +80,5 @@ void loggingDefaults()
   sourceEnables[ELS_RELOCATION]=ELL_WARN;
   sourceEnables[ELS_PATCHAPPLY]=ELL_CNT;
   sourceEnables[ELS_LINKMAP]=ELL_INFO_V3;
+  sourceEnables[ELS_DWARFTYPES]=ELL_CNT;
 }

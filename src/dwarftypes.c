@@ -232,7 +232,7 @@ char* getNameForDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
       snprintf(buf,64,"lambda_%i\n",(int)offset);
       break;
     default:
-      snprintf(buf,64,"unknown_type_anon_%u\n",(uint)offset);
+      snprintf(buf,64,"unknown_type_anon_%u",(uint)offset);
     }
     retname=strdup(buf);
   }
@@ -338,8 +338,7 @@ TypeInfo* getTypeInfoFromATType(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* c
   result=dictGet(cu->tv->types,name);
   if(!result)
   {
-    fprintf(stderr,"Type for die of name %s does not seem to exist\n",name);
-    fflush(stderr);
+    logprintf(ELL_WARN,ELS_DWARFTYPES,"Type for die of name %s does not seem to exist\n",name);
   }
   return result;
 }
@@ -470,7 +469,7 @@ void addPointerTypeFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
   TypeInfo* pointedType=getTypeInfoFromATType(dbg,die,cu);
   if(!pointedType)
   {
-    fprintf(stderr,"WARNING: adding pointer type %s when the type it points to does not exist\n",type->name);
+    logprintf(ELL_WARN,ELS_DWARFTYPES,"adding pointer type %s when the type it points to does not exist\n",type->name);
     type->pointedType=NULL;
   }
   else
@@ -650,6 +649,27 @@ SubprogramInfo* addSubprogramFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUn
   return prog;
 }
 
+//todo: I haven't actually fully figured out what dwarf
+//subroutines do...
+//todo: it has something with supporting function pointers,
+//I need to implement this
+void parseSubroutine(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
+{
+  Dwarf_Attribute attr;
+  Dwarf_Error err;
+  int res=dwarf_attr(die,DW_AT_prototyped,&attr,&err);
+  int isPrototype=0;
+  if(DW_DLV_OK==res)
+  {
+    isPrototype=readAttributeAsInt(attr);
+  }
+  if(!isPrototype)
+  {
+    death("non-prototype subroutine found, James doesn't yet know what to do with these\n");
+  }
+  
+}
+
 //takes a ** to a compile unit because if we parse a compile unit,
 //the current compile unit will change
 //returns a void* datum which will be passed to endDieChildren when all children
@@ -728,10 +748,17 @@ void* parseDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit** cu,bool* parseChi
     }
     break;
   case DW_TAG_formal_parameter: //ignore because if a function change will be recompiled and won't modify function while executing it
+    //todo: need to add its types to the list of types for the subprogram
     break;
-
+  case DW_TAG_lexical_block:
+    //we may care about its children, but not its definition itself
+    break;
+  case DW_TAG_subroutine_type:
+    //todo: I don't actually really know exactly what this is. . .
+    parseSubroutine(dbg,die,*cu);
+    break;
   default:
-    fprintf(stderr,"Unknown die type 0x%x. Ignoring it but this may not be what you want\n",tag);
+    logprintf(ELL_WARN,ELS_DWARFTYPES,"Unknown die type 0x%x. Ignoring it but this may not be what you want\n",tag);
     
   }
   
