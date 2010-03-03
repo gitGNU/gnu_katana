@@ -99,8 +99,14 @@ void insertTrampolineJump(addr_t insertAt,addr_t jumpTo)
 
 void applyVariablePatch(VarInfo* var,Map* fdeMap,ElfInfo* patch)
 {
-  //todo: return value checking
   int idx=getSymtabIdx(targetBin,var->name,0);
+  int symIdxInPatch=getSymtabIdx(patch,var->name,0);
+  GElf_Sym symInPatch;
+  if(STN_UNDEF!=symIdxInPatch)
+  {
+    getSymbol(patch,symIdxInPatch,&symInPatch);
+    var->newLocation=patchDataAddr+symInPatch.st_value;
+  }
   if(idx!=STN_UNDEF)
   {
     GElf_Sym sym;
@@ -109,26 +115,26 @@ void applyVariablePatch(VarInfo* var,Map* fdeMap,ElfInfo* patch)
     var->oldLocation=sym.st_value;
     bool relocate=sym.st_size < var->type->length;
     printf("need to relocated is %i as st_size is %i and new size is %i\n",relocate,(int)sym.st_size,var->type->length);
-    if(relocate)
+    if(!var->newLocation)
     {
-      allocateMemoryForVarRelocation(var);
+      var->newLocation=var->oldLocation;//didn't need to relocate the var
     }
     transformVarData(var,fdeMap,patch);
-    if(relocate)
+    if(var->newLocation!=var->oldLocation)
     {
+      //todo: do we need this here,
+      //do more relocations later
       relocateVar(var,targetBin);
     }
   }
   else
   {
     logprintf(ELL_INFO_V1,ELS_PATCHAPPLY,"Creating new variable %s\n",var->name);
-    int symIdxInPatch=getSymtabIdx(patch,var->name,0);
+    
     if(STN_UNDEF==symIdxInPatch)
     {
       death("patch symbol table didn't have symbol for new variable %s\n",var->name);
     }
-    GElf_Sym symInPatch;
-    getSymbol(patch,symIdxInPatch,&symInPatch);
     //create a symbol for our variable
     //todo: really should abstract this out
     Elf32_Sym sym;
@@ -137,7 +143,7 @@ void applyVariablePatch(VarInfo* var,Map* fdeMap,ElfInfo* patch)
     sym.st_info=ELF32_ST_INFO(STB_GLOBAL,STT_OBJECT);
     sym.st_name=addStrtabEntryToExisting(patchedBin,var->name,false);
     sym.st_shndx=elf_ndxscn(getSectionByName(patchedBin,".data.new"));
-    sym.st_value=patchDataAddr+symInPatch.st_value;
+    sym.st_value=var->newLocation;
     addSymtabEntryToExisting(patchedBin,&sym);
   }
 }
