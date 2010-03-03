@@ -293,7 +293,7 @@ void findELFSections(ElfInfo* e)
       e->textRelocData=elf_getdata(scn,NULL);
       e->textRelocCount = shdr.sh_size / shdr.sh_entsize;
     }
-    else if(!strcmp(".data",name))
+    else if(!strncmp(".data",name,strlen(".data")))//allow versioned data sections in patches as well as text
     {
       e->sectionIndices[ERS_DATA]=elf_ndxscn(scn);
       e->dataStart[IN_MEM]=shdr.sh_addr;
