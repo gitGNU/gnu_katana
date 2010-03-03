@@ -227,8 +227,9 @@ List* makePatchData(PoRegRule* rule,SpecialRegsState* state,ElfInfo* patch,ElfIn
       
 
       addr_t* existingDataMove=NULL;
-      if((existingDataMove=mapGet(dataMoved,&resultAddr)))
+      if((existingDataMove=mapGet(dataMoved,&tmpState.currAddrOld)))
       {
+        logprintf(ELL_INFO_V2,ELS_DWARF_FRAME,"Found existing data move for addr 0x%x at 0x%x\n",tmpState.currAddrOld,existingDataMove);
         //we've already fixed up the location,
         //just have to set the pointer to point where we want it to
         memcpy(result->data,existingDataMove,sizeof(addr_t));
@@ -240,14 +241,15 @@ List* makePatchData(PoRegRule* rule,SpecialRegsState* state,ElfInfo* patch,ElfIn
       
       //now we have to see if the location corresponds to a symbol
       //that may be being relocated to a .data.new section or something
-      idx_t symIdxOld=findSymbolContainingAddress(state->oldBinaryElf,resultAddr,STT_OBJECT);
+      //or the symbol itself may not even move
+      idx_t symIdxOld=findSymbolContainingAddress(state->oldBinaryElf,tmpState.currAddrOld,STT_OBJECT);
       if(symIdxOld!=STN_UNDEF)
       {
         //ok, so it was in a symbol in the executing binary, Now we have to find
         //out where it might have been moved to. This will be the new location of
         //the .data.new section plus the value of the symbol in the patch
-        idx_t symIdxPatch=reindexSymbol(state->oldBinaryElf,patch,symIdxOld,ESFF_FUZZY_MATCHING_OK);
-        if(STN_UNDEF==symIdxOld)
+        idx_t symIdxPatch=reindexSymbol(state->oldBinaryElf,patch,symIdxOld,ESFF_FUZZY_MATCHING_OK|ESFF_BSS_MATCH_DATA_OK);
+        if(STN_UNDEF==symIdxPatch)
         {
           death("need to fix up a pointer that is supposedly part of a variable (rather than arbitrary stuff on the heap) but the patch doesn't seem to contain this variable\n");
         }
@@ -261,9 +263,11 @@ List* makePatchData(PoRegRule* rule,SpecialRegsState* state,ElfInfo* patch,ElfIn
         if(!gelf_getshdr(scn,&shdr))
         {death("gelf_getshdr failed\n");}
         pointedObjectNewLocation=shdr.sh_addr+sym.st_value;
+        logprintf(ELL_INFO_V2,ELS_DWARF_FRAME,"Found a symbol in target corresponding to this symbol, so we're making our new location be 0x%x as specified by the patch\n",pointedObjectNewLocation);
       }
       else
       {
+        
         //no variable associated with this, it's just some random data
         //on the heap. So we just allocate some random space for it
         //the problem now is, we have to know how much space to allocate
@@ -278,11 +282,12 @@ List* makePatchData(PoRegRule* rule,SpecialRegsState* state,ElfInfo* patch,ElfIn
         
         //pointedObjectNewLocation=getFreeSpaceInTarget(patch->fdes[rule->index-1].memSize);
         pointedObjectNewLocation=mallocTarget(patch->fdes[rule->index-1].memSize);
+        logprintf(ELL_INFO_V2,ELS_DWARF_FRAME,"No symbol associated with object we have to relocate that we have a pointer to. Mallocced new memory at 0x%x\n",pointedObjectNewLocation);
       }
 
       addr_t* value=zmalloc(sizeof(addr_t));
       *value=pointedObjectNewLocation;
-      mapInsert(dataMoved,&resultAddr,value);
+      mapInsert(dataMoved,&tmpState.currAddrOld,value);
       
       
       tmpState.currAddrNew=pointedObjectNewLocation;
