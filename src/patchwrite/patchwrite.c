@@ -381,6 +381,34 @@ void writeTransformationToDwarf(TypeTransform* trans)
     free(inst.arg1Bytes);
     free(inst.arg2Bytes);
   }
+  else if(TT_POINTER==trans->from->type)
+  {
+    //then we're going to want one instruction, a recursive fixup
+    DwarfInstruction inst;
+    logprintf(ELL_INFO_V3,ELS_DWARF_FRAME,"adding pointer fixup fde\n");
+    inst.opcode=DW_CFA_KATANA_fixups_pointer;
+    assert(trans->from->pointedType);
+    TypeTransform* transformer=trans->from->pointedType->transformer;
+    assert(transformer);
+    if(!transformer->onDisk)
+    {
+      writeTransformationToDwarf(transformer);
+    }
+    Dwarf_Unsigned fdeIdx=transformer->fdeIdx;
+    byte bytes[1+sizeof(word_t)];
+    bytes[0]=ERT_CURR_TARG_NEW;
+    word_t size=sizeof(addr_t);
+    memcpy(bytes+1,&size,sizeof(word_t));
+    //offset on the register is always 0
+    inst.arg1Bytes=encodeAsLEB128(bytes,1+sizeof(word_t),false,&inst.arg1NumBytes);
+    bytes[0]=ERT_CURR_TARG_OLD;
+    inst.arg2Bytes=encodeAsLEB128(bytes,1+sizeof(word_t),false,&inst.arg2NumBytes);
+    inst.arg3=fdeIdx;//might as well make both valid
+    inst.arg3Bytes=encodeAsLEB128((byte*)&fdeIdx,sizeof(fdeIdx),false,&inst.arg3NumBytes);
+    addInstruction(&instrs,&inst);
+    free(inst.arg1Bytes);
+    free(inst.arg2Bytes);
+  }
   else //look at structure, not just straight copy
   {
     int oldBytesSoFar=0;
