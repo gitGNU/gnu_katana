@@ -18,7 +18,8 @@
 
 Dictionary* cuIdentifiers=NULL;
 DwarfInfo* di;
-
+DList* activeSubprogramsHead=NULL;
+DList* activeSubprogramsTail=NULL;
 
 
 TypeInfo* getTypeInfoFromATType(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu);
@@ -574,6 +575,24 @@ void addVarFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
     dictInsert(cu->tv->globalVars,var->name,var);
   }
   logprintf(ELL_INFO_V4,ELS_MISC,"added variable %s\n",var->name);
+
+  //we want to see if this variable is inside any subprograms
+  //(C does not allow nested subprograms, but some other language might
+  //and it's just as easy to allow them here)
+  //if the variable is inside a subprogram, we add its type to the list of types
+  //inside that subprogram. This can be compared later against the set of types
+  //that are to be patched later to determine whether the subprogram can have
+  //an activation frame on the stack during patching
+  DList* li=activeSubprogramsHead;
+  for(;li;li=li->next)
+  {
+    SubprogramInfo* sub=li->value;
+    assert(sub);
+    List* li=zmalloc(sizeof(List));
+    li->value=var->type;
+    listAppend(&sub->typesHead,&sub->typesTail,li);
+  }
+  
 }
 
 void parseCompileUnit(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit** cu,ElfInfo* elf)
@@ -611,7 +630,7 @@ void parseCompileUnit(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit** cu,ElfInfo
   logprintf(ELL_INFO_V4,ELS_MISC,"compilation unit has name %s\n",(*cu)->name);
 }
 
-void addSubprogramFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
+SubprogramInfo* addSubprogramFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
 {
   SubprogramInfo* prog=zmalloc(sizeof(SubprogramInfo));
   prog->name=getNameForDie(dbg,die,cu);
@@ -628,12 +647,16 @@ void addSubprogramFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
     prog->highpc=readAttributeAsInt(attr);
   }
   dictInsert(cu->subprograms,prog->name,prog);
+  return prog;
 }
 
 //takes a ** to a compile unit because if we parse a compile unit,
 //the current compile unit will change
-void parseDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit** cu,bool* parseChildren,ElfInfo* elf)
+//returns a void* datum which will be passed to endDieChildren when all children
+//of the die have been parsed
+void* parseDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit** cu,bool* parseChildren,ElfInfo* elf)
 {
+  void* result=NULL;
   Dwarf_Off off,cuOff;
   Dwarf_Error err;
   dwarf_dieoffset(die,&off,&err);
@@ -643,7 +666,7 @@ void parseDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit** cu,bool* parseChil
   {
     //we've already parsed this die
     *parseChildren=false;//already will have parsed children too
-    return;
+    return result;
   }
 
   Dwarf_Half tag = 0;
@@ -694,9 +717,15 @@ void parseDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit** cu,bool* parseChil
     addVarFromDie(dbg,die,*cu);
     break;
   case DW_TAG_subprogram:
-    addSubprogramFromDie(dbg,die,*cu);
-    *parseChildren=false;//no need to read things inside a function, if it changes
-    //it will be detected by other analysis means anyway
+    {
+    //we actually do want to read inside the function because we want
+    //to know what types it may be using, so we don't set parseChildren to false,
+    //as a first impulse might be
+    DList* li=zmalloc(sizeof(DList));
+    li->value=addSubprogramFromDie(dbg,die,*cu);
+    dlistAppend(&activeSubprogramsHead,&activeSubprogramsTail,li);
+    result=li->value;
+    }
     break;
   case DW_TAG_formal_parameter: //ignore because if a function change will be recompiled and won't modify function while executing it
     break;
@@ -709,6 +738,23 @@ void parseDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit** cu,bool* parseChil
   //insert the key as its value too because all we
   //care about is its existance, not its value
   mapSet((*cu)->tv->parsedDies,key,key,NULL,NULL);
+  return result;
+}
+
+void endDieChildren(Dwarf_Die die,void* data)
+{
+  Dwarf_Half tag = 0;
+  Dwarf_Error err;
+  dwarf_tag(die,&tag,&err);
+  switch(tag)
+  {
+  case DW_TAG_subprogram:
+    //assume that subprograms are properly nested, makes no sense
+    //for a language to do otherwise
+    assert(activeSubprogramsTail->value==data);
+    dlistDeleteTail(&activeSubprogramsHead,&activeSubprogramsTail);
+    break;
+  }
 }
 
 void walkDieTree(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu,bool siblings,ElfInfo* elf)
@@ -728,7 +774,7 @@ void walkDieTree(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu,bool siblings
   }
   dwarf_dealloc(dbg,name,DW_DLA_STRING);
   bool parseChildren=true;
-  parseDie(dbg,die,&cu,&parseChildren,elf);
+  void* data=parseDie(dbg,die,&cu,&parseChildren,elf);
   Dwarf_Die childOrSibling;
   if(parseChildren)
   {
@@ -744,6 +790,7 @@ void walkDieTree(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu,bool siblings
       dwarf_dealloc(dbg,childOrSibling,DW_DLA_DIE);
     }
   }
+  endDieChildren(die,data);
   if(!siblings)
   {
     return;

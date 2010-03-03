@@ -62,6 +62,11 @@ typedef struct
   char* name;
   addr_t lowpc;
   addr_t highpc;
+  List* typesHead;//list of types used within the subprogram. Later
+                    //we can just look through these types and if any
+                    //of them has a transformer then it can't have an
+                    //activation frame during patching
+  List* typesTail;
 } SubprogramInfo;
 
 typedef struct
