@@ -76,8 +76,8 @@ void loggingDefaults()
   sourceEnables[ELS_DWARF_FRAME]=ELL_CNT;
   sourceEnables[ELS_HOTPATCH]=ELL_INFO_V3;
   sourceEnables[ELS_SOURCETREE]=ELL_CNT;
-  sourceEnables[ELS_SYMBOL]=ELL_INFO_V1;
-  sourceEnables[ELS_RELOCATION]=ELL_INFO_V1;
+  sourceEnables[ELS_SYMBOL]=ELL_WARN;
+  sourceEnables[ELS_RELOCATION]=ELL_WARN;
   sourceEnables[ELS_PATCHAPPLY]=ELL_CNT;
   sourceEnables[ELS_LINKMAP]=ELL_INFO_V3;
 }
