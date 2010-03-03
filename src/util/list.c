@@ -8,6 +8,7 @@
 
 #include "list.h"
 #include <stdlib.h>
+#include <assert.h>
 
 void deleteList(List* start,void (*delFunc)(void*))
 {
@@ -188,4 +189,35 @@ void listAppend(List** head,List** tail,List* li)
   }
   *tail=li;
 
+}
+
+void dlistAppend(DList** head,DList** tail,DList* li)
+{
+  assert(head);
+  assert(tail);
+  li->next=NULL;
+  li->prev=*tail;
+  if(*head)
+  {
+    assert(*tail);
+    (*tail)->next=li;
+  }
+  else
+  {
+    *head=li;
+  }
+  *tail=li;
+}
+
+void dlistDeleteTail(DList** head,DList** tail)
+{
+  assert(head);
+  assert(tail);
+  assert(*tail);
+  DList* oldTail=*tail;
+  *tail=oldTail->prev;
+  if(!*tail)
+  {
+    *head=NULL;
+  }
 }

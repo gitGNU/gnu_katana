@@ -15,6 +15,13 @@ typedef struct _List
   struct _List* next;
 } List;
 
+typedef struct _DList
+{
+  void* value;
+  struct _DList* next;
+  struct _DList* prev;
+} DList;
+
 List* concatLists(List* l1Start,List* l1End,List* l2Start,List* l2End,List** endOut);
 void deleteList(List* start,void (*delFunc)(void*));
 
@@ -25,4 +32,9 @@ List* sortList(List* lst,int (*cmpfunc)(void*,void*));
 int listLength(List* lst);
 
 void listAppend(List** head,List** tail,List* li);
+
+void dlistAppend(DList** head,DList** tail,DList* li);
+
+void dlistDeleteTail(DList** head,DList** tail);
+
 #endif
