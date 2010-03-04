@@ -34,6 +34,7 @@ typedef enum
   ERS_DYNSYM,
   ERS_DYNSTR,
   ERS_DYNAMIC,
+  ERS_UNSAFE_FUNCTIONS,
   ERS_CNT,
   ERS_INVALID
 } E_RECOGNIZED_SECTION;
@@ -54,6 +55,7 @@ typedef struct ElfInfo
   DwarfInfo* dwarfInfo;
   struct FDE* fdes;
   int numFdes;
+  struct CIE* cie;
   bool dataAllocatedByKatana;//used for memory management
 } ElfInfo;
 
@@ -85,4 +87,6 @@ char* getSectionNameFromIdx(ElfInfo* e,int idx);
 char* getScnHdrString(ElfInfo* e,int idx);
 char* getString(ElfInfo* e,int idx);//get a string from the normal string table
 char* getDynString(ElfInfo* e,int idx);//get a string from the dynamic string table
+
+#define SHT_KATANA_UNSAFE_FUNCTIONS SHT_LOUSER+0x1
 #endif

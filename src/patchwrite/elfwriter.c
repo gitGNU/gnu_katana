@@ -130,45 +130,6 @@ void createSections(Elf* outelf)
                          //that it is in the ELF files I've examined,
                          //but does it have to be?
   shdr->sh_name=addStrtabEntry(".data.new");
-  
-
-  /*
-  //now create the patch syms to relocate
-  patch_syms_rel_scn=elf_newscn(outelf);
-  patch_syms_rel_data=elf_newdata(patch_syms_rel_scn);
-  patch_syms_rel_data->d_align=1;
-  patch_syms_rel_data->d_buf=NULL;
-  patch_syms_rel_data->d_off=0;
-  patch_syms_rel_data->d_size=0;//again, will increase as needed
-  patch_syms_rel_data->d_version=EV_CURRENT;
-  
-  shdr=elf32_getshdr(patch_syms_rel_scn);
-  shdr->sh_type=SHT_SYMTAB;
-  shdr->sh_link=1;//index of string table
-  shdr->sh_info=0;//todo: p.1-13 of ELF format describes this,
-                          //but I don't quite understand it
-  shdr->sh_addralign=4;//32-bit
-  shdr->sh_entsize=sizeof(Elf32_Sym);
-  shdr->sh_name=addStrtabEntry(".patch_syms_rel");
-
-  //now create the patch syms for new variables/functions
-  patch_syms_new_scn=elf_newscn(outelf);
-  patch_syms_new_data=elf_newdata(patch_syms_new_scn);
-  patch_syms_new_data->d_align=1;
-  patch_syms_new_data->d_buf=malloc(8);//arbitrary starting size, more
-                                       //will be allocced as needed
-  patch_syms_new_data->d_off=0;
-  patch_syms_new_data->d_size=0;
-  patch_syms_new_data->d_version=EV_CURRENT;
-  
-  shdr=elf32_getshdr(patch_syms_new_scn);
-  shdr->sh_type=SHT_SYMTAB;
-  shdr->sh_link=1;//index of string table
-  shdr->sh_info=0;//todo: p.1-13 of ELF format describes this,
-                          //but I don't quite understand it
-  shdr->sh_addralign=4;//32-bit
-  shdr->sh_entsize=sizeof(Elf32_Sym);
-  shdr->sh_name=addStrtabEntry(".patch_syms_new");*/
 
   #ifdef RENAMED_DWARF_SCNS
   
@@ -214,6 +175,8 @@ void createSections(Elf* outelf)
   symtab_data->d_off=0;
   symtab_data->d_size=0;
   symtab_data->d_version=EV_CURRENT;
+  scnInfo[ERS_SYMTAB].scn=symtab_scn;
+  scnInfo[ERS_SYMTAB].data=symtab_data;
   
   shdr=elf32_getshdr(symtab_scn);
   shdr->sh_type=SHT_SYMTAB;
@@ -228,6 +191,22 @@ void createSections(Elf* outelf)
   Elf32_Sym sym;
   memset(&sym,0,sizeof(Elf32_Sym));
   addSymtabEntry(symtab_data,&sym);
+
+   //create the section for holding indices to symbols of unsafe
+  //functions that can't have activation frames during patching
+  scn=scnInfo[ERS_UNSAFE_FUNCTIONS].scn=elf_newscn(outelf);
+
+  data=scnInfo[ERS_UNSAFE_FUNCTIONS].data=elf_newdata(scn);
+  data->d_align=sizeof(idx_t);
+  data->d_version=EV_CURRENT;
+  shdr=elf32_getshdr(scn);
+  shdr->sh_type=SHT_KATANA_UNSAFE_FUNCTIONS;
+  shdr->sh_link=elf_ndxscn(symtab_scn);
+  shdr->sh_info=SHN_UNDEF;
+  shdr->sh_addralign=1;  //todo: should this be word-aligned? It seems
+                         //that it is in the ELF files I've examined,
+                         //but does it have to be?
+  shdr->sh_name=addStrtabEntry(".unsafe_functions");
 
   //now not using old symtab b/c better to get old symbols from
   // /proc/PID/exe
@@ -268,6 +247,8 @@ void createSections(Elf* outelf)
   shdr->sh_addralign=1;//normally text is aligned, but we never actually execute from this section
   shdr->sh_name=addStrtabEntry(".text.new");
   shdr->sh_addr=0;//going to have to relocate anyway so no point in trying to keep the same address
+  scnInfo[ERS_TEXT].scn=text_scn;
+  scnInfo[ERS_TEXT].data=text_data;
 
   //rodata section for new strings, constants, etc
   //(note that in many cases these may not actually be "new" ones,
@@ -280,6 +261,8 @@ void createSections(Elf* outelf)
   rodata_data->d_off=0;
   rodata_data->d_size=0;
   rodata_data->d_version=EV_CURRENT;
+  scnInfo[ERS_RODATA].scn=rodata_scn;
+  scnInfo[ERS_RODATA].data=rodata_data;
   
   shdr=elf32_getshdr(rodata_scn);
   shdr->sh_type=SHT_PROGBITS;
@@ -288,7 +271,7 @@ void createSections(Elf* outelf)
   shdr->sh_addralign=1;//normally text is aligned, but we never actually execute from this section
   shdr->sh_name=addStrtabEntry(".rodata.new");
 
-  //rel.text.new
+  //rela.text.new
   rela_text_scn=elf_newscn(outelf);
   rela_text_data=elf_newdata(rela_text_scn);
   rela_text_data->d_align=1;
@@ -296,6 +279,8 @@ void createSections(Elf* outelf)
   rela_text_data->d_off=0;
   rela_text_data->d_size=0;
   rela_text_data->d_version=EV_CURRENT;
+  scnInfo[ERS_RELA_TEXT].scn=rela_text_scn;
+  scnInfo[ERS_RELA_TEXT].data=rela_text_data;
   shdr=elf32_getshdr(rela_text_scn);
   shdr->sh_type=SHT_RELA;
   shdr->sh_addralign=4;//todo: diff for 64-bit
@@ -312,18 +297,7 @@ void createSections(Elf* outelf)
       addSymtabEntry(symtab_data,&sym);
     }
   }
-  sym.st_name=elf32_getshdr(text_scn)->sh_name;
-  sym.st_shndx=elf_ndxscn(text_scn);
-  addSymtabEntry(symtab_data,&sym);
-  sym.st_name=elf32_getshdr(symtab_scn)->sh_name;
-  sym.st_shndx=elf_ndxscn(symtab_scn);
-  addSymtabEntry(symtab_data,&sym);
-  sym.st_name=elf32_getshdr(rela_text_scn)->sh_name;
-  sym.st_shndx=elf_ndxscn(rela_text_scn);
-  addSymtabEntry(symtab_data,&sym);
-  sym.st_name=elf32_getshdr(rodata_scn)->sh_name;
-  sym.st_shndx=elf_ndxscn(rodata_scn);
-  addSymtabEntry(symtab_data,&sym);
+
 
   //fill in some info about the sections we added
   patch->sectionIndices[ERS_TEXT]=elf_ndxscn(text_scn);
@@ -332,6 +306,7 @@ void createSections(Elf* outelf)
   patch->sectionIndices[ERS_RODATA]=elf_ndxscn(rodata_scn);
   patch->sectionIndices[ERS_RELA_TEXT]=elf_ndxscn(rela_text_scn);
   patch->sectionIndices[ERS_DATA]=elf_ndxscn(scnInfo[ERS_DATA].scn);
+  patch->sectionIndices[ERS_UNSAFE_FUNCTIONS]=elf_ndxscn(scnInfo[ERS_UNSAFE_FUNCTIONS].scn);
 }
 
 //must be called before any other routines
@@ -521,7 +496,6 @@ int dwarfWriteSectionCallback(char* name,int size,Dwarf_Unsigned type,
   sym.st_other=0;
   sym.st_shndx=elf_ndxscn(scn);
   *sectNameIdx=addSymtabEntry(symtab_data,&sym);
-  printf("symbol index is %i\n",*sectNameIdx);
   *error=0;  
   return sym.st_shndx;
 }

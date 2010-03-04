@@ -366,6 +366,10 @@ void findELFSections(ElfInfo* e)
     {
       e->sectionIndices[ERS_DYNAMIC]=elf_ndxscn(scn);
     }
+    else if(!strcmp(".unsafe_functions",name))
+    {
+      e->sectionIndices[ERS_UNSAFE_FUNCTIONS]=elf_ndxscn(scn);
+    }
   }
 }
 
@@ -417,7 +421,12 @@ char* getDynString(ElfInfo* e,int idx)
 
 char* getScnHdrString(ElfInfo* e,int idx)
 {
+  assert(e);
+  assert(e->sectionHdrStrTblIdx);
   Elf_Scn* scn=elf_getscn(e->e,e->sectionHdrStrTblIdx);
+  assert(scn);
   Elf_Data* data=elf_getdata(scn,NULL);
+  assert(data);
+  assert(idx<data->d_size);
   return (char*)data->d_buf+idx;
 }
