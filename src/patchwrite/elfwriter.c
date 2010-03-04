@@ -85,6 +85,7 @@ int addSymtabEntry(Elf_Data* data,Elf32_Sym* sym)
 
 void createSections(Elf* outelf)
 {
+  patch->dataAllocatedByKatana=true;
   //first create the string table
   strtab_scn=elf_newscn(outelf);
   strtab_data=elf_newdata(strtab_scn);
@@ -442,20 +443,7 @@ void endPatchElf()
   {
     death("Failed to write out elf file: %s\n",elf_errmsg (-1));
     exit(1);
-  }
-
-  //since we wrote this elf file we malloc'd all the
-  //data sections, and therefore libelf won't free them,
-  //so we have to do it ourselves
-  for(Elf_Scn* scn=elf_nextscn (outelf,NULL);scn;scn=elf_nextscn(outelf,scn))
-  {
-    Elf_Data* data=elf_getdata(scn,NULL);
-    if(data->d_buf)
-    {
-      free(data->d_buf);
-    }
-  }
-  
+  }  
   
   endELF(patch);
   patch_rules_data=patch_expr_data=strtab_data=text_data=rodata_data=rela_text_data=NULL;

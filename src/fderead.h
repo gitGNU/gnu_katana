@@ -32,7 +32,6 @@ typedef struct
 
 typedef struct FDE
 {
-  Dwarf_Fde dfde;
   CIE* cie;
   RegInstruction* instructions;
   int numInstructions;

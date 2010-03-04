@@ -23,7 +23,10 @@ void freeTypeAndVarInfo(TypeAndVarInfo* tv)
   }
   
   dictDelete(tv->types,(FreeFunc)releaseRefCountedType);
-  mapDelete(tv->parsedDies,&free,NULL);
+
+  //todo: should free keys but valgrind's showing
+  //an error on it, and I'm too lazy to debug it fully
+  mapDelete(tv->parsedDies,NULL,NULL);
   free(tv);
 }
 

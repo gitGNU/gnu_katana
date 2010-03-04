@@ -54,6 +54,7 @@ typedef struct ElfInfo
   DwarfInfo* dwarfInfo;
   struct FDE* fdes;
   int numFdes;
+  bool dataAllocatedByKatana;//used for memory management
 } ElfInfo;
 
 

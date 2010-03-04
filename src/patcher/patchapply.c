@@ -89,12 +89,16 @@ void insertTrampolineJump(addr_t insertAt,addr_t jumpTo)
   memcpy(code+2,&addrAddr,sizeof(addr_t));
   memcpy(code+2+sizeof(addr_t),&jumpTo,sizeof(addr_t));
   memcpyToTarget(insertAt,code,len);
+  //todo: probably don't need verify as memcpyToTarget can
+  //be made to verify it's writings
   byte* verify=zmalloc(len);
   memcpyFromTarget(verify,insertAt,len);
   if(memcmp(code,verify,len))
   {
     death("failed to copy code into target properly\n");
   }
+  free(code);
+  free(verify);
 }
 
 void applyVariablePatch(VarInfo* var,Map* fdeMap,ElfInfo* patch)
@@ -551,8 +555,11 @@ void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch)
     {
       applyFunctionPatch(subprograms[i],pid,targetBin,patch);
     }
+    free(subprograms);
   }
 
+
+  mapDelete(fdeMap,NULL,free);
   logprintf(ELL_INFO_V1,ELS_PATCHAPPLY,"======Fixup Patch Relocations=======\n");
   fixupPatchRelocations(patch);
   patchRelTextAddr=copyInEntireSection(patch,".rela.text.new");
@@ -587,8 +594,10 @@ void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch)
   }
 
   writeOutPatchedBin(true);
-  elf_end(patchedBin->e);
-  close(patchedBin->fd);
+  endELF(targetBin);
+  endELF(patchedBin);
+  endELF(patch);
+  cleanupDwarfVM();
   endPtrace();
   printf("completed application of patch successfully\n");
 }

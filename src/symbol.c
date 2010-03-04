@@ -177,6 +177,7 @@ idx_t findSymbol(ElfInfo* e,GElf_Sym* sym,ElfInfo* ref,int flags)
           {
             scnNameNew[strlen(scnNameNew)-strlen(buf)]='\0';
           }
+          free(buf);
 
         }
         
