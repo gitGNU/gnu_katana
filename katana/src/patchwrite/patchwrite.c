@@ -62,7 +62,7 @@ idx_t addSymbolFromBinaryToPatch(ElfInfo* binary,idx_t symIdx)
   //that this relocation refers to. If we don't already have a corresponding
   //symbol in the patch file, we may have to add this one
   Elf32_Sym sym;
-  sym.st_name=addStrtabEntry(symname);
+  sym.st_name=addStrtabEntry(symname);//todo: this is a waste if we don't end up using this symbol
   sym.st_value=symInNewBin.st_value;
   sym.st_size=symInNewBin.st_size;
   sym.st_info=symInNewBin.st_info;
@@ -183,7 +183,7 @@ void writeRelocationsInRange(addr_t lowpc,addr_t highpc,Elf_Scn* scn,
 
  
     rela.r_offset=newRelOffset;
-    printf("adding reloc for offset 0x%x\n",rela.r_offset);
+    logprintf(ELL_INFO_V4,ELS_RELOCATION,"adding reloc for offset 0x%x\n",rela.r_offset);
     addDataToScn(getDataByERS(patch,ERS_RELA_TEXT),&rela,sizeof(Elf32_Rela));
   }
   deleteList(relocs,free);
@@ -644,7 +644,12 @@ List* getTypeTransformationInfoForCU(CompilationUnit* cuOld,CompilationUnit* cuN
   return varTransHead;
 }
 
-
+void addUnsafeSubprogram(SubprogramInfo* sub)
+{
+  idx_t symIdx=getSymtabIdx(sub->cu->elf,sub->name,0);
+  idx_t symIdxInPatch=addSymbolFromBinaryToPatch(sub->cu->elf,symIdx);
+  addDataToScn(getDataByERS(patch,ERS_UNSAFE_FUNCTIONS),&symIdxInPatch,sizeof(idx_t));
+}
 
 void writeFuncTransformationInfoForCU(CompilationUnit* cuOld,CompilationUnit* cuNew)
 {
@@ -708,8 +713,29 @@ void writeFuncTransformationInfoForCU(CompilationUnit* cuOld,CompilationUnit* cu
         death("%s does not have a .rel.text section\n");
       }
       writeRelocationsInRange(patchedFunc->lowpc,patchedFunc->highpc,relocScn,funcSegmentBase,cuNew->elf);
+      addUnsafeSubprogram(patchedFunc);
+    }
+    else
+    {
+      //even if the subprogram hasn't changed, it might possibly
+      //not be safe to patch while it's on the stack based on the types it uses
+      //go through and see if they're unsafe
+      logprintf(ELL_INFO_V2,ELS_DWARFTYPES,"Examining types used in subprogram %s\n",patchedFunc->name);
+      List* li=patchedFunc->typesHead;
+      for(;li;li=li->next)
+      {
+        TypeInfo* type=li->value;
+        logprintf(ELL_INFO_V3,ELS_DWARFTYPES,"Subprogram %s uses type %s\n",patchedFunc->name,type->name);
+        if(type->transformer)
+        {
+          logprintf(ELL_INFO_V2,ELS_DWARFTYPES,"type %s needs transform, marking subprogram %s as unsafe\n",type->name,patchedFunc->name);
+          addUnsafeSubprogram(patchedFunc);
+          break;
+        }
+      }
     }
   }
+
 
   free(funcs1);
 }
