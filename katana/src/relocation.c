@@ -183,7 +183,7 @@ void applyRelocation(RelocInfo* rel,GElf_Sym* oldSym,ELF_STORAGE_TYPE type)
     if(ERT_REL==rel->type)
     {
       addr_t addrOld=oldSym->st_value;
-      addr_t oldAddrAccessed;
+      addr_t oldAddrAccessed=0;
       switch(rel->relocType)
       {
       case R_386_32:

@@ -66,7 +66,7 @@ void performRelocations(ElfInfo* e,VarInfo* var)
   {
     RelocInfo* rel=li->value;
     printf("relocation for %s at %x with type %i\n",var->name,(unsigned int)rel->r_offset,(unsigned int)rel->relocType);
-    word_t oldAddrAccessed;
+    word_t oldAddrAccessed=0;
     switch(rel->relocType)
     {
     case R_386_32:
