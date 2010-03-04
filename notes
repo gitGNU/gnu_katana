@@ -7,9 +7,13 @@ at needs these address because we may have the same needs.
 * confusion I have
 ** Why can't we just relocate functions when patching them?
    probably can most of the time according to Sergey
+   we would still need the trampolines to catch function pointers
+   lying around, etc
 ** why does gcc use pc-relative relocations for PLT stuff
    I think it's because for stuff within the same section (like .text)
-   you can relocate the section and not have to relocate anything
+   you can relocate the section and not have to relocate anything.
+   Also because the instructions are relative jumps, seem to be
+   easiest sort of jump to do in x86
 ** wtf is up with libelf and writing ELF files that can be executed.
 * issues I see
 ** exception handling
@@ -81,6 +85,11 @@ type that pointer is, we can't really patch it
    in an ELF file which is required to live in a fixed place is the
    ELF header, so could theoretically move around the PHT and SHT if
    we needed to make them larger
+** interfacing with memory management
+   when we fix up stuff that was created on the heap, hard to be sure
+   we don't interfere with memory management method. Currently we use
+   malloc, but really have to make sure using the same memory manager
+   as the target program is
 * things to keep in mind
 ** some way to check compatibility with target before applying the patch
 ** patching static variables
@@ -97,7 +106,6 @@ type that pointer is, we can't really patch it
    is possible using the backtrace call
    http://www.gnu.org/software/libtool/manual/libc/Backtraces.html
    generally requires compiling with -rdynamic
-** it appears that ld does not write all symbols from the symbol table into the hash table
 ** 32-bit vs 64-bit
    look into dwarf_get_address_size for some help on at least addresses
 ** extraneous object code changes
@@ -786,3 +794,8 @@ to be the case.
      my sample unwinder application does
 **** not patching code for functions with local variables of modified types
      Note that we don't currently put that info in the PO
+
+* requirements for Katana
+** x86 platform
+** /proc filesystem
+** elfcmp dependency (todo: remove this)
