@@ -41,7 +41,6 @@ char* unmangleSymbolName(char* name)
   {
     symbolNameUnmangled=zmalloc(strlen(name)+1);
     int atSignIdx=atSignPtr-name;
-    symbolNameUnmangled=zmalloc(strlen(name)+1);
     strcpy(symbolNameUnmangled,name);
     symbolNameUnmangled[atSignIdx]='\0';
   }
@@ -53,8 +52,9 @@ char* unmangleSymbolName(char* name)
 }
 
 //find the symbol matching the given symbol
-int findSymbol(ElfInfo* e,GElf_Sym* sym,ElfInfo* ref,int flags)
+idx_t findSymbol(ElfInfo* e,GElf_Sym* sym,ElfInfo* ref,int flags)
 {
+  idx_t retval=STN_UNDEF;
   Elf_Data* symTabData=NULL;
   char* (*getstrfunc)(ElfInfo*,int)=NULL;
   if(flags & ESFF_NEW_DYNAMIC)
@@ -91,13 +91,15 @@ int findSymbol(ElfInfo* e,GElf_Sym* sym,ElfInfo* ref,int flags)
     char* symname=(*getstrfunc)(e, sym2.st_name);
     int bind2=ELF32_ST_BIND(sym2.st_info);
     int type2=ELF32_ST_TYPE(sym2.st_info);
+    char* symnameUnmangled=unmangleSymbolName(symname);
     //todo: bug with symbols with names substrings of other names, need to properly unmangle symname
     if( (STT_SECTION==type && STT_SECTION==type2) ||
        (!symname && !symbolName) ||
        (!symname && !strlen(symbolName)) ||
        (!strlen(symname) && !symbolName) ||
-       (symname && symbolName && !strncmp(symname,symbolNameUnmangled,strlen(symbolNameUnmangled))))
+       (symname && symbolName && !strcmp(symnameUnmangled,symbolNameUnmangled)))
     {
+      free(symnameUnmangled);
       if(symname && strlen(symname))
       {
         logprintf(ELL_INFO_V2,ELS_SYMBOL,"[%i] matches %s, has name %s\n",i,symbolName,symname);
@@ -196,11 +198,20 @@ int findSymbol(ElfInfo* e,GElf_Sym* sym,ElfInfo* ref,int flags)
         }
       }
       logprintf(ELL_INFO_V1,ELS_SYMBOL,"found symbol %s at index %i\n",symbolName,i);
-      return i;
+      retval=i;
     }
-    //free(symname);//todo: is this right?
+    else
+    {
+      free(symnameUnmangled);
+    }
   }
-  return STN_UNDEF;
+  
+  if(symbolNameUnmangled!=symbolName)
+  {
+    free(symbolNameUnmangled);
+  }
+  free(symbolNameDot);
+  return retval;
 }
 
 GElf_Sym nativeSymToGELFSym(Elf32_Sym sym)

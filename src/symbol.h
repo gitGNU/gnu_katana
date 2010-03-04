@@ -29,7 +29,7 @@ typedef enum
 } E_SYMBOL_FIND_FLAGS;
 
 //find the symbol matching the given symbol
-int findSymbol(ElfInfo* e,GElf_Sym* sym,ElfInfo* ref,int flags);
+idx_t findSymbol(ElfInfo* e,GElf_Sym* sym,ElfInfo* ref,int flags);
 
 GElf_Sym nativeSymToGELFSym(Elf32_Sym sym);
 Elf32_Sym gelfSymToNativeSym(GElf_Sym);
