@@ -13,7 +13,7 @@
 
 #include "util.h"
 #include <stdbool.h>
-
+#include "refcounted.h"
 
 typedef struct _DNODE {
   struct _DNODE  *next;
@@ -28,12 +28,13 @@ typedef struct _DNODE DNODE;
 
 
 typedef struct _DICTIONARY {
+  RefCounted rc;
   DNODE **hash; //no longer a fixed-length array, allow this to be a general-purpose dictionary with user-defined size
   int numBuckets;//size of structure hash points to. Must remain constant due to current hash implementation
   DNODE *start;
   DNODE *end;
   int size; //number of elements in the dictionary
-  int refcount;
+  
 } __DICTIONARY;
 
 typedef struct _DICTIONARY DICTIONARY;

@@ -25,7 +25,7 @@ Dictionary* dictCreate(int bucketCnt)
   MALLOC_CHECK(dict->hash);
   BZERO(dict->hash,bucketCnt*sizeof(DNODE*));
   dict->size=0;
-  dict->refcount=1;
+  dict->rc.refcount=1;
   return dict;
 }
 
@@ -284,12 +284,12 @@ void** dictValues(const Dictionary* dict)
 //you must call dictDelete yourself
 int dictGrab(Dictionary* dict)
 {
-  dict->refcount++;
-  return dict->refcount;
+  dict->rc.refcount++;
+  return dict->rc.refcount;
 }
 int dictRelease(Dictionary* dict)
 {
-  dict->refcount--;
-  assert(dict->refcount>=0);
-  return dict->refcount;
+  dict->rc.refcount--;
+  assert(dict->rc.refcount>=0);
+  return dict->rc.refcount;
 }
