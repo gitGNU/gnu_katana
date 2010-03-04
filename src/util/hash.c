@@ -10,9 +10,11 @@
 #include <string.h>
 #include <stdlib.h>
 #include "hash.h"
+#include <assert.h>
 
 //! this one is called djb2
 unsigned long hash1(char* str) {
+  assert(str);
   unsigned long hash = 5381;
   int c;
   while ((c = *str++) != 0)
