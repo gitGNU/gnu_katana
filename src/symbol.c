@@ -149,8 +149,8 @@ idx_t findSymbol(ElfInfo* e,GElf_Sym* sym,ElfInfo* ref,int flags)
         GElf_Shdr shdrNew;
         gelf_getshdr(scnRef,&shdrRef);
         gelf_getshdr(scnNew,&shdrNew);
-        char* scnNameRef=getScnHdrString(ref,shdrRef.sh_name);
-        char* scnNameNew=getScnHdrString(e,shdrNew.sh_name);
+        char* scnNameRef=strdup(getScnHdrString(ref,shdrRef.sh_name));
+        char* scnNameNew=strdup(getScnHdrString(e,shdrNew.sh_name));
         //if -fdata-sections or -ffunction-sections is used then
         //we might have issues with section names having the name of the
         //var/function appended, so we strip these
@@ -194,9 +194,13 @@ idx_t findSymbol(ElfInfo* e,GElf_Sym* sym,ElfInfo* ref,int flags)
                  !strncmp(scnNameNew,".data",strlen(".data"))))))
           {
             logprintf(ELL_INFO_V2,ELS_SYMBOL,"symbol match fails on section name (%s vs %s)\n",scnNameRef,scnNameNew);
+            free(scnNameNew);
+            free(scnNameRef);
             continue;
           }
         }
+        free(scnNameNew);
+        free(scnNameRef);
       }
       logprintf(ELL_INFO_V1,ELS_SYMBOL,"found symbol %s at index %i\n",symbolName,i);
       retval=i;
