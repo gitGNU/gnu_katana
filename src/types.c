@@ -9,7 +9,11 @@
 #include "types.h"
 
 
-
+//I wish C had lambda functions
+void releaseRefCountedType(TypeInfo* ti)
+{
+  releaseRefCounted((RefCounted*)ti,(FreeFunc)freeTypeInfo);
+}
 
 void freeTypeAndVarInfo(TypeAndVarInfo* tv)
 {
@@ -17,9 +21,8 @@ void freeTypeAndVarInfo(TypeAndVarInfo* tv)
   {
     dictDelete(tv->globalVars,freeVarInfoVoid);
   }
-  //todo: keep track of unique types so can free them
-  //can't free them through the dictionary because we have typedefs
-  dictDelete(tv->types,NULL);
+  
+  dictDelete(tv->types,(FreeFunc)releaseRefCountedType);
   mapDelete(tv->parsedDies,&free,NULL);
   free(tv);
 }
@@ -41,6 +44,13 @@ void freeVarInfoVoid(void* v)
 }
     
 
+void freeSubprogramInfo(SubprogramInfo* si)
+{
+  free(si->name);
+  deleteList(si->typesHead,NULL);
+  free(si);
+}
+
 void freeCompilationUnit(CompilationUnit* cu)
 {
   freeTypeAndVarInfo(cu->tv);
@@ -48,6 +58,7 @@ void freeCompilationUnit(CompilationUnit* cu)
   free(cu->id);
   cu->name=(void*)0xbadf00d;
   cu->tv=(void*)0xbadf00d;
+  dictDelete(cu->subprograms,(FreeFunc)freeSubprogramInfo);
   free(cu);
 }
 
@@ -56,7 +67,7 @@ void freeDwarfInfo(DwarfInfo* di)
   List* next=di->compilationUnits;
   while(next)
   {
-    List* next_=next;
+    List* next_=next->next;
     freeCompilationUnit(next->value);
     next->value=(void*)0xbadf00d;
     free(next);
@@ -78,7 +89,7 @@ void freeTypeInfo(TypeInfo* t)
     }
     if(t->fieldTypes[i])
     {
-      free(t->fieldTypes[i]);
+      releaseRefCounted((RC*)t->fieldTypes[i],(FreeFunc)freeTypeInfo);
     }
     t->fields[i]=(void*)0xbadf00d;
     t->fieldTypes[i]=(void*)0xbadf00d;
@@ -89,6 +100,11 @@ void freeTypeInfo(TypeInfo* t)
   t->fieldTypes=(void*)0xbadf00d;
   t->fields=(void*)0xbadf00d;
   t->fieldLengths=(void*)0xbadf00d;
+  if(t->transformer)
+  {
+    freeTypeTransform(t->transformer);
+    t->transformer=(void*)0xbaadf00d;
+  }
   free(t);
 }
 
@@ -102,6 +118,7 @@ void freeTypeTransform(TypeTransform* t)
 {
   //todo: refcount types?
   free(t->fieldOffsets);
+  free(t->fieldTransformTypes);
   free(t);
 }
 

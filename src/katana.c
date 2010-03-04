@@ -135,6 +135,8 @@ int main(int argc,char** argv)
 
     printf("outfile is %s",outfile);
     writePatch(oldSourceTree,newSourceTree,oldBinPath,newBinPath,outfile);
+    free(oldBinPath);
+    free(newBinPath);
   }
   else if(EKM_APPLY_PATCH==mode)
   {

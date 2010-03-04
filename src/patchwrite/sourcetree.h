@@ -27,6 +27,8 @@ typedef struct
   char* pathToModified;
 } ObjFileInfo;
 
+void deleteObjFileInfo(ObjFileInfo* obj);
+
 //returns list of ObjFileInfo, will not include any with state EOS_UNCHANGED
 List* getChangedObjectFilesInSourceTree(char* origSourceTree,char* modSourceTree);
 ElfInfo* getOriginalObject(ObjFileInfo* obj);

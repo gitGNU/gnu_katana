@@ -58,13 +58,13 @@ List* getChangedObjectFilesInSourceTree(char* origSourceTree,char* modSourceTree
   {
     death("Modified source tree at %s does not eist\n",modSourceTree);
   }
-  struct dirent** dirEntriesOrig;
+  struct dirent** dirEntriesOrig=NULL;
   int numEntriesOrig=0;
   if(origSourceTree)
   {
     numEntriesOrig=scandir(origSourceTree,&dirEntriesOrig,filterOnlyObjAndDirs,alphasort);
   }
-  struct dirent** dirEntriesMod;
+  struct dirent** dirEntriesMod=NULL;
   int numEntriesMod=0;
   if(modSourceTree)
   {
@@ -85,11 +85,16 @@ List* getChangedObjectFilesInSourceTree(char* origSourceTree,char* modSourceTree
         head=concatLists(head,tail,
                          getChangedObjectFilesInSourceTree(fullPathOrig,fullPathMod),
                          NULL,&tail);
+        free(fullPathOrig);
+        free(fullPathMod);
+        free(dirEntriesOrig[i]);
+        free(dirEntriesMod[j]);
+        i++,j++;
         continue;
       }
       else if(DT_DIR==dirEntriesOrig[i]->d_type || DT_DIR==dirEntriesMod[j]->d_type)
       {
-        death("Why are you giving one of your directories a .o extension? This parser isn't terribly smart, so it breaks\n");
+        death("Why are you giving one of your directories a .o extension? This parser isn't terribly smart, so it breaks!\n");
       }
       //obj file exists in both of them
       //compare them for equality
@@ -111,17 +116,27 @@ List* getChangedObjectFilesInSourceTree(char* origSourceTree,char* modSourceTree
         obj->pathToModified=fullPathMod;
         li->value=obj;
         listAppend(&head,&tail,li);
+        free(dirEntriesOrig[i]);
+        free(dirEntriesMod[j]);
         i++,j++;
       }
       else
       {
         logprintf(ELL_INFO_V1,ELS_SOURCETREE,"Object file %s does not differ between versions\n",fullPathOrig);
+        free(fullPathOrig);
+        free(fullPathMod);
+        free(dirEntriesOrig[i]);
+        free(dirEntriesMod[j]);
         i++,j++;
       }
+      free(buf);
     }
     else if(cmp<0)
     {
       logprintf(ELL_WARN,ELS_SOURCETREE,"An object file '%s' has been removed from the new version of the source\n",dirEntriesOrig[i]->d_name);
+      free(fullPathOrig);
+      free(fullPathMod);
+      free(dirEntriesOrig[i]);
       i++;
     }
     else if (cmp>0)
@@ -133,10 +148,17 @@ List* getChangedObjectFilesInSourceTree(char* origSourceTree,char* modSourceTree
       obj->pathToModified=fullPathMod;
       li->value=obj;
       listAppend(&head,&tail,li);
+      free(fullPathOrig);
+      free(dirEntriesMod[j]);
       j++;
     }
   }
 
+  free(dirEntriesOrig);
+  if(dirEntriesMod)
+  {
+    free(dirEntriesMod);
+  }
   for(;i<numEntriesOrig;i++)
   {
     char* fullPathOrig=joinPaths(origSourceTree,dirEntriesOrig[i]->d_name);
@@ -155,4 +177,11 @@ List* getChangedObjectFilesInSourceTree(char* origSourceTree,char* modSourceTree
   }
   
   return head;
+}
+
+void deleteObjFileInfo(ObjFileInfo* obj)
+{
+  free(obj->pathToModified);
+  free(obj->pathToOriginal);
+  free(obj);
 }

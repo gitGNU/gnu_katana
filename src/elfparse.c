@@ -39,8 +39,13 @@ ElfInfo* openELFFile(char* fname)
 
 void endELF(ElfInfo* e)
 {
+  if(e->dwarfInfo)
+  {
+    freeDwarfInfo(e->dwarfInfo);
+  }
   elf_end(e->e);
   close(e->fd);
+  free(e->fname);
   free(e);
 }
 
@@ -218,6 +223,7 @@ ElfInfo* duplicateElf(ElfInfo* e,char* outfname,bool flushToDisk,bool keepLayout
   return newE;
 }
 
+//legacy function, currently unused as far as I know --james
 void writeOut(ElfInfo* e,char* outfname,bool keepLayout)
 {
   ElfInfo* newE=duplicateElf(e,outfname,true,keepLayout);
