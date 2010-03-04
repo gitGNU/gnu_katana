@@ -15,6 +15,7 @@
 #include "util/list.h"
 #include <libdwarf.h>
 #include <string.h>
+#include "util/refcounted.h"
 
 typedef unsigned int uint;
 typedef size_t addr_t;
@@ -92,6 +93,11 @@ struct TypeTransform_;//forward declare
 //not all members are used by all types (for example, structs use more)
 typedef struct TypeInfo_
 {
+  RefCounted rc;//note that when calling the grab and release methods
+                //we should pass a pointer to the whole type,
+                //cast. This will work properly because of the way C
+                //lays out memory as long as rc remains the first
+                //member of TypeInfo
   char* name;
   TYPE_TYPE type;
   int length;//overall length in bytes of the type

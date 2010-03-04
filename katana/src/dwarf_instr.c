@@ -225,6 +225,7 @@ void addInstruction(DwarfInstructions* instrs,DwarfInstruction* instr)
     memcpy(bytes+1,instr->arg1Bytes,instr->arg1NumBytes);
     memcpy(bytes+1+instr->arg1NumBytes,instr->arg2Bytes,instr->arg2NumBytes);
     addBytes(instrs,bytes,1+instr->arg1NumBytes+instr->arg2NumBytes);
+    free(bytes);
     break;
 
   //we can take care of all instructions taking three operands all of which
@@ -238,6 +239,7 @@ void addInstruction(DwarfInstructions* instrs,DwarfInstruction* instr)
     memcpy(bytes+1+instr->arg1NumBytes+instr->arg2NumBytes,instr->arg3Bytes,
            instr->arg3NumBytes);
     addBytes(instrs,bytes,1+instr->arg1NumBytes+instr->arg2NumBytes+instr->arg3NumBytes);
+    free(bytes);
     break;
     
     
