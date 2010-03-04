@@ -545,6 +545,35 @@ void addTypedefFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
   free(name);
 }
 
+//parse formal parameters only to add their type to the
+//list of types used by functions
+void parseFormalParameter(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
+{
+  TypeInfo* type=getTypeInfoFromATType(dbg,die,cu);
+  if(!type)
+  {
+    logprintf(ELL_WARN,ELS_DWARFTYPES,"Found formal parameter with no type\n");
+    return;
+  }
+  
+  //we want to see if this parameter is inside any subprograms
+  //(C does not allow nested subprograms, but some other language might
+  //and it's just as easy to allow them here)
+  //if the variable is inside a subprogram, we add its type to the list of types
+  //inside that subprogram. This can be compared later against the set of types
+  //that are to be patched later to determine whether the subprogram can have
+  //an activation frame on the stack during patching
+  DList* li=activeSubprogramsHead;
+  for(;li;li=li->next)
+  {
+    SubprogramInfo* sub=li->value;
+    assert(sub);
+    List* li=zmalloc(sizeof(List));
+    li->value=type;
+    listAppend(&sub->typesHead,&sub->typesTail,li);
+  }
+}
+
 void addVarFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
 {
   VarInfo* var=zmalloc(sizeof(VarInfo));
@@ -644,6 +673,7 @@ void parseCompileUnit(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit** cu,ElfInfo
 SubprogramInfo* addSubprogramFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
 {
   SubprogramInfo* prog=zmalloc(sizeof(SubprogramInfo));
+  prog->cu=cu;
   prog->name=getNameForDie(dbg,die,cu);
   Dwarf_Attribute attr;
   Dwarf_Error err;
@@ -759,8 +789,9 @@ void* parseDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit** cu,bool* parseChi
     result=li->value;
     }
     break;
-  case DW_TAG_formal_parameter: //ignore because if a function change will be recompiled and won't modify function while executing it
-    //todo: need to add its types to the list of types for the subprogram
+  case DW_TAG_formal_parameter:
+    parseFormalParameter(dbg,die,*cu);
+    break;
     break;
   case DW_TAG_lexical_block:
     //we may care about its children, but not its definition itself
