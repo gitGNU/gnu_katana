@@ -15,6 +15,7 @@
 #include <dwarf.h>
 #include "elfparse.h"
 #include "util/logging.h"
+#include "util/refcounted.h"
 
 Dictionary* cuIdentifiers=NULL;
 DwarfInfo* di;
@@ -204,28 +205,31 @@ char* getNameForDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
       break;
     case DW_TAG_pointer_type:
       {
-        char* name=getTypeNameFromATType(dbg,die,cu,NULL);
-        if(!name)
+        char* namePointed=getTypeNameFromATType(dbg,die,cu,NULL);
+        if(!namePointed)
         {
           fprintf(stderr,"WARNING: the type that DW_TAG_pointer_type references does not exist\n");
           snprintf(buf,2048,"pgeneric%i*",(int)offset);
         }
         else
         {
-          snprintf(buf,2048,"%s*",name);
+          snprintf(buf,2048,"%s*",namePointed);
+          free(namePointed);
         }
+        
       }
       break;
     case DW_TAG_array_type:
       {
-        char* name=getTypeNameFromATType(dbg,die,cu,NULL);
-        if(!name)
+        char* namePointed=getTypeNameFromATType(dbg,die,cu,NULL);
+        if(!namePointed)
         {
           death("the type that DW_TAG_array_type references does not exist\n");
         }
         int lowerBound=0,upperBound=0;
         getRangeFromDie(dbg,die,&lowerBound,&upperBound);
-        snprintf(buf,2048,"%s[]_%i_%i",name,lowerBound,upperBound);
+        snprintf(buf,2048,"%s[]_%i_%i",namePointed,lowerBound,upperBound);
+        free(namePointed);
       }
       break;
     case DW_TAG_subprogram:
@@ -239,7 +243,7 @@ char* getNameForDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
   else if(DW_DLV_OK==res)
   {
     retname=strdup(name);
-    dwarf_dealloc(dbg,(void*)name,DW_DLA_STRING);
+    dwarf_dealloc(dbg,name,DW_DLA_STRING);
   }
   else
   {
@@ -253,6 +257,7 @@ char* getNameForDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
 //is that this one respects typedefs, at least partially
 //optional dieOfType argument is set to the die of the discovered type
 //assuming it's found (i.e. will not be set if there was no DW_AT_type attribute)
+//the returned pointer should be freed
 char* getTypeNameFromATType(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu,Dwarf_Die* dieOfType)
 {
   Dwarf_Attribute attr;
@@ -263,7 +268,7 @@ char* getTypeNameFromATType(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu,Dw
     logprintf(ELL_INFO_V4,ELS_MISC ,"no type entry\n");
     //this happens in gcc-generated stuff, there's no DWARF entry
     //for the void type, so we have to create it manually
-    return "void";
+    return strdup("void");
   }
   Dwarf_Half form;
   Dwarf_Off offsetOfType;
@@ -340,6 +345,7 @@ TypeInfo* getTypeInfoFromATType(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* c
   {
     logprintf(ELL_WARN,ELS_DWARFTYPES,"Type for die of name %s does not seem to exist\n",name);
   }
+  free(name);
   return result;
 }
 
@@ -361,6 +367,7 @@ void addBaseTypeFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
   }
   type->length=byteSize;
   dictInsert(cu->tv->types,type->name,type);
+  grabRefCounted((RC*)type);
   logprintf(ELL_INFO_V4,ELS_MISC,"added base type of name %s\n",type->name);
 }
 
@@ -388,6 +395,7 @@ void addStructureFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
   //it's incomplete in case has members that reference it
   type->incomplete=true;
   dictInsert(cu->tv->types,type->name,type);
+  grabRefCounted((RC*)type);
   Dwarf_Die child;
   res=dwarf_child(die,&child,&err);
   if(res==DW_DLV_OK)
@@ -426,6 +434,7 @@ void addStructureFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
       //todo: perhaps use DW_AT_location instead of this?
       type->fieldLengths[idx]=typeOfField->length;
       type->fieldTypes[idx]=typeOfField;
+      grabRefCounted((RC*)typeOfField);
       idx++;
     }while(DW_DLV_OK==dwarf_siblingof(dbg,child,&child,&err));
   }
@@ -457,6 +466,7 @@ void addPointerTypeFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
   logprintf(ELL_INFO_V4,ELS_MISC,"got name for pointer\n");
   type->incomplete=true;//set incomplete and add in case the structure we get refers to it
   dictInsert(cu->tv->types,type->name,type);
+  grabRefCounted((RC*)type);
   Dwarf_Unsigned byteSize;
   int res=dwarf_bytesize(die,&byteSize,&err);
   if(DW_DLV_NO_ENTRY==res)
@@ -514,6 +524,7 @@ void addArrayTypeFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
     type->fde=readAttributeAsInt(attr);
   }
   dictInsert(cu->tv->types,type->name,type);
+  grabRefCounted((RC*)type);
   logprintf(ELL_INFO_V4,ELS_MISC,"added array type of name %s\n",type->name);
 }
 
@@ -524,6 +535,7 @@ void addTypedefFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
   if(type)
   {
     dictInsert(cu->tv->types,name,type);
+    grabRefCounted((RC*)type);
     logprintf(ELL_INFO_V4,ELS_MISC,"added typedef for name %s\n",name);
   }
   else
@@ -623,7 +635,7 @@ void parseCompileUnit(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit** cu,ElfInfo
   voidType->type=TT_VOID;
   voidType->name=strdup("void");
   dictInsert(tv->types,voidType->name,voidType);
-    
+  grabRefCounted((RC*)voidType);  
   (*cu)->name=getNameForDie(dbg,die,*cu);
   setIdentifierForCU(*cu,die);
   logprintf(ELL_INFO_V4,ELS_MISC,"compilation unit has name %s\n",(*cu)->name);
