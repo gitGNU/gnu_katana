@@ -236,7 +236,7 @@ void writeTypeToDwarf(TypeInfo* type)
   {
     return;//already written
   }
-  int tag;
+  int tag=0;
   switch(type->type)
   {
   case TT_STRUCT:
@@ -322,6 +322,7 @@ void writeOldTypeToDwarf(TypeInfo* type,CompilationUnit* cuToWriteIn)
   type->name=zmalloc(strlen(type->name)+2);
   sprintf(type->name,"%s~",oldName);
   writeTypeToDwarf(type);//detects that we're doing an old type and takes care of the rest
+  free(type->name);
   type->name=oldName;//restore the name
   type->cu=oldCu;
 
@@ -408,6 +409,7 @@ void writeTransformationToDwarf(TypeTransform* trans)
     addInstruction(&instrs,&inst);
     free(inst.arg1Bytes);
     free(inst.arg2Bytes);
+    free(inst.arg3Bytes);
   }
   else //look at structure, not just straight copy
   {
@@ -463,6 +465,8 @@ void writeTransformationToDwarf(TypeTransform* trans)
         inst.arg3Bytes=encodeAsLEB128((byte*)&fdeIdx,sizeof(fdeIdx),false,&inst.arg3NumBytes);
         addInstruction(&instrs,&inst);
         free(inst.arg1Bytes);
+        free(inst.arg2Bytes);
+        free(inst.arg3Bytes);
         oldBytesSoFar+=trans->from->fieldLengths[i];
         continue;
       }
@@ -472,12 +476,14 @@ void writeTransformationToDwarf(TypeTransform* trans)
     
       addInstruction(&instrs,&inst);
       free(inst.arg1Bytes);
+      free(inst.arg2Bytes);
       oldBytesSoFar+=trans->from->fieldLengths[i];
 
     }
   }
   printf("adding %i bytes to fde\n",instrs.numBytes);
   dwarf_insert_fde_inst_bytes(dbg,fde,instrs.numBytes,instrs.instrs,&err);
+  free(instrs.instrs);
 }
 
 void writeVarToData(VarInfo* var)
@@ -493,6 +499,7 @@ void writeVarToData(VarInfo* var)
   if(!gelf_getshdr(scn,&shdr))
   {death("gelf_shdr failed\n");}
   byte* data=NULL;
+  bool freeData=false;
   if(shdr.sh_type==SHT_PROGBITS)
   {
     data=getDataAtAbs(scn,sym.st_value,IN_MEM);
@@ -500,12 +507,17 @@ void writeVarToData(VarInfo* var)
   else if(shdr.sh_type==SHT_NOBITS)
   {
     data=zmalloc(var->type->length);
+    freeData=true;
   }
   else
   {
     death("variable lives in unexpected section\n");
   }
   addr_t addr=addDataToScn(getDataByERS(patch,ERS_DATA),data,var->type->length);
+  if(freeData)
+  {
+    free(data);
+  }
   //now we must create a symbol for it as well
   Elf32_Sym symNew=gelfSymToNativeSym(sym);
   symNew.st_name=addStrtabEntry(var->name);
@@ -557,6 +569,7 @@ void writeNewVarsForCU(CompilationUnit* cuOld,CompilationUnit* cuNew)
       writeVarToData(var);
     }
   }
+  free(patchVars);
 }
 
 List* getTypeTransformationInfoForCU(CompilationUnit* cuOld,CompilationUnit* cuNew)
@@ -696,6 +709,8 @@ void writeFuncTransformationInfoForCU(CompilationUnit* cuOld,CompilationUnit* cu
       writeRelocationsInRange(patchedFunc->lowpc,patchedFunc->highpc,relocScn,funcSegmentBase,cuNew->elf);
     }
   }
+
+  free(funcs1);
 }
 
   
@@ -748,17 +763,17 @@ void writeTypeAndFuncTransformationInfo(ElfInfo* patchee,ElfInfo* patched)
     cuOld->presentInOtherVersion=true;
     cuNew->presentInOtherVersion=true;
     List* li=getTypeTransformationInfoForCU(cuOld,cuNew);
-    //varTransHead=concatLists(varTransHead,varTransTail,li,NULL,&varTransTail);
     writeNewVarsForCU(cuOld,cuNew);
     writeVarTransforms(li);
+    deleteList(li,free);
+    
     //note that this must be done after dealing with the data
     //so that dealing with the data writes out the appropriate symbols
     writeFuncTransformationInfoForCU(cuOld,cuNew);
 
 
     printf("completed all transformations for compilation unit %s\n",cuOld->name);
-    //freeTransformationInfo(trans);//this was causing memory errors. todo: debug it
-    //I think it's needed for writeVarTransforms later. Should do reference counting
+
   }
 }
 
@@ -790,7 +805,6 @@ void writePatch(char* oldSourceTree,char* newSourceTree,char* oldBinName,char* n
   findELFSections(newBinary);
   oldBinary=openELFFile(oldBinName);
   findELFSections(oldBinary);
-  memset(&patch,0,sizeof(ElfInfo));
   patch=startPatchElf(patchOutName);
   Dwarf_Error err;
   dbg=dwarf_producer_init(DW_DLC_WRITE,dwarfWriteSectionCallback,dwarfErrorHandler,NULL,&err);
@@ -802,8 +816,9 @@ void writePatch(char* oldSourceTree,char* newSourceTree,char* oldBinName,char* n
     dwarfErrorHandler(err,"creating frame cie failed");
   }
 
+  //todo: find better way of reording symbols so local ones all first
   //call this once so the necessary dwarf sections get created
-  dwarf_transform_to_disk_form(dbg,&err);
+  //dwarf_transform_to_disk_form(dbg,&err);
 
   //so far there should be only local sections in symtab. Can set sh_info
   //apropriately
@@ -843,9 +858,8 @@ void writePatch(char* oldSourceTree,char* newSourceTree,char* oldBinName,char* n
     default:
       death("should only be seeing changed object files\n");
     }
-
-
   }
+  deleteList(objFiles,(FreeFunc)deleteObjFileInfo);
 
   dwarf_add_die_to_debug(dbg,firstCUDie,&err);
   int numSections=dwarf_transform_to_disk_form(dbg,&err);
@@ -864,10 +878,13 @@ void writePatch(char* oldSourceTree,char* newSourceTree,char* oldBinName,char* n
     data->d_buf=zmalloc(length);
     memcpy(data->d_buf,buf,length);
   }
-
   
-
   endPatchElf();
+  int res=dwarf_producer_finish(dbg,&err);
+  if(DW_DLV_ERROR==res)
+  {
+    dwarfErrorHandler(err,NULL);
+  }
   printf("wrote elf file %s\n",patchOutName);
   endELF(oldBinary);
   endELF(newBinary);
