@@ -533,7 +533,8 @@ void writeVarTransforms(List* varTrans)
   for(;li;li=li->next)
   {
     VarTransformation* vt=li->value;
-    writeOldTypeToDwarf(vt->transform->from,vt->var->type->cu);
+    //note: no longer writing the old type as we don't use it for anything currently
+    //writeOldTypeToDwarf(vt->transform->from,vt->var->type->cu);
     writeVarToDwarf(vt->var,vt->cu);
     writeVarToData(vt->var);
     writeTransformationToDwarf(vt->transform);
