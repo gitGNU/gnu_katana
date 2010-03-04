@@ -15,6 +15,7 @@
 #include <dwarf.h>
 #include <assert.h>
 #include "util/logging.h"
+#include "dwarfvm.h"
 
 
 
@@ -190,7 +191,7 @@ Map* readDebugFrame(ElfInfo* elf)
   Dwarf_Signed fdeElementCount = 0;
   Dwarf_Cie *cieData = NULL;
   Dwarf_Signed cieElementCount = 0;
-  CIE cie;
+  elf->cie=zmalloc(sizeof(CIE));
   
   Map* result=integerMapCreate(100);//todo: remove arbitrary constant 100
   Dwarf_Error err;
@@ -200,9 +201,7 @@ Map* readDebugFrame(ElfInfo* elf)
     dwarfErrorHandler(err,NULL);
   }
   dwarf_get_fde_list(dbg, &cieData, &cieElementCount,
-                                   &fdeData, &fdeElementCount, &err);
-
-  
+                                   &fdeData, &fdeElementCount, &err); 
   //read the CIE
   Dwarf_Unsigned cieLength = 0;
   Dwarf_Small version = 0;
@@ -216,20 +215,25 @@ Map* readDebugFrame(ElfInfo* elf)
                      &cieLength,
                      &version,
                      &augmenter,
-                     &cie.codeAlign,
-                     &cie.dataAlign,
-                     &cie.returnAddrRuleNum,
+                     &elf->cie->codeAlign,
+                     &elf->cie->dataAlign,
+                     &elf->cie->returnAddrRuleNum,
                      &initInstr,
                      &initInstrLen, &err);
-  //don't care about initial instructions, we don't use them
-  /*
-  cie.initialInstructions=parseFDEInstructions(dbg,initInstr,initInstrLen,cie.dataAlign,
-                                                cie.codeAlign,&cie.numInitialInstructions);
-  cie.initialRules=dictCreate(100);//todo: get rid of arbitrary constant 100
-  evaluateInstructions(cie.initialInstructions,cie.numInitialInstructions,cie.initialRules,-1,&cie);
-  */
+  //don't care about initial instructions, for patching,
+  //but do if we're reading a debug frame for stack unwinding purposes
+  //so that we can find activation frames
+  
+  elf->cie->initialInstructions=parseFDEInstructions(dbg,initInstr,initInstrLen,
+                                                     elf->cie->dataAlign,
+                                                     elf->cie->codeAlign,
+                                                     &elf->cie->numInitialInstructions);
+  elf->cie->initialRules=dictCreate(100);//todo: get rid of arbitrary constant 100
+  evaluateInstructions(elf->cie->initialInstructions,elf->cie->numInitialInstructions,
+                       elf->cie->initialRules,-1);
+  
   //todo: bizarre bug, it keeps coming out as -1, which is wrong
-  cie.codeAlign=1;
+  elf->cie->codeAlign=1;
   
   elf->fdes=zmalloc(fdeElementCount*sizeof(FDE));
   elf->numFdes=fdeElementCount;
@@ -239,7 +243,7 @@ Map* readDebugFrame(ElfInfo* elf)
     Dwarf_Ptr instrs;
     Dwarf_Unsigned ilen;
     dwarf_get_fde_instr_bytes(dfde, &instrs, &ilen, &err);
-    elf->fdes[i].instructions=parseFDEInstructions(dbg,instrs,ilen,cie.dataAlign,cie.codeAlign,&elf->fdes[i].numInstructions);
+    elf->fdes[i].instructions=parseFDEInstructions(dbg,instrs,ilen,elf->cie->dataAlign,elf->cie->codeAlign,&elf->fdes[i].numInstructions);
     Dwarf_Addr lowPC = 0;
     Dwarf_Unsigned addrRange = 0;
     Dwarf_Ptr fdeBytes = NULL;

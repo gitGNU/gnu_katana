@@ -1,5 +1,4 @@
 time
-dump*
 *.o
 *.s
 *.i
@@ -10,3 +9,4 @@ notes.txt
 *.bbl
 *.aux
 *.blg
+dump*

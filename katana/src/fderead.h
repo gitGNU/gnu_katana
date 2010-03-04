@@ -19,7 +19,7 @@ Map* readDebugFrame(ElfInfo* elf);
 
 //not really using CIE at the moment
 //do we need it?
-typedef struct
+typedef struct CIE
 {
   RegInstruction* initialInstructions;
   int numInitialInstructions;
