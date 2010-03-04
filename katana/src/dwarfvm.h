@@ -17,4 +17,6 @@ void patchDataWithFDE(VarInfo* var,FDE* transformerFDE,ElfInfo* targetBin,ElfInf
 //past stopLocation. stopLocation should be relative to the start of the instructions (i.e. the instructions are considered to start at 0)
 //if stopLocation is negative, it is ignored
 void evaluateInstructions(RegInstruction* instrs,int numInstrs,Dictionary* rules,int stopLocation);
+
+void cleanupDwarfVM();
 #endif

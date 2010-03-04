@@ -18,11 +18,6 @@
 
 
 
-Dwarf_Fde *fdeData = NULL;
-Dwarf_Signed fdeElementCount = 0;
-Dwarf_Cie *cieData = NULL;
-Dwarf_Signed cieElementCount = 0;
-CIE cie;
 
 
 //the returned memory should be freed
@@ -191,6 +186,12 @@ RegInstruction* parseFDEInstructions(Dwarf_Debug dbg,unsigned char* bytes,int le
 //and the FDE structure
 Map* readDebugFrame(ElfInfo* elf)
 {
+  Dwarf_Fde *fdeData = NULL;
+  Dwarf_Signed fdeElementCount = 0;
+  Dwarf_Cie *cieData = NULL;
+  Dwarf_Signed cieElementCount = 0;
+  CIE cie;
+  
   Map* result=integerMapCreate(100);//todo: remove arbitrary constant 100
   Dwarf_Error err;
   Dwarf_Debug dbg;
@@ -235,7 +236,6 @@ Map* readDebugFrame(ElfInfo* elf)
   for (int i = 0; i < fdeElementCount; i++)
   {
     Dwarf_Fde dfde=fdeData[i];
-    elf->fdes[i].dfde=dfde;
     Dwarf_Ptr instrs;
     Dwarf_Unsigned ilen;
     dwarf_get_fde_instr_bytes(dfde, &instrs, &ilen, &err);
@@ -260,7 +260,12 @@ Map* readDebugFrame(ElfInfo* elf)
     int* key=zmalloc(sizeof(int));
     *key=elf->fdes[i].offset;
     mapInsert(result,key,elf->fdes+i);
+    dwarf_dealloc(dbg,dfde,DW_DLA_FDE);
   }
+  dwarf_dealloc(dbg,cieData[0],DW_DLA_CIE);
+  dwarf_dealloc(dbg,fdeData,DW_DLA_LIST);
+  dwarf_dealloc(dbg,cieData,DW_DLA_LIST);
+  dwarf_finish(dbg,&err);
   return result;
 }
 

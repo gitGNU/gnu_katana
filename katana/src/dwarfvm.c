@@ -34,7 +34,9 @@ void evaluateInstructions(RegInstruction* instrs,int numInstrs,Dictionary* rules
   PoReg cfaReg;
   memset(&cfaReg,0,sizeof(PoReg));
   cfaReg.type=ERT_CFA;
-  PoRegRule* cfaRule=dictGet(rules,strForReg(cfaReg));
+  char* str=strForReg(cfaReg);
+  PoRegRule* cfaRule=dictGet(rules,str);
+  free(str);
   int loc=0;
   for(int i=0;i<numInstrs;i++)
   {
@@ -46,12 +48,16 @@ void evaluateInstructions(RegInstruction* instrs,int numInstrs,Dictionary* rules
     }
     else
     {
-      rule=dictGet(rules,strForReg(inst.arg1Reg));
+      char* str=strForReg(inst.arg1Reg);
+      rule=dictGet(rules,str);
+      free(str);
       if(!rule)
       {
         rule=zmalloc(sizeof(PoRegRule));
         rule->regLH=inst.arg1Reg;
-        dictInsert(rules,strForReg(inst.arg1Reg),rule);
+        char* str=strForReg(inst.arg1Reg);
+        dictInsert(rules,str,rule);
+        free(str);
       }
     }
     //printf("evaluating instruction of type 0x%x\n",(uint)inst.type);
@@ -127,6 +133,15 @@ typedef struct
   addr_t addr;//address to copy the data to
 } PatchData;
 
+void freePatchData(PatchData* pd)
+{
+  if(pd->data)
+  {
+    free(pd->data);
+  }
+  free(pd);
+}
+
 //returns a list of PatchData objects
 //this list generally only has one item unless a recurse rule
 //was encountered
@@ -146,6 +161,7 @@ List* makePatchData(PoRegRule* rule,SpecialRegsState* state,ElfInfo* patch,ElfIn
     death("left hand register must always yield an address");
   }
   memcpy(&resultAddr,addrBytes,sizeof(addr_t));
+  free(addrBytes);
 
   if(ERRT_OFFSET==rule->type || ERRT_REGISTER==rule->type || ERRT_EXPR==rule->type ||
      ERRT_RECURSE_FIXUP_POINTER==rule->type)
@@ -189,6 +205,7 @@ List* makePatchData(PoRegRule* rule,SpecialRegsState* state,ElfInfo* patch,ElfIn
       int size=resolveRegisterValue(&rule->regRH,state,&rhAddrBytes,ERRF_NONE);
       assert(size==sizeof(addr_t));
       memcpy(&tmpState.currAddrOld,rhAddrBytes,sizeof(addr_t));
+      free(rhAddrBytes);
       //fde indices seem to be 1-based and we store them zero-based
       head=generatePatchesFromFDEAndState(&patch->fdes[rule->index-1],&tmpState,patch,patchedBin);
     }
@@ -218,6 +235,7 @@ List* makePatchData(PoRegRule* rule,SpecialRegsState* state,ElfInfo* patch,ElfIn
       int size=resolveRegisterValue(&rule->regRH,state,&rhAddrBytes,ERRF_DEREFERENCE);
       assert(size==sizeof(addr_t));
       memcpy(&tmpState.currAddrOld,rhAddrBytes,sizeof(addr_t));
+      free(rhAddrBytes);
       if(!tmpState.currAddrOld)
       {
         //NULL pointer, can't recurse on it. Just make sure 0 gets copied to the new location
@@ -287,7 +305,9 @@ List* makePatchData(PoRegRule* rule,SpecialRegsState* state,ElfInfo* patch,ElfIn
 
       addr_t* value=zmalloc(sizeof(addr_t));
       *value=pointedObjectNewLocation;
-      mapInsert(dataMoved,&tmpState.currAddrOld,value);
+      size_t* key=zmalloc(sizeof(size_t));
+      memcpy(key,&tmpState.currAddrOld,sizeof(size_t));
+      mapInsert(dataMoved,key,value);
       
       
       tmpState.currAddrNew=pointedObjectNewLocation;
@@ -332,7 +352,9 @@ List* makePatchData(PoRegRule* rule,SpecialRegsState* state,ElfInfo* patch,ElfIn
   PoReg cfaReg;
   memset(&cfaReg,0,sizeof(PoReg));
   cfaReg.type=ERT_CFA;
-  PoRegRule* cfaRule=dictGet(rulesDict,strForReg(cfaReg));
+  char* str=strForReg(cfaReg);
+  PoRegRule* cfaRule=dictGet(rulesDict,str);
+  free(str);
   if(cfaRule)
   {
     addr_t addr;
@@ -353,6 +375,8 @@ List* makePatchData(PoRegRule* rule,SpecialRegsState* state,ElfInfo* patch,ElfIn
     List* patchList=makePatchData(rules[i],state,patch,patchedBin);
     liStart=concatLists(liStart,liEnd,patchList,NULL,&liEnd);
   }
+  free(rules);
+  dictDelete(rulesDict,free);
   return liStart;
 }
 
@@ -375,6 +399,13 @@ void patchDataWithFDE(VarInfo* var,FDE* fde,ElfInfo* oldBinaryElf,ElfInfo* patch
     PatchData* pd=li->value;
     memcpyToTarget(pd->addr,pd->data,pd->len);
   }
-  //todo: not right, need a free patch data function
-  deleteList(patchesList,free);
+  deleteList(patchesList,(FreeFunc)freePatchData);
+}
+
+void cleanupDwarfVM()
+{
+  if(dataMoved)
+  {
+    mapDelete(dataMoved,free,free);
+  }
 }

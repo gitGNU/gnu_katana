@@ -268,9 +268,12 @@ void addInstruction(DwarfInstructions* instrs,DwarfInstruction* instr)
 uint leb128ToUInt(byte* bytes,usint* outLEBBytesRead)
 {
   usint resultBytes;
+  //valgrind gives this as a mem leak, but I can't figure out why,
+  //as I free the result below. . .
   byte* result=decodeLEB128(bytes,false,&resultBytes,outLEBBytesRead);
   uint val=0;
   memcpy(&val,result,resultBytes);
+  free(result);
   return val;
 }
 

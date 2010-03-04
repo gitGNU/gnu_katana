@@ -48,6 +48,7 @@ PoReg readRegFromLEB128(byte* leb,usint* bytesRead)
   default:
     death("unsupported register type\n");
   }
+  free(bytes);
   return result;
 }
 

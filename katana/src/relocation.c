@@ -93,6 +93,7 @@ addr_t getPLTEntryForSym(ElfInfo* e,int symIdx)
     RelocInfo* reloc=getRelocationEntryAtOffset(e,getSectionByERS(e,ERS_REL_PLT),relocOffset);
     if(reloc->symIdx==symIdx)
     {
+      free(reloc);
       //hooray!, we've found it
       return pltStart+i;
     }

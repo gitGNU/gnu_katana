@@ -374,5 +374,7 @@ bool strnmatchTarget(char* str,addr_t strInTarget)
   char* buf=zmalloc(len+1);
   memcpyFromTarget((byte*)buf,strInTarget,len+1);
   buf[len]=0;
-  return !strcmp(buf,str);
+  bool result=!strcmp(buf,str);
+  free(buf);
+  return result;
 }

@@ -14,6 +14,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include "util/logging.h"
+#include "fderead.h"
 
 ElfInfo* openELFFile(char* fname)
 {
@@ -39,10 +40,31 @@ ElfInfo* openELFFile(char* fname)
 
 void endELF(ElfInfo* e)
 {
+  if(e->dataAllocatedByKatana)
+  {
+      //since we wrote this elf file we malloc'd all the
+    //data sections, and therefore libelf won't free them,
+    //so we have to do it ourselves
+    for(Elf_Scn* scn=elf_nextscn (e->e,NULL);scn;scn=elf_nextscn(e->e,scn))
+    {
+      Elf_Data* data=elf_getdata(scn,NULL);
+      if(data->d_buf)
+      {
+        free(data->d_buf);
+      }
+    }
+  }
+
+  
   if(e->dwarfInfo)
   {
     freeDwarfInfo(e->dwarfInfo);
   }
+  for(int i=0;i<e->numFdes;i++)
+  {
+    free(e->fdes[i].instructions);
+  }
+  free(e->fdes);
   elf_end(e->e);
   close(e->fd);
   free(e->fname);
@@ -216,8 +238,9 @@ ElfInfo* duplicateElf(ElfInfo* e,char* outfname,bool flushToDisk,bool keepLayout
     fprintf(stdout,"Failed to write out elf file: %s\n",elf_errmsg (-1));
   }
   ElfInfo* newE=zmalloc(sizeof(ElfInfo));
+  newE->dataAllocatedByKatana=true;
   newE->fd=outfd;
-  newE->fname=outfname;
+  newE->fname=strdup(outfname);
   newE->e=outelf;
   findELFSections(newE);
   return newE;
