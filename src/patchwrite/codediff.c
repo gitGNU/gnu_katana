@@ -109,9 +109,18 @@ bool areSubprogramsIdentical(SubprogramInfo* patcheeFunc,SubprogramInfo* patched
   bool retval=true;
   for(int i=0;i<len1;i++)
   {
-    RelocInfo* relocOld=oldLi->value;
-    RelocInfo* relocNew=newLi->value;
-    if((patcheeFunc->lowpc+i==relocOld->r_offset) &&
+    RelocInfo* relocOld=NULL;
+    if(oldLi)
+    {
+      relocOld=oldLi->value;
+    }
+    RelocInfo* relocNew=NULL;
+    if(newLi)
+    {
+      relocNew=newLi->value;
+    }
+    if(relocOld && relocNew &&
+       (patcheeFunc->lowpc+i==relocOld->r_offset) &&
        (patchedFunc->lowpc+i==relocNew->r_offset))
     {
       GElf_Sym symOld;
@@ -151,6 +160,10 @@ bool areSubprogramsIdentical(SubprogramInfo* patcheeFunc,SubprogramInfo* patched
       }
 
       //check the addend
+      //this may sometimes deal incorrectly with .rodata, since it's so opaque
+      //but the chances of false negatives (which could lead to system instability)
+      //are small. False positives will lead to more functions than necessary
+      //being patched, which may make it harder to apply a patch
       if(getAddendForReloc(relocOld) != getAddendForReloc(relocNew))
       {
         retval=false;
@@ -163,16 +176,18 @@ bool areSubprogramsIdentical(SubprogramInfo* patcheeFunc,SubprogramInfo* patched
       //taken care of by checking the addend?
 
       logprintf(ELL_INFO_V4,ELS_CODEDIFF,"Relocations at byte 0x%x determined to be the same\n",i);
+      oldLi=oldLi->next;
+      newLi=newLi->next;
       i+=sizeof(addr_t)-1;//since we compared on a whole address, not just the one byte
       continue;
     }
-    else if(patcheeFunc->lowpc+i==relocOld->r_offset) //somehow just one matches
+    else if(relocOld && patcheeFunc->lowpc+i==relocOld->r_offset) //somehow just one matches
     {
       logprintf(ELL_INFO_V1,ELS_CODEDIFF,"subprogram for %s changed, only old offset matches\n",patcheeFunc->name);
       retval=false;
       break;
     }
-    else if(patchedFunc->lowpc+i==relocNew->r_offset)
+    else if(relocNew && patchedFunc->lowpc+i==relocNew->r_offset)
     {
       logprintf(ELL_INFO_V1,ELS_CODEDIFF,"subprogram for %s changed, only new offset matches\n",patcheeFunc->name);
       retval=false;
@@ -184,7 +199,7 @@ bool areSubprogramsIdentical(SubprogramInfo* patcheeFunc,SubprogramInfo* patched
     if(textOld[i]!=textNew[i])
     {
       retval=false;
-      logprintf(ELL_INFO_V1,ELS_CODEDIFF,"subprogram for %s changed, byte at %i differs\n",patcheeFunc->name,i);
+      logprintf(ELL_INFO_V1,ELS_CODEDIFF,"subprogram for %s changed, byte at 0x%x differs\n",patcheeFunc->name,(uint)i);
       break;
     }
   }
