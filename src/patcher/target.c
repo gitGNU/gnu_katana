@@ -85,9 +85,10 @@ void endPtrace()
 
 void modifyTarget(addr_t addr,word_t value)
 {
+  logprintf(ELL_INFO_V2,ELS_HOTPATCH,"Trying to poke data at 0x%x with value 0x%x\n",(uint)addr,(uint)value);
   if(ptrace(PTRACE_POKEDATA,pid,addr,value)<0)
   {
-    fprintf(stderr,"Trying to poke data at 0x%x\n",(uint)addr);
+    logprintf(ELL_ERR,ELS_HOTPATCH,"Failed to poke data at 0x%x with value 0x%x\n",(uint)addr,(uint)value);
     perror("ptrace POKEDATA failed in modifyTarget\n");
     death(NULL);
   }
@@ -114,10 +115,14 @@ void modifyTarget(addr_t addr,word_t value)
 //todo: figure this out on x86
 #define PTRACE_WORD_SIZE 4
 
+//todo: look more into this. ptrace
+//man page says it's required but in practice doesn't seem to be
+#define require_ptrace_alignment
 
 //copies numBytes from data to addr in target
 void memcpyToTarget(long addr,byte* data,int numBytes)
 {
+  #ifdef require_ptrace_alignment
   //ptrace requires all addresses to be word-aligned
   addr_t misalignment=addr%PTRACE_WORD_SIZE;
   if(misalignment)
@@ -143,6 +148,8 @@ void memcpyToTarget(long addr,byte* data,int numBytes)
   }
 
   assert(0==addr%PTRACE_WORD_SIZE);
+  #endif
+
   
   for(int i=0;i<numBytes;i+=PTRACE_WORD_SIZE)
   {
@@ -196,7 +203,7 @@ void memcpyFromTarget(byte* data,long addr,int numBytes)
 {
   if(!memcpyFromTargetNoDeath(data,addr,numBytes))
   {
-    perror("ptrace PEEKDATA failed\n");
+    perror("ptrace PEEKDATA failed ");
     death(NULL);
   }      
 }
