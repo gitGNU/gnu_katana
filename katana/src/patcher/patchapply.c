@@ -109,6 +109,7 @@ void applyVariablePatch(VarInfo* var,Map* fdeMap,ElfInfo* patch)
   }
   if(idx!=STN_UNDEF)
   {
+    logprintf(ELL_INFO_V1,ELS_PATCHAPPLY,"Fixing up existing variable %s\n",var->name);
     GElf_Sym sym;
     //todo: should make space for the variable in .data.new or something
     getSymbol(targetBin,idx,&sym);

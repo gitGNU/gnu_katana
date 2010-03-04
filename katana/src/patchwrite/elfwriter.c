@@ -443,6 +443,18 @@ void endPatchElf()
     death("Failed to write out elf file: %s\n",elf_errmsg (-1));
     exit(1);
   }
+
+  //since we wrote this elf file we malloc'd all the
+  //data sections, and therefore libelf won't free them,
+  //so we have to do it ourselves
+  for(Elf_Scn* scn=elf_nextscn (outelf,NULL);scn;scn=elf_nextscn(outelf,scn))
+  {
+    Elf_Data* data=elf_getdata(scn,NULL);
+    if(data->d_buf)
+    {
+      free(data->d_buf);
+    }
+  }
   
   
   endELF(patch);
