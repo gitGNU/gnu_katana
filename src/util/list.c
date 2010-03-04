@@ -220,4 +220,5 @@ void dlistDeleteTail(DList** head,DList** tail)
   {
     *head=NULL;
   }
+  free(oldTail);
 }
