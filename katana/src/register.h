@@ -17,6 +17,7 @@
 typedef enum
 {
   ERT_NONE=0,
+  ERT_BASIC,//registers with simple numbers as Dwarf expects them
   ERT_PO_START=0xF0,   //used to specify to any general dwarf reader that knows about patch
                       //objects that things in this range are PO register types
   ERT_CURR_TARG_NEW,
@@ -40,7 +41,7 @@ typedef struct
   union
   {
     int offset;//for ERT_CURR_TARG_*, ERT_EXPR
-    int index;//for ERT_*_SYM_VAL
+    int index;//for ERT_*_SYM_VAL and ERT_BASIC
   } u;
 } PoReg;
 
