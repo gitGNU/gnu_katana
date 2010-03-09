@@ -71,7 +71,7 @@ void loggingDefaults()
 {
   lvlEnabled=ELL_INFO_V4;
   sourceEnables[ELS_MISC]=ELL_DISABLE;
-  sourceEnables[ELS_CODEDIFF]=ELL_INFO_V4;
+  sourceEnables[ELS_CODEDIFF]=ELL_INFO_V2;
   sourceEnables[ELS_TYPEDIFF]=ELL_CNT;
   sourceEnables[ELS_DWARF_FRAME]=ELL_CNT;
   sourceEnables[ELS_HOTPATCH]=ELL_INFO_V1;
@@ -82,4 +82,5 @@ void loggingDefaults()
   sourceEnables[ELS_LINKMAP]=ELL_INFO_V3;
   sourceEnables[ELS_DWARFTYPES]=ELL_CNT;
   sourceEnables[ELS_SAFETY]=ELL_CNT;
+  sourceEnables[ELS_PATCHWRITE]=ELL_CNT;
 }
