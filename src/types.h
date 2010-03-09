@@ -148,7 +148,7 @@ typedef struct TypeTransform_
   int* fieldOffsets;
   E_FIELD_TRANSFORM_TYPE* fieldTransformTypes;//normal copy, field deleted, or recurse
   bool onDisk;//used when writing patch info to disk
-  Dwarf_Unsigned fdeIdx;//index of FDE corresponding to the transformation
+  idx_t fdeIdx;//index of FDE corresponding to the transformation
 } TypeTransform;
 
 void freeTypeTransform(TypeTransform* t);

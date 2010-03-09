@@ -395,7 +395,7 @@ void writeTransformationToDwarf(TypeTransform* trans)
     {
       writeTransformationToDwarf(transformer);
     }
-    Dwarf_Unsigned fdeIdx=transformer->fdeIdx;
+    idx_t fdeIdx=transformer->fdeIdx;
     byte bytes[1+sizeof(word_t)];
     bytes[0]=ERT_CURR_TARG_NEW;
     word_t size=sizeof(addr_t);
@@ -460,7 +460,7 @@ void writeTransformationToDwarf(TypeTransform* trans)
         {
           writeTransformationToDwarf(transformer);
         }
-        Dwarf_Unsigned fdeIdx=transformer->fdeIdx;
+        idx_t fdeIdx=transformer->fdeIdx;
         inst.arg3=fdeIdx;//might as well make both valid
         inst.arg3Bytes=encodeAsLEB128((byte*)&fdeIdx,sizeof(fdeIdx),false,&inst.arg3NumBytes);
         addInstruction(&instrs,&inst);
@@ -720,6 +720,11 @@ void writeFuncTransformationInfoForCU(CompilationUnit* cuOld,CompilationUnit* cu
       //even if the subprogram hasn't changed, it might possibly
       //not be safe to patch while it's on the stack based on the types it uses
       //go through and see if they're unsafe
+
+      //todo: this is not a sufficient determination. Also need to look at relocations
+      //for changed global variables, because that stuff isn't necessarily going to
+      //show up in the DWARF information
+      
       logprintf(ELL_INFO_V2,ELS_DWARFTYPES,"Examining types used in subprogram %s\n",patchedFunc->name);
       List* li=patchedFunc->typesHead;
       for(;li;li=li->next)
