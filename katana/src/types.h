@@ -170,6 +170,8 @@ void freeVarInfo(VarInfo* v);
 void freeVarInfoVoid(void* v);
 
 
+//todo: is this type necessary, I think we could
+//get at all of this thorugh var->type
 typedef struct
 {
   VarInfo* var;
