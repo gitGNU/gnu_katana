@@ -508,35 +508,29 @@ void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch)
   DwarfInfo* diPatch=readDWARFTypes(patch);
   Map* fdeMap=readDebugFrame(patch);//get mapping between fde offsets and fde structures
 
-  
-  //map in the entirety of .text.new
-  patchTextAddr=copyInEntireSection(patch,".text.new");
-
-  //map in entirety of .rodata.new
-  patchRodataAddr=copyInEntireSection(patch,".rodata.new");
-
-  patchDataAddr=copyInEntireSection(patch,".data.new");
-  
-  writeOutPatchedBin(false);
 
   addr_t mallocAddr=locateRuntimeSymbolInTarget(targetBin,"malloc");
   if(mallocAddr)
   {
-    setMallocPLTAddress(mallocAddr);
+    setMallocAddress(mallocAddr);
   }
   else
   {
     death("Cannot find malloc in the target program\n");
   }
+  setTargetTextStart(targetBin->textStart[IN_MEM]);
 
+  
   addr_t safeBreakpointSpot=findSafeBreakpointForPatch(targetBin,patch,pid);
-  /*  logprintf(ELL_INFO_V2,ELS_PATCHAPPLY,"Setting breakpoint to apply patch at 0x%x\n",safeBreakpointSpot);
+  logprintf(ELL_INFO_V2,ELS_PATCHAPPLY,"Setting breakpoint to apply patch at 0x%x\n",
+            safeBreakpointSpot);
   setBreakpoint(safeBreakpointSpot);
   continuePtrace();
   logprintf(ELL_INFO_V2,ELS_PATCHAPPLY,"Continuing until we reach safe spot to patch. . .\n");
   bool breakpointReached=false;
   for(int i=0;i<MAX_WAIT_FOR_PATCHING_LOOPS;i++)
   {
+    logprintf(ELL_INFO_V3,ELS_PATCHAPPLY,"Iterating waiting for breakpoint to be hit\n");
     if(0!=waitpid(-1,NULL,WNOHANG))
     {
       breakpointReached=true;
@@ -548,7 +542,17 @@ void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch)
   if(!breakpointReached)
   {
     death("Program does not seem to be reaching safe state, aborting patching\n");
-    }*/
+  }
+
+    //map in the entirety of .text.new
+  patchTextAddr=copyInEntireSection(patch,".text.new");
+
+  //map in entirety of .rodata.new
+  patchRodataAddr=copyInEntireSection(patch,".rodata.new");
+
+  patchDataAddr=copyInEntireSection(patch,".data.new");
+  
+  writeOutPatchedBin(false);
 
   logprintf(ELL_INFO_V1,ELS_PATCHAPPLY,"======Applying patches=======\n");
   for(List* cuLi=diPatch->compilationUnits;cuLi;cuLi=cuLi->next)
