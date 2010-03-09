@@ -25,6 +25,21 @@ void deleteList(List* start,void (*delFunc)(void*))
   }
 }
 
+void deleteDList(DList* start,void (*delFunc)(void*))
+{
+  DList* li=start;
+  while(li)
+  {
+    if(delFunc)
+    {
+      (*delFunc)(li->value);
+    }
+    DList* tmp=li->next;
+    free(li);
+    li=tmp;
+  }
+}
+
 List* concatLists(List* l1Start,List* l1End,List* l2Start,List* l2End,List** endOut)
 {
   if(!l1Start && !l2Start)
@@ -178,6 +193,8 @@ List* sortList(List* lst,int (*cmpfunc)(void*,void*))
 
 void listAppend(List** head,List** tail,List* li)
 {
+  assert(head);
+  assert(tail);
   li->next=NULL;
   if(*head)
   {
@@ -188,7 +205,33 @@ void listAppend(List** head,List** tail,List* li)
     *head=li;
   }
   *tail=li;
+}
 
+void listPush(List** head,List** tail,List* li)
+{
+  assert(head);
+  li->next=*head;
+  if(NULL==*head && tail)
+  {
+    *tail=li;
+  }
+  *head=li;
+}
+
+void dlistPush(DList** head,DList** tail,DList* li)
+{
+  assert(head);
+  li->prev=NULL;
+  li->next=*head;
+  if(li->next)
+  {
+    li->next->prev=li;
+  }
+  if(NULL==*head && tail)
+  {
+    *tail=li;
+  }
+  *head=li;
 }
 
 void dlistAppend(DList** head,DList** tail,DList* li)

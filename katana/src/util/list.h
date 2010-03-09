@@ -33,7 +33,13 @@ int listLength(List* lst);
 
 void listAppend(List** head,List** tail,List* li);
 
+void listPush(List** head,List** tail,List* li);
+
+void deleteDList(DList* start,void (*delFunc)(void*));
+
 void dlistAppend(DList** head,DList** tail,DList* li);
+
+void dlistPush(DList** head,DList** tail,DList* li);
 
 void dlistDeleteTail(DList** head,DList** tail);
 
