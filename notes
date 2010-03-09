@@ -784,16 +784,19 @@ to be the case.
     |               | the current object                 |                       |                    |
     
 ** patch safety
-   Ideas (not mutually exclusive):
-*** The user may define safe points in the code at which patching may occur
-*** The user may define critical points in the code at which patching may not occur
-*** The system determines safe points automatically
-    This safety is based on the following things
+*** Ideas (not mutually exclusive):
+**** The user may define safe points in the code at which patching may occur
+**** The user may define critical points in the code at which patching may not occur
+**** The system determines safe points automatically
+     This safety is based on the following things
+*** Implementation Notes
 **** not patching code for functions that have an activation frame on the stack
      can unwind the stack to see what's on there same as gdb does or
      my sample unwinder application does
 **** not patching code for functions with local variables of modified types
-     Note that we don't currently put that info in the PO
+     We're putting that info in the PO as a section called .unsafe_functions
+     This section is no more than an array of symbol indices to the symbols
+     of functions which contain unsafe types
 
 * requirements for Katana
 ** x86 platform
