@@ -44,7 +44,9 @@ void setTargetRegs(struct user_regs_struct* regs);
 addr_t mmapTarget(int size,int prot);
 
 //must be called before any calls to mallocTarget
-void setMallocPLTAddress(addr_t addr);
+void setMallocAddress(addr_t addr);
+//must be called before any calls to mallocTarget
+void setTargetTextStart(addr_t addr);
 addr_t mallocTarget(word_t len);
 
 //compare a string to a string located

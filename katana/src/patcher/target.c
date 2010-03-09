@@ -21,9 +21,10 @@
 #include "util/logging.h"
 #include "util/map.h"
 
-//todo: bad programming
+//todo: bad programming to have globals like this
 extern int pid;
-addr_t mallocPLTAddress=0;
+addr_t mallocAddress=0;
+addr_t targetTextStart=0;
 
 typedef struct
 {
@@ -32,9 +33,14 @@ typedef struct
 //maps addresses to BreakpointRestoreInfo
 Map* breakpointRestoreInfo=NULL;
 
-void setMallocPLTAddress(addr_t addr)
+void setMallocAddress(addr_t addr)
 {
-  mallocPLTAddress=addr;
+  mallocAddress=addr;
+}
+
+void setTargetTextStart(addr_t addr)
+{
+  targetTextStart=addr;
 }
 
 void startPtrace()
@@ -252,11 +258,20 @@ addr_t mallocTarget(word_t len)
   //  outside the scope of this module though. We rely on it to be set
   //  from outside the module using the setMallocPLTAddress method
   //3. we have to restore the stack (3 byte instr)
-  if(!mallocPLTAddress)
+  if(!mallocAddress)
   {
     death("location of malloc is unknown\n");
   }
+  if(!targetTextStart)
+  {
+    death("location of target's start of text\n");
+  }
 
+  //for some odd reason, sometimes having issues if we just used newRegs.eip
+  addr_t modifyTextLocation=targetTextStart;
+  newRegs.eip=modifyTextLocation;
+  setTargetRegs(&newRegs);
+  
   //todo: diff for 64 bit
   //68 xx xx xx xx pushes amount to malloc onto the stack
   //e8 xx xx xx xx calls malloc
@@ -266,11 +281,16 @@ addr_t mallocTarget(word_t len)
                       0xe8,0x00,0x00,0x00,0x00,
                       0x83,0xc4, 0x04};
   memcpy(code+1,&len,sizeof(word_t));
-  addr_t relativeMallocPTAddr=mallocPLTAddress-newRegs.eip-10;
+  //+10 because the first instruction after the call instruction
+  //(i.e. what the relative call will be relative to) is 10 instructions
+  //after the start of the code
+  addr_t relativeMallocPTAddr=mallocAddress-(modifyTextLocation+10);
   memcpy(code+6,&relativeMallocPTAddr,sizeof(addr_t));
   byte oldText[13];
-  memcpyFromTarget(oldText,newRegs.eip,codeLen);
-  memcpyToTarget(newRegs.eip,code,codeLen);
+  
+  
+  memcpyFromTarget(oldText,modifyTextLocation,codeLen);
+  memcpyToTarget(modifyTextLocation,code,codeLen);
   
   //and run the code
   continuePtrace();
@@ -284,7 +304,7 @@ addr_t mallocTarget(word_t len)
   }
   //printf("now at eip 0x%x\n",newRegs.eip);
   //restore the old code
-  memcpyToTarget(oldRegs.eip,oldText,codeLen);
+  memcpyToTarget(modifyTextLocation,oldText,codeLen);
   //restore the old registers
   setTargetRegs(&oldRegs);
   return retval;
@@ -413,5 +433,15 @@ void removeBreakpoint(addr_t loc)
   {
     death("No breakpoint was set at address 0x%x, cannot remove it\n",loc);
   }
+  logprintf(ELL_INFO_V1,ELS_HOTPATCH,"Restoring breakpoint, copying 0x{%x,%x,%x,%x} to 0x%x\n",restore->origCode[0],restore->origCode[1],restore->origCode[2],restore->origCode[3],(uint)loc);
   memcpyToTarget(loc,restore->origCode,4);//todo: diff for 64-bit
+  struct user_regs_struct regs;
+  getTargetRegs(&regs);
+  if(regs.eip==loc+1)
+  {
+    //we just hit this breakpoint, move pack the pc so we can execute the instruction normally
+    logprintf(ELL_INFO_V1,ELS_HOTPATCH,"Restoring program counter to 0x%x\n",(uint)loc);
+    regs.eip=loc;
+    setTargetRegs(&regs);
+  }
 }
