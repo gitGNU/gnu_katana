@@ -127,36 +127,73 @@ bool areSubprogramsIdentical(SubprogramInfo* patcheeFunc,SubprogramInfo* patched
       GElf_Sym symNew;
       getSymbol(oldBinary,relocOld->symIdx,&symOld);
       getSymbol(newBinary,relocNew->symIdx,&symNew);
-
+      char* oldSymName=getString(oldBinary,symOld.st_name);
+      char* newSymName=getString(newBinary,symNew.st_name);
       //check basic symbol stuff to make sure it's the same symbol
-      if(strcmp(getString(oldBinary,symOld.st_name),getString(newBinary,symNew.st_name)) ||
-         symOld.st_size != symNew.st_size ||
-         symOld.st_info != symNew.st_info ||
+      byte oldType=ELF64_ST_TYPE(symOld.st_info);
+      byte newType=ELF64_ST_TYPE(symNew.st_info);
+      byte oldBind=ELF64_ST_BIND(symOld.st_info);
+      byte newBind=ELF64_ST_BIND(symNew.st_info);
+      if(strcmp(oldSymName,newSymName) ||
+         oldType != newType ||
+         oldBind != newBind ||
          symOld.st_other != symNew.st_other)
       {
         //the symbols differ in some important regard
         //todo: the test against st_shndx isn't necessarily valid, sections
         //could have ben re-numbered between the two, although it's unlikely
         retval=false;
-        logprintf(ELL_INFO_V1,ELS_CODEDIFF,"subprogram for %s changed, symbols differ (in more than value)\n",patcheeFunc->name);
+        logprintf(ELL_INFO_V1,ELS_CODEDIFF,"subprogram for %s changed, symbols (for %s/%s) differ (in more than value). st_info is %u/%u, st_other is %u/%u\n",
+                  patcheeFunc->name,oldSymName,newSymName,
+                  (uint)symOld.st_info,(uint)symNew.st_info,
+                  (uint)symOld.st_other,(uint)symNew.st_other);
         break;
       }
-
-      
-      //check sections for the symbols
-      Elf_Scn* scnOld=elf_getscn(oldBinary->e,symOld.st_shndx);
-      Elf_Scn* scnNew=elf_getscn(newBinary->e,symNew.st_shndx);
-      GElf_Shdr shdrOld;
-      GElf_Shdr shdrNew;
-      gelf_getshdr(scnOld,&shdrOld);
-      gelf_getshdr(scnNew,&shdrNew);
-      char* scnNameOld=getScnHdrString(oldBinary,shdrOld.sh_name);
-      char* scnNameNew=getScnHdrString(newBinary,shdrNew.sh_name);
-      if(strcmp(scnNameOld,scnNameNew))
+      if(symOld.st_size != symNew.st_size &&
+         oldType!=STT_FUNC)
       {
-        retval=false;
-        logprintf(ELL_INFO_V1,ELS_CODEDIFF,"subprogram for %s changed, symbols differ in section (%s vs %s\n",patcheeFunc->name,scnNameOld,scnNameNew);
-        break;
+        logprintf(ELL_INFO_V1,ELS_CODEDIFF,"subprogram for %s changed, symbols (for %s) differ in size (and are not symbols for a function\n",patcheeFunc->name,oldSymName);
+      }
+
+      if(symOld.st_shndx!=SHN_UNDEF && symOld.st_shndx!=SHN_COMMON &&
+         symOld.st_shndx!=SHN_ABS && symNew.st_shndx!=SHN_UNDEF &&
+         symNew.st_shndx!=SHN_COMMON && symNew.st_shndx!=SHN_ABS)
+      {
+        //check sections for the symbols
+        Elf_Scn* scnOld=elf_getscn(oldBinary->e,symOld.st_shndx);
+        assert(scnOld);
+        Elf_Scn* scnNew=elf_getscn(newBinary->e,symNew.st_shndx);
+        assert(scnNew);
+        GElf_Shdr shdrOld;
+        GElf_Shdr shdrNew;
+        if(!gelf_getshdr(scnOld,&shdrOld))
+        {
+          death("gelf_getshdr failed\n");
+        }
+        if(!gelf_getshdr(scnNew,&shdrNew))
+        {
+          death("gelf_getshdr failed\n");
+        }
+        char* scnNameOld=getScnHdrString(oldBinary,shdrOld.sh_name);
+        char* scnNameNew=getScnHdrString(newBinary,shdrNew.sh_name);
+        if(strcmp(scnNameOld,scnNameNew))
+        {
+          retval=false;
+          logprintf(ELL_INFO_V1,ELS_CODEDIFF,"subprogram for %s changed, symbols differ in section (%s vs %s\n",patcheeFunc->name,scnNameOld,scnNameNew);
+          break;
+        }
+      }
+      else if((symOld.st_shndx==SHN_UNDEF || symOld.st_shndx==SHN_COMMON ||
+               symOld.st_shndx==SHN_ABS) && symNew.st_shndx!=symOld.st_shndx)
+      {
+           logprintf(ELL_INFO_V1,ELS_CODEDIFF,"subprogram for %s changed, symbols differ in section, special section types don't match\n",patcheeFunc->name);
+          break;
+      }
+      else if((symNew.st_shndx==SHN_UNDEF || symNew.st_shndx==SHN_COMMON ||
+               symNew.st_shndx==SHN_ABS) && symNew.st_shndx!=symOld.st_shndx)
+      {
+           logprintf(ELL_INFO_V1,ELS_CODEDIFF,"subprogram for %s changed, symbols differ in section, special section types don't match\n",patcheeFunc->name);
+          break;
       }
 
       //check the addend
