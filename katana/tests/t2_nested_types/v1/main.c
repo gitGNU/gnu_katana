@@ -28,16 +28,7 @@ struct Bar
   int field3;
 };
 
-struct Bar alpha={42,{111,0,128},69,0};
-  
-void printThings()
-{
-  printf("alpha: %i,(foo: %i,%i),%i\n",alpha.field1,alpha.foo.field1,alpha.foo.field2,alpha.field2);
-  printf("v1: field 1 at addr: %x, foo.field1 at %x, field 2 at %x\n",(unsigned int)&alpha.field1,(unsigned int)&alpha.foo.field1,(unsigned int)&alpha.field2);
-  printf("v1: foo.field_extra is %i and field3 is %i\n",alpha.foo.field_extra,alpha.field3);
-  fflush(stdout);
-}
-
+void printThings();
 int main(int argc,char** argv)
 {
   printf("has pid %i\n",getpid());
@@ -48,3 +39,15 @@ int main(int argc,char** argv)
   }
   return 0;
 }
+
+struct Bar alpha={42,{111,0,128},69,0};
+  
+void printThings()
+{
+  printf("alpha: %i,(foo: %i,%i),%i\n",alpha.field1,alpha.foo.field1,alpha.foo.field2,alpha.field2);
+  printf("v1: field 1 at addr: %x, foo.field1 at %x, field 2 at %x\n",(unsigned int)&alpha.field1,(unsigned int)&alpha.foo.field1,(unsigned int)&alpha.field2);
+  printf("v1: foo.field_extra is %i and field3 is %i\n",alpha.foo.field_extra,alpha.field3);
+  fflush(stdout);
+}
+
+

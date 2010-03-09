@@ -14,6 +14,8 @@
 #include <string.h>
 #include <stdlib.h>
 
+#define MILLISECOND 1000
+
 typedef struct _Foo
 {
   int* field1;
@@ -22,15 +24,27 @@ typedef struct _Foo
   struct _Foo* other;
 } Foo;
 
+void assignValues();
+void printThings();
+int main(int argc,char** argv)
+{
+  printf("has pid %i\n",getpid());
+  assignValues();
+  while(1)
+  {
+    printThings();
+    usleep(100*MILLISECOND);
+  }
+  return 0;
+}
+
+
 Foo alpha;
 Foo beta;
 Foo* gamma;
 int vals1[3]={1,2,3};
 int vals2[3]={33,22,11};
 int vals3[3]={44,55,66};
-
-
-#define MILLISECOND 1000
 
 void printFoo(char* name,Foo* foo)
 {
@@ -77,14 +91,3 @@ void assignValues()
   gamma->other=&alpha;
 }
 
-int main(int argc,char** argv)
-{
-  printf("has pid %i\n",getpid());
-  assignValues();
-  while(1)
-  {
-    printThings();
-    usleep(100*MILLISECOND);
-  }
-  return 0;
-}
