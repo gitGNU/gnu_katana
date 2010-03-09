@@ -6,8 +6,8 @@
   Description: Read patch object files and apply them
 */
 
-#ifndef patchread_h
-#define patchread_h
+#ifndef patchapply_h
+#define patchapply_h
 void readAndApplyPatch(int pid,ElfInfo* targetBin,ElfInfo* patch);
 
 #endif
