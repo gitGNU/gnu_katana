@@ -151,6 +151,7 @@ int main(int argc,char** argv)
     findELFSections(oldBinElfInfo);
     ElfInfo* patch=openELFFile(patchFile);
     findELFSections(patch);
+    patch->isPO=true;
     readAndApplyPatch(pid,oldBinElfInfo,patch);
   }
   else if(EKM_PATCH_INFO==mode)

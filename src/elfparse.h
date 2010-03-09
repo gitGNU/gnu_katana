@@ -53,10 +53,12 @@ typedef struct ElfInfo
   int fd;//file descriptor for elf file
   char* fname;//file name associated with descriptor
   DwarfInfo* dwarfInfo;
-  struct FDE* fdes;
+  struct FDE* fdes;//for relocatable and executable objects, these
+                   //will be sorted by lowpc
   int numFdes;
   struct CIE* cie;
   bool dataAllocatedByKatana;//used for memory management
+  bool isPO;//is this elf object a patch object?
 } ElfInfo;
 
 
