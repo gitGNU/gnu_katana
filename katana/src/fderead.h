@@ -35,10 +35,13 @@ typedef struct FDE
   CIE* cie;
   RegInstruction* instructions;
   int numInstructions;
-  int memSize;//size of memory area the FDE describes. Used when fixing
-           //up pointers to know how much mem to allocate
+  int memSize;//size of memory area the FDE describes. Used when
+              //fixing up pointers to know how much mem to
+              //allocate. Has no meaning if this FDE wasn't read from
+              //a PO
   int lowpc;
-  int highpc;
+  int highpc;//has no meaning if this FDE describes fixups and was
+             //read from a PO
   int offset;//offset from beginning of debug frame
 } FDE;
 
