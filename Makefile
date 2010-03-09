@@ -6,7 +6,7 @@ CFLAGS_TYPEPATCH=-Doff64_t=__off64_t
 LDFLAGS_TYPEPATCH=-L /usr/local/lib -ldwarf -lelf -lm  -lunwind-x86 -lunwind-ptrace
 
 PATCHER_SRC=src/patcher/hotpatch.c src/patcher/target.c src/patcher/patchapply.c src/patcher/versioning.c src/patcher/linkmap.c src/patcher/safety.c
-PATCHWRITE_SRC=src/patchwrite/patchwrite.c src/patchwrite/codediff.c src/patchwrite/typediff.c src/patchwrite/elfwriter.c src/patchwrite/sourcetree.c
+PATCHWRITE_SRC=src/patchwrite/patchwrite.c src/patchwrite/codediff.c src/patchwrite/typediff.c src/patchwrite/elfwriter.c src/patchwrite/sourcetree.c src/patchwrite/write_to_dwarf.c
 UTIL_SRC=src/util/dictionary.c src/util/hash.c src/util/util.c src/util/map.c src/util/list.c src/util/logging.c src/util/path.c src/util/refcounted.c
 INFO_SRC=src/info/fdedump.c
 TYPEPATCH_SRC=src/katana.c src/dwarftypes.c   src/elfparse.c  src/types.c  src/dwarf_instr.c src/register.c src/relocation.c src/symbol.c src/fderead.c src/dwarfvm.c src/config.c $(PATCHWRITE_SRC) $(PATCHER_SRC) $(UTIL_SRC) $(INFO_SRC)
