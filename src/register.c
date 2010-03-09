@@ -22,6 +22,14 @@ PoReg readRegFromLEB128(byte* leb,usint* bytesRead)
   byte* bytes=decodeLEB128(leb,false,&numBytes,&numSeptets);
   *bytesRead=numSeptets;
   assert(numBytes>0);
+  if(bytes[0] < ERT_PO_START)
+  {
+    memset(&result,0,sizeof(result));
+    result.type=ERT_BASIC;
+    assert(numBytes<sizeof(idx_t));
+    memcpy(&result.u.index,bytes,numBytes);
+    return result;
+  }
   result.type=bytes[0];
   assert(result.type>ERT_PO_START && result.type<ERT_PO_END);
   switch(result.type)
@@ -79,6 +87,9 @@ char* strForReg(PoReg reg)
     break;
   case ERT_CFA:
     snprintf(buf,128,"{CFA}");
+    break;
+  case ERT_BASIC:
+    snprintf(buf,128,"r%i",reg.u.index);
     break;
   default:
     death("unsupported register type\n");
@@ -182,7 +193,7 @@ void printRule(PoRegRule rule,int regnum)
     printf("%s = %s\n",regStr,strForReg(rule.regRH));
     break;
   case ERRT_CFA:
-    printf("%s = %s + %i\n",regStr,strForReg(rule.regRH),rule.offset);
+    printf("cfa = %s + %i\n",strForReg(rule.regRH),rule.offset);
     break;
   case ERRT_RECURSE_FIXUP:
     printf("%s = recurse fixup with FDE#%i based at %s\n",regStr,rule.index,strForReg(rule.regRH));
