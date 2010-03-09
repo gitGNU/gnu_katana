@@ -17,14 +17,20 @@
 #include <sys/types.h>
 #include <sys/user.h>
 #include <unistd.h>
-#include <sys/mman.h>
 #include "config.h"
 #include "util/logging.h"
-
+#include "util/map.h"
 
 //todo: bad programming
 extern int pid;
 addr_t mallocPLTAddress=0;
+
+typedef struct
+{
+  byte origCode[4];
+} BreakpointRestoreInfo;
+//maps addresses to BreakpointRestoreInfo
+Map* breakpointRestoreInfo=NULL;
 
 void setMallocPLTAddress(addr_t addr)
 {
@@ -377,4 +383,35 @@ bool strnmatchTarget(char* str,addr_t strInTarget)
   bool result=!strcmp(buf,str);
   free(buf);
   return result;
+}
+
+void setBreakpoint(addr_t loc)
+{
+  if(!breakpointRestoreInfo)
+  {
+    assert(sizeof(addr_t)==sizeof(size_t));
+    breakpointRestoreInfo=size_tMapCreate(100);//todo: get rid of arbitrary size 100
+  }
+  BreakpointRestoreInfo* restore=zmalloc(sizeof(BreakpointRestoreInfo));
+  memcpyFromTarget(restore->origCode,loc,4);
+  addr_t* key=zmalloc(sizeof(addr_t));
+  *key=loc;
+  mapInsert(breakpointRestoreInfo,key,restore);
+  byte code[]={0xcc,0x90,0x90,0x90};//int3 followed by nops to make it
+                                    //word-aligned (todo: perhaps not
+                                    //necessary, I think
+                                    //memcpyToTarget already makes
+                                    //things word-aligned)
+  memcpyToTarget(loc,code,4);//todo: 8 not 4 for 64 bit
+}
+
+void removeBreakpoint(addr_t loc)
+{
+  assert(breakpointRestoreInfo);
+  BreakpointRestoreInfo* restore=mapGet(breakpointRestoreInfo,&loc);
+  if(!restore)
+  {
+    death("No breakpoint was set at address 0x%x, cannot remove it\n",loc);
+  }
+  memcpyToTarget(loc,restore->origCode,4);//todo: diff for 64-bit
 }

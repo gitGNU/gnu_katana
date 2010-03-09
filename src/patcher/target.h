@@ -52,4 +52,7 @@ addr_t mallocTarget(word_t len);
 //return true if the strings match
 //up to strlen(str) characters
 bool strnmatchTarget(char* str,addr_t strInTarget);
+
+void setBreakpoint(addr_t loc);
+void removeBreakpoint(addr_t loc);
 #endif
