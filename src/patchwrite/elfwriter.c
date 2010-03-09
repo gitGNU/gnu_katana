@@ -314,6 +314,7 @@ void createSections(Elf* outelf)
 ElfInfo* startPatchElf(char* fname)
 {
   patch=zmalloc(sizeof(ElfInfo));
+  patch->isPO=true;
   int outfd = creat(fname, 0666);
   if (outfd < 0)
   {
