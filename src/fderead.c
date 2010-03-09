@@ -50,6 +50,8 @@ RegInstruction* parseFDEInstructions(Dwarf_Debug dbg,unsigned char* bytes,int le
     case DW_CFA_offset:
       result[*numInstrs].type=high;
       result[*numInstrs].arg1=low;
+      result[*numInstrs].arg1Reg.type=ERT_BASIC;
+      result[*numInstrs].arg1Reg.u.index=low;
       result[*numInstrs].arg2=leb128ToUInt(bytes + 1, &uleblen)*dataAlign;
       bytes+=uleblen;
       len-=uleblen;
@@ -85,25 +87,11 @@ RegInstruction* parseFDEInstructions(Dwarf_Debug dbg,unsigned char* bytes,int le
         break;
       case DW_CFA_register:
         printf("Reading CW_CFA_register\n");
-        if(isPoRegType(bytes[1]))
-        {
-          result[*numInstrs].arg1Reg=readRegFromLEB128(bytes + 1,&uleblen);
-        }
-        else
-        {
-          result[*numInstrs].arg1=leb128ToUInt(bytes + 1, &uleblen);
-        }
+        result[*numInstrs].arg1Reg=readRegFromLEB128(bytes + 1,&uleblen);
         bytes+=uleblen;
         len-=uleblen;
         printf("byte is %i,%i,%i\n",(int)bytes[1],(int)bytes[1],(int)bytes[3]);
-        if(isPoRegType(bytes[1]))
-        {
-          result[*numInstrs].arg2Reg=readRegFromLEB128(bytes + 1,&uleblen);
-        }
-        else
-        {
-          result[*numInstrs].arg2=leb128ToUInt(bytes + 1, &uleblen);
-        }
+        result[*numInstrs].arg2Reg=readRegFromLEB128(bytes + 1,&uleblen);
         bytes+=uleblen;
         len-=uleblen;
         break;
@@ -137,14 +125,7 @@ RegInstruction* parseFDEInstructions(Dwarf_Debug dbg,unsigned char* bytes,int le
         len-=uleblen;
         break;
       case DW_CFA_def_cfa:
-        if(isPoRegType(bytes[1]))
-        {
-          result[*numInstrs].arg1Reg=readRegFromLEB128(bytes + 1,&uleblen);
-        }
-        else
-        {
-          result[*numInstrs].arg1=leb128ToUInt(bytes + 1, &uleblen);
-        }
+        result[*numInstrs].arg1Reg=readRegFromLEB128(bytes + 1,&uleblen);
         bytes+=uleblen;
         len-=uleblen;
         result[*numInstrs].arg2=leb128ToUInt(bytes + 1, &uleblen);
@@ -152,14 +133,7 @@ RegInstruction* parseFDEInstructions(Dwarf_Debug dbg,unsigned char* bytes,int le
         len-=uleblen;
         break;
       case DW_CFA_def_cfa_register:
-        if(isPoRegType(bytes[1]))
-        {
-          result[*numInstrs].arg1Reg=readRegFromLEB128(bytes + 1,&uleblen);
-        }
-        else
-        {
-          result[*numInstrs].arg1=leb128ToUInt(bytes + 1, &uleblen);
-        }
+        result[*numInstrs].arg1Reg=readRegFromLEB128(bytes + 1,&uleblen);
         bytes+=uleblen;
         len-=uleblen;
         break;
@@ -181,6 +155,14 @@ RegInstruction* parseFDEInstructions(Dwarf_Debug dbg,unsigned char* bytes,int le
   return result;
 }
 
+//helper function for readDebugFrame,
+//an fde comparison function that can be passed to qsort
+int fdeCmp(const void* a,const void* b)
+{
+  const FDE* fdeA=a;
+  const FDE* fdeB=b;
+  return fdeA->lowpc-fdeB->lowpc;
+}
 
 //returns a Map between the numerical offset of an FDE
 //(accessible via the DW_AT_MIPS_fde attribute of the relevant type)
@@ -229,7 +211,7 @@ Map* readDebugFrame(ElfInfo* elf)
                                                      elf->cie->codeAlign,
                                                      &elf->cie->numInitialInstructions);
   elf->cie->initialRules=dictCreate(100);//todo: get rid of arbitrary constant 100
-  evaluateInstructions(elf->cie->initialInstructions,elf->cie->numInitialInstructions,
+  evaluateInstructionsToRules(elf->cie->initialInstructions,elf->cie->numInitialInstructions,
                        elf->cie->initialRules,-1);
   
   //todo: bizarre bug, it keeps coming out as -1, which is wrong
@@ -257,15 +239,29 @@ Map* readDebugFrame(ElfInfo* elf)
                         &fdeBytesLength,
                         &cieOffset, &cie_index,
                         &fdeOffset, &err);
-    elf->fdes[i].lowpc=lowPC;
-    elf->fdes[i].highpc=lowPC+addrRange;
-    elf->fdes[i].memSize=addrRange;
+    if(elf->isPO)
+    {
+      elf->fdes[i].lowpc=lowPC;
+      elf->fdes[i].highpc=0;//has no meaning if the fde was read from a patch object
+      elf->fdes[i].memSize=addrRange;
+    }
+    else
+    {
+      elf->fdes[i].lowpc=lowPC;
+      elf->fdes[i].highpc=lowPC+addrRange;
+      elf->fdes[i].memSize=0;//has no meaning if the fde wasn't read from a patch object
+    }
     elf->fdes[i].offset=fdeOffset;
     int* key=zmalloc(sizeof(int));
     *key=elf->fdes[i].offset;
     mapInsert(result,key,elf->fdes+i);
     dwarf_dealloc(dbg,dfde,DW_DLA_FDE);
   }
+
+  //sort fdes by lowpc unless this is a patch object. This
+  //makes determining backtraces easier
+  qsort(elf->fdes,elf->numFdes,sizeof(FDE),fdeCmp);
+  
   dwarf_dealloc(dbg,cieData[0],DW_DLA_CIE);
   dwarf_dealloc(dbg,fdeData,DW_DLA_LIST);
   dwarf_dealloc(dbg,cieData,DW_DLA_LIST);

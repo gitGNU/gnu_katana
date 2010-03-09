@@ -9,5 +9,6 @@
 */
 
 #include "elfparse.h"
-
+#include "fderead.h"
+void printCIEInfo(CIE* cie);
 void printPatchFDEInfo(ElfInfo* patch);

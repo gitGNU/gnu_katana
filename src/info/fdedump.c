@@ -120,7 +120,7 @@ void printFDEInfo(CIE* cie,FDE* fde,int num)
   for(int i=fde->lowpc;i</*fde->highpc*/1 || 0==i;i++)
   {
     Dictionary* rulesDict=dictDuplicate(cie->initialRules,NULL);
-    evaluateInstructions(fde->instructions,fde->numInstructions,rulesDict,i-fde->lowpc);
+    evaluateInstructionsToRules(fde->instructions,fde->numInstructions,rulesDict,i-fde->lowpc);
     printf("    ----Register Rules at text address 0x%x------\n",i);
     printRules(rulesDict,"      ");
     dictDelete(rulesDict,NULL);
