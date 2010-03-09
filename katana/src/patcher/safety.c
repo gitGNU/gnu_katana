@@ -48,7 +48,7 @@ FDE* getFDEForPC(ElfInfo* elf,addr_t pc)
 
 char* getFunctionNameAtPC(ElfInfo* elf,addr_t pc)
 {
-  idx_t symIdx=findSymbolContainingAddress(elf,pc,STT_FUNC);
+  idx_t symIdx=findSymbolContainingAddress(elf,pc,STT_FUNC,SHN_UNDEF);
   if(STN_UNDEF==symIdx)
   {
     return "?";
@@ -271,7 +271,7 @@ DList* findActivationFrames(ElfInfo* elf,int pid)
       //we found an activation frame that's in the text section for our program
       //(i.e. as opposed to in libc or something)
       //now we try to find its symbol.
-      idx_t symIdx=findSymbolContainingAddress(elf,ip,STT_FUNC);
+      idx_t symIdx=findSymbolContainingAddress(elf,ip,STT_FUNC,SHN_UNDEF);
       if(STN_UNDEF!=symIdx)
       {
         logprintf(ELL_INFO_V1,ELS_SAFETY,"Found activation frame at 0x%x\n",ip);

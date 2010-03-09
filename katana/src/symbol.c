@@ -384,9 +384,10 @@ int getSymtabIdx(ElfInfo* e,char* symbolName,int flags)
 
 //find the index of a symbol whose st_value is addr or where
 //addr>st_value && addr<st_value+st_size
-//only match symbols whose type is type
+//only match symbols whose type is type and are for section scnIdx
+//pass SHN_UNDEF for scnIdx to accept symbols referencing any section
 //todo: this is slow. Could do smth much faster with interval tress or something
-idx_t findSymbolContainingAddress(ElfInfo* e,addr_t addr,byte type)
+idx_t findSymbolContainingAddress(ElfInfo* e,addr_t addr,byte type,idx_t scnIdx)
 {
   Elf_Data* symTabData=getDataByERS(e,ERS_SYMTAB);
   for (int i = 1; i < e->symTabCount; ++i)
@@ -395,6 +396,7 @@ idx_t findSymbolContainingAddress(ElfInfo* e,addr_t addr,byte type)
     if(!gelf_getsym(symTabData,i,&sym))
     {death("gelf_getsym failed\n");}
     if(ELF32_ST_TYPE(sym.st_info)==type &&
+       (sym.st_shndx==scnIdx || SHN_UNDEF==scnIdx) &&
        (sym.st_value==addr || 
         (sym.st_value<=addr &&
          sym.st_value+sym.st_size > addr)))
