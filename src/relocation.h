@@ -33,6 +33,8 @@ typedef struct
   int scnIdx;//which section this relocation applies to in e
 } RelocInfo;
 
+//todo: I don't think this struct is currently used
+//for anything --james
 typedef struct
 {
   ElfInfo* oldElf;

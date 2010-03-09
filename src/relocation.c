@@ -352,8 +352,7 @@ List* getRelocationItemsFor(ElfInfo* e,int symIdx)
     if(!gelf_getshdr(scn,&shdr))
     {death("gelf_getshdr failed in getRelocationItemsFor\n");}
     int scnIdx=shdr.sh_info;
-    char* name=elf_strptr(e->e,e->sectionHdrStrTblIdx,shdr.sh_name);
-    if(!strncmp("rel.",name,strlen("rel.")))
+    if(SHT_REL==shdr.sh_type)//todo: support RELA
     {
       //this is a relocations section
       Elf_Data* data=elf_getdata(scn,NULL);
