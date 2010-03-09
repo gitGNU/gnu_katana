@@ -42,6 +42,7 @@ int reindexSymbol(ElfInfo* old,ElfInfo* new,int oldIdx,int flags);
 //only ESFF_MANGLED_OK and ESFF_DYNAMIC are relevant
 int getSymtabIdx(ElfInfo* e,char* symbolName,int flags);
 
-idx_t findSymbolContainingAddress(ElfInfo* e,addr_t addr,byte type);
+//pass SHN_UNDEF for scnIdx to accept symbols referencing any section
+idx_t findSymbolContainingAddress(ElfInfo* e,addr_t addr,byte type,idx_t scnIdx);
 #endif
 

@@ -267,7 +267,7 @@ List* makePatchData(PoRegRule* rule,SpecialRegsState* state,ElfInfo* patch,ElfIn
       //now we have to see if the location corresponds to a symbol
       //that may be being relocated to a .data.new section or something
       //or the symbol itself may not even move
-      idx_t symIdxOld=findSymbolContainingAddress(state->oldBinaryElf,tmpState.currAddrOld,STT_OBJECT);
+      idx_t symIdxOld=findSymbolContainingAddress(state->oldBinaryElf,tmpState.currAddrOld,STT_OBJECT,SHN_UNDEF);
       if(symIdxOld!=STN_UNDEF)
       {
         //ok, so it was in a symbol in the executing binary, Now we have to find
