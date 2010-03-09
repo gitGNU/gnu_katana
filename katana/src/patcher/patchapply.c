@@ -21,6 +21,10 @@
 #include "symbol.h"
 #include "util/logging.h"
 #include "linkmap.h"
+#include "safety.h"
+#include "info/fdedump.h"
+#include "constants.h"
+#include <sys/wait.h>
 
 ElfInfo* patchedBin=NULL;
 ElfInfo* targetBin=NULL;
@@ -469,6 +473,8 @@ void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch)
 {
   startPtrace();
   targetBin=targetBin_;
+  
+  
   //we create an on-disk version of the patched binary
   //setting this up is much easier than modifying the in-memory ELF
   //structures. It does, however, allow us to write an accurate symbol table,
@@ -513,17 +519,6 @@ void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch)
   
   writeOutPatchedBin(false);
 
-  #ifdef legacy
-  //todo: this will not work in programs which do not use malloc directly.
-  //what to do about this?
-    idx_t symIdxDynamic=getSymtabIdx(targetBin,"malloc",ESFF_DYNAMIC|ESFF_MANGLED_OK);
-  if(STN_UNDEF==symIdxDynamic)
-  {
-    death("could not locate symbol for malloc in the target program\n");
-  }
-  setMallocPLTAddress(getPLTEntryForSym(targetBin,symIdxDynamic));
-  #endif
-
   addr_t mallocAddr=locateRuntimeSymbolInTarget(targetBin,"malloc");
   if(mallocAddr)
   {
@@ -533,7 +528,27 @@ void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch)
   {
     death("Cannot find malloc in the target program\n");
   }
-  
+
+  addr_t safeBreakpointSpot=findSafeBreakpointForPatch(targetBin,patch,pid);
+  /*  logprintf(ELL_INFO_V2,ELS_PATCHAPPLY,"Setting breakpoint to apply patch at 0x%x\n",safeBreakpointSpot);
+  setBreakpoint(safeBreakpointSpot);
+  continuePtrace();
+  logprintf(ELL_INFO_V2,ELS_PATCHAPPLY,"Continuing until we reach safe spot to patch. . .\n");
+  bool breakpointReached=false;
+  for(int i=0;i<MAX_WAIT_FOR_PATCHING_LOOPS;i++)
+  {
+    if(0!=waitpid(-1,NULL,WNOHANG))
+    {
+      breakpointReached=true;
+      break;
+    }
+    usleep(WAIT_FOR_SAFE_PATCHING_USLEEP);
+  }
+  removeBreakpoint(safeBreakpointSpot);
+  if(!breakpointReached)
+  {
+    death("Program does not seem to be reaching safe state, aborting patching\n");
+    }*/
 
   logprintf(ELL_INFO_V1,ELS_PATCHAPPLY,"======Applying patches=======\n");
   for(List* cuLi=diPatch->compilationUnits;cuLi;cuLi=cuLi->next)

@@ -34,6 +34,7 @@ typedef enum
   ELS_RELOCATION,
   ELS_PATCHAPPLY,
   ELS_LINKMAP,
+  ELS_SAFETY,
   ELS_CNT
 } E_LOG_SOURCE;//describes what subsystem the message came from
 
