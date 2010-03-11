@@ -78,11 +78,14 @@ void writeTypeToDwarf(Dwarf_P_Debug dbg,TypeInfo* type)
   case TT_ARRAY:
     tag=DW_TAG_array_type;
     break;
+  case TT_UNION:
+    tag=DW_TAG_union_type;
+    break;
   case TT_VOID:
     return;//don't actually need to write out the void type, DWARF doesn't represent it
     break;
   default:
-    death("unknown type type\n");
+    death("TypeInfo has unknown type\n");
   }
   Dwarf_P_Die parent=type->cu->lastDie?NULL:type->cu->die;
   assert(parent || type->cu->lastDie);
@@ -110,7 +113,7 @@ void writeTypeToDwarf(Dwarf_P_Debug dbg,TypeInfo* type)
     dwarf_add_AT_signed_const(dbg,die,DW_AT_lower_bound,type->lowerBound,&err);
     dwarf_add_AT_signed_const(dbg,die,DW_AT_upper_bound,type->upperBound,&err);
   }
-  else if(TT_STRUCT==type->type)
+  else if(TT_STRUCT==type->type || TT_UNION==type->type)
   {
     Dwarf_P_Die lastMemberDie=NULL;
     for(int i=0;i<type->numFields;i++)
@@ -198,11 +201,14 @@ void writeTransformationToDwarf(Dwarf_P_Debug dbg,TypeTransform* trans)
     inst.opcode=DW_CFA_register;
     byte bytes[1+sizeof(word_t)];
     bytes[0]=ERT_CURR_TARG_NEW;
-    assert(trans->from->length==trans->to->length);
-    memcpy(bytes+1,&trans->from->length,sizeof(word_t));
+    assert(trans->from->length<=trans->to->length);
+    memcpy(bytes+1,&trans->to->length,sizeof(word_t));
     //offset on the register is always 0, doing a complete copy of everything
     inst.arg1Bytes=encodeAsLEB128(bytes,1+sizeof(word_t),false,&inst.arg1NumBytes);
     bytes[0]=ERT_CURR_TARG_OLD;
+    //todo: should we just use the from length for everything, since it's the
+    //shorter of the two
+    memcpy(bytes+1,&trans->from->length,sizeof(word_t));
     inst.arg2Bytes=encodeAsLEB128(bytes,1+sizeof(word_t),false,&inst.arg2NumBytes);
     addInstruction(&instrs,&inst);
     free(inst.arg1Bytes);
@@ -237,7 +243,7 @@ void writeTransformationToDwarf(Dwarf_P_Debug dbg,TypeTransform* trans)
     free(inst.arg2Bytes);
     free(inst.arg3Bytes);
   }
-  else //look at structure, not just straight copy
+  else if(TT_STRUCT==trans->from->type) //look at structure, not just straight copy
   {
     int oldBytesSoFar=0;
     for(int i=0;i<trans->from->numFields;i++)
@@ -253,7 +259,7 @@ void writeTransformationToDwarf(Dwarf_P_Debug dbg,TypeTransform* trans)
         oldBytesSoFar+=trans->from->fieldLengths[i];
         continue;
       }
-#define NUM_BYTES 1+2*sizeof(word_t)
+      #define NUM_BYTES 1+2*sizeof(word_t)
       byte bytes[NUM_BYTES];
       bytes[0]=ERT_CURR_TARG_NEW;
       memcpy(bytes+1,&size,sizeof(word_t));
@@ -304,8 +310,11 @@ void writeTransformationToDwarf(Dwarf_P_Debug dbg,TypeTransform* trans)
       free(inst.arg1Bytes);
       free(inst.arg2Bytes);
       oldBytesSoFar+=trans->from->fieldLengths[i];
-
     }
+  }
+  else
+  {
+    death("unsupported TypeInfo type in writeTransformationToDwarf\n");
   }
   printf("adding %i bytes to fde\n",instrs.numBytes);
   dwarf_insert_fde_inst_bytes(dbg,fde,instrs.numBytes,instrs.instrs,&err);
