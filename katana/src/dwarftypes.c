@@ -235,6 +235,16 @@ char* getNameForDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
     case DW_TAG_subprogram:
       snprintf(buf,64,"lambda_%i\n",(int)offset);
       break;
+    case DW_TAG_lexical_block:
+      snprintf(buf,64,"lex_blk_%i\n",(int)offset);
+      break;
+    case DW_TAG_formal_parameter:
+      snprintf(buf,64,"formal_param_%i\n",(int)offset);
+      break;
+    case DW_TAG_subroutine_type:
+      //I don't actually know what this is
+      snprintf(buf,64,"sub_type_%i\n",(int)offset);
+      break;
     default:
       snprintf(buf,64,"unknown_type_anon_%u",(uint)offset);
     }
@@ -425,10 +435,8 @@ void addStructureFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
       TypeInfo* typeOfField=getTypeInfoFromATType(dbg,child,cu);
       if(!typeOfField)
       {
-        fprintf(stderr,"error, field type doesn't seem to exist, cannot create type %s\n",type->name);
-        type->fieldTypes[idx]=NULL;
-        freeTypeInfo(type);
-        return;
+        logprintf(ELL_ERR,ELS_DWARFTYPES,"field type doesn't seem to exist, cannot create type %s\n",type->name);
+        death(NULL);//logprintf(ELL_ERR calls death, but just in case. . .
       }
       
       //todo: perhaps use DW_AT_location instead of this?
@@ -886,6 +894,11 @@ void walkDieTree(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu,bool siblings
 //when the caller is finished with it
 DwarfInfo* readDWARFTypes(ElfInfo* elf)
 {
+  if(!elf->sectionIndices[ERS_DEBUG_INFO])
+  {
+    death("ELF file %s does not seem to have any dwarf DIE information\n",elf->fname);
+  }
+  
   di=zmalloc(sizeof(DwarfInfo));
   Dwarf_Error err;
   Dwarf_Debug dbg;
