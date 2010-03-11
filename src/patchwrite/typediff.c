@@ -133,6 +133,15 @@ bool compareTypesAndGenTransforms(TypeInfo* a,TypeInfo* b)
   a->transformer=transform;//do it up here in case we recurse on this type
   transform->from=a;
   transform->to=b;
+
+  if(TT_UNION==a->type)
+  {
+    //a straight copy is the only way we can do a union, because we don't know
+    //what's inside it. If we detect that a straight copy won't work,
+    //we'll bail later
+    transform->straightCopy=true;
+  }
+
     
   //now build the offsets array
   transform->fieldOffsets=zmalloc(sizeof(int)*a->numFields);
@@ -217,5 +226,5 @@ bool compareTypesAndGenTransforms(TypeInfo* a,TypeInfo* b)
     //todo: in general need to be able to support fields of struct type,
     //they're not really supported right now
   }
-  return retval;
+  return false;
 }
