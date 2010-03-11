@@ -355,6 +355,76 @@ void addUnsafeSubprogram(SubprogramInfo* sub)
   addDataToScn(getDataByERS(patch,ERS_UNSAFE_FUNCTIONS),&symIdxInPatch,sizeof(idx_t));
 }
 
+//returns the offset into the patch text that it was written at
+addr_t writeFuncToPatchText(SubprogramInfo* func,CompilationUnit* cu,idx_t* outSymIdx)
+{
+  int len=func->highpc-func->lowpc;
+  Elf_Scn* textScn=getSectionByERS(patch,ERS_TEXT);
+  Elf_Data* textData=getDataByERS(patch,ERS_TEXT);
+  GElf_Shdr shdr;
+  gelf_getshdr(textScn,&shdr);
+  
+  Elf_Scn* textScnPatched=NULL;
+  char buf[1024];
+  snprintf(buf,1024,".text.%s",func->name);
+  textScnPatched=getSectionByName(cu->elf,buf);
+  if(!textScnPatched)
+  {
+    textScnPatched=getSectionByERS(cu->elf,ERS_TEXT);
+  }
+  assert(textScnPatched);
+  addr_t offset=addDataToScn(textData,getDataAtAbs(textScnPatched,func->lowpc,IN_MEM),len);
+  addr_t funcSegmentBase=offset+shdr.sh_addr;//where text for this function is based
+  //if -ffunction-sections is used, the function might have its own text section
+  Elf32_Sym sym;
+  sym.st_name=addStrtabEntry(func->name);
+  sym.st_value=textData->d_off;//is it ok that this is section-relative, since
+  //we set st_shndx to be the text section
+  sym.st_size=0;
+  sym.st_info=ELF32_ST_INFO(STB_GLOBAL,STT_FUNC);
+  sym.st_other=0;
+  sym.st_shndx=elf_ndxscn(textScn);
+  *outSymIdx=addSymtabEntry(getDataByERS(patch,ERS_SYMTAB),&sym);
+  
+
+  //also include any relocations which exist for anything inside this function
+  //if -ffunction-sections is specified,
+  //each function will have its own relocation section,
+  //check this out first
+  snprintf(buf,1024,".rel.text.%s",func->name);
+  Elf_Scn* relocScn=getSectionByName(cu->elf,buf);
+  if(!relocScn)
+  {
+    relocScn=getSectionByName(cu->elf,".rel.text");
+  }
+  if(!relocScn)
+  {
+    death("%s does not have a .rel.text section\n");
+  }
+  writeRelocationsInRange(func->lowpc,func->highpc,relocScn,funcSegmentBase,cu->elf);
+  return offset;
+}
+
+void writeNewFuncsForCU(CompilationUnit* cuOld,CompilationUnit* cuNew)
+{
+  SubprogramInfo** patchFuncs=(SubprogramInfo**)dictValues(cuNew->subprograms);
+  Dictionary* oldFuncs=cuOld->subprograms;
+  SubprogramInfo* func=patchFuncs[0];
+  for(int i=0;func;i++,func=patchFuncs[i])
+  {
+    SubprogramInfo* oldFunc=dictGet(oldFuncs,func->name);
+    if(!oldFunc)
+    {
+      logprintf(ELL_INFO_V1,ELS_TYPEDIFF,"Found new function %s\n",func->name);
+      idx_t symIdx;
+      addr_t offset=writeFuncToPatchText(func,cuNew,&symIdx);
+      int len=func->highpc-func->lowpc;
+      writeFuncToDwarf(dbg,func->name,offset,len,symIdx,cuNew);
+    }
+  }
+  free(patchFuncs);
+}
+
 void writeFuncTransformationInfoForCU(CompilationUnit* cuOld,CompilationUnit* cuNew)
 {
   SubprogramInfo** funcs1=(SubprogramInfo**)dictValues(cuOld->subprograms);
@@ -370,53 +440,12 @@ void writeFuncTransformationInfoForCU(CompilationUnit* cuOld,CompilationUnit* cu
     if(!areSubprogramsIdentical(func,patchedFunc,cuOld->elf,cuNew->elf))
     {
       printf("writing transformation info for function %s\n",func->name);
-      int len=patchedFunc->highpc-patchedFunc->lowpc;
-      Elf_Scn* textScn=getSectionByERS(patch,ERS_TEXT);
-      Elf_Data* textData=getDataByERS(patch,ERS_TEXT);
-      GElf_Shdr shdr;
-      gelf_getshdr(textScn,&shdr);
-      addr_t funcSegmentBase=textData->d_off+shdr.sh_addr;//where text for this function is based
-      //if -ffunction-sections is used, the function might have its own text section
-      Elf_Scn* textScnPatched=NULL;
-      char buf[1024];
-      snprintf(buf,1024,".text.%s",patchedFunc->name);
-      textScnPatched=getSectionByName(cuNew->elf,buf);
-      if(!textScnPatched)
-      {
-        textScnPatched=getSectionByERS(cuNew->elf,ERS_TEXT);
-      }
-      assert(textScnPatched);
-      addDataToScn(textData,getDataAtAbs(textScnPatched,patchedFunc->lowpc,IN_MEM),len);
-      Elf32_Sym sym;
-      sym.st_name=addStrtabEntry(func->name);
-      sym.st_value=textData->d_off;//is it ok that this is section-relative, since
-      //we set st_shndx to be the text section
-      sym.st_size=0;
-      sym.st_info=ELF32_ST_INFO(STB_GLOBAL,STT_FUNC);
-      sym.st_other=0;
-      sym.st_shndx=elf_ndxscn(textScn);
-      idx_t idx=addSymtabEntry(getDataByERS(patch,ERS_SYMTAB),&sym);
-
       //we also have to add an entry into debug info, so that
       //we know to patch the function
-      writeFuncToDwarf(dbg,func->name,textData->d_off,len,idx,cuNew);
-      textData->d_off+=len;
-
-      //also include any relocations which exist for anything inside this function
-      //if -ffunction-sections is specified,
-      //each function will have its own relocation section,
-      //check this out first
-      snprintf(buf,1024,".rel.text.%s",patchedFunc->name);
-      Elf_Scn* relocScn=getSectionByName(cuNew->elf,buf);
-      if(!relocScn)
-      {
-        relocScn=getSectionByName(cuNew->elf,".rel.text");
-      }
-      if(!relocScn)
-      {
-        death("%s does not have a .rel.text section\n");
-      }
-      writeRelocationsInRange(patchedFunc->lowpc,patchedFunc->highpc,relocScn,funcSegmentBase,cuNew->elf);
+      idx_t symIdx;
+      addr_t offset=writeFuncToPatchText(patchedFunc,cuNew,&symIdx);
+      int len=patchedFunc->highpc-patchedFunc->lowpc;
+      writeFuncToDwarf(dbg,func->name,offset,len,symIdx,cuNew);
       addUnsafeSubprogram(patchedFunc);
     }
     else
@@ -550,7 +579,8 @@ void writeTypeAndFuncTransformationInfo(ElfInfo* patchee,ElfInfo* patched)
     writeNewVarsForCU(cuOld,cuNew);
     writeVarTransforms(varTransformsList);
     deleteList(varTransformsList,free);
-    
+
+    writeNewFuncsForCU(cuOld,cuNew);
     //note that this must be done after dealing with the data
     //so that dealing with the data writes out the appropriate symbols
     writeFuncTransformationInfoForCU(cuOld,cuNew);

@@ -159,7 +159,7 @@ void applyVariablePatch(VarInfo* var,Map* fdeMap,ElfInfo* patch)
 
 void applyFunctionPatch(SubprogramInfo* func,int pid,ElfInfo* targetBin,ElfInfo* patch)
 {
-  printf("patching function %s\n",func->name);
+  logprintf(ELL_INFO_V2,ELS_PATCHAPPLY,"patching function %s\n",func->name);
   //int len=func->highpc-func->lowpc;
   uint offset=func->lowpc;//-patch->textStart[IN_MEM]
   //get the function text from the patch file
@@ -173,17 +173,34 @@ void applyFunctionPatch(SubprogramInfo* func,int pid,ElfInfo* targetBin,ElfInfo*
   
   //now look up the symbol in the old binary to discover where to insert
   //the trampoline jump
-  //todo: return value checking
   int idx=getSymtabIdx(targetBin,func->name,0);
-  addr_t oldAddr=getSymAddress(targetBin,idx);
-  GElf_Sym sym;
-  getSymbol(targetBin,idx,&sym);
-  sym.st_value=addr;
-  //now we write the symbol to the new binary to keep
-  //track of where it is for future patches
-  Elf_Data* symTabData=getDataByERS(patchedBin,ERS_SYMTAB);
-  gelf_update_sym(symTabData,idx,&sym);
-  insertTrampolineJump(oldAddr,addr);
+  if(idx!=STN_UNDEF)
+  {
+    addr_t oldAddr=getSymAddress(targetBin,idx);
+    GElf_Sym sym;
+    getSymbol(targetBin,idx,&sym);
+    sym.st_value=addr;
+    //now we write the symbol to the new binary to keep
+    //track of where it is for future patches
+    Elf_Data* symTabData=getDataByERS(patchedBin,ERS_SYMTAB);
+    gelf_update_sym(symTabData,idx,&sym);
+    insertTrampolineJump(oldAddr,addr);
+
+  }
+  else
+  {
+    //the function did not exist previously!
+    //we create a new symbol for it
+    //todo: really should abstract this out
+    Elf32_Sym sym;
+    memset(&sym,0,sizeof(Elf32_Sym));
+    //todo: might not always be the case that it's global
+    sym.st_info=ELF32_ST_INFO(STB_GLOBAL,STT_FUNC);
+    sym.st_name=addStrtabEntryToExisting(patchedBin,func->name,false);
+    sym.st_shndx=elf_ndxscn(getSectionByName(patchedBin,".text.new"));
+    sym.st_value=addr;
+    addSymtabEntryToExisting(patchedBin,&sym);
+  }
 }
 
 
