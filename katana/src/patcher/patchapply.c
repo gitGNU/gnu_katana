@@ -232,10 +232,26 @@ addr_t copyInEntireSection(ElfInfo* patch,char* name)
 {
   //todo: perhaps might make more sense to mmap that part of the file?
   Elf_Scn* scn=getSectionByName(patch,name);
+  if(!scn)
+  {
+    death("Failed to find section %s in patch\n",name);
+  }
   Elf_Data* data=elf_getdata(scn,NULL);
+  if(!data)
+  {
+    death("Failed to find data for section %s in patch\n",name);
+  }
   addr_t addr=getFreeSpaceInTarget(data->d_size);
-  printf("mapping in the entirety of %s Copying %i bytes to 0x%x\n",name,data->d_size,(uint)addr);
-  memcpyToTarget(addr,data->d_buf,data->d_size);
+  if(data->d_size)
+  {
+    printf("mapping in the entirety of %s Copying %i bytes to 0x%x\n",name,data->d_size,(uint)addr);
+    memcpyToTarget(addr,data->d_buf,data->d_size);
+  }
+  else
+  {
+    logprintf(ELL_WARN,ELS_PATCHAPPLY,"Section %s does not contain any data, so cannot map it in\n",name);
+  }
+
   //and create a section for it
   Elf_Scn* newscn = elf_newscn (patchedBin->e);
   GElf_Shdr shdr,shdrNew;
