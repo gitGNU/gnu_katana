@@ -802,3 +802,9 @@ to be the case.
 ** x86 platform
 ** /proc filesystem
 ** elfcmp dependency (todo: remove this)
+** compile with debugging information (-g)
+* testing apache
+** changes made to apache so that katana can work on it
+*** debugging info: 
+    built with
+    env CFLAGS=-g ./configure
