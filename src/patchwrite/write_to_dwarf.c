@@ -81,6 +81,9 @@ void writeTypeToDwarf(Dwarf_P_Debug dbg,TypeInfo* type)
   case TT_UNION:
     tag=DW_TAG_union_type;
     break;
+  case TT_ENUM:
+    tag=DW_TAG_enumeration_type;
+    break;
   case TT_VOID:
     return;//don't actually need to write out the void type, DWARF doesn't represent it
     break;

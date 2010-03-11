@@ -51,12 +51,12 @@ void allocateMemoryForVarRelocation(VarInfo* var)
 
 void transformVarData(VarInfo* var,Map* fdeMap,ElfInfo* patch)
 {
-  printf("transforming var %s\n",var->name);
+  logprintf(ELL_INFO_V2,ELS_PATCHAPPLY,"transforming var %s\n",var->name);
   FDE* transformerFDE=mapGet(fdeMap,&var->type->fde);
   if(!transformerFDE)
   {
     //todo: roll back atomically
-    death("could not find transformer for variable\n");
+    death("could not find transformer for variable %s referencing fde%i\n",var->name,var->type->fde);
   }
   patchDataWithFDE(var,transformerFDE,targetBin,patch,patchedBin);
 }

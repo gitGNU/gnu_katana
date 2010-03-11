@@ -194,6 +194,9 @@ char* getNameForDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
     case DW_TAG_union_type:
       snprintf(buf,64,"anon_union_%u\n",(uint)offset);
       break;
+    case DW_TAG_enumeration_type:
+      snprintf(buf,64,"anon_enum_%u\n",(uint)offset);
+      break;
     case DW_TAG_const_type:
       {
         char* name=getTypeNameFromATType(dbg,die,cu,NULL);
@@ -382,6 +385,35 @@ void addBaseTypeFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
   dictInsert(cu->tv->types,type->name,type);
   grabRefCounted((RC*)type);
   logprintf(ELL_INFO_V4,ELS_MISC,"added base type of name %s\n",type->name);
+}
+
+void addEnumFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
+{
+  TypeInfo* type=zmalloc(sizeof(TypeInfo));
+  type->type=TT_ENUM;
+  type->cu=cu;
+  Dwarf_Error err=0;
+
+  type->name=getNameForDie(dbg,die,cu);
+  Dwarf_Unsigned byteSize;
+  int res=dwarf_bytesize(die,&byteSize,&err);
+  if(DW_DLV_NO_ENTRY==res)
+  {
+    logprintf(ELL_WARN,ELS_DWARFTYPES,"enumeration %s has no byte length, we can't read it\n",type->name);
+    freeTypeInfo(type);
+    return;
+  }
+  type->length=byteSize;
+  dictInsert(cu->tv->types,type->name,type);
+  grabRefCounted((RC*)type);
+  //check for fde info for transformation
+  Dwarf_Attribute attr;
+  res=dwarf_attr(die,DW_AT_MIPS_fde,&attr,&err);
+  if(DW_DLV_OK==res)
+  {
+    type->fde=readAttributeAsInt(attr);
+  }
+  logprintf(ELL_INFO_V4,ELS_MISC,"added enum of name %s\n",type->name);
 }
 
 //read in the type definition of a structure
@@ -875,6 +907,12 @@ void* parseDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit** cu,bool* parseChi
   case DW_TAG_union_type:
     addUnionFromDie(dbg,die,*cu);
     *parseChildren=false;//reading the union will have taken care of that
+    break;
+  case DW_TAG_enumeration_type:
+    addEnumFromDie(dbg,die,*cu);
+    *parseChildren=false;//enum's children will be the different
+                         //enumeration values, which we don't actually
+                         //care about
     break;
   case DW_TAG_typedef:
   case DW_TAG_const_type://const only changes program semantics, not memory layout, so we don't care about it really, just treat it as a typedef
