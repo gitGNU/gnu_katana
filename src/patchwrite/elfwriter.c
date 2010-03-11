@@ -53,6 +53,7 @@ ScnInProgress scnInfo[ERS_CNT];
 ElfInfo* patch=NULL;
 Elf* outelf;
 
+//returns the offset into the section that the data was added at
 addr_t addDataToScn(Elf_Data* dataDest,void* data,int size)
 {
   dataDest->d_buf=realloc(dataDest->d_buf,dataDest->d_size+size);
