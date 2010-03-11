@@ -86,11 +86,9 @@ RegInstruction* parseFDEInstructions(Dwarf_Debug dbg,unsigned char* bytes,int le
         }
         break;
       case DW_CFA_register:
-        printf("Reading CW_CFA_register\n");
         result[*numInstrs].arg1Reg=readRegFromLEB128(bytes + 1,&uleblen);
         bytes+=uleblen;
         len-=uleblen;
-        printf("byte is %i,%i,%i\n",(int)bytes[1],(int)bytes[1],(int)bytes[3]);
         result[*numInstrs].arg2Reg=readRegFromLEB128(bytes + 1,&uleblen);
         bytes+=uleblen;
         len-=uleblen;
