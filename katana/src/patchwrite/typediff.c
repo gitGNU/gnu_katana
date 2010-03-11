@@ -120,6 +120,7 @@ bool compareTypesAndGenTransforms(TypeInfo* a,TypeInfo* b)
     break;
   case TT_BASE:
   case TT_VOID:
+  case TT_ENUM://if there was a change it would have been caught by the length check above
     break;
   }
     
@@ -134,7 +135,7 @@ bool compareTypesAndGenTransforms(TypeInfo* a,TypeInfo* b)
   transform->from=a;
   transform->to=b;
 
-  if(TT_UNION==a->type)
+  if(TT_UNION==a->type || TT_ENUM==a->type)
   {
     //a straight copy is the only way we can do a union, because we don't know
     //what's inside it. If we detect that a straight copy won't work,
@@ -164,6 +165,7 @@ bool compareTypesAndGenTransforms(TypeInfo* a,TypeInfo* b)
     switch(fieldTypeOld->type)
     {
     case TT_BASE:
+    case TT_ENUM:
       transform->fieldTransformTypes[i]=EFTT_COPY;
       break;
     case TT_STRUCT:

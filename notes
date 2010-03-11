@@ -224,7 +224,7 @@ tion
 
 
 
-**call frame info/DWARF/Exception Handling
+** call frame info/DWARF/Exception Handling
 *** libdwarf: http://reality.sgiweb.org/davea/dwarf.html
 *** dwarf standard http://dwarfstd.org/Dwarf3.pdf
 **** Call frame information in section 6.4 (p. 120 in the pdf, marked as p.108)
