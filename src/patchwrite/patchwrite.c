@@ -513,27 +513,37 @@ void writeTypeAndFuncTransformationInfo(ElfInfo* patchee,ElfInfo* patched)
       for(List* liR=relocations;liR;liR=liR->next)
       {
         RelocInfo* reloc=liR->value;
-        idx_t funcSymIdx=findSymbolContainingAddress(cuNew->elf,reloc->r_offset,STT_FUNC,reloc->scnIdx);
-        if(STN_UNDEF==funcSymIdx)
+        GElf_Shdr shdr;
+        if(!gelf_getshdr(elf_getscn(reloc->e->e,reloc->scnIdx),&shdr))
         {
-          logprintf(ELL_WARN,ELS_PATCHWRITE,"Could not find any function containing one of the relocations for variable %s\n",var->name);
-          continue;
+          death("gelf_getshdr failed\n");
         }
-        GElf_Sym funcSym;
-        getSymbol(cuNew->elf,funcSymIdx,&funcSym);
-        char* funcName=getString(cuNew->elf,funcSym.st_name);
-        SubprogramInfo* subprogram=dictGet(cuNew->subprograms,funcName);
-        if(!subprogram)
+        char* scnName=getScnHdrString(reloc->e,shdr.sh_name);
+        if(!strncmp(".text",scnName,5))
         {
-          death("Function %s expected in compilation unit %s but its info structure was not found\n",funcName,cuNew->name);
+          idx_t funcSymIdx=findSymbolContainingAddress(cuNew->elf,reloc->r_offset,STT_FUNC,reloc->scnIdx);
+          if(STN_UNDEF==funcSymIdx)
+          {
+            printf("reloc in section %i\n",reloc->scnIdx);
+            logprintf(ELL_WARN,ELS_PATCHWRITE,"Could not find any function containing one of the relocations for variable %s\n",var->name);
+            continue;
+          }
+          GElf_Sym funcSym;
+          getSymbol(cuNew->elf,funcSymIdx,&funcSym);
+          char* funcName=getString(cuNew->elf,funcSym.st_name);
+          SubprogramInfo* subprogram=dictGet(cuNew->subprograms,funcName);
+          if(!subprogram)
+          {
+            death("Function %s expected in compilation unit %s but its info structure was not found\n",funcName,cuNew->name);
+          }
+          //todo: if the SubprogramInfo struct had a flag bool unsafe
+          //or something like that, we could just set that
+          //since we actually know this type will make things unsafe
+          List* typeLi=zmalloc(sizeof(List));
+          typeLi->value=var->type;
+          listAppend(&subprogram->typesHead,&subprogram->typesTail,typeLi);
+          logprintf(ELL_INFO_V2,ELS_SAFETY,"Added type %s to types used by function %s which would make it unsafe\n",var->type->name,subprogram->name);
         }
-        //todo: if the SubprogramInfo struct had a flag bool unsafe
-        //or something like that, we could just set that
-        //since we actually know this type will make things unsafe
-        List* typeLi=zmalloc(sizeof(List));
-        typeLi->value=var->type;
-        listAppend(&subprogram->typesHead,&subprogram->typesTail,typeLi);
-        logprintf(ELL_INFO_V2,ELS_SAFETY,"Added type %s to types used by function %s which would make it unsafe\n",var->type->name,subprogram->name);
       }
       deleteList(relocations,free);
     }
