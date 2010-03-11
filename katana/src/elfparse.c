@@ -370,6 +370,10 @@ void findELFSections(ElfInfo* e)
     {
       e->sectionIndices[ERS_UNSAFE_FUNCTIONS]=elf_ndxscn(scn);
     }
+    else if(!strcmp(".debug_info",name))
+    {
+      e->sectionIndices[ERS_DEBUG_INFO]=elf_ndxscn(scn);
+    }
   }
 }
 
