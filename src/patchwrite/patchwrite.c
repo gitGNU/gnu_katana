@@ -612,8 +612,9 @@ void writePatch(char* oldSourceTree,char* newSourceTree,char* oldBinName,char* n
     case EOS_MODIFIED:
       {
         ElfInfo* elf1=getOriginalObject(obj);
-        readDWARFTypes(elf1);
         ElfInfo* elf2=getModifiedObject(obj);
+        logprintf(ELL_INFO_V1,ELS_PATCHWRITE,"Finding differences between %s and %s and writing them to the patch\n",elf1->fname,elf2->fname);
+        readDWARFTypes(elf1);
         readDWARFTypes(elf2);
         //all the object files had their own roData sections
         //and now we're lumping them together
