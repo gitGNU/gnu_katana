@@ -108,20 +108,35 @@ typedef struct TypeInfo_
                     same struct, reading the struct members will
                     reference this type which is only half read
                     itself*/
-  //the following members are only applicable to structs
+  CompilationUnit* cu; //which compilation unit the type is in. NULL
+                       //if the type is visible to all compilation
+                       //units
+  Dwarf_P_Die die;//used when writing patch info to disk
+  struct TypeTransform_* transformer;//how to transform the type into its other form
+  uint fde;//identifier (offset) for fde containing info on how to transform this type
+  ///////////////////////////////////////////
+  //only applicable to structs and unions
+  ///////////////////////////////////////////
   int numFields;
   char** fields;
   int* fieldLengths;
   struct TypeInfo_** fieldTypes;
-  //the following are relevant only to pointers or arrays
+  ///////////////////////////////////////////
+  //end only applicable to structs and unions
+  ///////////////////////////////////////////
+  //applicable only to pointers or arrays
+  ///////////////////////////////////////////
   struct TypeInfo_* pointedType;//could also be called arrayType
-  //the following are relevant only to arrays
+  ///////////////////////////////////////////
+  //end applicable only to pointers or arrays
+  ///////////////////////////////////////////
+  //applicable only to arrays
+  ///////////////////////////////////////////
   int lowerBound;
   int upperBound;
-  CompilationUnit* cu; //which compilation unit the type is in. NULL if the type is visible to all compilation units
-  Dwarf_P_Die die;//used when writing patch info to disk
-  struct TypeTransform_* transformer;//how to transform the type into its other form
-  uint fde;//identifier (offset) for fde containing info on how to transform this type
+  ///////////////////////////////////////////
+  //end applicable only to arrays
+  ///////////////////////////////////////////
 } TypeInfo;
 
 void freeTypeInfo(TypeInfo* t);
