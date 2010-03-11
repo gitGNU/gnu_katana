@@ -83,6 +83,7 @@ bool compareTypesAndGenTransforms(TypeInfo* a,TypeInfo* b)
 
   switch(a->type)
   {
+  case TT_UNION:
   case TT_STRUCT:
     //first for loop was just to determine if we needed to build the
     //offsets array
@@ -110,6 +111,7 @@ bool compareTypesAndGenTransforms(TypeInfo* a,TypeInfo* b)
     }
     //deliberately no break here because want to check pointed type too
   case TT_POINTER:
+    //this will generate the necessary transformation
     if(!compareTypesAndGenTransforms(a->pointedType,b->pointedType))
     {
       retval=false;
@@ -122,92 +124,98 @@ bool compareTypesAndGenTransforms(TypeInfo* a,TypeInfo* b)
   }
     
 
-  if(!retval)
+  if(retval)
   {
-    transform=zmalloc(sizeof(TypeTransform));
-    a->transformer=transform;//do it up here in case we recurse on this type
-    transform->from=a;
-    transform->to=b;
+    return true;
+  }
+
+  transform=zmalloc(sizeof(TypeTransform));
+  a->transformer=transform;//do it up here in case we recurse on this type
+  transform->from=a;
+  transform->to=b;
     
-    //now build the offsets array
-    transform->fieldOffsets=zmalloc(sizeof(int)*a->numFields);
-    transform->fieldTransformTypes=zmalloc(sizeof(int)*a->numFields);
-    for(int i=0;i<a->numFields;i++)
+  //now build the offsets array
+  transform->fieldOffsets=zmalloc(sizeof(int)*a->numFields);
+  transform->fieldTransformTypes=zmalloc(sizeof(int)*a->numFields);
+  for(int i=0;i<a->numFields;i++)
+  {
+    int idxInB=getIndexForField(b,a->fields[i]);
+    TypeInfo* fieldTypeOld=a->fieldTypes[i];
+    TypeInfo* fieldTypeNew=b->fieldTypes[idxInB];
+    if(fieldTypeOld->type != fieldTypeNew->type)
     {
-      int idxInB=getIndexForField(b,a->fields[i]);
-      TypeInfo* fieldTypeOld=a->fieldTypes[i];
-      TypeInfo* fieldTypeNew=b->fieldTypes[idxInB];
-      if(fieldTypeOld->type != fieldTypeNew->type)
-      {
-        //type changed too drastically even if the name hasn't,
-        //so we can't really patch that
-        //todo: issue a warning?
-        transform->fieldOffsets[i]=FIELD_DELETED;
-        transform->fieldTransformTypes[i]=EFTT_DELETE;
-        continue;
-      }
-      int offset=getOffsetForField(b,a->fields[i]);
-
-
-      
-      switch(fieldTypeOld->type)
-      {
-      case TT_BASE:
-        transform->fieldTransformTypes[i]=EFTT_COPY;
-        break;
-      case TT_STRUCT:
-        transform->fieldTransformTypes[i]=EFTT_RECURSE;
-        break;
-      case TT_POINTER:
-        if(!compareTypesAndGenTransforms(fieldTypeOld->pointedType,fieldTypeNew->pointedType))
-        {
-          if(!fieldTypeOld->pointedType->transformer)
-          {
-            freeTypeTransform(transform);
-            logprintf(ELL_WARN,ELS_TYPEDIFF,"Unable to generate transformation for field types");
-            return false;
-          }
-        }
-        if(fieldTypeOld->pointedType->transformer)
-        {
-          //points to something that needs dealing with
-          transform->fieldTransformTypes[i]=EFTT_RECURSE;
-        }
-        else
-        {
-          //points to something that's fine, so we can just go ahead and copy the pointer,
-          //no need to relocate everything
-          transform->fieldTransformTypes[i]=EFTT_COPY;
-        } 
-        break;
-      default:
-        death("unsupported type %i in generating transform in compareTypes. Poke james to write in support\n",fieldTypeOld->type);
-      }
-      if(fieldTypeOld->transformer && fieldTypeOld->transformer->to != fieldTypeNew)
-      {
-        death("Cannot transform a type to two different types\n");
-      }
-      
-      if(EFTT_RECURSE==transform->fieldTransformTypes[i])
-      {
-        if(!compareTypesAndGenTransforms(fieldTypeOld,fieldTypeNew))
-        {
-          if(!fieldTypeOld->transformer)
-          {
-            freeTypeTransform(transform);
-            logprintf(ELL_WARN,ELS_TYPEDIFF,"Unable to generate transformation for field types");
-            return false;
-          }
-        }
-      }
-      transform->fieldOffsets[i]=offset;
-      //todo: how exactly to handle base type changing if different size
-      //since we're on a little-endian system now, things
-      //will just get zero-padded, which *should* be ok
-    
-      //todo: in general need to be able to support fields of struct type,
-      //they're not really supported right now
+      //type changed too drastically even if the name hasn't,
+      //so we can't really patch that
+      //todo: issue a warning?
+      transform->fieldOffsets[i]=FIELD_DELETED;
+      transform->fieldTransformTypes[i]=EFTT_DELETE;
+      continue;
     }
+    
+    switch(fieldTypeOld->type)
+    {
+    case TT_BASE:
+      transform->fieldTransformTypes[i]=EFTT_COPY;
+      break;
+    case TT_STRUCT:
+      transform->fieldTransformTypes[i]=EFTT_RECURSE;
+      break;
+    case TT_UNION:
+      transform->fieldTransformTypes[i]=EFTT_RECURSE;
+      break;
+    case TT_POINTER:
+      if(!compareTypesAndGenTransforms(fieldTypeOld->pointedType,fieldTypeNew->pointedType))
+      {
+        if(!fieldTypeOld->pointedType->transformer)
+        {
+          freeTypeTransform(transform);
+          logprintf(ELL_WARN,ELS_TYPEDIFF,"Unable to generate transformation for field types");
+          return false;
+        }
+      }
+      if(fieldTypeOld->pointedType->transformer)
+      {
+        //points to something that needs dealing with
+        transform->fieldTransformTypes[i]=EFTT_RECURSE;
+      }
+      else
+      {
+        //points to something that's fine, so we can just go ahead and copy the pointer,
+        //no need to relocate everything
+        transform->fieldTransformTypes[i]=EFTT_COPY;
+      } 
+      break;
+    default:
+      death("unsupported type %i in generating transform in compareTypes. Poke james to write in support\n",fieldTypeOld->type);
+    }
+    if(fieldTypeOld->transformer && fieldTypeOld->transformer->to != fieldTypeNew)
+    {
+      death("Cannot transform a type to two different types\n");
+    }
+      
+    if(EFTT_RECURSE==transform->fieldTransformTypes[i])
+    {
+      if(!compareTypesAndGenTransforms(fieldTypeOld,fieldTypeNew))
+      {
+        if(!fieldTypeOld->transformer)
+        {
+          freeTypeTransform(transform);
+          logprintf(ELL_WARN,ELS_TYPEDIFF,"Unable to generate transformation for field types");
+          return false;
+        }
+        if(TT_UNION==a->type)
+        {
+          death("Cannot generate transformation for union type %s because its member type %s has changed and there is no way to know how to apply fixups when the type is unknown\n",a->name,fieldTypeNew->name);
+        }
+      }
+    }
+    transform->fieldOffsets[i]=getOffsetForField(b,a->fields[i]);
+    //todo: how exactly to handle base type changing if different size
+    //since we're on a little-endian system now, things
+    //will just get zero-padded, which *should* be ok
+    
+    //todo: in general need to be able to support fields of struct type,
+    //they're not really supported right now
   }
   return retval;
 }

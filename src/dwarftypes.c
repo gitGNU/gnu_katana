@@ -189,7 +189,10 @@ char* getNameForDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
       snprintf(buf,64,"vanon_%i\n",(int)offset);
       break;
     case DW_TAG_structure_type:
-      snprintf(buf,64,"anon_%u\n",(uint)offset);
+      snprintf(buf,64,"anon_struct_%u\n",(uint)offset);
+      break;
+    case DW_TAG_union_type:
+      snprintf(buf,64,"anon_union_%u\n",(uint)offset);
       break;
     case DW_TAG_const_type:
       {
@@ -506,6 +509,7 @@ void addPointerTypeFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
 }
 
 
+
 void addArrayTypeFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
 {
   logprintf(ELL_INFO_V4,ELS_MISC,"reading array type\n");
@@ -552,6 +556,90 @@ void addTypedefFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
   }
   free(name);
 }
+
+
+//read in the type definition of a union
+void addUnionFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
+{
+  logprintf(ELL_INFO_V4,ELS_MISC,"reading union ");
+  TypeInfo* type=zmalloc(sizeof(TypeInfo));
+  type->type=TT_UNION;
+  type->cu=cu;
+  Dwarf_Error err=0;
+
+  type->name=getNameForDie(dbg,die,cu);
+  logprintf(ELL_INFO_V4,ELS_MISC,"of name %s\n",type->name);
+  Dwarf_Unsigned byteSize;
+  int res=dwarf_bytesize(die,&byteSize,&err);
+  if(DW_DLV_NO_ENTRY==res)
+  {
+    logprintf(ELL_ERR,ELS_DWARFTYPES,"union %s has no byte length, we can't read it\n",type->name);
+    freeTypeInfo(type);
+    return;
+  }
+  type->length=byteSize;
+  //insert the type into global types now with a note that
+  //it's incomplete in case has members that reference it
+  type->incomplete=true;
+  dictInsert(cu->tv->types,type->name,type);
+  grabRefCounted((RC*)type);
+  Dwarf_Die child;
+  res=dwarf_child(die,&child,&err);
+  if(res==DW_DLV_OK)
+  {
+    int idx=0;
+    do
+    {
+      //iterate through each field of the structure
+      Dwarf_Half tag = 0;
+      dwarf_tag(child,&tag,&err);
+      if(tag!=DW_TAG_member)
+      {
+        logprintf(ELL_WARN,ELS_DWARFTYPES,"within union found tag not a member, this is bizarre\n");
+        continue;
+      }
+      type->numFields++;
+      type->fields=realloc(type->fields,type->numFields*sizeof(char*));
+      MALLOC_CHECK(type->fields);
+      type->fieldLengths=realloc(type->fieldLengths,type->numFields*sizeof(int));
+      MALLOC_CHECK(type->fieldLengths);
+      type->fieldTypes=realloc(type->fieldTypes,type->numFields*sizeof(char*));
+      MALLOC_CHECK(type->fieldTypes);
+
+      type->fields[idx]=getNameForDie(dbg,child,cu);
+      logprintf(ELL_INFO_V4,ELS_MISC,"found field %s\n",type->fields[idx]);
+
+      TypeInfo* typeOfField=getTypeInfoFromATType(dbg,child,cu);
+      if(!typeOfField)
+      {
+        logprintf(ELL_ERR,ELS_DWARFTYPES,"field type doesn't seem to exist, cannot create type %s\n",type->name);
+        death(NULL);//logprintf(ELL_ERR calls death, but just in case. . .
+      }
+      
+      //todo: perhaps use DW_AT_location instead of this?
+      type->fieldLengths[idx]=typeOfField->length;
+      type->fieldTypes[idx]=typeOfField;
+      grabRefCounted((RC*)typeOfField);
+      idx++;
+    }while(DW_DLV_OK==dwarf_siblingof(dbg,child,&child,&err));
+  }
+  else
+  {
+    fprintf(stderr,"union %s with no members, this is odd\n",type->name);
+    freeTypeInfo(type);//todo: is this really what we want to do
+    return;
+  }
+  //check for fde info for transformation
+  Dwarf_Attribute attr;
+  res=dwarf_attr(die,DW_AT_MIPS_fde,&attr,&err);
+  if(DW_DLV_OK==res)
+  {
+    type->fde=readAttributeAsInt(attr);
+  }
+  type->incomplete=false;
+  logprintf(ELL_INFO_V4,ELS_MISC,"added union type %s\n",type->name);
+}
+
 
 //parse formal parameters only to add their type to the
 //list of types used by functions
@@ -778,6 +866,10 @@ void* parseDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit** cu,bool* parseChi
   case DW_TAG_structure_type:
     addStructureFromDie(dbg,die,*cu);
     *parseChildren=false;//reading the structure will have taken care of that
+    break;
+  case DW_TAG_union_type:
+    addUnionFromDie(dbg,die,*cu);
+    *parseChildren=false;//reading the union will have taken care of that
     break;
   case DW_TAG_typedef:
   case DW_TAG_const_type://const only changes program semantics, not memory layout, so we don't care about it really, just treat it as a typedef

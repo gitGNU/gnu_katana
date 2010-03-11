@@ -85,6 +85,7 @@ typedef enum
   TT_BASE,
   TT_POINTER,
   TT_ARRAY,
+  TT_UNION,
   TT_VOID //the void type
 } TYPE_TYPE;
 
