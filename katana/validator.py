@@ -17,9 +17,10 @@ def cleanup():
 
 vlogf=open("validator_log","a")
 
-if len(sys.argv)!=2:
+if len(sys.argv)<2:
   print "Wrong number of arguments"
-  print "Usage: "+sys.argv[0]+" DIRECTORY_TO_TEST"
+  print "Usage: "+sys.argv[0]+" DIRECTORY_TO_TEST [EXECUTABLE_NAME]"
+  print "Default executable name is 'test'"
   sys.exit(1)
 
 sys.path.append(os.path.abspath(sys.argv[1]))
@@ -30,6 +31,8 @@ vlogf.write("Validator running in dir: "+sys.argv[1]+"\n")
 oldTree=os.path.join(sys.argv[1],"v0")
 newTree=os.path.join(sys.argv[1],"v1")
 execName="test"
+if len(sys.argv)>2:
+  execName=sys.argv[2]
 logfname=os.path.join(sys.argv[1],"log")
 logf=open(logfname,"w")
 logf.truncate()
