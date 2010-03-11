@@ -693,24 +693,29 @@ void addVarFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
     free(var->name);
     return;
   }
-  VarInfo* prev=dictGet(cu->tv->globalVars,var->name);
-  if(prev)
+
+  //variables are not global if we're reading inside a subprogram (function)
+  if(!activeSubprogramsHead)
   {
-    if(prev->declaration)
+    VarInfo* prev=dictGet(cu->tv->globalVars,var->name);
+    if(prev)
     {
-      dictSet(cu->tv->globalVars,var->name,var,&freeVarInfoVoid);
+      if(prev->declaration)
+      {
+        dictSet(cu->tv->globalVars,var->name,var,&freeVarInfoVoid);
+      }
+      else
+      {
+        fprintf(stderr,"Multiple definitions of the global variable '%s', linker should have caught this",var->name);
+        death(NULL);
+      }
     }
     else
     {
-      fprintf(stderr,"Multiple definitions of the global variable '%s', linker should have caught this",var->name);
-      death(NULL);
+      dictInsert(cu->tv->globalVars,var->name,var);
     }
+    logprintf(ELL_INFO_V4,ELS_MISC,"added variable %s\n",var->name);
   }
-  else
-  {
-    dictInsert(cu->tv->globalVars,var->name,var);
-  }
-  logprintf(ELL_INFO_V4,ELS_MISC,"added variable %s\n",var->name);
 
   //we want to see if this variable is inside any subprograms
   //(C does not allow nested subprograms, but some other language might
