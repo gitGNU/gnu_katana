@@ -1,5 +1,5 @@
 /*
-  File: v1/main.c
+  File: v0/main.c
   Author: James Oakley
   Project: Katana - Preliminary Work
   Date: January 10
@@ -28,21 +28,19 @@ typedef struct _Bar
   Foo foo;
 } Bar;
 
-typedef struct _Mumble
-{
-  int idx;
-  Foo foo1;
-  Foo foo2;
-} Mumble;
-
 typedef union _Baz
 {
   int i;
   Foo f;
-  Mumble m;
   Bar b;
 } Baz;
 
+
+typedef enum
+{
+  VAL_B,
+  VAL_C
+} Moo;
 
 void printThings();
 void assignValues();
@@ -60,6 +58,7 @@ int main(int argc,char** argv)
 
 void printFoo(char* name,Foo* foo)
 {
+  fflush(stdout);
   printf("%s lives at 0x%x\n",name,(unsigned int)foo);
   if(foo->field1)
   {
@@ -70,6 +69,7 @@ void printFoo(char* name,Foo* foo)
     printf("%s: NULL, %i\n",name,foo->field2);
   }
 }
+
 
 void printBar(char* name,Bar* bar)
 {
@@ -83,24 +83,14 @@ void printBar(char* name,Bar* bar)
 Baz alpha; //will use the int member of the union
 Baz beta;  //will use the Foo member of the union
 Baz gamma; //will use the Bar member of the union
-Baz delta = {.m={1,{NULL,2},{NULL,3}}};
+Moo epsilon=VAL_B;
 
-void printMumble(char* name,Mumble* m)
-{
-  printf("%s idx is %i\n",name,m->idx);
-  char buf[64];
-  sprintf(buf,"%s.foo1",name);
-  printFoo(buf,&m->foo1);
-  sprintf(buf,"%s.foo2",name);
-  printFoo(buf,&m->foo2);
-}
 
 void printThings()
 {
   printf("alpha is %i\n",alpha.i);
   printFoo("beta",&beta.f);
   printBar("gamma",&gamma.b);
-  printMumble("delta",&delta.m);
   printf("sizeof(Baz) is %i\n",sizeof(Baz));
   fflush(stdout);
 }
