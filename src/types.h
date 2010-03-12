@@ -75,6 +75,7 @@ typedef struct
   CompilationUnit* cu;
 } SubprogramInfo;
 
+
 typedef struct
 {
   List* compilationUnits;
@@ -91,6 +92,7 @@ typedef enum
   TT_ARRAY,
   TT_UNION,
   TT_ENUM,
+  TT_SUBROUTINE_TYPE,//for function pointers to point to
   TT_VOID //the void type
 } TYPE_TYPE;
 
@@ -122,7 +124,11 @@ typedef struct TypeInfo_
   struct TypeTransform_* transformer;//how to transform the type into its other form
   uint fde;//identifier (offset) for fde containing info on how to transform this type
   ///////////////////////////////////////////
-  //only applicable to structs and unions
+  //only applicable to structs, unions, and
+  //subroutineTypes. subroutineTypes do not set
+  //fieldLengths, but do use fieldTypes
+  //to keep track of the types to be passed
+  //to the subroutine
   ///////////////////////////////////////////
   int numFields;
   char** fields;
