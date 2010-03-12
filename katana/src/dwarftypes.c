@@ -165,8 +165,6 @@ void getRangeFromDie(Dwarf_Debug dbg,Dwarf_Die die,int* lowerBound,int* upperBou
 
 
 //the returned pointer should be freed
-//todo: this function has a major problem identifying unnamed structs,
-//and allowing them to be referenced by other things, need to fix that
 char* getNameForDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
 {
   char* name=NULL;
@@ -184,20 +182,20 @@ char* getNameForDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
     switch(tag)
     {
     case DW_TAG_base_type:
-      snprintf(buf,64,"banon_%i\n",(int)offset);
+      snprintf(buf,64,"banon_%i",(int)offset);
     case DW_TAG_member:
-      snprintf(buf,64,"manon_%i\n",(int)offset);
+      snprintf(buf,64,"manon_%i",(int)offset);
     case DW_TAG_variable:
-      snprintf(buf,64,"vanon_%i\n",(int)offset);
+      snprintf(buf,64,"vanon_%i",(int)offset);
       break;
     case DW_TAG_structure_type:
-      snprintf(buf,64,"anon_struct_%u\n",(uint)offset);
+      snprintf(buf,64,"anon_struct_%u",(uint)offset);
       break;
     case DW_TAG_union_type:
-      snprintf(buf,64,"anon_union_%u\n",(uint)offset);
+      snprintf(buf,64,"anon_union_%u",(uint)offset);
       break;
     case DW_TAG_enumeration_type:
-      snprintf(buf,64,"anon_enum_%u\n",(uint)offset);
+      snprintf(buf,64,"anon_enum_%u",(uint)offset);
       break;
     case DW_TAG_const_type:
       {
@@ -253,17 +251,17 @@ char* getNameForDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
       }
       break;
     case DW_TAG_subprogram:
-      snprintf(buf,64,"lambda_%i\n",(int)offset);
+      snprintf(buf,64,"lambda_%i",(int)offset);
       break;
     case DW_TAG_lexical_block:
-      snprintf(buf,64,"lex_blk_%i\n",(int)offset);
+      snprintf(buf,64,"lex_blk_%i",(int)offset);
       break;
     case DW_TAG_formal_parameter:
-      snprintf(buf,64,"formal_param_%i\n",(int)offset);
+      snprintf(buf,64,"formal_param_%i",(int)offset);
       break;
     case DW_TAG_subroutine_type:
       //I don't actually know what this is
-      snprintf(buf,64,"sub_type_%i\n",(int)offset);
+      snprintf(buf,64,"sub_type_%i",(int)offset);
       break;
     default:
       snprintf(buf,64,"unknown_type_anon_%u",(uint)offset);
@@ -570,9 +568,7 @@ void* addStructureFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
   }
   else
   {
-    fprintf(stderr,"structure %s with no members, this is odd\n",type->name);
-    freeTypeInfo(type);//todo: is this really what we want to do
-    return NULL;
+    logprintf(ELL_WARN,ELS_DWARFTYPES,"structure %s with no members, this is odd\n",type->name);
   }
   //check for fde info for transformation
   res=dwarf_attr(die,DW_AT_MIPS_fde,&attr,&err);
@@ -768,9 +764,7 @@ void* addUnionFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
   }
   else
   {
-    fprintf(stderr,"union %s with no members, this is odd\n",type->name);
-    freeTypeInfo(type);//todo: is this really what we want to do
-    return NULL;
+    logprintf(ELL_WARN,ELS_DWARFTYPES,"union %s with no members, this is odd\n",type->name);
   }
   //check for fde info for transformation
   Dwarf_Attribute attr;
@@ -937,11 +931,8 @@ SubprogramInfo* addSubprogramFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUn
   return prog;
 }
 
-//todo: I haven't actually fully figured out what dwarf
-//subroutines do...
-//todo: it has something with supporting function pointers,
-//I need to implement this
-void parseSubroutine(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
+//subroutineType supports function pointers
+void* addSubroutineType(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
 {
   Dwarf_Attribute attr;
   Dwarf_Error err;
@@ -955,7 +946,62 @@ void parseSubroutine(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
   {
     death("non-prototype subroutine found, James doesn't yet know what to do with these\n");
   }
+
+  TypeInfo* type=zmalloc(sizeof(TypeInfo));
+  type->type=TT_SUBROUTINE_TYPE;
+  type->cu=cu;
+
+  type->name=getNameForDie(dbg,die,cu);
+  logprintf(ELL_INFO_V4,ELS_DWARFTYPES,"reading subroutine type of name %s\n",type->name);
+  type->length=0;//subroutine type in a way isn't a real type. It certainly has no length
   
+  //insert the type into global types now with a note that
+  //it's incomplete in case has members that reference it
+  type->incomplete=true;
+  dictInsert(cu->tv->types,type->name,type);
+  grabRefCounted((RC*)type);
+  setParsedDie(die,type,cu);
+  Dwarf_Die child;
+  res=dwarf_child(die,&child,&err);
+  if(res==DW_DLV_OK)
+  {
+    int idx=0;
+    do
+    {
+      //iterate through each formal parameter
+      //todo: do we really need to do this? Not really using them for anything
+      Dwarf_Half tag = 0;
+      dwarf_tag(child,&tag,&err);
+      if(tag!=DW_TAG_formal_parameter)
+      {
+        logprintf(ELL_WARN,ELS_DWARFTYPES,"within subroutine type found tag not a formal parameter, this is bizarre\n");
+        continue;
+      }
+      type->numFields++;
+      type->fields=realloc(type->fields,type->numFields*sizeof(char*));
+      MALLOC_CHECK(type->fields);
+      type->fieldTypes=realloc(type->fieldTypes,type->numFields*sizeof(char*));
+      MALLOC_CHECK(type->fieldTypes);
+      type->fields[idx]=getNameForDie(dbg,child,cu);
+
+      TypeInfo* typeOfField=getTypeInfoFromATType(dbg,child,cu);
+      if(!typeOfField)
+      {
+        logprintf(ELL_ERR,ELS_DWARFTYPES,"parameter type doesn't seem to exist, cannot create type %s\n",type->name);
+        death(NULL);//logprintf(ELL_ERR calls death, but just in case. . .
+      }
+      
+      //todo: perhaps use DW_AT_location instead of this?
+      type->fieldTypes[idx]=typeOfField;
+      grabRefCounted((RC*)typeOfField);
+      grabRefCounted((RC*)typeOfField);
+      idx++;
+    }while(DW_DLV_OK==dwarf_siblingof(dbg,child,&child,&err));
+  }
+
+  type->incomplete=false;
+  logprintf(ELL_INFO_V4,ELS_MISC,"added union type %s\n",type->name);
+  return type;
 }
 
 //takes a ** to a compile unit because if we parse a compile unit,
@@ -1049,15 +1095,17 @@ void* parseDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit** cu,bool* parseChi
     //we may care about its children, but not its definition itself
     break;
   case DW_TAG_subroutine_type:
-    //todo: I don't actually really know exactly what this is. . .
-    parseSubroutine(dbg,die,*cu);
+    result=addSubroutineType(dbg,die,*cu);
     break;
   default:
     logprintf(ELL_WARN,ELS_DWARFTYPES,"Unknown die type 0x%x. Ignoring it but this may not be what you want\n",tag);
     
   }
-  
-  mapSet((*cu)->tv->parsedDies,key,result,NULL,NULL);
+
+  if(result || !mapExists((*cu)->tv->parsedDies,key))
+  {
+    mapSet((*cu)->tv->parsedDies,key,result,NULL,NULL);
+  }
   return result;
 }
 

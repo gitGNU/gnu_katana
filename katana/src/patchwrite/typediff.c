@@ -122,6 +122,11 @@ bool compareTypesAndGenTransforms(TypeInfo* a,TypeInfo* b)
   case TT_VOID:
   case TT_ENUM://if there was a change it would have been caught by the length check above
     break;
+  case TT_SUBROUTINE_TYPE:
+    //subroutine type isn't a real type,
+    //it exists only to make function pointers possible,
+    //it can't change
+    return true;
   }
     
 
