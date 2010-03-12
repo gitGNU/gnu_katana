@@ -25,7 +25,7 @@ int cmpRelocs(void* a,void* b)
 bool areSubprogramsIdentical(SubprogramInfo* patcheeFunc,SubprogramInfo* patchedFunc,
                              ElfInfo* oldBinary,ElfInfo* newBinary)
 {
-  logprintf(ELL_INFO_V1,ELS_CODEDIFF,"testing whether subprograms for %s are identical\n",patcheeFunc->name);
+  logprintf(ELL_INFO_V2,ELS_CODEDIFF,"testing whether subprograms for %s are identical\n",patcheeFunc->name);
   int len1=patcheeFunc->highpc-patcheeFunc->lowpc;
   int len2=patchedFunc->highpc-patchedFunc->lowpc;
   if(len1!=len2)
@@ -155,6 +155,7 @@ bool areSubprogramsIdentical(SubprogramInfo* patcheeFunc,SubprogramInfo* patched
         logprintf(ELL_INFO_V1,ELS_CODEDIFF,"subprogram for %s changed, symbols (for %s) differ in size (and are not symbols for a function\n",patcheeFunc->name,oldSymName);
       }
 
+      char* scnNameNew=NULL;
       if(symOld.st_shndx!=SHN_UNDEF && symOld.st_shndx!=SHN_COMMON &&
          symOld.st_shndx!=SHN_ABS && symNew.st_shndx!=SHN_UNDEF &&
          symNew.st_shndx!=SHN_COMMON && symNew.st_shndx!=SHN_ABS)
@@ -175,7 +176,7 @@ bool areSubprogramsIdentical(SubprogramInfo* patcheeFunc,SubprogramInfo* patched
           death("gelf_getshdr failed\n");
         }
         char* scnNameOld=getScnHdrString(oldBinary,shdrOld.sh_name);
-        char* scnNameNew=getScnHdrString(newBinary,shdrNew.sh_name);
+        scnNameNew=getScnHdrString(newBinary,shdrNew.sh_name);
         if(strcmp(scnNameOld,scnNameNew))
         {
           retval=false;
@@ -204,7 +205,7 @@ bool areSubprogramsIdentical(SubprogramInfo* patcheeFunc,SubprogramInfo* patched
       if(getAddendForReloc(relocOld) != getAddendForReloc(relocNew))
       {
         retval=false;
-        logprintf(ELL_INFO_V1,ELS_CODEDIFF,"subprogram for %s changed, relocation addends differ\n",patcheeFunc->name);
+        logprintf(ELL_INFO_V1,ELS_CODEDIFF,"subprogram for %s changed, relocation addends differ for symbol '%s'' in section %s (ndx %i)\n",patcheeFunc->name,newSymName,scnNameNew,(int)symNew.st_shndx);
         break;
       }
 
@@ -245,7 +246,7 @@ bool areSubprogramsIdentical(SubprogramInfo* patcheeFunc,SubprogramInfo* patched
   deleteList(oldRelocations,free);
   if(retval)
   {
-    logprintf(ELL_INFO_V1,ELS_CODEDIFF,"subprogram for %s did not change\n",patcheeFunc->name);
+    logprintf(ELL_INFO_V2,ELS_CODEDIFF,"subprogram for %s did not change\n",patcheeFunc->name);
   }
   return retval;
 }
