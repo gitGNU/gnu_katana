@@ -436,7 +436,34 @@ int reindexSectionForPatch(ElfInfo* e,int scnIdx)
   }
   else
   {
-    death("don't yet support functions referring to sections other than rodata\n");
+    //perhaps we have a section with that name
+    Elf_Scn* patchScn=getSectionByName(patch,scnName);
+    if(!patchScn)
+    {
+      //ok, we have to create a section with that name
+      //just so we can refer to it with a symbol
+      //so that it can get reindexed to the appropriate section
+      //in the original binary when we apply the patch
+      Elf_Scn* scn=elf_getscn(e->e,scnIdx);
+      GElf_Shdr shdr;
+      getShdr(scn,&shdr);
+      patchScn=elf_newscn(outelf);
+      Elf32_Shdr* patchShdr=elf32_getshdr(patchScn);
+      patchShdr->sh_type=shdr.sh_type;
+      patchShdr->sh_link=shdr.sh_link;
+      patchShdr->sh_info=shdr.sh_info;
+      patchShdr->sh_addralign=shdr.sh_addralign;
+      patchShdr->sh_name=addStrtabEntry(scnName);
+      //need to add a symbol for this section
+      Elf32_Sym sym;
+      memset(&sym,0,sizeof(Elf32_Sym));
+      sym.st_info=ELF32_ST_INFO(STB_LOCAL,STT_SECTION);
+      sym.st_name=patchShdr->sh_name;
+      sym.st_shndx=elf_ndxscn(patchScn);
+      addSymtabEntry(symtab_data,&sym);
+      
+    }
+    return elf_ndxscn(patchScn);
   }
   return STN_UNDEF;
 }
