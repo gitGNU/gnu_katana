@@ -914,20 +914,10 @@ void* parseCompileUnit(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit** cu,ElfInf
   dictInsert(tv->types,voidType->name,voidType);
   grabRefCounted((RC*)voidType);  
   char* name=getNameForDie(dbg,die,*cu);
-  Dwarf_Attribute attr;
-  Dwarf_Error err;
-  int res=dwarf_attr(die,DW_AT_comp_dir,&attr,&err);
-  if(res==DW_DLV_OK)
-  {
-    char* dir=readAttributeAsString(attr);
-    char* relDir=makePathRelativeTo(dir,workingDir);
-    free(dir);
-    (*cu)->name=joinPaths(relDir,name);
-  }
-  else
-  {
-    (*cu)->name=name;
-  }
+  char* dir=getDirectoryOfPath(elf->fname);
+  char* relDir=makePathRelativeTo(dir,workingDir);
+  free(dir);
+  (*cu)->name=joinPaths(relDir,name);
   setIdentifierForCU(*cu,die);
   logprintf(ELL_INFO_V4,ELS_MISC,"compilation unit has name %s\n",(*cu)->name);
   return *cu;
