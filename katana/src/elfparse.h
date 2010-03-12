@@ -22,7 +22,7 @@ typedef enum
 
 typedef enum
 {
-  ERS_TEXT,
+  ERS_TEXT=1,
   ERS_RODATA,
   ERS_DATA,
   ERS_SYMTAB,
@@ -86,10 +86,13 @@ Elf_Data* getDataByIdx(ElfInfo* e,idx_t idx);
 Elf_Data* getDataByERS(ElfInfo* e,E_RECOGNIZED_SECTION scn);
 Elf_Scn* getSectionByERS(ElfInfo* e,E_RECOGNIZED_SECTION ers);
 void getShdrByERS(ElfInfo* e,E_RECOGNIZED_SECTION ers,GElf_Shdr* shdr);
+void getShdr(Elf_Scn* scn,GElf_Shdr* shdr);
 char* getSectionNameFromIdx(ElfInfo* e,int idx);
 char* getScnHdrString(ElfInfo* e,int idx);
 char* getString(ElfInfo* e,int idx);//get a string from the normal string table
 char* getDynString(ElfInfo* e,int idx);//get a string from the dynamic string table
+
+
 
 #define SHT_KATANA_UNSAFE_FUNCTIONS SHT_LOUSER+0x1
 #endif
