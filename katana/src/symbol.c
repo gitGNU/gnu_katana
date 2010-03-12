@@ -52,6 +52,8 @@ char* unmangleSymbolName(char* name)
 }
 
 //find the symbol matching the given symbol
+//e is the binary we're looking in
+//ref is the elf object this symbol is in right now
 idx_t findSymbol(ElfInfo* e,GElf_Sym* sym,ElfInfo* ref,int flags)
 {
   idx_t retval=STN_UNDEF;
@@ -144,7 +146,9 @@ idx_t findSymbol(ElfInfo* e,GElf_Sym* sym,ElfInfo* ref,int flags)
          shndxRef!=SHN_COMMON && shndxNew!=SHN_COMMON)
       {
         Elf_Scn* scnRef=elf_getscn(ref->e,shndxRef);
+        assert(scnRef);
         Elf_Scn* scnNew=elf_getscn(e->e,shndxNew);
+        assert(scnNew);
         GElf_Shdr shdrRef;
         GElf_Shdr shdrNew;
         gelf_getshdr(scnRef,&shdrRef);
