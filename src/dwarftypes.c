@@ -16,12 +16,13 @@
 #include "elfparse.h"
 #include "util/logging.h"
 #include "util/refcounted.h"
+#include "util/path.h"
 
 Dictionary* cuIdentifiers=NULL;
 DwarfInfo* di;
 DList* activeSubprogramsHead=NULL;
 DList* activeSubprogramsTail=NULL;
-
+char* workingDir=NULL;
 
 TypeInfo* getTypeInfoFromATType(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu);
 char* getTypeNameFromATType(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu,Dwarf_Die* dieOfType);
@@ -88,6 +89,7 @@ char* readAttributeAsString(Dwarf_Attribute attr)
   switch(form)
   {
   case DW_FORM_string:
+  case DW_FORM_strp:
     //todo: deal with sign issues
     //might be unsigned
     dwarf_formstring(attr,&data,&err);
@@ -110,11 +112,18 @@ void setIdentifierForCU(CompilationUnit* cu,Dwarf_Die die)
     //ok, we have multiple compilation units with the same name, need to use the compilation path as well
       Dwarf_Attribute attr;
       Dwarf_Error err;
-      dwarf_attr(die,DW_AT_comp_dir,&attr,&err);
-      char* dir=readAttributeAsString(attr);
-      cu->id=malloc(strlen(cu->name)+strlen(dir)+3);
-      sprintf(cu->id,"%s:%s",cu->name,dir);
-      free(dir);
+      int res=dwarf_attr(die,DW_AT_comp_dir,&attr,&err);
+      if(res==DW_DLV_OK)
+      {
+        char* dir=readAttributeAsString(attr);
+        cu->id=malloc(strlen(cu->name)+strlen(dir)+3);
+        sprintf(cu->id,"%s:%s",cu->name,dir);
+        free(dir);
+      }
+      else
+      {
+        death("No way to find unique identifier for CU\n");
+      }
   }
   else
   {
@@ -904,7 +913,21 @@ void* parseCompileUnit(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit** cu,ElfInf
   voidType->name=strdup("void");
   dictInsert(tv->types,voidType->name,voidType);
   grabRefCounted((RC*)voidType);  
-  (*cu)->name=getNameForDie(dbg,die,*cu);
+  char* name=getNameForDie(dbg,die,*cu);
+  Dwarf_Attribute attr;
+  Dwarf_Error err;
+  int res=dwarf_attr(die,DW_AT_comp_dir,&attr,&err);
+  if(res==DW_DLV_OK)
+  {
+    char* dir=readAttributeAsString(attr);
+    char* relDir=makePathRelativeTo(dir,workingDir);
+    free(dir);
+    (*cu)->name=joinPaths(relDir,name);
+  }
+  else
+  {
+    (*cu)->name=name;
+  }
   setIdentifierForCU(*cu,die);
   logprintf(ELL_INFO_V4,ELS_MISC,"compilation unit has name %s\n",(*cu)->name);
   return *cu;
@@ -1182,8 +1205,11 @@ void walkDieTree(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu,bool siblings
 
 //the returned structure should be freed
 //when the caller is finished with it
-DwarfInfo* readDWARFTypes(ElfInfo* elf)
+//workingDir is used for path names
+//it is the directory that names should be relative to
+DwarfInfo* readDWARFTypes(ElfInfo* elf,char* workingDir_)
 {
+  workingDir=workingDir_;
   if(!elf->sectionIndices[ERS_DEBUG_INFO])
   {
     death("ELF file %s does not seem to have any dwarf DIE information\n",elf->fname);
