@@ -44,6 +44,10 @@ char* makePathRelativeTo(char* path,char* ref)
 {
   char* path_=absPath(path);
   char* ref_=absPath(ref);
+  if(!path_ || !ref_)
+  {
+    return NULL;
+  }
   if(!strncmp(path_,ref_,strlen(ref_)))
   {
     char* result=strdup(path_+strlen(ref_));
@@ -87,7 +91,14 @@ char* getDirectoryOfPath(char* path)
 //The returned string should be freed
 char* absPath(char* path)
 {
-  return realpath(path,NULL);
+  char* result=realpath(path,NULL);
+  if(!result)
+  {
+    perror("realpath failed in absPath");
+    logprintf(ELL_WARN,ELS_PATH,"realpath failed in absPath(%s)\n",path);
+    return NULL;
+  }
+  return result;
 }
 
 bool isAbsPath(char* path)
