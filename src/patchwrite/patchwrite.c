@@ -239,7 +239,7 @@ void writeVarTransforms(List* varTrans)
     VarTransformation* vt=li->value;
     //note: no longer writing the old type as we don't use it for anything currently
     //writeOldTypeToDwarf(vt->transform->from,vt->var->type->cu);
-    writeVarToDwarf(dbg,vt->var,vt->cu);
+    writeVarToDwarf(dbg,vt->var,vt->cu,false);
     writeVarToData(vt->var);
     writeTransformationToDwarf(dbg,vt->transform);
     printf("writing transformation for var %s\n",vt->var->name);
@@ -270,7 +270,7 @@ void writeNewVarsForCU(CompilationUnit* cuOld,CompilationUnit* cuNew)
     if(!oldVar)
     {
       logprintf(ELL_INFO_V1,ELS_TYPEDIFF,"Found new variable %s\n",var->name);
-      writeVarToDwarf(dbg,var,cuNew);
+      writeVarToDwarf(dbg,var,cuNew,true);
       writeVarToData(var);
     }
   }
@@ -420,7 +420,7 @@ void writeNewFuncsForCU(CompilationUnit* cuOld,CompilationUnit* cuNew)
       idx_t symIdx;
       addr_t offset=writeFuncToPatchText(func,cuNew,&symIdx);
       int len=func->highpc-func->lowpc;
-      writeFuncToDwarf(dbg,func->name,offset,len,symIdx,cuNew);
+      writeFuncToDwarf(dbg,func->name,offset,len,symIdx,cuNew,true);
     }
   }
   free(patchFuncs);
@@ -446,7 +446,7 @@ void writeFuncTransformationInfoForCU(CompilationUnit* cuOld,CompilationUnit* cu
       idx_t symIdx;
       addr_t offset=writeFuncToPatchText(patchedFunc,cuNew,&symIdx);
       int len=patchedFunc->highpc-patchedFunc->lowpc;
-      writeFuncToDwarf(dbg,func->name,offset,len,symIdx,cuNew);
+      writeFuncToDwarf(dbg,func->name,offset,len,symIdx,cuNew,false);
       addUnsafeSubprogram(patchedFunc);
     }
     else
