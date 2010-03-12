@@ -296,6 +296,10 @@ addr_t findSafeBreakpointForPatch(ElfInfo* targetBin,ElfInfo* patch,int pid)
 {
   DList* activationFrames=findActivationFrames(targetBin,pid);
   Elf_Data* unsafeFunctionsData=getDataByERS(patch,ERS_UNSAFE_FUNCTIONS);
+  if(!unsafeFunctionsData)
+  {
+    death("Patch object does not contain any unsafe functions data. This should not be\n");
+  }
   size_t numUnsafeFunctions=unsafeFunctionsData->d_size/sizeof(idx_t);
   //have to go through and reindex them all
   idx_t* unsafeFunctions=zmalloc(numUnsafeFunctions*sizeof(idx_t));
