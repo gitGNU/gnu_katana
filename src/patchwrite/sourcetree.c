@@ -98,7 +98,7 @@ List* getChangedObjectFilesInSourceTree(char* origSourceTree,char* modSourceTree
       }
       //obj file exists in both of them
       //compare them for equality
-      if(system("which elfcmp"))
+      if(system("which elfcmp > /dev/null"))
       {
         death("You must have the elfcmp program installed. You can obtain this from elfutils which can be found at https://fedorahosted.org/elfutils/\n");
       }
@@ -154,15 +154,11 @@ List* getChangedObjectFilesInSourceTree(char* origSourceTree,char* modSourceTree
     }
   }
 
-  free(dirEntriesOrig);
-  if(dirEntriesMod)
-  {
-    free(dirEntriesMod);
-  }
+  
   for(;i<numEntriesOrig;i++)
   {
     char* fullPathOrig=joinPaths(origSourceTree,dirEntriesOrig[i]->d_name);
-    logprintf(ELL_INFO_V1,ELS_SOURCETREE,"Object file %s does not differ between versions\n",fullPathOrig);
+    logprintf(ELL_INFO_V1,ELS_SOURCETREE,"Object file %s does not exist in the new version\n",fullPathOrig);
   }
   for(;j<numEntriesMod;j++)
   {
@@ -174,6 +170,11 @@ List* getChangedObjectFilesInSourceTree(char* origSourceTree,char* modSourceTree
     obj->pathToModified=fullPathMod;
     li->value=obj;
     listAppend(&head,&tail,li);
+  }
+  free(dirEntriesOrig);
+  if(dirEntriesMod)
+  {
+    free(dirEntriesMod);
   }
   
   return head;
