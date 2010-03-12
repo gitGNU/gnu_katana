@@ -387,7 +387,7 @@ Elf_Scn* getSectionByName(ElfInfo* e,char* name)
     {
       death("cannot get shdr\n");
     }
-    char* scnName=elf_strptr(e->e,e->sectionHdrStrTblIdx,shdr.sh_name);
+    char* scnName=getScnHdrString(e,shdr.sh_name);
     if(!strcmp(name,scnName))
     {
       return scn;
@@ -433,4 +433,12 @@ char* getScnHdrString(ElfInfo* e,int idx)
   assert(data);
   assert(idx<data->d_size);
   return (char*)data->d_buf+idx;
+}
+
+void getShdr(Elf_Scn* scn,GElf_Shdr* shdr)
+{
+  if(!gelf_getshdr(scn,shdr))
+  {
+    death("gelf_getshdr failed\n");
+  }
 }
