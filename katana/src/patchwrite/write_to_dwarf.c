@@ -32,7 +32,7 @@ void writeCUToDwarf(Dwarf_P_Debug dbg,CompilationUnit* cu)
 }
 
 void writeFuncToDwarf(Dwarf_P_Debug dbg,char* name,uint textOffset,uint funcTextSize,
-                      int symIdx,CompilationUnit* cu)
+                      int symIdx,CompilationUnit* cu,bool new)
 {
   if(!cu->die)
   {
@@ -49,6 +49,10 @@ void writeFuncToDwarf(Dwarf_P_Debug dbg,char* name,uint textOffset,uint funcText
   //todo: these are going to need relocation
   dwarf_add_AT_targ_address(dbg,die,DW_AT_low_pc,textOffset,symIdx,&err);
   dwarf_add_AT_targ_address(dbg,die,DW_AT_high_pc,textOffset+funcTextSize,symIdx,&err);
+  if(new)
+  {
+    dwarf_add_AT_flag(dbg,die,DW_AT_allocated,0,&err);
+  }
   cu->lastDie=die;
 }
 
@@ -162,7 +166,7 @@ void writeOldTypeToDwarf(Dwarf_P_Debug dbg,TypeInfo* type,CompilationUnit* cuToW
 
 }
 
-void writeVarToDwarf(Dwarf_P_Debug dbg,VarInfo* var,CompilationUnit* cu)
+void writeVarToDwarf(Dwarf_P_Debug dbg,VarInfo* var,CompilationUnit* cu,bool new)
 {
   assert(cu);
   if(!cu->die)
@@ -181,6 +185,10 @@ void writeVarToDwarf(Dwarf_P_Debug dbg,VarInfo* var,CompilationUnit* cu)
   Dwarf_P_Die die=dwarf_new_die(dbg,DW_TAG_variable,parent,NULL,sibling,NULL,&err);
   dwarf_add_AT_name(die,var->name,&err);
   dwarf_add_AT_reference(dbg,die,DW_AT_type,var->type->die,&err);
+  if(new)
+  {
+    dwarf_add_AT_flag(dbg,die,DW_AT_allocated,0,&err);
+  }
   cu->lastDie=die;
 }
 

@@ -9,8 +9,8 @@
 #ifndef write_to_dwarf_h
 #define write_to_dwarf_h
 #include "types.h"
-void writeVarToDwarf(Dwarf_P_Debug dbg,VarInfo* var,CompilationUnit* cu);
+void writeVarToDwarf(Dwarf_P_Debug dbg,VarInfo* var,CompilationUnit* cu,bool new);
 void writeTransformationToDwarf(Dwarf_P_Debug dbg,TypeTransform* trans);
 void writeFuncToDwarf(Dwarf_P_Debug dbg,char* name,uint textOffset,uint funcTextSize,
-                      int symIdx,CompilationUnit* cu);
+                      int symIdx,CompilationUnit* cu,bool new);
 #endif
