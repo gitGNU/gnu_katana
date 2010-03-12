@@ -43,6 +43,7 @@ ElfInfo* oldBinElfInfo=NULL;
 #include "util/logging.h"
 #include "patchwrite/typediff.h"
 #include "info/fdedump.h"
+#include "info/dwinfo_dump.h"
 #include "util/path.h"
 #include "config.h"
 
@@ -163,6 +164,8 @@ int main(int argc,char** argv)
     char* patchFile=argv[optind];
     logprintf(ELL_INFO_V3,ELS_MISC,"patch file is %s\n",patchFile);
     ElfInfo* patch=openELFFile(patchFile);
+    printPatchDwarfInfo(patch);
+    //printPatchUnsafeFuncsInfo(patch);
     printPatchFDEInfo(patch);
   }
   else
