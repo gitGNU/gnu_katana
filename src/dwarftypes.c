@@ -165,6 +165,8 @@ void getRangeFromDie(Dwarf_Debug dbg,Dwarf_Die die,int* lowerBound,int* upperBou
 
 
 //the returned pointer should be freed
+//todo: this function has a major problem identifying unnamed structs,
+//and allowing them to be referenced by other things, need to fix that
 char* getNameForDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
 {
   char* name=NULL;
@@ -207,6 +209,18 @@ char* getNameForDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
           abort();
         }
         snprintf(buf,2048,"const %s",name);
+      }
+      break;
+    case DW_TAG_volatile_type:
+      {
+        char* name=getTypeNameFromATType(dbg,die,cu,NULL);
+        if(!name)
+        {
+          fprintf(stderr,"the type that DW_TAG_volatile_type references does not exist\n");
+          fflush(stderr);
+          abort();
+        }
+        snprintf(buf,2048,"volatile %s",name);
       }
       break;
     case DW_TAG_pointer_type:
@@ -268,39 +282,28 @@ char* getNameForDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
   return retname;
 }
 
-//the main difference between this function
-//and getTypeInfoFromATType aside from the return type
-//is that this one respects typedefs, at least partially
-//optional dieOfType argument is set to the die of the discovered type
-//assuming it's found (i.e. will not be set if there was no DW_AT_type attribute)
-//the returned pointer should be freed
-char* getTypeNameFromATType(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu,Dwarf_Die* dieOfType)
+Dwarf_Die getDieFromATType(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
 {
+  Dwarf_Die result;
   Dwarf_Attribute attr;
   Dwarf_Error err;
   int res=dwarf_attr(die,DW_AT_type,&attr,&err);
   if(res==DW_DLV_NO_ENTRY)
   {
-    logprintf(ELL_INFO_V4,ELS_MISC ,"no type entry\n");
+    logprintf(ELL_INFO_V4,ELS_DWARFTYPES ,"no type entry\n");
     //this happens in gcc-generated stuff, there's no DWARF entry
     //for the void type, so we have to create it manually
-    return strdup("void");
+    return NULL;
   }
   Dwarf_Half form;
   Dwarf_Off offsetOfType;
-  bool shouldFreeDieOfType=false;
-  if(!dieOfType)
-  {
-    dieOfType=zmalloc(sizeof(Dwarf_Die));
-    shouldFreeDieOfType=true;
-  }
   dwarf_whatform(attr,&form,&err);
   //the returned form should be either local or global reference to a type
   if(form==DW_FORM_ref_addr)
   {
     dwarf_global_formref(attr,&offsetOfType,&err);
     //logprintf(ELL_INFO_V4,ELS_MISC,"global offset is %i\n",(int)offsetOfType);
-    dwarf_offdie(dbg,offsetOfType,dieOfType,&err);
+    dwarf_offdie(dbg,offsetOfType,&result,&err);
     if(DW_DLV_ERROR==res)
     {
       dwarfErrorHandler(err,NULL);
@@ -318,7 +321,7 @@ char* getTypeNameFromATType(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu,Dw
     dwarf_die_CU_offset(die,&off2,&err);
     offsetOfCu=off1-off2;
     //logprintf(ELL_INFO_V4,ELS_MISC,"offset of cu is %i\n",(int)offsetOfCu);
-    int res=dwarf_offdie(dbg,offsetOfCu+offsetOfType,dieOfType,&err);
+    int res=dwarf_offdie(dbg,offsetOfCu+offsetOfType,&result,&err);
     if(DW_DLV_ERROR==res)
     {
       dwarfErrorHandler(err,NULL);
@@ -330,8 +333,34 @@ char* getTypeNameFromATType(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu,Dw
       abort();
     }
   }
-  
-  char* name=getNameForDie(dbg,*dieOfType,cu);
+  return result;
+}
+
+//the main difference between this function
+//and getTypeInfoFromATType aside from the return type
+//is that this one respects typedefs, at least partially
+//optional dieOfType argument is set to the die of the discovered type
+//assuming it's found (i.e. will not be set if there was no DW_AT_type attribute)
+//the returned pointer should be freed
+char* getTypeNameFromATType(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu,Dwarf_Die* dieOfType)
+{
+  bool shouldFreeDieOfType=false;
+  if(!dieOfType)
+  {
+    dieOfType=zmalloc(sizeof(Dwarf_Die));
+    shouldFreeDieOfType=true;
+  }
+  *dieOfType=getDieFromATType(dbg,die,cu);
+  char* name;
+  if(*dieOfType)
+  {
+    name=getNameForDie(dbg,*dieOfType,cu);
+  }
+  else
+  {
+    //because Dwarf doesn't explicitly represent the void type
+    name=strdup("void");
+  }
   if(shouldFreeDieOfType)
   {
     free(dieOfType);
@@ -346,26 +375,48 @@ char* getTypeNameFromATType(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu,Dw
 //or if the die doesn't have DW_AT_type
 TypeInfo* getTypeInfoFromATType(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
 {
-  Dwarf_Die dieOfType;
-  char* name=getTypeNameFromATType(dbg,die,cu,&dieOfType);
-  logprintf(ELL_INFO_V4,ELS_MISC,"name is %s\n",name);
-  //todo: scoping? vars other than global?
-  TypeInfo* result=dictGet(cu->tv->types,name);
-  if(!result)
+  Dwarf_Die dieOfType=getDieFromATType(dbg,die,cu);
+  void* data=NULL;
+  if(dieOfType)
   {
-    //it's possible we haven't read this die yet
-    walkDieTree(dbg,dieOfType,cu,false,cu->elf);
+    Dwarf_Error err;
+    Dwarf_Off off;
+    dwarf_dieoffset(dieOfType,&off,&err);
+    data=mapGet(cu->tv->parsedDies,&off);
+    if(!data)
+    {
+      //we haven't read in this die yet
+      walkDieTree(dbg,dieOfType,cu,false,cu->elf);
+      data=mapGet(cu->tv->parsedDies,&off);
+    }
   }
-  result=dictGet(cu->tv->types,name);
-  if(!result)
+  else
   {
+    //void type
+    data=dictGet(cu->tv->types,"void");
+  }
+  if(!data)
+  {
+    char* name=getNameForDie(dbg,dieOfType,cu);
     logprintf(ELL_WARN,ELS_DWARFTYPES,"Type for die of name %s does not seem to exist\n",name);
   }
-  free(name);
-  return result;
+  return data;
 }
 
-void addBaseTypeFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
+void setParsedDie(Dwarf_Die die,void* data,CompilationUnit* cu)
+{
+  Dwarf_Error err;
+  Dwarf_Off off;
+  dwarf_dieoffset(die,&off,&err);
+  size_t* key=zmalloc(sizeof(size_t));
+  *key=off;
+  //set it properly in parsed dies so it can be referred to
+  mapSet(cu->tv->parsedDies,key,data,NULL,free);
+}
+
+
+
+void* addBaseTypeFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
 {
   TypeInfo* type=zmalloc(sizeof(TypeInfo));
   type->type=TT_BASE;
@@ -377,17 +428,18 @@ void addBaseTypeFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
   int res=dwarf_bytesize(die,&byteSize,&err);
   if(DW_DLV_NO_ENTRY==res)
   {
-    fprintf(stderr,"structure %s has no byte length, we can't read it\n",type->name);
+    logprintf(ELL_WARN,ELS_DWARFTYPES,"base type %s has no byte length, we can't read it\n",type->name);
     freeTypeInfo(type);
-    return;
+    return NULL;
   }
   type->length=byteSize;
   dictInsert(cu->tv->types,type->name,type);
   grabRefCounted((RC*)type);
   logprintf(ELL_INFO_V4,ELS_MISC,"added base type of name %s\n",type->name);
+  return type;
 }
 
-void addEnumFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
+void* addEnumFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
 {
   TypeInfo* type=zmalloc(sizeof(TypeInfo));
   type->type=TT_ENUM;
@@ -401,7 +453,7 @@ void addEnumFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
   {
     logprintf(ELL_WARN,ELS_DWARFTYPES,"enumeration %s has no byte length, we can't read it\n",type->name);
     freeTypeInfo(type);
-    return;
+    return NULL;
   }
   type->length=byteSize;
   dictInsert(cu->tv->types,type->name,type);
@@ -414,33 +466,68 @@ void addEnumFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
     type->fde=readAttributeAsInt(attr);
   }
   logprintf(ELL_INFO_V4,ELS_MISC,"added enum of name %s\n",type->name);
+  return type;
 }
 
 //read in the type definition of a structure
-void addStructureFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
+void* addStructureFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
 {
   logprintf(ELL_INFO_V4,ELS_MISC,"reading structure ");
-  TypeInfo* type=zmalloc(sizeof(TypeInfo));
-  type->type=TT_STRUCT;
-  type->cu=cu;
   Dwarf_Error err=0;
 
-  type->name=getNameForDie(dbg,die,cu);
-  logprintf(ELL_INFO_V4,ELS_MISC,"of name %s\n",type->name);
+  char* name=getNameForDie(dbg,die,cu);
+  logprintf(ELL_INFO_V4,ELS_MISC,"of name %s\n",name);
+
+  TypeInfo* type=dictGet(cu->tv->types,name);
+  if(type)
+  {
+    if(!type->declaration)
+    {
+      death("Type %s already exists\n",name);
+    }
+  }
+  else
+  {
+    type=zmalloc(sizeof(TypeInfo));
+  }
+  type->type=TT_STRUCT;
+  type->cu=cu;
+  type->name=name;
+  
+  Dwarf_Attribute attr;
+  int res=dwarf_attr(die,DW_AT_declaration,&attr,&err);
+  if(DW_DLV_OK==res)
+  {
+    type->declaration=(bool)readAttributeAsInt(attr);
+  }
+
+  
+  //insert the type into global types now with a note that
+  //it's incomplete in case has members that reference it
+  dictSet(cu->tv->types,type->name,type,NULL);
+  grabRefCounted((RC*)type);
+  
+  setParsedDie(die,type,cu);
+
+  if(type->declaration)
+  {
+    //nothing more to read, it's just a declaration
+    return type;
+  }
+
+  type->incomplete=true;
+  
+
   Dwarf_Unsigned byteSize;
-  int res=dwarf_bytesize(die,&byteSize,&err);
+  res=dwarf_bytesize(die,&byteSize,&err);
   if(DW_DLV_NO_ENTRY==res)
   {
     fprintf(stderr,"structure %s has no byte length, we can't read it\n",type->name);
     freeTypeInfo(type);
-    return;
+    return NULL;
   }
   type->length=byteSize;
-  //insert the type into global types now with a note that
-  //it's incomplete in case has members that reference it
-  type->incomplete=true;
-  dictInsert(cu->tv->types,type->name,type);
-  grabRefCounted((RC*)type);
+  
   Dwarf_Die child;
   res=dwarf_child(die,&child,&err);
   if(res==DW_DLV_OK)
@@ -485,10 +572,9 @@ void addStructureFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
   {
     fprintf(stderr,"structure %s with no members, this is odd\n",type->name);
     freeTypeInfo(type);//todo: is this really what we want to do
-    return;
+    return NULL;
   }
   //check for fde info for transformation
-  Dwarf_Attribute attr;
   res=dwarf_attr(die,DW_AT_MIPS_fde,&attr,&err);
   if(DW_DLV_OK==res)
   {
@@ -496,27 +582,43 @@ void addStructureFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
   }
   type->incomplete=false;
   logprintf(ELL_INFO_V4,ELS_MISC,"added structure type %s\n",type->name);
+  return type;
 }
 
-void addPointerTypeFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
+void* addPointerTypeFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
 {
+  char* name=getNameForDie(dbg,die,cu);
+  if(dictExists(cu->tv->types,name))
+  {
+    //this is an ok condition, because of typedefs a pointer
+    //type could get added more than once
+    return dictGet(cu->tv->types,name);
+  }
   TypeInfo* type=zmalloc(sizeof(TypeInfo));
   type->type=TT_POINTER;
   type->cu=cu;
   Dwarf_Error err=0;
   logprintf(ELL_INFO_V4,ELS_MISC,"getting name for pointer\n");
-  type->name=getNameForDie(dbg,die,cu);
+  type->name=name;
   logprintf(ELL_INFO_V4,ELS_MISC,"got name for pointer\n");
   type->incomplete=true;//set incomplete and add in case the structure we get refers to it
   dictInsert(cu->tv->types,type->name,type);
   grabRefCounted((RC*)type);
+
+  Dwarf_Off off;
+  dwarf_dieoffset(die,&off,&err);
+  size_t* key=zmalloc(sizeof(size_t));
+  *key=off;
+  //set it properly in parsed dies so it can be referred to
+  mapSet(cu->tv->parsedDies,key,type,NULL,free);
+  
   Dwarf_Unsigned byteSize;
   int res=dwarf_bytesize(die,&byteSize,&err);
   if(DW_DLV_NO_ENTRY==res)
   {
     fprintf(stderr,"structure %s has no byte length, we can't read it\n",type->name);
     freeTypeInfo(type);
-    return;
+    return NULL;
   }
   type->length=byteSize;
   TypeInfo* pointedType=getTypeInfoFromATType(dbg,die,cu);
@@ -538,11 +640,12 @@ void addPointerTypeFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
     type->fde=readAttributeAsInt(attr);
   }
   type->incomplete=false;
+  return type;
 }
 
 
 
-void addArrayTypeFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
+void* addArrayTypeFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
 {
   logprintf(ELL_INFO_V4,ELS_MISC,"reading array type\n");
   TypeInfo* type=zmalloc(sizeof(TypeInfo));
@@ -550,6 +653,8 @@ void addArrayTypeFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
   type->name=getNameForDie(dbg,die,cu);
   type->cu=cu;
   Dwarf_Error err=0;
+
+  setParsedDie(die,type,cu);
   
   TypeInfo* pointedType=getTypeInfoFromATType(dbg,die,cu);
   if(!pointedType)
@@ -570,28 +675,33 @@ void addArrayTypeFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
   dictInsert(cu->tv->types,type->name,type);
   grabRefCounted((RC*)type);
   logprintf(ELL_INFO_V4,ELS_MISC,"added array type of name %s\n",type->name);
+  return type;
 }
 
-void addTypedefFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
+void* addTypedefFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
 {
   char* name=getNameForDie(dbg,die,cu);
   TypeInfo* type=getTypeInfoFromATType(dbg,die,cu);
   if(type)
   {
-    dictInsert(cu->tv->types,name,type);
-    grabRefCounted((RC*)type);
-    logprintf(ELL_INFO_V4,ELS_MISC,"added typedef for name %s\n",name);
+    if(!dictExists(cu->tv->types,name))
+    {
+      dictInsert(cu->tv->types,name,type);
+      grabRefCounted((RC*)type);
+      logprintf(ELL_INFO_V4,ELS_MISC,"added typedef for name %s\n",name);
+    }
   }
   else
   {
     fprintf(stderr,"WARNING: Unable to resolve typedef for %s\n",name);
   }
   free(name);
+  return type;
 }
 
 
 //read in the type definition of a union
-void addUnionFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
+void* addUnionFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
 {
   logprintf(ELL_INFO_V4,ELS_MISC,"reading union ");
   TypeInfo* type=zmalloc(sizeof(TypeInfo));
@@ -607,7 +717,7 @@ void addUnionFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
   {
     logprintf(ELL_ERR,ELS_DWARFTYPES,"union %s has no byte length, we can't read it\n",type->name);
     freeTypeInfo(type);
-    return;
+    return NULL;
   }
   type->length=byteSize;
   //insert the type into global types now with a note that
@@ -615,6 +725,7 @@ void addUnionFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
   type->incomplete=true;
   dictInsert(cu->tv->types,type->name,type);
   grabRefCounted((RC*)type);
+  setParsedDie(die,type,cu);
   Dwarf_Die child;
   res=dwarf_child(die,&child,&err);
   if(res==DW_DLV_OK)
@@ -659,7 +770,7 @@ void addUnionFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
   {
     fprintf(stderr,"union %s with no members, this is odd\n",type->name);
     freeTypeInfo(type);//todo: is this really what we want to do
-    return;
+    return NULL;
   }
   //check for fde info for transformation
   Dwarf_Attribute attr;
@@ -670,6 +781,7 @@ void addUnionFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
   }
   type->incomplete=false;
   logprintf(ELL_INFO_V4,ELS_MISC,"added union type %s\n",type->name);
+  return type;
 }
 
 
@@ -702,7 +814,7 @@ void parseFormalParameter(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
   }
 }
 
-void addVarFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
+void* addVarFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
 {
   VarInfo* var=zmalloc(sizeof(VarInfo));
   var->name=getNameForDie(dbg,die,cu);
@@ -723,7 +835,7 @@ void addVarFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
   {
     fprintf(stderr,"Cannot create var %s when its type cannot be determined\n",var->name);
     free(var->name);
-    return;
+    return NULL;
   }
 
   //variables are not global if we're reading inside a subprogram (function)
@@ -765,10 +877,10 @@ void addVarFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
     li->value=var->type;
     listAppend(&sub->typesHead,&sub->typesTail,li);
   }
-  
+  return var;
 }
 
-void parseCompileUnit(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit** cu,ElfInfo* elf)
+void* parseCompileUnit(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit** cu,ElfInfo* elf)
 {
   *cu=zmalloc(sizeof(CompilationUnit));
   (*cu)->elf=elf;
@@ -791,7 +903,7 @@ void parseCompileUnit(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit** cu,ElfInfo
   Dictionary* globalVars=dictCreate(100);//todo: get rid of magic number 100 and base it on smth
   assert(globalVars);
   tv->globalVars=globalVars;
-  tv->parsedDies=integerMapCreate(100);//todo: get rid of magic number 100 and base it on smth
+  tv->parsedDies=size_tMapCreate(100);//todo: get rid of magic number 100 and base it on smth
   //create the void type
   TypeInfo* voidType=zmalloc(sizeof(TypeInfo));
   voidType->type=TT_VOID;
@@ -801,6 +913,7 @@ void parseCompileUnit(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit** cu,ElfInfo
   (*cu)->name=getNameForDie(dbg,die,*cu);
   setIdentifierForCU(*cu,die);
   logprintf(ELL_INFO_V4,ELS_MISC,"compilation unit has name %s\n",(*cu)->name);
+  return *cu;
 }
 
 SubprogramInfo* addSubprogramFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
@@ -871,15 +984,10 @@ void* parseDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit** cu,bool* parseChi
     death("tag before compile unit\n");
   }
 
-  int* key=zmalloc(sizeof(int));
+  size_t* key=zmalloc(sizeof(size_t));
   *key=off;
   if(*cu)
   {
-    //insert it into our set of parsed dies so that
-    //it's impossible to enter an infinite loop with
-    //a die referencing a die currently being processed
-    //map requires memory allocated for the key
-    mapInsert((*cu)->tv->parsedDies,key,"incomplete");
     *parseChildren=true;
   }
   
@@ -888,38 +996,39 @@ void* parseDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit** cu,bool* parseChi
   switch(tag)
   {
   case DW_TAG_compile_unit:
-    parseCompileUnit(dbg,die,cu,elf);
+    result=parseCompileUnit(dbg,die,cu,elf);
     break;
   case DW_TAG_base_type:
-    addBaseTypeFromDie(dbg,die,*cu);
+    result=addBaseTypeFromDie(dbg,die,*cu);
     break;
   case DW_TAG_pointer_type:
-    addPointerTypeFromDie(dbg,die,*cu);
+    result=addPointerTypeFromDie(dbg,die,*cu);
     break;
   case DW_TAG_array_type:
-    addArrayTypeFromDie(dbg,die,*cu);
+    result=addArrayTypeFromDie(dbg,die,*cu);
     *parseChildren=false;
     break;
   case DW_TAG_structure_type:
-    addStructureFromDie(dbg,die,*cu);
+    result=addStructureFromDie(dbg,die,*cu);
     *parseChildren=false;//reading the structure will have taken care of that
     break;
   case DW_TAG_union_type:
-    addUnionFromDie(dbg,die,*cu);
+    result=addUnionFromDie(dbg,die,*cu);
     *parseChildren=false;//reading the union will have taken care of that
     break;
   case DW_TAG_enumeration_type:
-    addEnumFromDie(dbg,die,*cu);
+    result=addEnumFromDie(dbg,die,*cu);
     *parseChildren=false;//enum's children will be the different
                          //enumeration values, which we don't actually
                          //care about
     break;
   case DW_TAG_typedef:
-  case DW_TAG_const_type://const only changes program semantics, not memory layout, so we don't care about it really, just treat it as a typedef
-    addTypedefFromDie(dbg,die,*cu);
+  case DW_TAG_volatile_type:
+  case DW_TAG_const_type://const/volatile only changes program semantics, not memory layout, so we don't care about it really, just treat it as a typedef
+    result=addTypedefFromDie(dbg,die,*cu);
     break;
   case DW_TAG_variable:
-    addVarFromDie(dbg,die,*cu);
+    result=addVarFromDie(dbg,die,*cu);
     break;
   case DW_TAG_subprogram:
     {
@@ -948,9 +1057,7 @@ void* parseDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit** cu,bool* parseChi
     
   }
   
-  //insert the key as its value too because all we
-  //care about is its existance, not its value
-  mapSet((*cu)->tv->parsedDies,key,key,NULL,NULL);
+  mapSet((*cu)->tv->parsedDies,key,result,NULL,NULL);
   return result;
 }
 

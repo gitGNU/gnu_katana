@@ -37,9 +37,13 @@ typedef struct
   Dictionary* types; //maps type names to TypeInfo structs
   //List* globalTypesList;//exists to give a unique listing of types, as the dictionary contains typedefs, etc //todo: support this
   Dictionary* globalVars;  /*maps var names to VarInfo structs.  */
-  Map* parsedDies; //contains global offsets of dwarf dies we've parsed so far
-                          //this is necessary because we don't necessarily parse them
-                          //in order because a die can refer to a die that comes later
+  Map* parsedDies; //contains keys that areglobal offsets of dwarf
+                   //dies we've parsed so far this is necessary
+                   //because we don't necessarily parse them in order
+                   //because a die can refer to a die that comes
+                   //later. The values are the data 
+
+                       
 } TypeAndVarInfo;
 
 void freeTypeAndVarInfo(TypeAndVarInfo* tv);
@@ -110,6 +114,7 @@ typedef struct TypeInfo_
                     same struct, reading the struct members will
                     reference this type which is only half read
                     itself*/
+  bool declaration;//this type only represents a declaration, and is not a full definition
   CompilationUnit* cu; //which compilation unit the type is in. NULL
                        //if the type is visible to all compilation
                        //units
