@@ -74,8 +74,12 @@ List* getChangedObjectFilesInSourceTree(char* origSourceTree,char* modSourceTree
   int j=0;
   for(;i<numEntriesOrig && j<numEntriesMod;)
   {
+    assert(dirEntriesOrig[i]);
+    assert(dirEntriesMod[j]);
+    assert(dirEntriesOrig[i]->d_name);
+    assert(dirEntriesMod[j]->d_name);
     char* fullPathOrig=joinPaths(origSourceTree,dirEntriesOrig[i]->d_name);
-    char* fullPathMod=joinPaths(modSourceTree,dirEntriesMod[i]->d_name);
+    char* fullPathMod=joinPaths(modSourceTree,dirEntriesMod[j]->d_name);
     int cmp=strcmp(dirEntriesOrig[i]->d_name,dirEntriesMod[j]->d_name);
     if(!cmp)
     {
