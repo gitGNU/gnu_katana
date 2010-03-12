@@ -111,6 +111,28 @@ void freeTypeInfo(TypeInfo* t)
   free(t);
 }
 
+TypeInfo* duplicateTypeInfo(const TypeInfo* t)
+{
+  TypeInfo* result=zmalloc(sizeof(TypeInfo));
+  memcpy(result,t,sizeof(TypeInfo));
+  result->rc.refcount=0;
+  result->name=strdup(t->name);
+  result->fields=zmalloc(sizeof(char*)*t->numFields);
+  result->fieldLengths=zmalloc(sizeof(int)*t->numFields);
+  result->fieldTypes=zmalloc(sizeof(TypeInfo*)*t->numFields);
+  for(int i=0;i<t->numFields;i++)
+  {
+    result->fields[i]=strdup(t->fields[i]);
+    result->fieldLengths[i]=t->fieldLengths[i];
+    result->fieldTypes[i]=t->fieldTypes[i];
+    grabRefCounted((RC*)result->fieldTypes[i]);
+  }
+  result->pointedType=t->pointedType;
+  result->lowerBound=t->lowerBound;
+  result->upperBound=t->upperBound;
+  return result;
+}
+
 //wrapper
 void freeTypeTransformVoid(void* t)
 {
