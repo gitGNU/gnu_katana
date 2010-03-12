@@ -11,6 +11,7 @@
 #include <gelf.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <limits.h>
 #include <dwarf.h>
 #include <assert.h>
 #include "register.h"
@@ -654,8 +655,8 @@ void writePatch(char* oldSourceTree,char* newSourceTree,char* oldBinName,char* n
         ElfInfo* elf1=getOriginalObject(obj);
         ElfInfo* elf2=getModifiedObject(obj);
         logprintf(ELL_INFO_V1,ELS_PATCHWRITE,"Finding differences between %s and %s and writing them to the patch\n",elf1->fname,elf2->fname);
-        readDWARFTypes(elf1);
-        readDWARFTypes(elf2);
+        readDWARFTypes(elf1,oldSourceTree);
+        readDWARFTypes(elf2,newSourceTree);
         //all the object files had their own roData sections
         //and now we're lumping them together
         writeROData(elf2);
@@ -667,7 +668,7 @@ void writePatch(char* oldSourceTree,char* newSourceTree,char* oldBinName,char* n
     case EOS_NEW:
       {
         ElfInfo* elf=getModifiedObject(obj);
-        readDWARFTypes(elf);
+        readDWARFTypes(elf,newSourceTree);
         writeAllTypeAndFuncTransformationInfo(elf);
       }
     default:

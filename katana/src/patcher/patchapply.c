@@ -538,7 +538,9 @@ void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch)
   //todo: we're assuming for now that symbols in the binary the patch was generated
   //with and in the target binary are going to have the same values
   //this isn't necessarily going to be the case
-  DwarfInfo* diPatch=readDWARFTypes(patch);
+  char cwd[PATH_MAX];
+  getcwd(cwd,PATH_MAX);
+  DwarfInfo* diPatch=readDWARFTypes(patch,cwd);
   Map* fdeMap=readDebugFrame(patch);//get mapping between fde offsets and fde structures
 
 

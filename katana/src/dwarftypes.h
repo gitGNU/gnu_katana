@@ -12,7 +12,9 @@
 #include "elfparse.h"
 #include <libdwarf.h>
 //caller should free info when no longer needs it
-DwarfInfo* readDWARFTypes(ElfInfo* elf);
+//workingDir is used for path names
+//it is the directory that names should be relative to
+DwarfInfo* readDWARFTypes(ElfInfo* elf,char* workingDir);
 
 
 void dwarfErrorHandler(Dwarf_Error err,Dwarf_Ptr arg);
