@@ -116,7 +116,14 @@ typedef struct TypeInfo_
                     same struct, reading the struct members will
                     reference this type which is only half read
                     itself*/
-  bool declaration;//this type only represents a declaration, and is not a full definition
+  bool declaration;//this type only represents a declaration, and is
+                   //not a full definition
+  bool isConst;//const type. Really in C const is an attribute, but in
+               //Dwarf it leads to a separate type, and that's what we
+               //need here as well. We don't just treat consts as
+               //typedefs because we can make more assumptions about
+               //them (like we always change the target if the
+               //initializer changes)
   CompilationUnit* cu; //which compilation unit the type is in. NULL
                        //if the type is visible to all compilation
                        //units
@@ -152,6 +159,7 @@ typedef struct TypeInfo_
   ///////////////////////////////////////////
 } TypeInfo;
 
+TypeInfo* duplicateTypeInfo(const TypeInfo* t);
 void freeTypeInfo(TypeInfo* t);
 
 #define FIELD_DELETED -2
