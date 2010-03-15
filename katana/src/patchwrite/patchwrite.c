@@ -326,6 +326,8 @@ List* getTypeTransformationInfoForCU(CompilationUnit* cuOld,CompilationUnit* cuN
       }
       else
       {
+        //todo: this is ugly separate out into its own function
+        
         //what if the initializers for the variables have changed
         idx_t symIdxOld=getSymtabIdx(cuOld->elf,var->name,0);
         idx_t symIdxNew=getSymtabIdx(cuNew->elf,var->name,0);
@@ -340,12 +342,33 @@ List* getTypeTransformationInfoForCU(CompilationUnit* cuOld,CompilationUnit* cuN
              symNew.st_shndx!=SHN_COMMON && symNew.st_shndx!=SHN_UNDEF &&
              symNew.st_shndx!=SHN_ABS && symOld.st_shndx!=SHN_ABS)
           {
-            byte* initializerOld=getDataAtAbs(elf_getscn(cuOld->elf->e,symOld.st_shndx),
+            GElf_Shdr shdrOld;
+            GElf_Shdr shdrNew;
+            Elf_Scn* scnOld=elf_getscn(cuOld->elf->e,symOld.st_shndx);
+            Elf_Scn* scnNew=elf_getscn(cuNew->elf->e,symNew.st_shndx);
+            getShdr(scnOld,&shdrOld);
+            getShdr(scnNew,&shdrNew);
+            if(shdrOld.sh_type!=SHT_NOBITS && shdrNew.sh_type!=SHT_NOBITS)
+            {
+              byte* initializerOld=getDataAtAbs(scnOld,
                                               symOld.st_value,IN_MEM);
-            byte* initializerNew=getDataAtAbs(elf_getscn(cuNew->elf->e,symNew.st_shndx),
+              byte* initializerNew=getDataAtAbs(scnNew,
                                               symNew.st_value,IN_MEM);
-            //todo: I don't think this handles bss correctly
-            if(memcmp(initializerOld,initializerNew,ti1->length))
+              if(memcmp(initializerOld,initializerNew,ti1->length))
+              {
+                if(TT_CONST==ti1->type)
+                {
+                  //we can copy over the data with impunity,
+                  //the target shouldn't have changed it
+                  needsTransform=true;
+                }
+                else
+                {
+                  logprintf(ELL_WARN,ELS_DWARFTYPES,"Variable %s (in %s) has a different initializer between versions. Doing nothing about this, but this may not be what you want\n",var->name,cuNew->name);
+                }
+              }
+            }
+            else if(shdrOld.sh_type!=shdrNew.sh_type)
             {
               if(TT_CONST==ti1->type)
               {
