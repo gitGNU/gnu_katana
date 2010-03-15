@@ -342,7 +342,7 @@ List* makePatchData(PoRegRule* rule,SpecialRegsState* state,ElfInfo* patch,ElfIn
 }
 
 //returns a list of PatchData objects
-  List* generatePatchesFromFDEAndState(FDE* fde,SpecialRegsState* state,ElfInfo* patch,ElfInfo* patchedBin)
+List* generatePatchesFromFDEAndState(FDE* fde,SpecialRegsState* state,ElfInfo* patch,ElfInfo* patchedBin)
 {
   //we build up rules for each register from the DW_CFA instructions
   Dictionary* rulesDict=dictCreate(100);//todo: get rid of arbitrary constant 100
