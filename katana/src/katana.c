@@ -165,6 +165,7 @@ int main(int argc,char** argv)
     char* patchFile=argv[optind];
     logprintf(ELL_INFO_V3,ELS_MISC,"patch file is %s\n",patchFile);
     ElfInfo* patch=openELFFile(patchFile);
+    patch->isPO=true;//todo: this should be detected by openELFFile
     printf("*********Type and Function Info****************\n");
     printPatchDwarfInfo(patch);
     printf("\n*********Safety Info****************\n");
