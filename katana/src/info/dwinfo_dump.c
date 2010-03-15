@@ -14,8 +14,8 @@ void printPatchDwarfInfo(ElfInfo* patch)
 {
   if(!patch->dwarfInfo)
   {
-      char cwd[PATH_MAX];
-      getcwd(cwd,PATH_MAX);
+    char cwd[PATH_MAX];
+    getcwd(cwd,PATH_MAX);
     readDWARFTypes(patch,cwd);
   }
   DwarfInfo* di=patch->dwarfInfo;
