@@ -959,12 +959,20 @@ void* parseCompileUnit(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit** cu,ElfInf
   voidType->type=TT_VOID;
   voidType->name=strdup("void");
   dictInsert(tv->types,voidType->name,voidType);
-  grabRefCounted((RC*)voidType);  
+  grabRefCounted((RC*)voidType);
   char* name=getNameForDie(dbg,die,*cu);
-  char* dir=getDirectoryOfPath(elf->fname);
-  char* relDir=makePathRelativeTo(dir,workingDir);
-  free(dir);
-  (*cu)->name=joinPaths(relDir,name);
+  if(!elf->isPO)
+  {
+    char* dir=getDirectoryOfPath(elf->fname);
+    char* relDir=makePathRelativeTo(dir,workingDir);
+    free(dir);
+    (*cu)->name=joinPaths(relDir,name);
+    free(name);
+  }
+  else
+  {
+    (*cu)->name=name;
+  }
   setIdentifierForCU(*cu,die);
   logprintf(ELL_INFO_V4,ELS_MISC,"compilation unit has name %s\n",(*cu)->name);
   return *cu;
