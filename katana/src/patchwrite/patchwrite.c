@@ -403,11 +403,19 @@ List* getTypeTransformationInfoForCU(CompilationUnit* cuOld,CompilationUnit* cuN
       List* li=zmalloc(sizeof(List));
       VarTransformation* vt=zmalloc(sizeof(VarTransformation));
       vt->var=patchedVar;
-      vt->transform=var->type->transformer;
       vt->cu=cuNew;
-      if(!vt->transform && vt->var->type->type!=TT_CONST)
+
+      //never write an FDE transformation for const global variables
+      //because the program should never change them, should
+      //be changed by initializer only
+      if(TT_CONST!=vt->var->type->type)
       {
-        death("the transformation info for that variable doesn't exist!\n");
+        vt->transform=var->type->transformer;
+        if(!vt->transform)
+        {
+          death("the transformation info for that variable doesn't exist!\n");
+        }
+
       }
       li->value=vt;
       if(varTransHead)
