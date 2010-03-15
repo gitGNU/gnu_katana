@@ -106,7 +106,11 @@ bool compareTypesAndGenTransforms(TypeInfo* a,TypeInfo* b)
     if(a->lowerBound != b->lowerBound || a->upperBound!=b->upperBound)
     {
       retval=false;
-      death("haven't actually figured out how to properly write a type transformer for arrays yet. Poke James to do this\n");
+      logprintf(ELL_WARN,ELS_TYPEDIFF,"Generating type transformation for array %s/%s by assuming anything new has been put on the end of the array. This may not be what you want\n",a->name,b->name);
+      if(a->lowerBound != b->lowerBound)
+      {
+        death("haven't actually figured out how to properly write a type transformer for arrays changing lower bound yet. Poke James to do this\n");
+      }
       break;
     }
     //deliberately no break here because want to check pointed type too
@@ -141,11 +145,13 @@ bool compareTypesAndGenTransforms(TypeInfo* a,TypeInfo* b)
   transform->from=a;
   transform->to=b;
 
-  if(TT_UNION==a->type || TT_ENUM==a->type)
+  if(TT_UNION==a->type || TT_ENUM==a->type || TT_ARRAY==a->type)
   {
     //a straight copy is the only way we can do a union, because we don't know
     //what's inside it. If we detect that a straight copy won't work,
     //we'll bail later
+
+    //it's not really the way we want to do an array, but arrays are pretty opaque
     transform->straightCopy=true;
   }
 
