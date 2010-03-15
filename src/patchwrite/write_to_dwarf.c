@@ -90,6 +90,10 @@ void writeTypeToDwarf(Dwarf_P_Debug dbg,TypeInfo* type)
     break;
   case TT_CONST:
     tag=DW_TAG_const_type;
+    break;
+  case TT_SUBROUTINE_TYPE:
+    tag=DW_TAG_subroutine_type;
+    break;
   case TT_VOID:
     return;//don't actually need to write out the void type, DWARF doesn't represent it
     break;
@@ -102,7 +106,7 @@ void writeTypeToDwarf(Dwarf_P_Debug dbg,TypeInfo* type)
   Dwarf_P_Die die=dwarf_new_die(dbg,tag,parent,NULL,type->cu->lastDie,NULL,&err);
   type->cu->lastDie=die;
   type->die=die;
-  if(TT_CONST!=type->type)
+  if(TT_CONST!=type->type && TT_SUBROUTINE_TYPE!=type->type)
   {
     dwarf_add_AT_name(die,type->name,&err);
     dwarf_add_AT_unsigned_const(dbg,die,DW_AT_byte_size,type->length,&err);
@@ -206,6 +210,14 @@ void writeTransformationToDwarf(Dwarf_P_Debug dbg,TypeTransform* trans)
     return;
   }
   trans->onDisk=true;
+  if(TT_CONST==trans->from->type && !trans->straightCopy)
+  {
+    TypeTransform* transformer=trans->from->pointedType->transformer;
+    assert(transformer);
+    writeTransformationToDwarf(dbg,transformer);
+    trans->fdeIdx=transformer->fdeIdx;
+    return;
+  }
   Dwarf_Error err;
   Dwarf_P_Fde fde=dwarf_new_fde(dbg,&err);
   assert(trans->to->die);
