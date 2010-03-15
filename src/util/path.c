@@ -28,7 +28,7 @@ char* joinPaths(char* path1,char* path2)
   {
     return result;
   }
-  if(path1 && !strEndsWith(path1,"/"))
+  if(path1 && path1[0]!='\0' && !strEndsWith(path1,"/"))
   {
     strcat(result,"/");
   }
