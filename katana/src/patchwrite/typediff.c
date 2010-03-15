@@ -111,6 +111,7 @@ bool compareTypesAndGenTransforms(TypeInfo* a,TypeInfo* b)
     }
     //deliberately no break here because want to check pointed type too
   case TT_POINTER:
+  case TT_CONST:
     //this will generate the necessary transformation
     if(!compareTypesAndGenTransforms(a->pointedType,b->pointedType))
     {
@@ -180,6 +181,7 @@ bool compareTypesAndGenTransforms(TypeInfo* a,TypeInfo* b)
       transform->fieldTransformTypes[i]=EFTT_RECURSE;
       break;
     case TT_POINTER:
+    case TT_CONST:
       if(!compareTypesAndGenTransforms(fieldTypeOld->pointedType,fieldTypeNew->pointedType))
       {
         if(!fieldTypeOld->pointedType->transformer)

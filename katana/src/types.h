@@ -93,6 +93,7 @@ typedef enum
   TT_UNION,
   TT_ENUM,
   TT_SUBROUTINE_TYPE,//for function pointers to point to
+  TT_CONST,//const version of another type
   TT_VOID //the void type
 } TYPE_TYPE;
 
@@ -118,12 +119,6 @@ typedef struct TypeInfo_
                     itself*/
   bool declaration;//this type only represents a declaration, and is
                    //not a full definition
-  bool isConst;//const type. Really in C const is an attribute, but in
-               //Dwarf it leads to a separate type, and that's what we
-               //need here as well. We don't just treat consts as
-               //typedefs because we can make more assumptions about
-               //them (like we always change the target if the
-               //initializer changes)
   CompilationUnit* cu; //which compilation unit the type is in. NULL
                        //if the type is visible to all compilation
                        //units
@@ -144,11 +139,11 @@ typedef struct TypeInfo_
   ///////////////////////////////////////////
   //end only applicable to structs and unions
   ///////////////////////////////////////////
-  //applicable only to pointers or arrays
+  //applicable only to pointers, arrays, or const
   ///////////////////////////////////////////
   struct TypeInfo_* pointedType;//could also be called arrayType
   ///////////////////////////////////////////
-  //end applicable only to pointers or arrays
+  //end applicable only to pointers, arrays, or const
   ///////////////////////////////////////////
   //applicable only to arrays
   ///////////////////////////////////////////
