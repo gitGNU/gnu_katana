@@ -241,8 +241,11 @@ void writeVarTransforms(List* varTrans)
     //writeOldTypeToDwarf(vt->transform->from,vt->var->type->cu);
     writeVarToDwarf(dbg,vt->var,vt->cu,false);
     writeVarToData(vt->var);
-    writeTransformationToDwarf(dbg,vt->transform);
-    printf("writing transformation for var %s\n",vt->var->name);
+    if(vt->transform) //will be no transformation if just changing the initializer
+    {
+      writeTransformationToDwarf(dbg,vt->transform);
+      printf("writing transformation for var %s\n",vt->var->name);
+    }
     /*
     //create the symbol entry
     //this means first creating the string table entry
@@ -282,7 +285,7 @@ List* getTypeTransformationInfoForCU(CompilationUnit* cuOld,CompilationUnit* cuN
 {
   List* varTransHead=NULL;
   List* varTransTail=NULL;
-  printf("Examining compilation unit %s\n",cuOld->name);
+  logprintf(ELL_INFO_V1,ELS_PATCHWRITE,"Examining compilation unit %s\n",cuOld->name);
   VarInfo** vars1=(VarInfo**)dictValues(cuOld->tv->globalVars);
 
   VarInfo* var=vars1[0];
@@ -293,7 +296,7 @@ List* getTypeTransformationInfoForCU(CompilationUnit* cuOld,CompilationUnit* cuN
     if(!patchedVar)
     {
       //todo: do we need to do anything special to handle removal of variables in the patch?
-      printf("warning: var %s seems to have been removed in the patch\n",var->name);
+      logprintf(ELL_WARN,ELS_PATCHWRITE,"var %s seems to have been removed in the patch\n",var->name);
       continue;
     }
     TypeInfo* ti1=var->type;
@@ -321,6 +324,56 @@ List* getTypeTransformationInfoForCU(CompilationUnit* cuOld,CompilationUnit* cuN
         printf("generated type transformation for type %s\n",ti1->name);
         needsTransform=true;
       }
+      else
+      {
+        //what if the initializers for the variables have changed
+        idx_t symIdxOld=getSymtabIdx(cuOld->elf,var->name,0);
+        idx_t symIdxNew=getSymtabIdx(cuNew->elf,var->name,0);
+        if(symIdxOld!=STN_UNDEF && symIdxNew!=STN_UNDEF)
+        {       
+          //check to see if its initializer has changed
+          GElf_Sym symOld;
+          GElf_Sym symNew;
+          getSymbol(cuOld->elf,symIdxOld,&symOld);
+          getSymbol(cuNew->elf,symIdxNew,&symNew);
+          if(symOld.st_shndx!=SHN_COMMON && symOld.st_shndx!=SHN_UNDEF &&
+             symNew.st_shndx!=SHN_COMMON && symNew.st_shndx!=SHN_UNDEF &&
+             symNew.st_shndx!=SHN_ABS && symOld.st_shndx!=SHN_ABS)
+          {
+            byte* initializerOld=getDataAtAbs(elf_getscn(cuOld->elf->e,symOld.st_shndx),
+                                              symOld.st_value,IN_MEM);
+            byte* initializerNew=getDataAtAbs(elf_getscn(cuNew->elf->e,symNew.st_shndx),
+                                              symNew.st_value,IN_MEM);
+            //todo: I don't think this handles bss correctly
+            if(memcmp(initializerOld,initializerNew,ti1->length))
+            {
+              if(TT_CONST==ti1->type)
+              {
+                //we can copy over the data with impunity,
+                //the target shouldn't have changed it
+                needsTransform=true;
+              }
+              else
+              {
+                logprintf(ELL_WARN,ELS_DWARFTYPES,"Variable %s (in %s) has a different initializer between versions. Doing nothing about this, but this may not be what you want\n",var->name,cuNew->name);
+              }
+            }
+          }
+          else if(symOld.st_shndx!=symNew.st_shndx)
+          {
+            death("This isn't implemented yet, poke James to implement it\n");
+            //todo: what if just one is undefined/common?
+          }
+            //todo: handle SHN_ABS properly
+        }
+        else if((symIdxNew==STN_UNDEF && symIdxOld!=STN_UNDEF) ||
+                (symIdxNew!=STN_UNDEF && symIdxOld==STN_UNDEF))
+        {
+          //todo: what do we actually want to do here
+          logprintf(ELL_WARN,ELS_DWARFTYPES,"In one version of %s, variable %s does not have a symbol. Ignoring this, may not be what you want\n",cuNew->name,var->name);
+        }
+        
+      }
     }
     if(needsTransform)
     {
@@ -329,7 +382,7 @@ List* getTypeTransformationInfoForCU(CompilationUnit* cuOld,CompilationUnit* cuN
       vt->var=patchedVar;
       vt->transform=var->type->transformer;
       vt->cu=cuNew;
-      if(!vt->transform)
+      if(!vt->transform && vt->var->type->type!=TT_CONST)
       {
         death("the transformation info for that variable doesn't exist!\n");
       }
@@ -435,7 +488,7 @@ void writeFuncTransformationInfoForCU(CompilationUnit* cuOld,CompilationUnit* cu
     SubprogramInfo* patchedFunc=dictGet(cuNew->subprograms,func->name);
     if(!patchedFunc)
     {
-      fprintf(stderr,"WARNING: function %s was removed from the patched version of compilation unit %s\n",func->name,cuNew->name);
+      logprintf(ELL_WARN,ELS_PATCHWRITE,"function %s was removed from the patched version of compilation unit %s\n",func->name,cuNew->name);
       continue;
     }
     if(!areSubprogramsIdentical(func,patchedFunc,cuOld->elf,cuNew->elf))

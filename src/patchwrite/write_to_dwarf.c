@@ -88,6 +88,8 @@ void writeTypeToDwarf(Dwarf_P_Debug dbg,TypeInfo* type)
   case TT_ENUM:
     tag=DW_TAG_enumeration_type;
     break;
+  case TT_CONST:
+    tag=DW_TAG_const_type;
   case TT_VOID:
     return;//don't actually need to write out the void type, DWARF doesn't represent it
     break;
@@ -100,9 +102,13 @@ void writeTypeToDwarf(Dwarf_P_Debug dbg,TypeInfo* type)
   Dwarf_P_Die die=dwarf_new_die(dbg,tag,parent,NULL,type->cu->lastDie,NULL,&err);
   type->cu->lastDie=die;
   type->die=die;
-  dwarf_add_AT_name(die,type->name,&err);
-  dwarf_add_AT_unsigned_const(dbg,die,DW_AT_byte_size,type->length,&err);
-  if((TT_POINTER==type->type || TT_ARRAY==type->type) && TT_VOID!=type->pointedType->type)
+  if(TT_CONST!=type->type)
+  {
+    dwarf_add_AT_name(die,type->name,&err);
+    dwarf_add_AT_unsigned_const(dbg,die,DW_AT_byte_size,type->length,&err);
+  }
+  if((TT_POINTER==type->type || TT_ARRAY==type->type || TT_CONST==type->type)
+     && TT_VOID!=type->pointedType->type)
   {
     if(strEndsWith(type->name,"~"))
     {

@@ -410,6 +410,18 @@ TypeInfo* getTypeInfoFromATType(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* c
   return data;
 }
 
+void getTypeFDE(TypeInfo* type,Dwarf_Die die)
+{
+  Dwarf_Error err;
+  //check for fde info for transformation
+  Dwarf_Attribute attr;
+  int res=dwarf_attr(die,DW_AT_MIPS_fde,&attr,&err);
+  if(DW_DLV_OK==res)
+  {
+    type->fde=readAttributeAsInt(attr);
+  }
+}
+
 void setParsedDie(Dwarf_Die die,void* data,CompilationUnit* cu)
 {
   Dwarf_Error err;
@@ -529,7 +541,7 @@ void* addStructureFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
   res=dwarf_bytesize(die,&byteSize,&err);
   if(DW_DLV_NO_ENTRY==res)
   {
-    fprintf(stderr,"structure %s has no byte length, we can't read it\n",type->name);
+    logprintf(ELL_WARN,ELS_DWARFTYPES,"structure %s has no byte length, we can't read it\n",type->name);
     freeTypeInfo(type);
     return NULL;
   }
@@ -621,7 +633,7 @@ void* addPointerTypeFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
   int res=dwarf_bytesize(die,&byteSize,&err);
   if(DW_DLV_NO_ENTRY==res)
   {
-    fprintf(stderr,"structure %s has no byte length, we can't read it\n",type->name);
+    logprintf(ELL_WARN,ELS_DWARFTYPES,"pointer type %s has no byte length, we can't read it\n",type->name);
     freeTypeInfo(type);
     return NULL;
   }
@@ -644,6 +656,41 @@ void* addPointerTypeFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
   {
     type->fde=readAttributeAsInt(attr);
   }
+  type->incomplete=false;
+  return type;
+}
+
+void* addConstTypeFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
+{
+  char* name=getNameForDie(dbg,die,cu);
+  if(dictExists(cu->tv->types,name))
+  {
+    //this is an ok condition, because of typedefs a const
+    //type could get added more than once
+    return dictGet(cu->tv->types,name);
+  }
+  TypeInfo* type=zmalloc(sizeof(TypeInfo));
+  type->type=TT_CONST;
+  type->cu=cu;
+  type->name=name;
+  type->incomplete=true;//set incomplete and add in case the structure we get refers to it
+  dictInsert(cu->tv->types,type->name,type);
+  grabRefCounted((RC*)type);
+
+  setParsedDie(die,type,cu);
+  
+  TypeInfo* pointedType=getTypeInfoFromATType(dbg,die,cu);
+  if(!pointedType)
+  {
+    logprintf(ELL_ERR,ELS_DWARFTYPES,"cannot add const type %s when the type it refers to does not exist\n",type->name);
+    type->pointedType=NULL;
+  }
+  else
+  {
+    type->pointedType=pointedType;
+  }
+  type->length=pointedType->length;
+  getTypeFDE(type,die);
   type->incomplete=false;
   return type;
 }
@@ -1083,8 +1130,15 @@ void* parseDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit** cu,bool* parseChi
     break;
   case DW_TAG_typedef:
   case DW_TAG_volatile_type:
-  case DW_TAG_const_type://const/volatile only changes program semantics, not memory layout, so we don't care about it really, just treat it as a typedef
+    //volatile only changes program semantics, not memory layout, so we don't care about it really, just treat it as a typedef
     result=addTypedefFromDie(dbg,die,*cu);
+    break;
+  case DW_TAG_const_type:
+    //unlike volatile, const actually is important to us because
+    //if a global variable is const, we know it cannot be modified
+    //and therefore if its initializer changes, we know we should use the new
+    //initializer
+    result=addConstTypeFromDie(dbg,die,*cu);
     break;
   case DW_TAG_variable:
     result=addVarFromDie(dbg,die,*cu);
