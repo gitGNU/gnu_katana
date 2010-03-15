@@ -362,8 +362,8 @@ List* getRelocationItemsFor(ElfInfo* e,int symIdx)
         {
           reloc=zmalloc(sizeof(RelocInfo));
           reloc->e=e;
-          reloc->scnIdx=scnIdx;
         }
+        reloc->scnIdx=scnIdx;
         gelf_getrel(data,j,&rel);
         //printf("found relocation item for symbol %u\n",(unsigned int)ELF64_R_SYM(rel.r_info));
         if(ELF64_R_SYM(rel.r_info)!=symIdx)

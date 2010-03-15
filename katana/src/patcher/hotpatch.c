@@ -53,6 +53,7 @@ addr_t getFreeSpaceInTarget(uint howMuch)
   //we just discard it. This is wasteful
 }
 
+//todo: does this function belong in this file?
 void performRelocations(ElfInfo* e,VarInfo* var)
 {
   int symIdx=getSymtabIdx(e,var->name,0);
@@ -64,13 +65,23 @@ void performRelocations(ElfInfo* e,VarInfo* var)
   List* relocItems=getRelocationItemsFor(e,symIdx);
   for(List* li=relocItems;li;li=li->next)
   {
-    RelocInfo* rel=li->value;
-    printf("relocation for %s at %x with type %i\n",var->name,(unsigned int)rel->r_offset,(unsigned int)rel->relocType);
+    RelocInfo* reloc=li->value;
+    GElf_Shdr shdr;
+    getShdr(elf_getscn(reloc->e->e,reloc->scnIdx),&shdr);
+    char* scnName=getScnHdrString(reloc->e,shdr.sh_name);
+    if(strncmp(".text",scnName,5))
+    {
+      //todo: are there any other relocation types we have to fix up besides text ones
+      //todo: probably should fix up relocations on disk as well as in memory so on disk is
+      //      in sync with in memory for when we do consecutive patching
+      continue;
+    }
+    printf("relocation for %s at %x with type %i\n",var->name,(unsigned int)reloc->r_offset,(unsigned int)reloc->relocType);
     word_t oldAddrAccessed=0;
-    switch(rel->relocType)
+    switch(reloc->relocType)
     {
     case R_386_32:
-      oldAddrAccessed=getTextAtAbs(e,rel->r_offset,IN_MEM);
+      oldAddrAccessed=getWordAtAbs(elf_getscn(e->e,reloc->scnIdx),reloc->r_offset,IN_MEM);
       break;
     default:
       death("relocation type we can't handle yet\n");
@@ -87,6 +98,6 @@ void performRelocations(ElfInfo* e,VarInfo* var)
     
     uint newAddrAccessed=var->newLocation+offset;//newAddr is new address of the symbol
     printf("new addr is 0x%x\n",newAddrAccessed);
-    modifyTarget(rel->r_offset,newAddrAccessed);//now the access is fully relocated
+    modifyTarget(reloc->r_offset,newAddrAccessed);//now the access is fully relocated
   }
 }
