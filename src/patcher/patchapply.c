@@ -73,9 +73,10 @@ void relocateVar(VarInfo* var,ElfInfo* targetBin)
   gelf_update_sym(symTabData,symIdx,&sym);
 
   logprintf(ELL_INFO_V4,ELS_PATCHAPPLY,"var new location is 0x%x\n",var->newLocation);
-  
-  //todo: how much do we need to do as long as we're patching code
-  //performRelocations(targetBin,var);
+
+  //do need to do this because may contain some relocations
+  //not in new code
+  performRelocations(targetBin,var);
 }
 
 void insertTrampolineJump(addr_t insertAt,addr_t jumpTo)
@@ -122,17 +123,21 @@ void applyVariablePatch(VarInfo* var,Map* fdeMap,ElfInfo* patch)
     //todo: should make space for the variable in .data.new or something
     getSymbol(targetBin,idx,&sym);
     var->oldLocation=sym.st_value;
-    bool relocate=sym.st_size < var->type->length;
-    printf("need to relocated is %i as st_size is %i and new size is %i\n",relocate,(int)sym.st_size,var->type->length);
+    //now always relocating because the contents of .data.new may matter. todo: is this correct
+    //bool relocate=sym.st_size < var->type->length;
+    //printf("need to relocated is %i as st_size is %i and new size is %i\n",relocate,(int)sym.st_size,var->type->length);
     if(!var->newLocation)
     {
-      var->newLocation=var->oldLocation;//didn't need to relocate the var
+      var->newLocation=var->oldLocation;//didn't need to relocate the bar
     }
-    transformVarData(var,fdeMap,patch);
+    if(var->type->fde)//might not have an fde if just a constant with a changed initializer
+    {
+      transformVarData(var,fdeMap,patch);
+    }
     if(var->newLocation!=var->oldLocation)
     {
-      //todo: do we need this here,
-      //do more relocations later
+      //do need to do this because may contain some relocations
+      //not in .rela.text.new
       relocateVar(var,targetBin);
     }
   }
