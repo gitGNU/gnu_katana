@@ -60,17 +60,22 @@ the address space of the process, and updates each PLT entry.
 For dynamic symbols, Katana traverses the PLT entries of the
 executable and compares the symbol name of each entry with
 the symbol name that requires relocation. Once a match is found, the
-symbol value can be determined. In our prototype,
-Katana is unable to handle calls to previously
-%SB:
-unused functions present in any shared libraries\footnote{This would
-  require creation of new PLT and GOT entries and either subsequent
-  re-basing of the following segments of the executable, or creation
-  of a new segment to allocate the extra entries. Although ELF
-  rewriting systems like ERESI or Diablo show that such manipulations
-  can be made practical, we chose not to complicate Katana with
-  them yet.}
-, although support for this is planned.
+symbol value can be determined. Our current prototype cannot add calls
+to previously unused functions in shared libraries, but support for
+this will be added using the ``ALTPLT'' technique described in \cite{elf-debugging}.
+
+%JMHO: this got too many negative comments from reviewers, removing
+%and clarifying above
+% Katana is unable to handle calls to previously
+% %SB:
+% unused functions present in any shared libraries\footnote{This would
+%   require creation of new PLT and GOT entries and either subsequent
+%   re-basing of the following segments of the executable, or creation
+%   of a new segment to allocate the extra entries. Although ELF
+%   rewriting systems like ERESI or Diablo show that such manipulations
+%   can be made practical, we chose not to complicate Katana with
+%   them yet.}
+% , although support for this is planned.
 
 Finally, if the outstanding symbol's definition was not found within
 the replicated executable (either within the symbol table or the PLT),
@@ -188,8 +193,7 @@ modified types identified during {\it type discovery}. If it is, then
 we add the variable along with its {\it original} address from the replicated
 executable, its {\it new} address from the patch, and type information to the
 PO. At the end of this stage, Katana would have identified all newly
-created or modified variables from the patch. Dealing with variable
-scope and safety is still a work in progress in the current prototype.
+created or modified variables from the patch. 
 %\newline
 \newline
 (iii) {\it Patch Application: } Applying a data patch consists of
@@ -206,23 +210,54 @@ segment (in case of structures such as lists, trees, since we have the
 type specification, we can repeat this process recursively for each
 node on the list or tree). Else if the variable is not a pointer, then
 Katana modifies all its references in the program text to the updated
-memory location from the patch. In the current prototype, Katana
-automatically zeros all {\it new} member variables within structures.
-Eventually it will support default values and programmer-written
+memory location from the patch. Katana supports default values in the
+sense that if the variable has an initializer in the new version of
+the program text, that initializer will be used for any member
+variables within structures which or array elements which did not
+previously exist in the executing target. Initializers from the new
+version are used for all \texttt{const} global variables.
+Eventually Katana it will support default values and programmer-written
 custom initializers.
 
 {\bf Challenges.} %\hskip 0.1in 
-Hot patching still faces a number of
+Data patching, as described above, is not an easy task, even with
+DWARF type information. C, as well as many other directly compiled
+languages, does not have a strong type system, and is not designed to
+allow reflection. Structures are relatively straightforward to patch,
+because they contain a detailed specification. Unions and arrays, on
+the other hand, are generally quite opaque. If substantial changes
+have been made to one of the types in a union, Katana cannot do
+anything automatically, as there is no automatic way to determine
+which unioned type to act on. If an array changes size, Katana will
+assume that it is growing or shrinking at the end, and copy old data
+accordingly, but will issue a warning that this may not be the desired
+behavior. Pointers are of course handled, but with some limitations
+currently. Unfortunately for our purposes, memory management is not
+part of the ABI. Further, there is no standard way to determine what
+block a given pointer is part of. Our current implementation correctly
+handles only memory management with \texttt{malloc} and only pointers to the
+beginning of blocks. Improvement of this is a major area of future
+work. Multiple pointers to the same address are handled by keeping track
+of which addresses have been relocated. \texttt{void}* also poses a
+problem, as there is generally no way to determine the ``real'' type
+of the pointer. The general solution to all of these type problems is
+to ask the programmer for routines which perform the
+application-specific work. Minimizing programmer work is of foremost
+importance, because greater human interaction adds greater possibility
+for human error, thus possibly decreasing the reliability of the
+patch, but it is not avoidable in all situations.
+
+Hot patching still faces a number of other
 challenges, including dealing with multithreaded programs and address
 space randomization (which slight changes to the OS loader can help us
 overcome).  
 There is nothing inherent in our design which will not work with
 multithreading, but dealing with it through ptrace takes considerable
-work which we have not yet done.
-Furthermore, dynamic updates require some knowledge of the
-program's execution state so that the application is quiescent with
-respect to the code and data being altered by Katana as it applies the
-Patch Object. 
+work which we have not yet done. More importantly, the deadlock
+avoidance work required to ensure that we do at some point pause all
+threads, but that we never pause a thread that another thread may be
+waiting on in order to reach a safe state is nontrivial. We plan to
+address this in the future.
 % We consider the program to be in a safe state if all
 % activation records are free of functions contained in the PO and all
 % activition records are free of functions that $(1)$ access any global
@@ -233,8 +268,5 @@ Patch Object.
 %
 %JMHO: We repeat this again in the discussion section, so I commented
 %it out here and added a brief note saying we discuss it more below
-We have not
-yet implemented a safety determination mechanism, but we discuss our
-approach to it in the next section.
 
 % LocalWords:  ptrace multithreading JMHO

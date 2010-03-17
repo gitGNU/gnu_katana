@@ -66,7 +66,10 @@ seems unlikely, it would be possible to add support for programmers to
 manually specify safe places for patching to occur. For programs built
 around a central loop (the vast majority of long-running programs),
 the likelihood of safe patching can be expedited by isolating the main
-loop into a simple routine unlikely to ever need patching.
+loop into a simple routine unlikely to ever need patching. While
+safety determination is implemented in our prototype, we do not yet
+have enough real data about the likelihood of applications failing to
+reach a safe state.
 %JHMO end
 
 %\subsection{Multithreading}
