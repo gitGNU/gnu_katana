@@ -191,11 +191,11 @@ char* getNameForDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
     switch(tag)
     {
     case DW_TAG_base_type:
-      snprintf(buf,64,"banon_%i",(int)offset);
+      snprintf(buf,64,"anon_base_%i",(int)offset);
     case DW_TAG_member:
-      snprintf(buf,64,"manon_%i",(int)offset);
+      snprintf(buf,64,"anon_member_%i",(int)offset);
     case DW_TAG_variable:
-      snprintf(buf,64,"vanon_%i",(int)offset);
+      snprintf(buf,64,"anon_var_%i",(int)offset);
       break;
     case DW_TAG_structure_type:
       snprintf(buf,64,"anon_struct_%u",(uint)offset);
@@ -236,7 +236,7 @@ char* getNameForDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
         if(!namePointed)
         {
           fprintf(stderr,"WARNING: the type that DW_TAG_pointer_type references does not exist\n");
-          snprintf(buf,2048,"pgeneric%i*",(int)offset);
+          snprintf(buf,2048,"anon_pointer%i*",(int)offset);
         }
         else
         {
@@ -270,7 +270,7 @@ char* getNameForDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
       break;
     case DW_TAG_subroutine_type:
       //I don't actually know what this is
-      snprintf(buf,64,"sub_type_%i",(int)offset);
+      snprintf(buf,64,"anon_sub_type_%i",(int)offset);
       break;
     default:
       snprintf(buf,64,"unknown_type_anon_%u",(uint)offset);
