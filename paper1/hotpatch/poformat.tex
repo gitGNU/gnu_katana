@@ -1,6 +1,7 @@
 \section{Patch Object Format}
 \label{sec:poformat}
-\subsection{Reasons and Needs}
+%\subsection{Reasons and Needs}
+{\bf Reasons and Needs.}
 We have developed a Patch Object format with the following properties
 \begin{itemize}
  \item a valid ELF file
@@ -71,7 +72,8 @@ trampolines in the old versions of the functions or by relocating all
 references to the function (we currently do the former in Katana, but
 may later transition to doing the latter).
 
-\subsection{Our Patch Object Format}
+%\subsection{Our Patch Object Format}
+{\bf Our Patch Object Format.}
 Our Patch Object (PO) format is an ELF-based format. Figure
 \ref{fig:elfheaders} shows the sections contained in a simple
 patch. \texttt{.text.new} and \texttt{.rodata.new} are of course the
