@@ -78,6 +78,7 @@ bool compareTypesAndGenTransforms(TypeInfo* a,TypeInfo* b)
      a->numFields!=b->numFields ||
      a->length != b->length)
   {
+    logprintf(ELL_INFO_V2,ELS_TYPEDIFF,"Type %s changed because name, numFields, or length changed\n",a->name);
     retval=false;
   }
 
@@ -95,6 +96,7 @@ bool compareTypesAndGenTransforms(TypeInfo* a,TypeInfo* b)
          strcmp(a->fieldTypes[i]->name,b->fieldTypes[i]->name))
       {
         retval=false;
+        logprintf(ELL_INFO_V2,ELS_TYPEDIFF,"Struct or union %s changed because old/new members %s/%s changed\n",a->name,a->fieldTypes[i]->name,b->fieldTypes[i]->name);
         break;
       }
     
@@ -120,6 +122,7 @@ bool compareTypesAndGenTransforms(TypeInfo* a,TypeInfo* b)
     if(!compareTypesAndGenTransforms(a->pointedType,b->pointedType))
     {
       retval=false;
+      logprintf(ELL_INFO_V2,ELS_TYPEDIFF,"Pointer or const type %s changed because type it refers to (%s) changed\n",a->name,a->pointedType->name);
       break;
     }
     break;

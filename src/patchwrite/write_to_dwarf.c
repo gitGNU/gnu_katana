@@ -349,7 +349,6 @@ void writeTransformationToDwarf(Dwarf_P_Debug dbg,TypeTransform* trans)
   {
     death("unsupported TypeInfo type in writeTransformationToDwarf\n");
   }
-  printf("adding %i bytes to fde\n",instrs.numBytes);
   dwarf_insert_fde_inst_bytes(dbg,fde,instrs.numBytes,instrs.instrs,&err);
   free(instrs.instrs);
 }
