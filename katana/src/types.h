@@ -99,6 +99,13 @@ typedef enum
 
 struct TypeTransform_;//forward declare
 
+typedef enum E_TYPEDIFF_STATUS
+{
+  ETS_NOT_DONE=0,
+  ETS_DIFFERED,
+  ETS_SAME
+} E_TYPEDIFF_STATUS;
+
 //struct to hold information about a type in the target program
 //not all members are used by all types (for example, structs use more)
 typedef struct TypeInfo_
@@ -119,10 +126,17 @@ typedef struct TypeInfo_
                     itself*/
   bool declaration;//this type only represents a declaration, and is
                    //not a full definition
+  
   CompilationUnit* cu; //which compilation unit the type is in. NULL
                        //if the type is visible to all compilation
                        //units
   Dwarf_P_Die die;//used when writing patch info to disk
+  E_TYPEDIFF_STATUS typediffStatus;//cache whether we've diffed this
+                                   //type before. todo: is this
+                                   //necessary or can we just use
+                                   //combination of diffAgainst and
+                                   //transformer?
+  struct TypeInfo_* diffAgainst;//each type should only ever be compared to one other type
   struct TypeTransform_* transformer;//how to transform the type into its other form
   uint fde;//identifier (offset) for fde containing info on how to transform this type
   ///////////////////////////////////////////
