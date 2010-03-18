@@ -65,14 +65,25 @@ bool compareTypesAndGenTransforms(TypeInfo* a,TypeInfo* b)
     //don't know how to perform the transformation
     return false;
   }
-  if(a->transformer)
+  if(a->diffAgainst)
   {
-    if(a->transformer->to!=b)
+    assert(ETS_NOT_DONE!=a->typediffStatus);
+    if(a->diffAgainst!=b)
     {
       death("cannot transform a type to two different types\n");
     }
-    return false;
+    if(ETS_DIFFERED==a->typediffStatus)
+    {
+      return false;
+    }
+    else
+    {
+      return true;
+    }
   }
+
+  a->diffAgainst=b;
+  
   bool retval=true;
   if(strcmp(a->name,b->name) ||
      a->numFields!=b->numFields ||
@@ -142,15 +153,18 @@ bool compareTypesAndGenTransforms(TypeInfo* a,TypeInfo* b)
     //subroutine type isn't a real type,
     //it exists only to make function pointers possible,
     //it can't change
-    return true;
+    retval=true;
   }
     
 
   if(retval)
   {
+    a->typediffStatus=ETS_SAME;
     return true;
   }
 
+  a->typediffStatus=ETS_DIFFERED;
+  
   transform=zmalloc(sizeof(TypeTransform));
   a->transformer=transform;//do it up here in case we recurse on this type
   transform->from=a;
