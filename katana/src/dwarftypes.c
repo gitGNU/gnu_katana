@@ -699,10 +699,10 @@ void* addConstTypeFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
 
 void* addArrayTypeFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
 {
-  logprintf(ELL_INFO_V4,ELS_MISC,"reading array type\n");
   TypeInfo* type=zmalloc(sizeof(TypeInfo));
   type->type=TT_ARRAY;
   type->name=getNameForDie(dbg,die,cu);
+  logprintf(ELL_INFO_V4,ELS_MISC,"reading array type %s\n",type->name);
   type->cu=cu;
   Dwarf_Error err=0;
 
@@ -715,6 +715,7 @@ void* addArrayTypeFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
   }
   type->pointedType=pointedType;
   getRangeFromDie(dbg,die,&type->lowerBound,&type->upperBound);
+  type->length=type->pointedType->length*(type->upperBound-type->lowerBound);
 
 
   //check for fde info for transformation

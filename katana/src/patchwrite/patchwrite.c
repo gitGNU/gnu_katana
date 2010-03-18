@@ -193,7 +193,9 @@ void writeRelocationsInRange(addr_t lowpc,addr_t highpc,Elf_Scn* scn,
 void writeVarToData(VarInfo* var)
 {
   //todo: store address within var?
-  int symIdx=getSymtabIdx(newBinary,var->name,0);
+  int symIdx=getSymtabIdx(newBinary,var->name,0);//todo: this will not
+                                                 //work for
+                                                 //local/static vars
   if(STN_UNDEF==symIdx)
   {death("could not get symbol for var %s\n",var->name);}
   GElf_Sym sym;
@@ -217,6 +219,7 @@ void writeVarToData(VarInfo* var)
   {
     death("variable lives in unexpected section\n");
   }
+  //todo: what if it's in rodata? Then shouldn't need to put it in .data.new too
   addr_t addr=addDataToScn(getDataByERS(patch,ERS_DATA),data,var->type->length);
   if(freeData)
   {
@@ -356,6 +359,7 @@ List* getTypeTransformationInfoForCU(CompilationUnit* cuOld,CompilationUnit* cuN
                                               symNew.st_value,IN_MEM);
               if(memcmp(initializerOld,initializerNew,ti1->length))
               {
+                logprintf(ELL_INFO_V1,ELS_TYPEDIFF,"Initializer changed for var %s of type %s\n",var->name,ti1->name);
                 if(TT_CONST==ti1->type)
                 {
                   //we can copy over the data with impunity,
