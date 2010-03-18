@@ -1,0 +1,129 @@
+The following document details how we handled each comment for each of
+the reviewers for IJSSE paper #2493. Comments from the reviewers are
+quoted using the characters >> at the start of each line.
+
+REVIEW 1
+>> I urge the authors to complete the missing work, especially in
+>> the area of safety and multithreading. Both are prerequisites for
+>> this work being acceptable in the real world.
+We have actually made significant work on implementing safety analysis
+since the submission for review, so we updated the paper slightly with
+that information. We added a slightly greater nod to the importance of
+multithreading (and our intent to address it) in the Challenges
+subsection of section III.
+
+>> Section I should mention virtualization as a path to upgrading
+>> existing systems with patches, basically rolling upgrades. While
+>> this won't work for monolithic systems, it does work extremly well
+>> for horizontally scaled software architectures and eliminates the
+>> need for hotpatching. If traditional patching is - as you claim -
+>> often not done due to the preception of instability, why would
+>> hotpatching be perceived as a better choice?
+Virtualization is a type of redundancy. The hardware expense and waste
+does not apply to it, but our arguments about state loss and
+complexity do apply. We have clarified our argument about redundancy
+slightly to show that this case is included.
+
+
+>> I would redraw Fig.1 as follows: - remove second patcher - add arrow
+>> from patcher back into runtime. Basically, the future/patched runtime
+>> should not appear any different that the current unpatched
+>> runtime. Think about it, in the next phase the previously patched
+>> runtime is the basis you are starting from. - Rename "Patched Runtime"
+>> to something like "Hotpatch application phase", etc.
+We disagree. We are showing the lifecycle of software and how it is
+extended, not that it is running differently after it is patched. The
+point about the name of that stage is well taken, however, and it has
+been renamed.
+
+>> Your description includes only sequential patch application (n-1 ->
+>> n). What about wanting to upgrade from n-5 to n?  
+This is entirely possible, and we have added a slight clarification in
+section V to make this harder to miss
+
+
+REVIEW 2 
+>> The quote after the abstract is not necessary. If the authors
+>> strongly feel about it, they can include that in an appropriate place
+>> of the main text of the paper.
+The quote has been moved to a more appropriate location.
+
+>> The extension from the workshop paper is not clear, it may be
+>> mentioned briefly by referring to the workshop paper in the
+>> Introduction or the related works.
+
+>> The title of both workshop and journal papers same. Based on the new
+>> addition in the journal version, the title of the paper needs to be
+>> changed.
+The title has been changed
+
+>> Section VII could be expanded with the details of major contributions,
+>> lessons learned, limitations and future work.
+Section VII has been expanded slightly. Much of this is covered
+elsewhere in the paper, so to repeat it would be to risk excessive
+redundancy.
+
+REVIEW 3
+>> The quote concerning conficker at the start of the paper is an
+>> interesting anecdote but should perhaps be placed where you make the
+>> argument that some trade security for perceived stability. 
+The quote has been moved to a more appropriate location.
+
+
+>> Your argument concerning redundancy is a bit of a strawman. Redundancy
+>> is primarily used to ensure high availability, and in that context the
+>> cost and resource is can be motivated. The ability to upgrade systems
+>> with minimal disruption is just a nice byproduct. For patching
+>> purposes alone, one could operate with a minimal amount of extra
+>> resources (negating the "expensive" and "wasteful" arguments). Complex
+>> and specialized do still apply in many (but far from all) cases.
+We disagree. We are not arguing that redundancy is useless, merely
+that it is not as attractive as a ubiquitous patching
+mechanism. Building a system with redundancy advanced enough that
+state can be transferred from one instance of a task to another
+without requiring per-application coding of the state transferral is
+not known to us to be a solved problem, and the reviewer points us to
+no evidence that it is.
+
+>> Figure one is far too large. 
+This has been remedied
+
+>> First you say Katana uses inotify, then that your current prototype
+>> doesn't use it. Which is it? 
+The original plan was to use inotify. We have never yet implemented its
+use, as it is not central to patching and other features were more
+important. We have therefore modified the section mentioning it to
+give it only a very brief mention as "future work".
+
+
+>> Data patching is the most challenging part of the problem. You discuss
+>> this, but it isn't clear exacly what the limits of your approach are.
+>> Can you handle pointers to members of structures (when the structure
+>> changes)? Can you handle arrays? Pointers to array elements? Changed
+>> meaning of data (e.g. if an element is added to an enum)?
+>> Variable-size structures (i.e. those with a variable-size buffer at
+>> the end)? Will pointer casts cause problems (e.g. if a pointer to a
+>> changed data object is stored in a void* or caddr_t variable)? Do you
+>> handle multiple pointers to the same heap object (or the situation
+>> where you have one pointer to the start of a heap object, and one to
+>> an element inside it)? Do unions cause problems (e.g. union between an
+>> int and a pointer)?  
+These are very valid questions. Section III
+has been expanded slightly in an effort to address these concerns and
+the current limitations of our system.
+
+>> The limitation to code that does not call previously unused functions
+>> in dynamically loaded libraries seems quite serious. Since you have
+>> chosen not to support this, presumably you do not consider it a severe
+>> limitation of Katana. Can you explain why? 
+This is very true. When we were designing the system, it was deemed
+difficult. Given its importance, however, we have made plans to
+support it. We have fixed this in the paper, and cite the technique
+that will be used.
+
+>> Katana will only update when the program is in a safe state. In real
+>> programs, how often will the program never enter a safe state? What
+>> practical experience do you have with this? What practical experiences
+>> do you have so far?
+Unfortunately, we have little. We will certainly be publishing
+real-world results when we have optained them.
