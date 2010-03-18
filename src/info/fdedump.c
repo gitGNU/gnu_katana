@@ -17,76 +17,6 @@
 
 Dwarf_Debug dbgForFDEDump;
 
-#ifdef legacy
-void readDebugFrameForDump(Dwarf_Debug dbg)
-{
-  Dwarf_Fde *fdeData = NULL;
-  Dwarf_Signed fdeElementCount = 0;
-  Dwarf_Cie *cieData = NULL;
-  Dwarf_Signed cieElementCount = 0;
-  CIE* cie=zmalloc(sizeof(CIE));
-
-  Dwarf_Error err;
-  dwarf_get_fde_list(dbg, &cieData, &cieElementCount,
-                                   &fdeData, &fdeElementCount, &err);
-
-  
-  //read the CIE
-  Dwarf_Unsigned cieLength = 0;
-  Dwarf_Small version = 0;
-  char* augmenter = "";
-  Dwarf_Ptr initInstr = 0;
-  Dwarf_Unsigned initInstrLen = 0;
-  assert(1==cieElementCount);
-  //todo: all the casting here is hackish
-  //should respect types more
-  dwarf_get_cie_info(cieData[0],
-                     &cieLength,
-                     &version,
-                     &augmenter,
-                     &cie->codeAlign,
-                     &cie->dataAlign,
-                     &cie->returnAddrRuleNum,
-                     &initInstr,
-                     &initInstrLen, &err);
-  cie->initialInstructions=parseFDEInstructions(dbg,initInstr,initInstrLen,cie->dataAlign,
-                                                cie->codeAlign,&cie->numInitialInstructions);
-  cie->initialRules=dictCreate(100);//todo: get rid of arbitrary constant 100
-  evaluateInstructions(cie->initialInstructions,cie->numInitialInstructions,cie->initialRules,-1);
-  //todo: bizarre bug, it keeps coming out as -1, which is wrong
-  cie->codeAlign=1;
-  
-  fdes=zmalloc(fdeElementCount*sizeof(FDE));
-  numFdes=fdeElementCount;
-  for (int i = 0; i < fdeElementCount; i++)
-  {
-    Dwarf_Fde dfde=fdeData[i];
-    Dwarf_Ptr instrs;
-    Dwarf_Unsigned ilen;
-    dwarf_get_fde_instr_bytes(dfde, &instrs, &ilen, &err);
-    fdes[i].instructions=parseFDEInstructions(dbg,instrs,ilen,cie->dataAlign,cie->codeAlign,&fdes[i].numInstructions);
-    Dwarf_Addr lowPC = 0;
-    Dwarf_Unsigned funcLength = 0;
-    Dwarf_Ptr fdeBytes = NULL;
-    Dwarf_Unsigned fdeBytesLength = 0;
-    Dwarf_Off cieOffset = 0;
-    Dwarf_Signed cie_index = 0;
-    Dwarf_Off fdeOffset = 0;
-    dwarf_get_fde_range(dfde,
-                        &lowPC, &funcLength,
-                        &fdeBytes,
-                        &fdeBytesLength,
-                        &cieOffset, &cie_index,
-                        &fdeOffset, &err);
-    fdes[i].lowpc=lowPC;
-    fdes[i].highpc=lowPC+funcLength;
-    printf("fde has lowpc of %i and highpc of %i\n",fdes[i].lowpc,fdes[i].highpc);
-    
-  }
-}
-#endif
-
-
 void printCIEInfo(CIE* cie)
 {
   printf("------CIE-----\n");
@@ -136,7 +66,6 @@ void printPatchFDEInfo(ElfInfo* patch)
   }
   readDebugFrameForDump(dbgForFDEDump);
   */
-  readDebugFrame(patch);
   printCIEInfo(patch->cie);
   for(int i=0;i<patch->numFdes;i++)
   {

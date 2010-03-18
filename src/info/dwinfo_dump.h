@@ -8,5 +8,5 @@
 
 #ifndef dwinfo_dump_h
 #define dwinfo_dump_h
-void printPatchDwarfInfo(ElfInfo* patch);
+void printPatchDwarfInfo(ElfInfo* patch,Map* fdeMap);
 #endif
