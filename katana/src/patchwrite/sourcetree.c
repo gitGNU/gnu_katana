@@ -126,32 +126,56 @@ List* getChangedObjectFilesInSourceTree(char* origSourceTree,char* modSourceTree
       }
       else
       {
-        logprintf(ELL_INFO_V1,ELS_SOURCETREE,"Object file %s does not differ between versions\n",fullPathOrig);
-        free(fullPathOrig);
-        free(fullPathMod);
-        free(dirEntriesOrig[i]);
-        free(dirEntriesMod[j]);
-        i++,j++;
+          logprintf(ELL_INFO_V1,ELS_SOURCETREE,"Object file %s does not differ between versions\n",fullPathOrig);
+          free(fullPathOrig);
+          free(fullPathMod);
+          free(dirEntriesOrig[i]);
+          free(dirEntriesMod[j]);
+          i++,j++;
       }
       free(buf);
     }
     else if(cmp<0)
     {
-      logprintf(ELL_WARN,ELS_SOURCETREE,"An object file '%s' has been removed from the new version of the source\n",dirEntriesOrig[i]->d_name);
+      if(DT_DIR==dirEntriesOrig[i]->d_type)
+      {
+        //recurse on the directories, only
+        //the old version is present though
+        head=concatLists(head,tail,
+                         getChangedObjectFilesInSourceTree(fullPathOrig,NULL),
+                         NULL,&tail);
+      }
+      else
+      {
+        logprintf(ELL_WARN,ELS_SOURCETREE,"An object file '%s' has been removed from the new version of the source\n",dirEntriesOrig[i]->d_name);
+      }
       free(fullPathOrig);
       free(fullPathMod);
       free(dirEntriesOrig[i]);
       i++;
+
     }
     else if (cmp>0)
     {
-      //file only exists in new version
-      List* li=zmalloc(sizeof(List));
-      ObjFileInfo* obj=zmalloc(sizeof(ObjFileInfo));
-      obj->state=EOS_NEW;
-      obj->pathToModified=fullPathMod;
-      li->value=obj;
-      listAppend(&head,&tail,li);
+      if(DT_DIR==dirEntriesOrig[i]->d_type)
+      {
+        //recurse on the directories, only
+        //the old version is present though
+        head=concatLists(head,tail,
+                         getChangedObjectFilesInSourceTree(NULL,fullPathMod),
+                         NULL,&tail);
+      }
+      else
+      {
+        
+        //file only exists in new version
+        List* li=zmalloc(sizeof(List));
+        ObjFileInfo* obj=zmalloc(sizeof(ObjFileInfo));
+        obj->state=EOS_NEW;
+        obj->pathToModified=fullPathMod;
+        li->value=obj;
+        listAppend(&head,&tail,li);
+      }
       free(fullPathOrig);
       free(dirEntriesMod[j]);
       j++;
