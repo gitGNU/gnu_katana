@@ -88,13 +88,14 @@ new code and supporting
     [ 1] .strtab           STRTAB        
     [ 2] .symtab           SYMTAB        
     [ 3] .text.new         PROGBITS      
-    [ 4] .rodata.new       PROGBITS      
-    [ 5] .rela.text.new    RELA          
-    [ 6] .debug_info       PROGBITS      
-    [ 7] .debug_abbrev     PROGBITS      
-    [ 8] .debug_frame      PROGBITS      
-    [ 9] .rel.debug_info   REL           
-    [10] .rel.debug_frame  REL           
+    [ 4] .unsafe_functions LOUSER+1
+    [ 5] .rodata.new       PROGBITS      
+    [ 6] .rela.text.new    RELA          
+    [ 7] .debug_info       PROGBITS      
+    [ 8] .debug_abbrev     PROGBITS      
+    [ 9] .debug_frame      PROGBITS      
+    [10] .rel.debug_info   REL           
+    [11] .rel.debug_frame  REL           
 \end{verbatim}
 \end{center}
 %}
@@ -132,8 +133,12 @@ between versions \emph{va} and \emph{vb} to patch both an executable
 which was originally compiled to \emph{va} and an executable which was
 patched from earlier versions to be equivalent to \emph{va}. Ksplice,
 one of the few other patchers which operates solely at the binary
-level, does not have this capability \cite{ksplice}. Note that patch
-versioning is currently a work in progress and not fully implemented.
+level, does not have this capability \cite{ksplice}. We will provide a
+mechanism for composing patches, such that a patch from version
+\emph{va} to \emph{vb} may be composed with a patch from \emph{vb} to
+\emph{vc} to produce a patch from \emph{va} to \emph{vb}. Note that
+patch versioning is currently a work in progress and not fully
+implemented.
 %\begin{wrapfigure}{r}{0.5\linewidth}
 \begin{figure}[ht]
 {\small
