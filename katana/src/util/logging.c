@@ -82,7 +82,7 @@ void loggingDefaults()
   sourceEnables[ELS_LINKMAP]=ELL_INFO_V3;
   sourceEnables[ELS_DWARFTYPES]=ELL_WARN;
   sourceEnables[ELS_SAFETY]=ELL_CNT;
-  sourceEnables[ELS_PATCHWRITE]=ELL_WARN;
+  sourceEnables[ELS_PATCHWRITE]=ELL_INFO_V1;
   sourceEnables[ELS_PATH]=ELL_CNT;
   sourceEnables[ELS_ELFWRITE]=ELL_INFO_V2;
 }
