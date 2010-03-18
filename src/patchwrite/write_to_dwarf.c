@@ -106,6 +106,10 @@ void writeTypeToDwarf(Dwarf_P_Debug dbg,TypeInfo* type)
   Dwarf_P_Die die=dwarf_new_die(dbg,tag,parent,NULL,type->cu->lastDie,NULL,&err);
   type->cu->lastDie=die;
   type->die=die;
+  if(type->declaration)
+  {
+    dwarf_add_AT_flag(dbg,die,DW_AT_prototyped,true,&err);
+  }
   if(TT_CONST!=type->type && TT_SUBROUTINE_TYPE!=type->type)
   {
     dwarf_add_AT_name(die,type->name,&err);
