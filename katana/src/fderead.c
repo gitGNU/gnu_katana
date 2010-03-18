@@ -219,6 +219,7 @@ Map* readDebugFrame(ElfInfo* elf)
   elf->numFdes=fdeElementCount;
   for (int i = 0; i < fdeElementCount; i++)
   {
+    elf->fdes[i].idx=i;
     Dwarf_Fde dfde=fdeData[i];
     Dwarf_Ptr instrs;
     Dwarf_Unsigned ilen;

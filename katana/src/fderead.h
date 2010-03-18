@@ -43,6 +43,7 @@ typedef struct FDE
   int highpc;//has no meaning if this FDE describes fixups and was
              //read from a PO
   int offset;//offset from beginning of debug frame
+  int idx;//what index fde this is
 } FDE;
 
 
