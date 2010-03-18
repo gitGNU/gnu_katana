@@ -1018,7 +1018,7 @@ void* addSubroutineType(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
   TypeInfo* type=zmalloc(sizeof(TypeInfo));
   type->type=TT_SUBROUTINE_TYPE;
   type->cu=cu;
-
+  type->declaration=isPrototype;
   type->name=getNameForDie(dbg,die,cu);
   logprintf(ELL_INFO_V4,ELS_DWARFTYPES,"reading subroutine type of name %s\n",type->name);
   type->length=0;//subroutine type in a way isn't a real type. It certainly has no length
