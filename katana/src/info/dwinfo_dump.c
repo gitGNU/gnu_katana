@@ -48,8 +48,9 @@ void printPatchDwarfInfo(ElfInfo* patch)
     for(int i=0;vars[i];i++)
     {
       printf("    %s %s\n",vars[i]->type->name,vars[i]->name);
+      //todo: should display an index
+      printf("      transformed by FDE at offset %i\n",vars[i]->type->fde);
     }
     free(vars);
   }
-
 }
