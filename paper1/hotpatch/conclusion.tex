@@ -12,3 +12,12 @@ proprietary or open software), and our method of patching along with the
 PO file format are first attempts at providing a basis for informed reasoning
 about the structure and implications of a patch. 
 
+We present a reasoned approach to making patching a part of the
+standard tool chain. We demonstrate a working binary userland patcher
+operating completely at the object level. Our system is, to our
+knowledge, the first to utilize DWARF type information to automate the
+transformation between old and new versions of a type. There yet
+remains much work to be done, and our future work involves support for
+patching multi-threaded targets, better support for handling opaque
+types such as \texttt{void}*, and further development of patch
+versioning and the ability to perform operations on patch objects.
