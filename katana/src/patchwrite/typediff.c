@@ -91,13 +91,21 @@ bool compareTypesAndGenTransforms(TypeInfo* a,TypeInfo* b)
     for(int i=0;retval && i<a->numFields;i++)
     {
       //todo: do we need to update if just the name changes?
-      //certainly won't need to relocate
+      //certainly won't need to relocate. Or do we just assume
+      //that if the name changes it's all different
       if(a->fieldLengths[i]!=b->fieldLengths[i] ||
-         strcmp(a->fieldTypes[i]->name,b->fieldTypes[i]->name))
+         strcmp(a->fieldTypes[i]->name,b->fieldTypes[i]->name) || strcmp(a->fields[i],b->fields[i]))
       {
-        retval=false;
-        logprintf(ELL_INFO_V2,ELS_TYPEDIFF,"Struct or union %s changed because old/new members %s/%s changed\n",a->name,a->fieldTypes[i]->name,b->fieldTypes[i]->name);
-        break;
+        if(!strncmp(a->fieldTypes[i]->name,"anon_",5) && !strncmp(a->fieldTypes[i]->name,"anon_",5) && a->fieldTypes[i]->type==b->fieldTypes[i]->type && !strcmp(a->fields[i],b->fields[i]) && a->fieldLengths[i]==b->fieldLengths[i])
+        {
+          logprintf(ELL_WARN,ELS_TYPEDIFF,"Struct or union %s has member %s of type %s/%s. Because this is an anonymous type, we aren't automatically assuming that a small name change means a change of type, but this may not be what you want\n",a->name,a->fields[i],a->fieldTypes[i]->name,b->fieldTypes[i]->name);
+        }
+        else
+        {
+          retval=false;
+          logprintf(ELL_INFO_V2,ELS_TYPEDIFF,"Struct or union %s changed because old/new members %s/%s changed\n",a->name,a->fieldTypes[i]->name,b->fieldTypes[i]->name);
+          break;
+        }
       }
     
     //todo: what if a field stays the same type, but that type changes
