@@ -1,9 +1,8 @@
 -*- mode:org; -*-
 
 * notes from meeting
-keep an eye on relocation, compiler defines many times of
-relocations. See if format can support all of relocation types. Look
-at needs these address because we may have the same needs.
+look up what Diablo's patch against gcc was and if it was related to
+relocations in .rodata
 * confusion I have
 ** Why can't we just relocate functions when patching them?
    probably can most of the time according to Sergey
