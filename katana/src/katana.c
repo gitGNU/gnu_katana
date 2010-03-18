@@ -166,8 +166,9 @@ int main(int argc,char** argv)
     logprintf(ELL_INFO_V3,ELS_MISC,"patch file is %s\n",patchFile);
     ElfInfo* patch=openELFFile(patchFile);
     patch->isPO=true;//todo: this should be detected by openELFFile
+    Map* fdeMap=readDebugFrame(patch);
     printf("*********Type and Function Info****************\n");
-    printPatchDwarfInfo(patch);
+    printPatchDwarfInfo(patch,fdeMap);
     printf("\n*********Safety Info****************\n");
     printPatchUnsafeFuncsInfo(patch);
     printf("\n*********Type Transformation Rules****************\n");

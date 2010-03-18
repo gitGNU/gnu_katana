@@ -9,8 +9,9 @@
 #include "dwarftypes.h"
 #include <unistd.h>
 #include <limits.h>
+#include "fderead.h"
 
-void printPatchDwarfInfo(ElfInfo* patch)
+void printPatchDwarfInfo(ElfInfo* patch,Map* fdeMap)
 {
   if(!patch->dwarfInfo)
   {
@@ -30,11 +31,15 @@ void printPatchDwarfInfo(ElfInfo* patch)
   for(List* li=di->compilationUnits;li;li=li->next)
   {
     CompilationUnit* cu=li->value;
-    printf("  In %s:\n",cu->name);
     SubprogramInfo** subprograms=(SubprogramInfo**)dictValues(cu->subprograms);
     for(int i=0;subprograms[i];i++)
     {
-      printf("    %s\n",subprograms[i]->name);
+      if(0==i)
+      {
+        //wait until here to print it in case there are none
+        printf("  In %s:\n",cu->name);
+      }
+      printf("    %s\n",subprograms[i]->name);        
     }
     free(subprograms);
   }
@@ -43,13 +48,21 @@ void printPatchDwarfInfo(ElfInfo* patch)
   for(List* li=di->compilationUnits;li;li=li->next)
   {
     CompilationUnit* cu=li->value;
-    printf("  In %s:\n",cu->name);
     VarInfo** vars=(VarInfo**)dictValues(cu->tv->globalVars);
     for(int i=0;vars[i];i++)
     {
+      if(0==i)
+      {
+        //wait until here to print the name in case there are none
+        printf("  In %s:\n",cu->name);
+      }
       printf("    %s %s\n",vars[i]->type->name,vars[i]->name);
       //todo: should display an index
-      printf("      transformed by FDE at offset %i\n",vars[i]->type->fde);
+      FDE* transformerFDE=mapGet(fdeMap,&vars[i]->type->fde);
+      if(transformerFDE)
+      {
+        printf("      transformed by FDE#%i\n",transformerFDE->idx);
+      }
     }
     free(vars);
   }
