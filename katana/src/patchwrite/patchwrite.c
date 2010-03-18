@@ -285,7 +285,7 @@ List* getTypeTransformationInfoForCU(CompilationUnit* cuOld,CompilationUnit* cuN
 {
   List* varTransHead=NULL;
   List* varTransTail=NULL;
-  logprintf(ELL_INFO_V1,ELS_PATCHWRITE,"Examining compilation unit %s\n",cuOld->name);
+  logprintf(ELL_INFO_V1,ELS_PATCHWRITE,"Examining compilation unit %s for type transformation info\n",cuOld->name);
   VarInfo** vars1=(VarInfo**)dictValues(cuOld->tv->globalVars);
 
   VarInfo* var=vars1[0];
@@ -321,7 +321,7 @@ List* getTypeTransformationInfoForCU(CompilationUnit* cuOld,CompilationUnit* cuN
           fflush(stderr);
           abort();
         }
-        printf("generated type transformation for type %s\n",ti1->name);
+        logprintf(ELL_INFO_V1,ELS_TYPEDIFF,"generated type transformation for type %s\n",ti1->name);
         needsTransform=true;
       }
       else
@@ -524,7 +524,7 @@ void writeFuncTransformationInfoForCU(CompilationUnit* cuOld,CompilationUnit* cu
     }
     if(!areSubprogramsIdentical(func,patchedFunc,cuOld->elf,cuNew->elf))
     {
-      printf("writing transformation info for function %s\n",func->name);
+      logprintf(ELL_INFO_V2,ELS_PATCHWRITE,"writing transformation info for function %s\n",func->name);
       //we also have to add an entry into debug info, so that
       //we know to patch the function
       idx_t symIdx;
@@ -671,7 +671,7 @@ void writeTypeAndFuncTransformationInfo(ElfInfo* patchee,ElfInfo* patched)
     writeFuncTransformationInfoForCU(cuOld,cuNew);
 
 
-    printf("completed all transformations for compilation unit %s\n",cuOld->name);
+    logprintf(ELL_INFO_V2,ELS_PATCHWRITE,"completed all transformations for compilation unit %s\n",cuOld->name);
 
   }
 }
@@ -763,7 +763,6 @@ void writePatch(char* oldSourceTree,char* newSourceTree,char* oldBinName,char* n
 
   dwarf_add_die_to_debug(dbg,firstCUDie,&err);
   int numSections=dwarf_transform_to_disk_form(dbg,&err);
-  printf("num dwarf sections is %i\n",numSections);
   for(int i=0;i<numSections;i++)
   {
     Dwarf_Signed elfScnIdx;

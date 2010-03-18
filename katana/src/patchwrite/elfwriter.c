@@ -9,6 +9,7 @@
 #include "elfwriter.h"
 #include <assert.h>
 #include <fcntl.h>
+#include <util/logging.h>
 
 //Elf_Data* patch_syms_rel_data=NULL;
 //Elf_Data* patch_syms_new_data=NULL;
@@ -354,7 +355,7 @@ void finalizeDataSize(Elf_Scn* scn,Elf_Data* data)
 {
   Elf32_Shdr* shdr=elf32_getshdr(scn);
   shdr->sh_size=data->d_size;
-  printf("finalizing data size to %i for section with index %i\n",shdr->sh_size,elf_ndxscn(scn));
+  logprintf(ELL_INFO_V3,ELS_ELFWRITE,"finalizing data size to %i for section with index %i\n",shdr->sh_size,elf_ndxscn(scn));
 }
 
 void finalizeDataSizes()
