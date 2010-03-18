@@ -1,6 +1,5 @@
 \section{Introduction}
 \label{sec:intro}
-
 It is somewhat ironic that users and organizatations hesistate to
 apply patches whose stated purpose is to support availability or
 reliability precisely because the process of doing so can lead to
@@ -11,6 +10,7 @@ Reboots in enterprise environments ({\it e.g.,} trading, e-commerce,
 core network systems), even for a few minutes, imply large revenue
 loss or an extensive backup and failover infrastructure with rolling
 updates.  
+
 {\footnotesize
 \begin{quote}
 ``Some reports, such as the case of the Conficker outbreak within 
@@ -20,6 +20,7 @@ choosing to trade off vulnerability exposure for some perceived notion
 of platform stability...'' -- \url{http://mtc.sri.com/Conficker/}
 \end{quote}
 }
+
 We question whether this {\em de facto} acceptence of
 significant downtime and redundant infrastructure should not be
 abandoned in favor of a reliable hot patching process.
@@ -100,6 +101,8 @@ is expensive to design for, implement, and execute).  In the case of
 mission-critical services, even after a major flaw is unveiled and a
 patch subsequently created, administrators likely wish to apply the
 patch and upgrade the process without actually restarting the program
-and losing state and time.  This requirement serves as our
-motivation for {\it hot patching}.
+and losing state and time.  This requirement serves as our motivation
+for {\it hot patching}. We focus on systems which are both
+high-availability and store significant state (which would be lost on
+a restart) such as those found in the power grid.
 
