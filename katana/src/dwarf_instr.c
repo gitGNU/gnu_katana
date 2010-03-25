@@ -297,7 +297,7 @@ void printInstruction(RegInstruction inst)
     printf("DW_CFA_advance_loc_2 %i\n",inst.arg1);
     break;
   case DW_CFA_offset:
-    printf("DW_CFA_offset r%i %li\n",inst.arg1,inst.arg2);
+    printf("DW_CFA_offset r%i %li\n",inst.arg1,(long)inst.arg2);
     break;
   case DW_CFA_register:
     printf("DW_CFA_register ");
@@ -312,7 +312,7 @@ void printInstruction(RegInstruction inst)
     }
     if(ERT_NONE==inst.arg2Reg.type)
     {
-      printf("r%li ",inst.arg2);
+      printf("r%lu ",inst.arg2);
     }
     else
     {
@@ -338,14 +338,14 @@ void printInstruction(RegInstruction inst)
     }
     if(ERT_NONE==inst.arg2Reg.type)
     {
-      printf("r%li ",inst.arg2);
+      printf("r%lu ",inst.arg2);
     }
     else
     {
       printReg(inst.arg2Reg,stdout);
       printf(" ");
     }
-    printf("fde#%li ",inst.arg3);
+    printf("fde#%lu ",inst.arg3);
     printf("\n");
     break;
 
@@ -360,7 +360,7 @@ void printInstruction(RegInstruction inst)
       printReg(inst.arg1Reg,stdout);
       printf(" ");
     }
-    printf("%li \n",inst.arg2);
+    printf("%li \n",(long)inst.arg2);
     break;
   case DW_CFA_def_cfa_register:
     printf("DW_CFA_def_cfa_register");
