@@ -213,7 +213,9 @@ void addInstruction(DwarfInstructions* instrs,DwarfInstruction* instr)
     //we can take care of all instructions taking either two operands both of which
     //are either LEB128 or DW_FORM_block
   case DW_CFA_offset_extended:
+#ifdef DW_CFA_offset_extended_sf //only available in Dwarf3
   case DW_CFA_offset_extended_sf:
+#endif
   case DW_CFA_val_offset:
   case DW_CFA_val_offset_sf:
   case DW_CFA_register:
