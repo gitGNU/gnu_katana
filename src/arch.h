@@ -52,7 +52,7 @@
 #define ElfXX_Shdr Elf32_Shdr
 #define ElfXX_Ehdr Elf32_Ehdr
 #define ElfXX_Dyn Elf64_Dyn
-#define elfxx_getshdr elfxx_getshdr
+#define elfxx_getshdr elf32_getshdr
 #define elfxx_newehdr elf32_newehdr
 #define ELFXX_R_TYPE ELF32_R_TYPE
 #define ELFXX_R_SYM ELF32_R_SYM

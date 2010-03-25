@@ -68,10 +68,10 @@ char* strForReg(PoReg reg)
   switch(reg.type)
   {
   case ERT_CURR_TARG_OLD:
-    snprintf(buf,128,"{CURR_TARG_OLD,0x%lx bytes,0x%x off}",reg.size,reg.u.offset);
+    snprintf(buf,128,"{CURR_TARG_OLD,0x%lx bytes,0x%x off}",(unsigned long)reg.size,reg.u.offset);
     break;
   case ERT_CURR_TARG_NEW:
-    snprintf(buf,128,"{CURR_TARG_NEW,0x%lx bytes,0x%x off}",reg.size,reg.u.offset);
+    snprintf(buf,128,"{CURR_TARG_NEW,0x%lx bytes,0x%x off}",(unsigned long)reg.size,reg.u.offset);
     break;
   case ERT_EXPR:
     //todo: print out expression
@@ -196,10 +196,10 @@ void printRule(PoRegRule rule,int regnum)
     printf("cfa = %s + %i\n",strForReg(rule.regRH),rule.offset);
     break;
   case ERRT_RECURSE_FIXUP:
-    printf("%s = recurse fixup with FDE#%li based at %s\n",regStr,rule.index,strForReg(rule.regRH));
+    printf("%s = recurse fixup with FDE#%lu based at %s\n",regStr,rule.index,strForReg(rule.regRH));
     break;
   case ERRT_RECURSE_FIXUP_POINTER:
-    printf("%s = recurse fixup pointer with FDE#%li based at %s\n",regStr,rule.index,strForReg(rule.regRH));
+    printf("%s = recurse fixup pointer with FDE#%lu based at %s\n",regStr,rule.index,strForReg(rule.regRH));
     break;
   default:
     death("unknown rule type\n");

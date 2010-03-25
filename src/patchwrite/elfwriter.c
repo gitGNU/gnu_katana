@@ -99,7 +99,7 @@ void createSections(Elf* outelf)
   scnInfo[ERS_STRTAB].scn=strtab_scn;
   scnInfo[ERS_STRTAB].data=strtab_data;
   
-  ElfXX_Shdr* shdr ;
+  ElfXX_Shdr* shdr;
   shdr=elfxx_getshdr(strtab_scn);
   shdr->sh_type=SHT_STRTAB;
   shdr->sh_link=SHN_UNDEF;
