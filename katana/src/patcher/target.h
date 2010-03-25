@@ -8,6 +8,7 @@
 
 #ifndef target_h
 #define target_h
+#include <sys/types.h>
 #include <sys/user.h>
 #ifdef __USE_MISC
 #include <sys/mman.h>
@@ -18,12 +19,13 @@
 #endif
 #include <sys/syscall.h>
 #include "types.h"
+#include "arch.h"
 //#include <sys/user.h>
 
 void startPtrace();
 void continuePtrace();
 void endPtrace();
-void modifyTarget(addr_t addr,uint value);
+void modifyTarget(addr_t addr,word_t value);
 //copies numBytes from data to addr in target
 //todo: does addr have to be aligned
 void memcpyToTarget(long addr,byte* data,int numBytes);

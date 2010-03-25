@@ -117,9 +117,8 @@ RelocInfo* getRelocationEntryAtOffset(ElfInfo* e,Elf_Scn* relocScn,addr_t offset
   Elf_Data* data=elf_getdata(relocScn,NULL);
   assert(shdr.sh_size>offset);
   int scnIdx=shdr.sh_info;//section relocation applies to
-  //todo: diff for 64 bit
-  Elf32_Rel rel;
-  Elf32_Rela rela;
+  ElfXX_Rel rel;
+  ElfXX_Rela rela;
   RelocInfo* reloc=zmalloc(sizeof(RelocInfo));
   reloc->e=e;
   reloc->scnIdx=scnIdx;
@@ -128,16 +127,16 @@ RelocInfo* getRelocationEntryAtOffset(ElfInfo* e,Elf_Scn* relocScn,addr_t offset
   {
     memcpy(&rel,data->d_buf+offset,sizeof(rel));
     reloc->r_offset=rel.r_offset;
-    reloc->relocType=ELF32_R_TYPE(rel.r_info);
-    reloc->symIdx=ELF32_R_SYM(rel.r_info);
+    reloc->relocType=ELFXX_R_TYPE(rel.r_info);
+    reloc->symIdx=ELFXX_R_SYM(rel.r_info);
   }
   else //RELA
   {
     memcpy(&rela,data->d_buf+offset,sizeof(rela));
     reloc->r_offset=rela.r_offset;
     reloc->r_addend=rela.r_addend;
-    reloc->relocType=ELF32_R_TYPE(rela.r_info);
-    reloc->symIdx=ELF32_R_SYM(rela.r_info);
+    reloc->relocType=ELFXX_R_TYPE(rela.r_info);
+    reloc->symIdx=ELFXX_R_SYM(rela.r_info);
   }
   return reloc;
 }
@@ -168,9 +167,12 @@ void applyRelocation(RelocInfo* rel,GElf_Sym* oldSym,ELF_STORAGE_TYPE type)
     //may have to do some additional fixups
     switch(rel->relocType)
     {
-    case R_386_32:
+    case R_386_32: //also holds for R_X86_64_32, but the code is the
+                   //same so C will complain about duplicate case
+                   //value if we put it
       break;
-    case R_386_PC32:
+    case R_386_PC32: //again, holds for X86_64 but C would complain
+                     //about duplicate case value
       //-sizeof(addr_t) because relative to PC of next instruction
       newAddrAccessed=newAddrAccessed-rel->r_offset-sizeof(addr_t);
       break;
@@ -187,7 +189,9 @@ void applyRelocation(RelocInfo* rel,GElf_Sym* oldSym,ELF_STORAGE_TYPE type)
       addr_t oldAddrAccessed=0;
       switch(rel->relocType)
       {
-      case R_386_32:
+      case R_386_32: //also holds for R_X86_64_32, but the code is the
+                     //same so C will complain about duplicate case
+                    //value if we put it
         assert(sym.st_shndx!=SHN_UNDEF &&
                sym.st_shndx!=SHN_ABS &&
                sym.st_shndx!=SHN_COMMON);
@@ -206,10 +210,10 @@ void applyRelocation(RelocInfo* rel,GElf_Sym* oldSym,ELF_STORAGE_TYPE type)
       logprintf(ELL_INFO_V3,ELS_RELOCATION,"Relocation type is %i and addend is 0x%x\n",rel->relocType,rel->r_addend);
       switch(rel->relocType)
       {
-      case R_386_32:
+      case R_386_32: //holds for X86_X64 as well, has same numerical value
         newAddrAccessed=addrNew+rel->r_addend;
         break;
-      case R_386_PC32:
+      case R_386_PC32: //holds for X86_X64 as well, has same numerical value
         //off by one?
         //printf("addrNew is 0x%x, addend ix 0x%x, offset is 0x%x\n",addrNew,rel->rela.r_addend,rel->rela.r_offset);
          //-sizeof(addr_t) because relative to PC of next instruction
@@ -416,10 +420,10 @@ addr_t computeAddend(ElfInfo* e,byte type,idx_t symIdx,addr_t r_offset,idx_t scn
   word_t addrAccessed=getWordAtAbs(elf_getscn(e->e,scnIdx),r_offset,IN_MEM);
   switch(type)
   {
-  case R_386_32:
+  case R_386_32: //holds for X86_X64 as well, has same numerical value
     return addrAccessed-symVal;
     break;
-  case R_386_PC32:
+  case R_386_PC32: //holds for X86_X64 as well, has same numerical value
     {
       addr_t computation=addrAccessed-symVal+r_offset+sizeof(addr_t);
       //+sizeof(addr_t) because it's pc at next instruction

@@ -25,6 +25,7 @@
 #include "info/fdedump.h"
 #include "constants.h"
 #include <sys/wait.h>
+#include <unistd.h>
 
 ElfInfo* patchedBin=NULL;
 ElfInfo* targetBin=NULL;
@@ -34,7 +35,7 @@ addr_t patchRelTextAddr=0;
 addr_t patchDataAddr=0;
 
 int addStrtabEntryToExisting(ElfInfo* e,char* str,bool header);
-int addSymtabEntryToExisting(ElfInfo* e,Elf32_Sym* sym);
+int addSymtabEntryToExisting(ElfInfo* e,ElfXX_Sym* sym);
 
 void allocateMemoryForVarRelocation(VarInfo* var)
 {
@@ -42,7 +43,7 @@ void allocateMemoryForVarRelocation(VarInfo* var)
   int length=var->type->length;
   var->newLocation=getFreeSpaceInTarget(length);
   byte* zeros=zmalloc(length);
-  printf("zeroing out new memory at 0x%x with length %i\n",var->newLocation,length);
+  printf("zeroing out new memory at 0x%lx with length %i\n",var->newLocation,length);
   memcpyToTarget(var->newLocation,zeros,length);
   free(zeros);
   //todo: handle errors
@@ -151,10 +152,10 @@ void applyVariablePatch(VarInfo* var,Map* fdeMap,ElfInfo* patch)
     }
     //create a symbol for our variable
     //todo: really should abstract this out
-    Elf32_Sym sym;
-    memset(&sym,0,sizeof(Elf32_Sym));
+    ElfXX_Sym sym;
+    memset(&sym,0,sizeof(ElfXX_Sym));
     //todo: might not always be the case that it's global
-    sym.st_info=ELF32_ST_INFO(STB_GLOBAL,STT_OBJECT);
+    sym.st_info=ELFXX_ST_INFO(STB_GLOBAL,STT_OBJECT);
     sym.st_name=addStrtabEntryToExisting(patchedBin,var->name,false);
     sym.st_shndx=elf_ndxscn(getSectionByName(patchedBin,".data.new"));
     sym.st_value=var->newLocation;
@@ -197,10 +198,10 @@ void applyFunctionPatch(SubprogramInfo* func,int pid,ElfInfo* targetBin,ElfInfo*
     //the function did not exist previously!
     //we create a new symbol for it
     //todo: really should abstract this out
-    Elf32_Sym sym;
-    memset(&sym,0,sizeof(Elf32_Sym));
+    ElfXX_Sym sym;
+    memset(&sym,0,sizeof(ElfXX_Sym));
     //todo: might not always be the case that it's global
-    sym.st_info=ELF32_ST_INFO(STB_GLOBAL,STT_FUNC);
+    sym.st_info=ELFXX_ST_INFO(STB_GLOBAL,STT_FUNC);
     sym.st_name=addStrtabEntryToExisting(patchedBin,func->name,false);
     sym.st_shndx=elf_ndxscn(getSectionByName(patchedBin,".text.new"));
     sym.st_value=addr;
@@ -235,10 +236,10 @@ int addStrtabEntryToExisting(ElfInfo* e,char* str,bool header)
   return retval;
 }
 
-int addSymtabEntryToExisting(ElfInfo* e,Elf32_Sym* sym)
+int addSymtabEntryToExisting(ElfInfo* e,ElfXX_Sym* sym)
 {
   Elf_Data* data=getDataByERS(e,ERS_SYMTAB);
-  int len=sizeof(Elf32_Sym);
+  int len=sizeof(ElfXX_Sym);
   int newSize=data->d_size+len;
   data->d_buf=realloc(data->d_buf,newSize);
   memcpy((char*)data->d_buf+data->d_size,sym,len);
@@ -266,7 +267,7 @@ addr_t copyInEntireSection(ElfInfo* patch,char* name)
   addr_t addr=getFreeSpaceInTarget(data->d_size);
   if(data->d_size)
   {
-    printf("mapping in the entirety of %s Copying %i bytes to 0x%x\n",name,data->d_size,(uint)addr);
+    printf("mapping in the entirety of %s Copying %li bytes to 0x%lx\n",name,data->d_size,addr);
     memcpyToTarget(addr,data->d_buf,data->d_size);
   }
   else
@@ -295,9 +296,9 @@ addr_t copyInEntireSection(ElfInfo* patch,char* name)
   memcpy(newdata->d_buf,data->d_buf,data->d_size);
 
   //add a symbol
-  Elf32_Sym sym;
-  memset(&sym,0,sizeof(Elf32_Sym));
-  sym.st_info=ELF32_ST_INFO(STB_LOCAL,STT_SECTION);
+  ElfXX_Sym sym;
+  memset(&sym,0,sizeof(ElfXX_Sym));
+  sym.st_info=ELFXX_ST_INFO(STB_LOCAL,STT_SECTION);
   sym.st_name=0;//traditionally section symbols have no name (I dunno why) and
   //keeping this consistency helps in reindexing symbols
   sym.st_shndx=elf_ndxscn(newscn);
@@ -447,7 +448,7 @@ void fixupPatchRelocations(ElfInfo* patch)
   Elf_Scn* relTextScn=getSectionByName(patch,".rela.text.new");
   //go through and reindex all of the symbols
   Elf_Data* data=elf_getdata(relTextScn,NULL);
-  int numRelocs=data->d_size/sizeof(Elf32_Rela);
+  int numRelocs=data->d_size/sizeof(ElfXX_Rela);
   Elf_Scn* patchTextNew=getSectionByName(patch,".text.new");
   GElf_Shdr shdr;
   if(!gelf_getshdr(patchTextNew,&shdr))
@@ -463,9 +464,9 @@ void fixupPatchRelocations(ElfInfo* patch)
  
   for(int i=0;i<numRelocs;i++)
   {
-    Elf32_Rela* rela=((Elf32_Rela*)data->d_buf)+i;
-    int symIdx=ELF32_R_SYM(rela->r_info);
-    int type=ELF32_R_TYPE(rela->r_info);
+    ElfXX_Rela* rela=((ElfXX_Rela*)data->d_buf)+i;
+    int symIdx=ELFXX_R_SYM(rela->r_info);
+    int type=ELFXX_R_TYPE(rela->r_info);
     GElf_Sym sym;
     getSymbol(patch,symIdx,&sym);
 
@@ -480,17 +481,15 @@ void fixupPatchRelocations(ElfInfo* patch)
     {
       death("Could not reindex symbol from patch to patchedBin\n");
     }
-    rela->r_info=ELF32_R_INFO(reindex,type);
+    rela->r_info=ELFXX_R_INFO(reindex,type);
     addr_t newOffset=rela->r_offset-oldTextNewStart+patchTextAddr;
 
     //fix up PC32-relocations so we keep the same absolute address
     //hopefully most of them will be properly fixed up by PLT or GOT
     //todo: even allow this at all? Issue warning later
     //if some not taken care of?
-    switch(type)
+    if(type==R_386_PC32 || type==R_X86_64_PC32)
     {
-    case R_386_PC32:
-      {
         assert(rela->r_offset<textData->d_size);
         word_t addrAccessed=*((word_t*)(textData->d_buf+rela->r_offset));
         //if we were using a PC-relative relocation and the PC wasn't in the patch text,
@@ -501,7 +500,6 @@ void fixupPatchRelocations(ElfInfo* patch)
         logprintf(ELL_INFO_V2,ELS_RELOCATION,"for PC32 relocation, modifying access at 0x%x to access 0x%x by adding 0x%x\n",(uint)newOffset,(uint)(addrAccessed+diff),(uint)diff);
         modifyTarget(newOffset,addrAccessed+diff);
         //todo: I'm not sure this is necessary here, since we do relocations later
-      }
     }
     rela->r_offset=newOffset;
   }
@@ -638,7 +636,7 @@ void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch)
   reloc.type=ERT_RELA;
   reloc.scnIdx=elf_ndxscn(getSectionByName(patchedBin,".text.new"));
   GElf_Rela rela;
-  int numRelocs=data->d_size/sizeof(Elf32_Rela);
+  int numRelocs=data->d_size/sizeof(ElfXX_Rela);
   for(int i=0;i<numRelocs;i++)
   {
     if(!gelf_getrela(data,i,&rela))

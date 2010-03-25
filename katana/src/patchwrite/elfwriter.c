@@ -74,9 +74,9 @@ int addStrtabEntry(char* str)
 }
 
 //return index of entry in symbol table
-int addSymtabEntry(Elf_Data* data,Elf32_Sym* sym)
+int addSymtabEntry(Elf_Data* data,ElfXX_Sym* sym)
 {
-  int len=sizeof(Elf32_Sym);
+  int len=sizeof(ElfXX_Sym);
   addDataToScn(data,sym,len);
   if(data==symtab_data)
   {
@@ -99,8 +99,8 @@ void createSections(Elf* outelf)
   scnInfo[ERS_STRTAB].scn=strtab_scn;
   scnInfo[ERS_STRTAB].data=strtab_data;
   
-  Elf32_Shdr* shdr ;
-  shdr=elf32_getshdr(strtab_scn);
+  ElfXX_Shdr* shdr ;
+  shdr=elfxx_getshdr(strtab_scn);
   shdr->sh_type=SHT_STRTAB;
   shdr->sh_link=SHN_UNDEF;
   shdr->sh_info=SHN_UNDEF;
@@ -124,7 +124,7 @@ void createSections(Elf* outelf)
   Elf_Data* data=scnInfo[ERS_DATA].data=elf_newdata(scn);
   data->d_align=1;
   data->d_version=EV_CURRENT;
-  shdr=elf32_getshdr(scn);
+  shdr=elfxx_getshdr(scn);
   shdr->sh_type=SHT_PROGBITS;
   shdr->sh_link=SHN_UNDEF;
   shdr->sh_info=SHN_UNDEF;
@@ -144,7 +144,7 @@ void createSections(Elf* outelf)
   patch_rules_data->d_size=0
   patch_rules_data->d_version=EV_CURRENT;
   
-  shdr=elf32_getshdr(patch_rules_scn);
+  shdr=elfxx_getshdr(patch_rules_scn);
   shdr->sh_type=SHT_PROGBITS;
   shdr->sh_link=1;//index of string table
   shdr->sh_info=SHN_UNDEF;
@@ -160,7 +160,7 @@ void createSections(Elf* outelf)
   patch_expr_data->d_size=0;
   patch_expr_data->d_version=EV_CURRENT;
   
-  shdr=elf32_getshdr(patch_expr_scn);
+  shdr=elfxx_getshdr(patch_expr_scn);
   shdr->sh_type=SHT_PROGBITS;
   shdr->sh_link=1;//index of string table
   shdr->sh_info=SHN_UNDEF;
@@ -180,18 +180,18 @@ void createSections(Elf* outelf)
   scnInfo[ERS_SYMTAB].scn=symtab_scn;
   scnInfo[ERS_SYMTAB].data=symtab_data;
   
-  shdr=elf32_getshdr(symtab_scn);
+  shdr=elfxx_getshdr(symtab_scn);
   shdr->sh_type=SHT_SYMTAB;
   shdr->sh_link=1;//index of string table
   shdr->sh_info=0;//todo: p.1-13 of ELF format describes this,
                           //but I don't quite understand it
-  shdr->sh_addralign=4;//32-bit
-  shdr->sh_entsize=sizeof(Elf32_Sym);
+  shdr->sh_addralign=__WORDSIZE;
+  shdr->sh_entsize=sizeof(ElfXX_Sym);
   shdr->sh_name=addStrtabEntry(".symtab");
 
   //first symbol in symtab should be all zeros
-  Elf32_Sym sym;
-  memset(&sym,0,sizeof(Elf32_Sym));
+  ElfXX_Sym sym;
+  memset(&sym,0,sizeof(ElfXX_Sym));
   addSymtabEntry(symtab_data,&sym);
 
    //create the section for holding indices to symbols of unsafe
@@ -201,7 +201,7 @@ void createSections(Elf* outelf)
   data=scnInfo[ERS_UNSAFE_FUNCTIONS].data=elf_newdata(scn);
   data->d_align=sizeof(idx_t);
   data->d_version=EV_CURRENT;
-  shdr=elf32_getshdr(scn);
+  shdr=elfxx_getshdr(scn);
   shdr->sh_type=SHT_KATANA_UNSAFE_FUNCTIONS;
   shdr->sh_link=elf_ndxscn(symtab_scn);
   shdr->sh_info=SHN_UNDEF;
@@ -209,28 +209,6 @@ void createSections(Elf* outelf)
                          //that it is in the ELF files I've examined,
                          //but does it have to be?
   shdr->sh_name=addStrtabEntry(".unsafe_functions");
-
-  //now not using old symtab b/c better to get old symbols from
-  // /proc/PID/exe
-  /*
-  //symtab for symbols we care about in old binary
-  old_symtab_scn=elf_newscn(outelf);
-  old_symtab_data=elf_newdata(old_symtab_scn);
-  old_symtab_data->d_align=1;
-  old_symtab_data->d_buf=NULL;
-  old_symtab_data->d_off=0;
-  old_symtab_data->d_size=0;
-  old_symtab_data->d_version=EV_CURRENT;
-  
-  shdr=elf32_getshdr(old_symtab_scn);
-  shdr->sh_type=SHT_SYMTAB;
-  shdr->sh_link=1;//index of string table
-  shdr->sh_info=0;//todo: p.1-13 of ELF format describes this,
-                          //but I don't quite understand it
-  shdr->sh_addralign=4;//32-bit
-  shdr->sh_entsize=sizeof(Elf32_Sym);
-  shdr->sh_name=addStrtabEntry(".symtab.v0");
-  */
 
   //text section for new functions
   text_scn=elf_newscn(outelf);
@@ -242,7 +220,7 @@ void createSections(Elf* outelf)
   text_data->d_size=0;
   text_data->d_version=EV_CURRENT;
   
-  shdr=elf32_getshdr(text_scn);
+  shdr=elfxx_getshdr(text_scn);
   shdr->sh_type=SHT_PROGBITS;
   shdr->sh_link=0;
   shdr->sh_info=0;
@@ -266,7 +244,7 @@ void createSections(Elf* outelf)
   scnInfo[ERS_RODATA].scn=rodata_scn;
   scnInfo[ERS_RODATA].data=rodata_data;
   
-  shdr=elf32_getshdr(rodata_scn);
+  shdr=elfxx_getshdr(rodata_scn);
   shdr->sh_type=SHT_PROGBITS;
   shdr->sh_link=0;
   shdr->sh_info=0;
@@ -283,18 +261,18 @@ void createSections(Elf* outelf)
   rela_text_data->d_version=EV_CURRENT;
   scnInfo[ERS_RELA_TEXT].scn=rela_text_scn;
   scnInfo[ERS_RELA_TEXT].data=rela_text_data;
-  shdr=elf32_getshdr(rela_text_scn);
+  shdr=elfxx_getshdr(rela_text_scn);
   shdr->sh_type=SHT_RELA;
-  shdr->sh_addralign=4;//todo: diff for 64-bit
+  shdr->sh_addralign=__WORDSIZE;
   shdr->sh_name=addStrtabEntry(".rela.text.new");
 
   //write symbols for sections
-  sym.st_info=ELF32_ST_INFO(STB_LOCAL,STT_SECTION);
+  sym.st_info=ELFXX_ST_INFO(STB_LOCAL,STT_SECTION);
   for(int i=0;i<ERS_CNT;i++)
   {
     if(scnInfo[i].scn)
     {
-      sym.st_name=elf32_getshdr(scnInfo[i].scn)->sh_name;
+      sym.st_name=elfxx_getshdr(scnInfo[i].scn)->sh_name;
       sym.st_shndx=elf_ndxscn(scnInfo[i].scn);
       addSymtabEntry(symtab_data,&sym);
     }
@@ -325,7 +303,7 @@ ElfInfo* startPatchElf(char* fname)
 
   outelf = elf_begin (outfd, ELF_C_WRITE, NULL);
   patch->e=outelf;
-  Elf32_Ehdr* ehdr=elf32_newehdr(outelf);
+  ElfXX_Ehdr* ehdr=elfxx_newehdr(outelf);
   if(!ehdr)
   {
     death("Unable to create new ehdr\n");
@@ -334,7 +312,7 @@ ElfInfo* startPatchElf(char* fname)
   ehdr->e_ident[EI_MAG1]=ELFMAG1;
   ehdr->e_ident[EI_MAG2]=ELFMAG2;
   ehdr->e_ident[EI_MAG3]=ELFMAG3;
-  ehdr->e_ident[EI_CLASS]=ELFCLASS32;
+  ehdr->e_ident[EI_CLASS]=ELFCLASSXX;
   ehdr->e_ident[EI_DATA]=ELFDATA2LSB;
   ehdr->e_ident[EI_VERSION]=EV_CURRENT;
   ehdr->e_ident[EI_OSABI]=ELFOSABI_NONE;
@@ -353,7 +331,7 @@ ElfInfo* startPatchElf(char* fname)
 
 void finalizeDataSize(Elf_Scn* scn,Elf_Data* data)
 {
-  Elf32_Shdr* shdr=elf32_getshdr(scn);
+  ElfXX_Shdr* shdr=elfxx_getshdr(scn);
   shdr->sh_size=data->d_size;
   logprintf(ELL_INFO_V3,ELS_ELFWRITE,"finalizing data size to %i for section with index %i\n",shdr->sh_size,elf_ndxscn(scn));
 }
@@ -374,7 +352,7 @@ void finalizeDataSizes()
   /*
   //symtab from old binary
 
-  shdr=elf32_getshdr(old_symtab_scn);
+  shdr=elfxx_getshdr(old_symtab_scn);
   shdr->sh_size=old_symtab_data->d_size;
   */
 
@@ -401,10 +379,10 @@ void endPatchElf()
   //all symbols created so far that were relative to sections
   //assumed that their sections started at location 0. This obviously
   //can't be true of all sections. We now relocate the symbols appropriately
-  int numEntries=symtab_data->d_size/sizeof(Elf32_Sym);//todo: diff for 64 bit
+  int numEntries=symtab_data->d_size/sizeof(ElfXX_Sym);
   for(int i=1;i<numEntries;i++)
   {
-    Elf32_Sym* sym=symtab_data->d_buf+i*sizeof(Elf32_Sym);
+    ElfXX_Sym* sym=symtab_data->d_buf+i*sizeof(ElfXX_Sym);
     if(sym->st_shndx!=SHN_UNDEF && sym->st_shndx!=SHN_ABS && sym->st_shndx!=SHN_COMMON)
     {
       //symbol needs rebasing
@@ -449,16 +427,16 @@ int reindexSectionForPatch(ElfInfo* e,int scnIdx)
       GElf_Shdr shdr;
       getShdr(scn,&shdr);
       patchScn=elf_newscn(outelf);
-      Elf32_Shdr* patchShdr=elf32_getshdr(patchScn);
+      ElfXX_Shdr* patchShdr=elfxx_getshdr(patchScn);
       patchShdr->sh_type=shdr.sh_type;
       patchShdr->sh_link=shdr.sh_link;
       patchShdr->sh_info=shdr.sh_info;
       patchShdr->sh_addralign=shdr.sh_addralign;
       patchShdr->sh_name=addStrtabEntry(scnName);
       //need to add a symbol for this section
-      Elf32_Sym sym;
-      memset(&sym,0,sizeof(Elf32_Sym));
-      sym.st_info=ELF32_ST_INFO(STB_LOCAL,STT_SECTION);
+      ElfXX_Sym sym;
+      memset(&sym,0,sizeof(ElfXX_Sym));
+      sym.st_info=ELFXX_ST_INFO(STB_LOCAL,STT_SECTION);
       sym.st_name=patchShdr->sh_name;
       sym.st_shndx=elf_ndxscn(patchScn);
       addSymtabEntry(symtab_data,&sym);
@@ -481,17 +459,17 @@ int dwarfWriteSectionCallback(char* name,int size,Dwarf_Unsigned type,
   Elf_Data* strtab_data=getDataByERS(patch,ERS_STRTAB);
   for(;scn;scn=elf_nextscn(outelf,scn))
   {
-    Elf32_Shdr* shdr=elf32_getshdr(scn);
+    ElfXX_Shdr* shdr=elfxx_getshdr(scn);
     if(!strncmp(strtab_data->d_buf+shdr->sh_name,name,nameLen))
     {
       //ok, we found the section we want, now have to find its symbol
       int symtabSize=symtab_data->d_size;
-      for(int i=0;i<symtabSize/sizeof(Elf32_Sym);i++)
+      for(int i=0;i<symtabSize/sizeof(ElfXX_Sym);i++)
       {
-        Elf32_Sym* sym=(Elf32_Sym*)(symtab_data->d_buf+i*sizeof(Elf32_Sym));
+        ElfXX_Sym* sym=(ElfXX_Sym*)(symtab_data->d_buf+i*sizeof(ElfXX_Sym));
         int idx=elf_ndxscn(scn);
         //printf("we're on section with index %i and symbol for index %i\n",idx,sym->st_shndx);
-        if(STT_SECTION==ELF32_ST_TYPE(sym->st_info) && idx==sym->st_shndx)
+        if(STT_SECTION==ELFXX_ST_TYPE(sym->st_info) && idx==sym->st_shndx)
         {
           *sectNameIdx=i;
           return idx;
@@ -506,7 +484,7 @@ int dwarfWriteSectionCallback(char* name,int size,Dwarf_Unsigned type,
  
   //todo: write this section
   scn=elf_newscn(outelf);
-  Elf32_Shdr* shdr=elf32_getshdr(scn);
+  ElfXX_Shdr* shdr=elfxx_getshdr(scn);
   shdr->sh_name=addStrtabEntry(name);
   shdr->sh_type=type;
   shdr->sh_flags=flags;
@@ -518,11 +496,11 @@ int dwarfWriteSectionCallback(char* name,int size,Dwarf_Unsigned type,
     shdr->sh_link=elf_ndxscn(symtab_scn);
   }
   shdr->sh_info=info;
-  Elf32_Sym sym;
+  ElfXX_Sym sym;
   sym.st_name=shdr->sh_name;
   sym.st_value=0;//don't yet know where this symbol will end up. todo: fix this, so relocations can theoretically be done
   sym.st_size=0;
-  sym.st_info=ELF32_ST_INFO(STB_LOCAL,STT_SECTION);
+  sym.st_info=ELFXX_ST_INFO(STB_LOCAL,STT_SECTION);
   sym.st_other=0;
   sym.st_shndx=elf_ndxscn(scn);
   *sectNameIdx=addSymtabEntry(symtab_data,&sym);

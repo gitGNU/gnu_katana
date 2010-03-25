@@ -12,6 +12,7 @@
 #include <dirent.h>
 #include "util/logging.h"
 #include "util/path.h"
+#include "elfcmp.h"
 
 ElfInfo* getOriginalObject(ObjFileInfo* obj)
 {
@@ -100,16 +101,8 @@ List* getChangedObjectFilesInSourceTree(char* origSourceTree,char* modSourceTree
       {
         death("Why are you giving one of your directories a .o extension? This parser isn't terribly smart, so it breaks!\n");
       }
-      //obj file exists in both of them
-      //compare them for equality
-      if(system("which elfcmp > /dev/null"))
-      {
-        death("You must have the elfcmp program installed. You can obtain this from elfutils which can be found at https://fedorahosted.org/elfutils/\n");
-      }
 
-      char* buf=zmalloc(strlen(fullPathOrig)+strlen(fullPathMod)+32);
-      sprintf(buf,"elfcmp %s %s",fullPathOrig,fullPathMod);
-      if(system(buf))
+      if(!elfcmp(fullPathOrig,fullPathMod))
       {
         logprintf(ELL_INFO_V1,ELS_SOURCETREE,"Object files %s and %s differ\n",fullPathOrig,fullPathMod);
                 
@@ -133,7 +126,6 @@ List* getChangedObjectFilesInSourceTree(char* origSourceTree,char* modSourceTree
           free(dirEntriesMod[j]);
           i++,j++;
       }
-      free(buf);
     }
     else if(cmp<0)
     {

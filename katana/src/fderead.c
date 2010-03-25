@@ -11,8 +11,7 @@
 #include "fderead.h"
 #include "register.h"
 #include "dwarf_instr.h"
-#include <libdwarf.h>
-#include <dwarf.h>
+#include <libdwarf/dwarf.h>
 #include <assert.h>
 #include "util/logging.h"
 #include "dwarfvm.h"
@@ -66,6 +65,7 @@ RegInstruction* parseFDEInstructions(Dwarf_Debug dbg,unsigned char* bytes,int le
       {
       case DW_CFA_set_loc:
         //todo: this assumes 32-bit
+        //does it? need to look into this more
         memcpy(&result[*numInstrs].arg1,bytes+1,sizeof(int));
         bytes+=sizeof(int);
         len-=sizeof(int);

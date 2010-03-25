@@ -12,7 +12,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <limits.h>
-#include <dwarf.h>
+#include <libdwarf/dwarf.h>
 #include <assert.h>
 #include "register.h"
 #include "codediff.h"
@@ -61,7 +61,7 @@ idx_t addSymbolFromBinaryToPatch(ElfInfo* binary,idx_t symIdx)
   //create a symbol to represent the symbol in newBinary
   //that this relocation refers to. If we don't already have a corresponding
   //symbol in the patch file, we may have to add this one
-  Elf32_Sym sym;
+  ElfXX_Sym sym;
   sym.st_name=addStrtabEntry(symname);//todo: this is a waste if we don't end up using this symbol
   sym.st_value=symInNewBin.st_value;
   sym.st_size=symInNewBin.st_size;
@@ -72,7 +72,7 @@ idx_t addSymbolFromBinaryToPatch(ElfInfo* binary,idx_t symIdx)
   {
     sym.st_shndx=reindexSectionForPatch(newBinary,symInNewBin.st_shndx);
   }
-  sym.st_info=ELF32_ST_INFO(ELF64_ST_BIND(symInNewBin.st_info),
+  sym.st_info=ELFXX_ST_INFO(ELF64_ST_BIND(symInNewBin.st_info),
                             symType);
   sym.st_other=symInNewBin.st_other;
 
@@ -98,7 +98,7 @@ void writeRelocationsInRange(addr_t lowpc,addr_t highpc,Elf_Scn* scn,
     //we always use RELA rather than REL in the patch file
     //because having the addend recorded makes some
     //things much easier to work with
-    Elf32_Rela rela;//what we actually write to the file
+    ElfXX_Rela rela;//what we actually write to the file
     RelocInfo* reloc=li->value;
     //todo: we insert symbols so that the relocations
     //will be valid, but we need to make sure we don't insert
@@ -123,7 +123,8 @@ void writeRelocationsInRange(addr_t lowpc,addr_t highpc,Elf_Scn* scn,
     //now depending on the type we may have to do some additional fixups
     switch(type)
     {
-      case R_386_PC32:
+    case R_386_PC32:
+    case R_X86_64_PC32:
         {
           word_t addrAccessed=getWordAtAbs(elf_getscn(binary->e,reloc->scnIdx)
                                            ,oldRelOffset,IN_MEM);
@@ -131,7 +132,7 @@ void writeRelocationsInRange(addr_t lowpc,addr_t highpc,Elf_Scn* scn,
           //address of the instruction. If we're not accessing
           //something inside the current function, then we might think
           //we actually want the type to be absolute, not relative. The problem
-          //with that is often a R_386_PC32 deals with a value at r_offset
+          //with that is often a PC32 relocation deals with a value at r_offset
           //that is not an address itself but an offset from the current address
           //and we must keep it that way, for example for relative calls
           //therefore we try to fix things up as best we can, although
@@ -157,7 +158,7 @@ void writeRelocationsInRange(addr_t lowpc,addr_t highpc,Elf_Scn* scn,
     }
     #endif
 
-    rela.r_info=ELF32_R_INFO(reindex,type);
+    rela.r_info=ELFXX_R_INFO(reindex,type);
     
     if(ERT_REL==reloc->type)
     {
@@ -184,7 +185,7 @@ void writeRelocationsInRange(addr_t lowpc,addr_t highpc,Elf_Scn* scn,
  
     rela.r_offset=newRelOffset;
     logprintf(ELL_INFO_V4,ELS_RELOCATION,"adding reloc for offset 0x%x\n",rela.r_offset);
-    addDataToScn(getDataByERS(patch,ERS_RELA_TEXT),&rela,sizeof(Elf32_Rela));
+    addDataToScn(getDataByERS(patch,ERS_RELA_TEXT),&rela,sizeof(ElfXX_Rela));
   }
   deleteList(relocs,free);
 }
@@ -226,7 +227,7 @@ void writeVarToData(VarInfo* var)
     free(data);
   }
   //now we must create a symbol for it as well
-  Elf32_Sym symNew=gelfSymToNativeSym(sym);
+  ElfXX_Sym symNew=gelfSymToNativeSym(sym);
   symNew.st_name=addStrtabEntry(var->name);
   symNew.st_value=addr;//will get relocated later once the data section in the patch has a fixed address
   symNew.st_shndx=elf_ndxscn(getSectionByERS(patch,ERS_DATA));
@@ -253,12 +254,12 @@ void writeVarTransforms(List* varTrans)
     //create the symbol entry
     //this means first creating the string table entry
     int strIdx=addStrtabEntry(vt->var->name);
-    Elf32_Sym sym;
+    ElfXX_Sym sym;
     sym.st_name=strIdx;
     sym.st_value=0;//don't know yet where this symbol is going to end up
     sym.st_size=vt->var->type->length;
     //todo: support local, weak, etc symbols
-    sym.st_info=ELF32_ST_INFO(STB_GLOBAL,STT_OBJECT);
+    sym.st_info=ELFXX_ST_INFO(STB_GLOBAL,STT_OBJECT);
     sym.st_other=0;
     sym.st_shndx=0;//no special section this is related to;
     addSymtabEntry(patch_syms_rel_data,&sym);*/
@@ -465,12 +466,12 @@ addr_t writeFuncToPatchText(SubprogramInfo* func,CompilationUnit* cu,idx_t* outS
   addr_t offset=addDataToScn(textData,getDataAtAbs(textScnPatched,func->lowpc,IN_MEM),len);
   addr_t funcSegmentBase=offset+shdr.sh_addr;//where text for this function is based
   //if -ffunction-sections is used, the function might have its own text section
-  Elf32_Sym sym;
+  ElfXX_Sym sym;
   sym.st_name=addStrtabEntry(func->name);
   sym.st_value=textData->d_off;//is it ok that this is section-relative, since
   //we set st_shndx to be the text section
   sym.st_size=0;
-  sym.st_info=ELF32_ST_INFO(STB_GLOBAL,STT_FUNC);
+  sym.st_info=ELFXX_ST_INFO(STB_GLOBAL,STT_FUNC);
   sym.st_other=0;
   sym.st_shndx=elf_ndxscn(textScn);
   *outSymIdx=addSymtabEntry(getDataByERS(patch,ERS_SYMTAB),&sym);
@@ -725,8 +726,8 @@ void writePatch(char* oldSourceTree,char* newSourceTree,char* oldBinName,char* n
 
   //so far there should be only local sections in symtab. Can set sh_info
   //apropriately
-  Elf32_Shdr* shdr=elf32_getshdr(getSectionByERS(patch,ERS_SYMTAB));
-  shdr->sh_info=getDataByERS(patch,ERS_SYMTAB)->d_off/sizeof(Elf32_Sym)+1;
+  ElfXX_Shdr* shdr=elfxx_getshdr(getSectionByERS(patch,ERS_SYMTAB));
+  shdr->sh_info=getDataByERS(patch,ERS_SYMTAB)->d_off/sizeof(ElfXX_Sym)+1;
   printf("set symtab sh_info to %i\n",shdr->sh_info);
   
   //now that we've created the necessary things, actually run through
@@ -774,7 +775,7 @@ void writePatch(char* oldSourceTree,char* newSourceTree,char* oldBinName,char* n
     Dwarf_Ptr buf=dwarf_get_section_bytes(dbg,i,&elfScnIdx,&length,&err);
     Elf_Scn* scn=elf_getscn(outelf,elfScnIdx);
     Elf_Data* data=elf_newdata(scn);
-    Elf32_Shdr* shdr=elf32_getshdr(scn);
+    ElfXX_Shdr* shdr=elfxx_getshdr(scn);
     shdr->sh_size=length;
     data->d_size=length;
     data->d_off=0;
