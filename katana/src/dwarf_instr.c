@@ -312,7 +312,7 @@ void printInstruction(RegInstruction inst)
     }
     if(ERT_NONE==inst.arg2Reg.type)
     {
-      printf("r%lu ",inst.arg2);
+      printf("r%lu ",(unsigned long)inst.arg2);
     }
     else
     {
@@ -338,14 +338,14 @@ void printInstruction(RegInstruction inst)
     }
     if(ERT_NONE==inst.arg2Reg.type)
     {
-      printf("r%lu ",inst.arg2);
+      printf("r%lu ",(unsigned long)inst.arg2);
     }
     else
     {
       printReg(inst.arg2Reg,stdout);
       printf(" ");
     }
-    printf("fde#%lu ",inst.arg3);
+    printf("fde#%lu ",(unsigned long)inst.arg3);
     printf("\n");
     break;
 

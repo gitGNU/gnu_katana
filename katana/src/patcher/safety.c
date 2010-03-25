@@ -371,7 +371,7 @@ void printBacktrace(ElfInfo* elf,int pid)
     unw_get_reg(&unwindCursor, UNW_REG_IP, &ip);
     if(lowpc<=ip && ip<=highpc)
     {
-      printf("0x%lx: %s\n",ip,getFunctionNameAtPC(elf,ip));
+      printf("0x%lx: %s\n",(unsigned long)ip,getFunctionNameAtPC(elf,ip));
     }
   }
   endLibUnwind();
