@@ -12,6 +12,7 @@
 #include <stdbool.h>
 #include "util/util.h"
 #include <libdwarf.h>
+#include <dwarf.h>
 #include "register.h"
 
 byte* encodeAsLEB128(byte* bytes,int numBytes,bool signed_,usint* numBytesOut);
@@ -61,7 +62,7 @@ void addInstruction(DwarfInstructions* instrs,DwarfInstruction* instr);
 void printInstruction(RegInstruction inst);
 
 //some versions of dwarf.h have a misspelling
-#ifndef DW_CFA_lo_user
+#if !DW_CFA_lo_user
 #define DW_CFA_lo_user DW_CFA_low_user
 #endif
 //specifies that the value for the given register should be computed
