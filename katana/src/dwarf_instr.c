@@ -9,7 +9,7 @@
 #include "util/util.h"
 #include "dwarf_instr.h"
 #include <math.h>
-#include <libdwarf/dwarf.h>
+#include <dwarf.h>
 #include "util/logging.h"
 
 //encode bytes (presumably representing a number)

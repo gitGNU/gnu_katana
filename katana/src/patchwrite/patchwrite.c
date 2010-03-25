@@ -12,7 +12,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <limits.h>
-#include <libdwarf/dwarf.h>
+#include <dwarf.h>
 #include <assert.h>
 #include "register.h"
 #include "codediff.h"

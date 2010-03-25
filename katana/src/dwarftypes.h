@@ -10,7 +10,7 @@
 #ifndef dwarftypes_h
 #define dwarftypes_h
 #include "elfparse.h"
-#include <libdwarf/libdwarf.h>
+#include <libdwarf.h>
 //caller should free info when no longer needs it
 //workingDir is used for path names
 //it is the directory that names should be relative to
