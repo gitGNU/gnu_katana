@@ -1,6 +1,6 @@
 CXX=g++
 CC=gcc
-CFLAGS=-Wall -g -std=c99 -D_POSIX_SOURCE -D_BSD_SOURCE -D_XOPEN_SOURCE -D_GNU_SOURCE -I src/
+CFLAGS=-Wall -g -std=c99 -D_POSIX_SOURCE -D_BSD_SOURCE -D_XOPEN_SOURCE -D_GNU_SOURCE -I src/ -I /usr/local/include/libdwarf/ -I /usr/include/libdwarf
 CFLAGS_TYPEPATCH=-Doff64_t=__off64_t
 LDFLAGS_TYPEPATCH=-L /usr/local/lib -ldwarf -lelf -lm  -lunwind-generic -lunwind-ptrace
 
