@@ -64,7 +64,7 @@ bool locateSymbolInLinkMap(struct link_map* lm,addr_t* result,char* symName,int 
   nameBuf[255]=0;
   if(!strlen(nameBuf))
   {
-    logprintf(ELL_WARN,ELS_LINKMAP,"Not examining symbols in nameless library, it's probably not what we want\n",nameBuf);
+    logprintf(ELL_WARN,ELS_LINKMAP,"Not examining symbols in nameless library, it's probably not what we want\n");
     return false;
   }
   
@@ -101,17 +101,16 @@ bool locateSymbolInLinkMap(struct link_map* lm,addr_t* result,char* symName,int 
     case DT_SYMTAB:
       symtab=dyn.d_un.d_ptr;
     case DT_SONAME:
-      
       break;
     default:
       break;
     }
   }
-  
 
   if(!symtab || !strtab || !hashtable)
   {
-    death("didn't find all the needed entries in the .dynamic section\n");
+    logprintf(ELL_WARN,ELS_LINKMAP,"Not examining symbols in library %s because not all the needed entries were found in the .dynamic section\n",nameBuf);
+    return false;
   }
 
   //in practice, I sometimes see invalid hashtable entries and no good way that
