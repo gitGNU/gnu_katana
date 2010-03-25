@@ -13,7 +13,7 @@
 #include "util/dictionary.h"
 #include "util/map.h"
 #include "util/list.h"
-#include <libdwarf/libdwarf.h>
+#include <libdwarf.h>
 #include <string.h>
 #include "util/refcounted.h"
 
