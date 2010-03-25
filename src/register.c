@@ -196,10 +196,10 @@ void printRule(PoRegRule rule,int regnum)
     printf("cfa = %s + %i\n",strForReg(rule.regRH),rule.offset);
     break;
   case ERRT_RECURSE_FIXUP:
-    printf("%s = recurse fixup with FDE#%lu based at %s\n",regStr,rule.index,strForReg(rule.regRH));
+    printf("%s = recurse fixup with FDE#%lu based at %s\n",regStr,(unsigned long)rule.index,strForReg(rule.regRH));
     break;
   case ERRT_RECURSE_FIXUP_POINTER:
-    printf("%s = recurse fixup pointer with FDE#%lu based at %s\n",regStr,rule.index,strForReg(rule.regRH));
+    printf("%s = recurse fixup pointer with FDE#%lu based at %s\n",regStr,(unsigned long)rule.index,strForReg(rule.regRH));
     break;
   default:
     death("unknown rule type\n");

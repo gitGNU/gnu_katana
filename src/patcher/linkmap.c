@@ -172,7 +172,7 @@ addr_t locateRuntimeSymbolInTarget(ElfInfo* e,char* name)
   for(;;memcpyFromTarget((byte*)&lm,(addr_t)lm.l_next,sizeof(lm)))
   {
     addr_t addr;//store the result address
-    if(locateSymbolInLinkMap(&lm,&addr,name,elf_hash((const unsigned char*)name)))
+    if(locateSymbolInLinkMap(&lm,&addr,name,elf_hash(name)))
     {
       return addr;
     }

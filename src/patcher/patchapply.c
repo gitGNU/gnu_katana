@@ -43,7 +43,7 @@ void allocateMemoryForVarRelocation(VarInfo* var)
   int length=var->type->length;
   var->newLocation=getFreeSpaceInTarget(length);
   byte* zeros=zmalloc(length);
-  printf("zeroing out new memory at 0x%lx with length %i\n",var->newLocation,length);
+  printf("zeroing out new memory at 0x%lx with length %i\n",(unsigned long)var->newLocation,length);
   memcpyToTarget(var->newLocation,zeros,length);
   free(zeros);
   //todo: handle errors
@@ -267,7 +267,7 @@ addr_t copyInEntireSection(ElfInfo* patch,char* name)
   addr_t addr=getFreeSpaceInTarget(data->d_size);
   if(data->d_size)
   {
-    printf("mapping in the entirety of %s Copying %li bytes to 0x%lx\n",name,data->d_size,addr);
+    printf("mapping in the entirety of %s Copying %li bytes to 0x%lx\n",name,(long)data->d_size,(unsigned long)addr);
     memcpyToTarget(addr,data->d_buf,data->d_size);
   }
   else
