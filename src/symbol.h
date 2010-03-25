@@ -11,6 +11,7 @@
 
 #include "types.h"
 #include "elfparse.h"
+#include "arch.h"
 
 addr_t getSymAddress(ElfInfo* e,int symIdx);
 //gets the symbol at the given idx, dies if it doesn't exist
@@ -31,8 +32,8 @@ typedef enum
 //find the symbol matching the given symbol
 idx_t findSymbol(ElfInfo* e,GElf_Sym* sym,ElfInfo* ref,int flags);
 
-GElf_Sym nativeSymToGELFSym(Elf32_Sym sym);
-Elf32_Sym gelfSymToNativeSym(GElf_Sym);
+GElf_Sym nativeSymToGELFSym(ElfXX_Sym sym);
+ElfXX_Sym gelfSymToNativeSym(GElf_Sym);
 
 //from an index of a symbol in the old ELF structure,
 //find it's index in the new ELF structure. Return -1 if it cannot be found

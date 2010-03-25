@@ -1,12 +1,11 @@
 CXX=g++
 CC=gcc
-#todo: remove 32-bit dependency
-CFLAGS=-Wall -g -std=c99 -D_POSIX_SOURCE -D_BSD_SOURCE -D_XOPEN_SOURCE -D_GNU_SOURCE -m32 -I src/
+CFLAGS=-Wall -g -std=c99 -D_POSIX_SOURCE -D_BSD_SOURCE -D_XOPEN_SOURCE -D_GNU_SOURCE -I src/
 CFLAGS_TYPEPATCH=-Doff64_t=__off64_t
-LDFLAGS_TYPEPATCH=-L /usr/local/lib -ldwarf -lelf -lm  -lunwind-x86 -lunwind-ptrace
+LDFLAGS_TYPEPATCH=-L /usr/local/lib -ldwarf -lelf -lm  -lunwind-generic -lunwind-ptrace
 
 PATCHER_SRC=src/patcher/hotpatch.c src/patcher/target.c src/patcher/patchapply.c src/patcher/versioning.c src/patcher/linkmap.c src/patcher/safety.c
-PATCHWRITE_SRC=src/patchwrite/patchwrite.c src/patchwrite/codediff.c src/patchwrite/typediff.c src/patchwrite/elfwriter.c src/patchwrite/sourcetree.c src/patchwrite/write_to_dwarf.c
+PATCHWRITE_SRC=src/patchwrite/patchwrite.c src/patchwrite/codediff.c src/patchwrite/typediff.c src/patchwrite/elfwriter.c src/patchwrite/sourcetree.c src/patchwrite/write_to_dwarf.c src/patchwrite/elfcmp.c
 UTIL_SRC=src/util/dictionary.c src/util/hash.c src/util/util.c src/util/map.c src/util/list.c src/util/logging.c src/util/path.c src/util/refcounted.c
 INFO_SRC=src/info/fdedump.c src/info/dwinfo_dump.c  src/info/unsafe_funcs_dump.c
 TYPEPATCH_SRC=src/katana.c src/dwarftypes.c   src/elfparse.c  src/types.c  src/dwarf_instr.c src/register.c src/relocation.c src/symbol.c src/fderead.c src/dwarfvm.c src/config.c $(PATCHWRITE_SRC) $(PATCHER_SRC) $(UTIL_SRC) $(INFO_SRC)
@@ -28,7 +27,7 @@ tests :
 code_tests :
 	make -C code_tests
 
-.PHONY : clean tests
+.PHONY : clean tests code_tests
 
 check : all tests code_tests
 	code_tests/listsort

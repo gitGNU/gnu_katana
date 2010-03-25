@@ -13,6 +13,8 @@
                Author of Eresi. It is likely that this method may be part
                of Eresi's linkmap code although I have not dug into Eresi's
                linkmap code to find out the precise method used there.
+ Important Note: the hash table in ELF files has entries of size Elf32_Word
+                 regardless of the Elf class of the object
 */
 
 #include <link.h>
@@ -26,7 +28,7 @@ addr_t locateLinkMap(ElfInfo* e)
   //which is where the GOT is stored
   //note: this is platform/OS specific, not in ELF standard
   Elf_Data* data=getDataByERS(e,ERS_DYNAMIC);
-  int numEntries=data->d_size/sizeof(Elf32_Dyn);
+  int numEntries=data->d_size/sizeof(ElfXX_Dyn);
   addr_t gotAddr=0;
   for(int i=0;i<numEntries;i++)
   {
@@ -60,18 +62,24 @@ bool locateSymbolInLinkMap(struct link_map* lm,addr_t* result,char* symName,int 
   char nameBuf[256];
   memcpyFromTarget((byte*)nameBuf,(addr_t)lm->l_name,256);
   nameBuf[255]=0;
+  if(!strlen(nameBuf))
+  {
+    logprintf(ELL_WARN,ELS_LINKMAP,"Not examining symbols in nameless library, it's probably not what we want\n",nameBuf);
+    return false;
+  }
+  
   logprintf(ELL_INFO_V2,ELS_LINKMAP,"Looking for symbol %s in link map for object %s\n",symName,nameBuf);
     
   addr_t strtab=0;
   addr_t symtab=0;
   addr_t hashtableBuckets=0;
-  word_t numBuckets;
+  ElfXX_Word numBuckets=0;
   addr_t hashtableChains=0;
   addr_t hashtable=0;
   
   //first we look at the link the linkmap entry has to the .dynamic section
   //for whatever program or library it corresponds to
-  Elf32_Dyn dyn;
+  ElfXX_Dyn dyn;
   for(int i=0;;i++)
   {
     memcpyFromTarget((byte*)&dyn,(addr_t)(lm->l_ld+i),sizeof(dyn));
@@ -109,24 +117,24 @@ bool locateSymbolInLinkMap(struct link_map* lm,addr_t* result,char* symName,int 
   //in practice, I sometimes see invalid hashtable entries and no good way that
   //I've found to detect them. So we just look for an invalid memory access and
   //bail when we get it, hope the symbol wasn't in that library
-  if(!memcpyFromTargetNoDeath((byte*)&numBuckets,hashtable,sizeof(addr_t)))
+  if(!memcpyFromTargetNoDeath((byte*)&numBuckets,hashtable,sizeof(ElfXX_Word)))
   {
     logprintf(ELL_WARN,ELS_LINKMAP,"Not examining symbols in this library ('%s'), doesn't seem to contain valid hashtable\n",nameBuf);
     return false;
   }
-  hashtableBuckets=hashtable+2*sizeof(word_t);
-  hashtableChains=hashtable+2*sizeof(word_t)+numBuckets*sizeof(idx_t);
+  hashtableBuckets=hashtable+2*sizeof(ElfXX_Word);
+  hashtableChains=hashtable+2*sizeof(ElfXX_Word)+numBuckets*sizeof(ElfXX_Word);
 
   //now that we've found what we need to look at the hashtable, we actually index into
   //the hash table
-  idx_t symIdx=0;
-  memcpyFromTarget((byte*)&symIdx,hashtableBuckets+sizeof(idx_t)*(symNameHash % numBuckets),sizeof(idx_t));
+  ElfXX_Word symIdx=0;
+  memcpyFromTarget((byte*)&symIdx,hashtableBuckets+sizeof(ElfXX_Word)*(symNameHash % numBuckets),sizeof(ElfXX_Word));
   for(;
       symIdx;
-      memcpyFromTarget((byte*)&symIdx,hashtableChains+sizeof(idx_t)*symIdx,sizeof(symIdx)))
+      memcpyFromTarget((byte*)&symIdx,hashtableChains+sizeof(idx_t)*symIdx,sizeof(ElfXX_Word)))
   {
-    Elf32_Sym sym;
-    memcpyFromTarget((byte*)&sym,symtab+sizeof(Elf32_Sym)*symIdx,sizeof(Elf32_Sym));
+    ElfXX_Sym sym;
+    memcpyFromTarget((byte*)&sym,symtab+sizeof(ElfXX_Sym)*symIdx,sizeof(ElfXX_Sym));
 
     if(0==sym.st_value && SHN_UNDEF==sym.st_shndx)
     {
@@ -164,7 +172,7 @@ addr_t locateRuntimeSymbolInTarget(ElfInfo* e,char* name)
   for(;;memcpyFromTarget((byte*)&lm,(addr_t)lm.l_next,sizeof(lm)))
   {
     addr_t addr;//store the result address
-    if(locateSymbolInLinkMap(&lm,&addr,name,elf_hash(name)))
+    if(locateSymbolInLinkMap(&lm,&addr,name,elf_hash((const unsigned char*)name)))
     {
       return addr;
     }

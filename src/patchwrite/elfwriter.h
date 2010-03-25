@@ -11,7 +11,7 @@
 #define elfwriter_h
 
 #include "elfparse.h"
-
+#include "arch.h"
 
 //must be called before any other routines
 //for each patch object to create
@@ -24,7 +24,7 @@ addr_t addDataToScn(Elf_Data* dataDest,void* data,int size);
 //adds an entry to the string table, return its offset
 int addStrtabEntry(char* str);
 //return index of entry in symbol table
-int addSymtabEntry(Elf_Data* data,Elf32_Sym* sym);
+int addSymtabEntry(Elf_Data* data,ElfXX_Sym* sym);
 
 int reindexSectionForPatch(ElfInfo* e,int scnIdx);
 

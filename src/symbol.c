@@ -83,16 +83,16 @@ idx_t findSymbol(ElfInfo* e,GElf_Sym* sym,ElfInfo* ref,int flags)
   //start at 1 because never trying to match symbol 0
    int bind=ELF64_ST_BIND(sym->st_info);
    int type=ELF64_ST_TYPE(sym->st_info);
-  int numEntries=symTabData->d_size/sizeof(Elf32_Sym);//todo: diff for 64 bit
+  int numEntries=symTabData->d_size/sizeof(ElfXX_Sym);
   for (int i = 1; i < numEntries; ++i)
   {
-    Elf32_Sym sym2;
+    ElfXX_Sym sym2;
     //get the symbol in an unsafe manner because
     //we may be getting it from a data buffer we're in the process of filling
-    memcpy(&sym2,symTabData->d_buf+i*sizeof(Elf32_Sym),sizeof(Elf32_Sym));
+    memcpy(&sym2,symTabData->d_buf+i*sizeof(ElfXX_Sym),sizeof(ElfXX_Sym));
     char* symname=(*getstrfunc)(e, sym2.st_name);
-    int bind2=ELF32_ST_BIND(sym2.st_info);
-    int type2=ELF32_ST_TYPE(sym2.st_info);
+    int bind2=ELFXX_ST_BIND(sym2.st_info);
+    int type2=ELFXX_ST_TYPE(sym2.st_info);
     char* symnameUnmangled=unmangleSymbolName(symname);
     //todo: bug with symbols with names substrings of other names, need to properly unmangle symname
     if( (STT_SECTION==type && STT_SECTION==type2) ||
@@ -223,27 +223,27 @@ idx_t findSymbol(ElfInfo* e,GElf_Sym* sym,ElfInfo* ref,int flags)
   return retval;
 }
 
-GElf_Sym nativeSymToGELFSym(Elf32_Sym sym)
+GElf_Sym nativeSymToGELFSym(ElfXX_Sym sym)
 {
   GElf_Sym res;
   res.st_name=sym.st_name;
   res.st_value=sym.st_value;
   res.st_size=sym.st_size;
-  res.st_info=ELF64_ST_INFO(ELF32_ST_BIND(sym.st_info),
-                            ELF32_ST_TYPE(sym.st_info));
+  res.st_info=ELF64_ST_INFO(ELFXX_ST_BIND(sym.st_info),
+                            ELFXX_ST_TYPE(sym.st_info));
   res.st_other=sym.st_other;
   res.st_shndx=sym.st_shndx;
   return res;
 }
 
 
-Elf32_Sym gelfSymToNativeSym(GElf_Sym sym)
+ElfXX_Sym gelfSymToNativeSym(GElf_Sym sym)
 {
-  Elf32_Sym res;
+  ElfXX_Sym res;
   res.st_name=sym.st_name;
   res.st_value=sym.st_value;
   res.st_size=sym.st_size;
-  res.st_info=ELF32_ST_INFO(ELF64_ST_BIND(sym.st_info),
+  res.st_info=ELFXX_ST_INFO(ELF64_ST_BIND(sym.st_info),
                             ELF64_ST_TYPE(sym.st_info));
   res.st_other=sym.st_other;
   res.st_shndx=sym.st_shndx;
@@ -291,8 +291,8 @@ int getSymtabIdx(ElfInfo* e,char* symbolName,int flags)
   //Hash table only contains dynamic symbols, don't use it here
   /*
   int nbucket, nchain;
-  memcpy(&nbucket,hashTableData->d_buf,sizeof(Elf32_Word));
-  memcpy(&nchain,hashTableData->d_buf+sizeof(Elf32_Word),sizeof(Elf32_Word));
+  memcpy(&nbucket,hashTableData->d_buf,sizeof(ElfXX_Word));
+  memcpy(&nchain,hashTableData->d_buf+sizeof(ElfXX_Word),sizeof(ElfXX_Word));
   logprintf(ELL_INFO_V4,ELS_MISC,"there are %i buckets, %i chain entries, and total size of %i\n",nbucket,nchain,hashTableData->d_size);
 
 
@@ -300,7 +300,7 @@ int getSymtabIdx(ElfInfo* e,char* symbolName,int flags)
   logprintf(ELL_INFO_V4,ELS_MISC,"hash is %lu\n",hash);
   //get the index from the bucket
   int idx;
-  memcpy(&idx,hashTableData->d_buf+sizeof(Elf32_Word)*(2+hash),sizeof(Elf32_Word));
+  memcpy(&idx,hashTableData->d_buf+sizeof(ElfXX_Word)*(2+hash),sizeof(ElfXX_Word));
   int nextIdx=idx;
   char* symname="";
   while(strcmp(symname,symbolName))
@@ -321,7 +321,7 @@ int getSymtabIdx(ElfInfo* e,char* symbolName,int flags)
     }
     symname=elf_strptr(e,strTblIdx,sym.st_name);
     //update index for the next go-around if need be from the chain table
-    memcpy(&nextIdx,hashTableData->d_buf+sizeof(Elf32_Word)*(2+nbucket+idx),sizeof(Elf32_Word));
+    memcpy(&nextIdx,hashTableData->d_buf+sizeof(ElfXX_Word)*(2+nbucket+idx),sizeof(ElfXX_Word));
   }
   return idx;
   */
@@ -399,7 +399,7 @@ idx_t findSymbolContainingAddress(ElfInfo* e,addr_t addr,byte type,idx_t scnIdx)
     GElf_Sym sym;
     if(!gelf_getsym(symTabData,i,&sym))
     {death("gelf_getsym failed\n");}
-    if(ELF32_ST_TYPE(sym.st_info)==type &&
+    if(ELFXX_ST_TYPE(sym.st_info)==type &&
        (sym.st_shndx==scnIdx || SHN_UNDEF==scnIdx) &&
        (sym.st_value==addr || 
         (sym.st_value<=addr &&

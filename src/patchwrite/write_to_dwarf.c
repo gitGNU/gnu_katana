@@ -7,8 +7,7 @@
 */
 
 #include "types.h"
-#include <libdwarf.h>
-#include <dwarf.h>
+#include <libdwarf/dwarf.h>
 #include "dwarf_instr.h"
 #include "util/logging.h"
 

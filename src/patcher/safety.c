@@ -64,31 +64,31 @@ void setRegValueFromDwarfRegNum(struct user_regs_struct* regs,int num,long int n
   switch(num)
   {
   case 0:
-    regs->eax=newValue;
+    REG_AX(*regs)=newValue;
     break;
   case 1:
-    regs->ecx=newValue;
+    REG_CX(*regs)=newValue;
     break;
   case 2:
-    regs->edx=newValue;
+    REG_DX(*regs)=newValue;
     break;
   case 3:
-    regs->ebx=newValue;
+    REG_BX(*regs)=newValue;
     break;
   case 4:
-    regs->esp=newValue;
+    REG_SP(*regs)=newValue;
     break;
   case 5:
-    regs->ebp=newValue;
+    REG_BP(*regs)=newValue;
     break;
   case 6:
-    regs->esi=newValue;
+    REG_SI(*regs)=newValue;
     break;
   case 7:
-    regs->edi=newValue;
+    REG_DI(*regs)=newValue;
     break;
   case 8:
-    regs->eip=newValue;
+    REG_IP(*regs)=newValue;
     break;
   default:
     fprintf(stderr,"unknown register number %i, cannot set reg val\n",num);
@@ -102,23 +102,23 @@ long int getRegValueFromDwarfRegNum(struct user_regs_struct regs,int num)
   switch(num)
   {
   case 0:
-    return regs.eax;
+    return REG_AX(regs);
   case 1:
-    return regs.ecx;
+    return REG_CX(regs);
   case 2:
-    return regs.edx;
+    return REG_DX(regs);
   case 3:
-    return regs.ebx;
+    return REG_BX(regs);
   case 4:
-    return regs.esp;
+    return REG_SP(regs);
   case 5:
-    return regs.ebp;
+    return REG_BP(regs);
   case 6:
-    return regs.esi;
+    return REG_SI(regs);
   case 7:
-    return regs.edi;
+    return REG_DI(regs);
   case 8:
-    return regs.eip;
+    return REG_IP(regs);
   default:
     fprintf(stderr,"unknown register number %i, cannot get reg val\n",num);
     death(NULL);
@@ -184,7 +184,7 @@ struct user_regs_struct restoreRegsFromRegisterRules(struct user_regs_struct cur
       if(!strcmp("esp",getX86RegNameFromDwarfRegNum(i)))
       {
         //no rule to restore the stack pointer, assume it's the same as the cfa
-        regs.esp=cfaAddr;
+        REG_SP(regs)=cfaAddr;
       }
       continue;
     }
@@ -371,7 +371,7 @@ void printBacktrace(ElfInfo* elf,int pid)
     unw_get_reg(&unwindCursor, UNW_REG_IP, &ip);
     if(lowpc<=ip && ip<=highpc)
     {
-      printf("0x%x: %s\n",ip,getFunctionNameAtPC(elf,ip));
+      printf("0x%lx: %s\n",ip,getFunctionNameAtPC(elf,ip));
     }
   }
   endLibUnwind();

@@ -124,9 +124,6 @@ void modifyTarget(addr_t addr,word_t value)
   }
 }
 
-//todo: figure this out on x86
-#define PTRACE_WORD_SIZE 4
-
 //todo: look more into this. ptrace
 //man page says it's required but in practice doesn't seem to be
 #define require_ptrace_alignment
@@ -269,7 +266,7 @@ addr_t mallocTarget(word_t len)
 
   //for some odd reason, sometimes having issues if we just used newRegs.eip
   addr_t modifyTextLocation=targetTextStart;
-  newRegs.eip=modifyTextLocation;
+  REG_IP(newRegs)=modifyTextLocation;
   setTargetRegs(&newRegs);
   
   //todo: diff for 64 bit
@@ -296,7 +293,7 @@ addr_t mallocTarget(word_t len)
   continuePtrace();
   wait(NULL);
   getTargetRegs(&newRegs);//get the return value from the syscall
-  int retval=newRegs.eax;
+  word_t retval=REG_AX(newRegs);
   printf("retval is 0x%x\n",(uint)retval);
   if((void*)retval==NULL)
   {
@@ -333,36 +330,36 @@ addr_t mmapTarget(int size,int prot)
   //note that this approach requires an executable stack.
   //if we didn't have an executable stack we could temporarily replace
   //code in the text segment at the program counter
-  newRegs.esp-=sizeof(int);
+  REG_SP(newRegs)-=sizeof(int);
   long code4Bytes;
   assert(sizeof(code4Bytes)==4);
   memcpy(&code4Bytes,code,4);
   //printf("inserting code at eip 0x%x\n",newRegs.eip);
   byte oldText[4];
-  memcpyFromTarget(oldText,newRegs.eip,4);
-  modifyTarget(newRegs.eip,code4Bytes);
+  memcpyFromTarget(oldText,REG_IP(newRegs),4);
+  modifyTarget(REG_IP(newRegs),code4Bytes);
   printf("inserted syscall call\n");
-  long returnAddr=newRegs.eip+2;//the int3 instruction
+  long returnAddr=REG_IP(newRegs)+2;//the int3 instruction
 
   
   //the call we want to make is
   //mmap(NULL,size,prot,MAP_PRIVATE|MAP_ANONYMOUS,-1,0)
   //mmap in libc is just a wrapper over a kernel call
   //we have a lot to put on the stack
-  modifyTarget(newRegs.esp-=4,0);
-  modifyTarget(newRegs.esp-=4,-1);
-  modifyTarget(newRegs.esp-=4,MAP_PRIVATE|MAP_ANONYMOUS);
-  modifyTarget(newRegs.esp-=4,prot);
-  modifyTarget(newRegs.esp-=4,size);
-  modifyTarget(newRegs.esp-=4,(int)NULL);
-  modifyTarget(newRegs.esp-=4,returnAddr);
-  newRegs.ebx=newRegs.esp+4;//syscall, takes arguments in registers,
+  modifyTarget(REG_SP(newRegs)-=4,0);
+  modifyTarget(REG_SP(newRegs)-=4,-1);
+  modifyTarget(REG_SP(newRegs)-=4,MAP_PRIVATE|MAP_ANONYMOUS);
+  modifyTarget(REG_SP(newRegs)-=4,prot);
+  modifyTarget(REG_SP(newRegs)-=4,size);
+  modifyTarget(REG_SP(newRegs)-=4,(word_t)NULL);
+  modifyTarget(REG_SP(newRegs)-=4,returnAddr);
+  REG_BX(newRegs)=REG_SP(newRegs)+4;//syscall, takes arguments in registers,
                             //this is a pointer to the arguments on the stack
-  newRegs.eax=SYS_mmap;//syscall number to identify that this is an mmap call
+  REG_AX(newRegs)=SYS_mmap;//syscall number to identify that this is an mmap call
   printf("%x\n",SYS_mmap);
   printf("inserted syscall params on stack\n");
   
-  newRegs.eax=SYS_mmap;//syscall number to identify that this is an mmap call
+  REG_AX(newRegs)=SYS_mmap;//syscall number to identify that this is an mmap call
   //now actually tell the process about these registers
   setTargetRegs(&newRegs);
   
@@ -370,17 +367,17 @@ addr_t mmapTarget(int size,int prot)
   continuePtrace();
   wait(NULL);
   getTargetRegs(&newRegs);//get the return value from the syscall
-  int retval=newRegs.eax;
+  word_t retval=REG_AX(newRegs);
   printf("retval is 0x%x\n",(uint)retval);
   if((void*)retval==MAP_FAILED)
   {
     fprintf(stderr,"mmap in target failed\n");
     death(NULL);
   }
-  //printf("now at eip 0x%x\n",newRegs.eip);
+  //printf("now at eip 0x%x\n",REG_IP(newRegs));
   #ifndef OLD_MMAP_TARGET
   //restore the old code
-  memcpyToTarget(oldRegs.eip,oldText,4);
+  memcpyToTarget(REG_IP(oldRegs),oldText,4);
   #endif
   //restore the old registers
   setTargetRegs(&oldRegs);
@@ -437,11 +434,11 @@ void removeBreakpoint(addr_t loc)
   memcpyToTarget(loc,restore->origCode,4);//todo: diff for 64-bit
   struct user_regs_struct regs;
   getTargetRegs(&regs);
-  if(regs.eip==loc+1)
+  if(REG_IP(regs)==loc+1)
   {
     //we just hit this breakpoint, move pack the pc so we can execute the instruction normally
     logprintf(ELL_INFO_V1,ELS_HOTPATCH,"Restoring program counter to 0x%x\n",(uint)loc);
-    regs.eip=loc;
+    REG_IP(regs)=loc;
     setTargetRegs(&regs);
   }
 }

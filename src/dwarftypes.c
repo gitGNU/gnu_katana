@@ -12,7 +12,7 @@
 #include <stdbool.h>
 #include "types.h"
 #include <assert.h>
-#include <dwarf.h>
+#include <libdwarf/dwarf.h>
 #include "elfparse.h"
 #include "util/logging.h"
 #include "util/refcounted.h"
@@ -63,16 +63,30 @@ int readAttributeAsInt(Dwarf_Attribute attr)
       result=b?1:0;
     }
     break;
+  default:
+    fprintf(stderr,"readAttributeAsInt cannot handle form type 0x%x yet\n",form);
+    death(NULL);
+  }
+  return result;
+}
+
+addr_t readAttributeAsAddr(Dwarf_Attribute attr)
+{
+  Dwarf_Half form;
+  Dwarf_Error err;
+  addr_t result=0;
+  dwarf_whatform(attr,&form,&err);
+  switch(form)
+  {
   case DW_FORM_addr:
     {
       Dwarf_Addr addr;
       dwarf_formaddr(attr,&addr,&err);
-      assert(sizeof(addr_t)==sizeof(int));
-      result=(int)addr;
+      result=addr;
     }
     break;
   default:
-    fprintf(stderr,"readAttributeAsInt cannot handle form type 0x%x yet\n",form);
+    fprintf(stderr,"readAttributeAsAddr cannot handle form type 0x%x yet\n",form);
     death(NULL);
   }
   return result;
@@ -989,12 +1003,12 @@ SubprogramInfo* addSubprogramFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUn
   int res=dwarf_attr(die,DW_AT_low_pc,&attr,&err);
   if(DW_DLV_OK==res)
   {
-    prog->lowpc=readAttributeAsInt(attr);
+    prog->lowpc=readAttributeAsAddr(attr);
   }
   res=dwarf_attr(die,DW_AT_high_pc,&attr,&err);
   if(DW_DLV_OK==res)
   {
-    prog->highpc=readAttributeAsInt(attr);
+    prog->highpc=readAttributeAsAddr(attr);
   }
   dictInsert(cu->subprograms,prog->name,prog);
   return prog;

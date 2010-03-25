@@ -25,8 +25,6 @@
 #include <assert.h>
 #include <signal.h>
 #include <sys/wait.h>
-#include <libdwarf.h>
-#include "dwarf.h"
 #include "dwarftypes.h"
 #include "types.h"
 #include "elfparse.h"
