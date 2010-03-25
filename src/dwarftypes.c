@@ -12,7 +12,7 @@
 #include <stdbool.h>
 #include "types.h"
 #include <assert.h>
-#include <libdwarf/dwarf.h>
+#include <dwarf.h>
 #include "elfparse.h"
 #include "util/logging.h"
 #include "util/refcounted.h"

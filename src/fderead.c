@@ -11,7 +11,7 @@
 #include "fderead.h"
 #include "register.h"
 #include "dwarf_instr.h"
-#include <libdwarf/dwarf.h>
+#include <dwarf.h>
 #include <assert.h>
 #include "util/logging.h"
 #include "dwarfvm.h"

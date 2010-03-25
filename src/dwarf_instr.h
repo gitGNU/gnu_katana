@@ -11,7 +11,7 @@
 
 #include <stdbool.h>
 #include "util/util.h"
-#include <libdwarf/libdwarf.h>
+#include <libdwarf.h>
 #include "register.h"
 
 byte* encodeAsLEB128(byte* bytes,int numBytes,bool signed_,usint* numBytesOut);

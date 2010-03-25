@@ -8,7 +8,7 @@
 
 #include "dwarfvm.h"
 #include "register.h"
-#include <libdwarf/dwarf.h>
+#include <dwarf.h>
 #include "util/dictionary.h"
 #include "patcher/target.h"
 #include <assert.h>
