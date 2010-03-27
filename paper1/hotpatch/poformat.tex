@@ -8,17 +8,17 @@ We have developed a Patch Object format with the following properties
  \item information about types and functions requiring patches contained
    as DWARF information
  \item type transformations specified using a language defined by the
-   Dwarf standard
+   DWARF standard
 \end{itemize}
 Through the use of existing standards and well-structured ELF files
 utilizing a simple expression language for data patching, we aim to
-create patches which are easily examined (or modified) with existing
+create patches that are easily examined (or modified) with existing
 tools. This easy compatibility with the existing binary tools and
 standards brings us to a very good point: why should patching not be a
 part of the ABI and of the standard toolchain? This does not
-necessarily have to be the precise format we use for Katana, any such
+necessarily have to be the precise format we use for Katana. Any such
 format that would become a standard, whether an actual standard or a
-de-facto standard should be well vetted by the community, but we argue
+de-facto standard, should be well vetted by the community, but we argue
 that something like this should be included in the standard object
 types, along with relocatable objects, executable objects, shared
 libraries, and core dumps. Consider the situation. Relocatable objects
@@ -27,15 +27,15 @@ nothing new. This is the entire premise of the dynamic
 library. User-written functions which may have to run upon this code
 injection (in the case of patching data where the desired actions
 cannot be determined automatically) already exist as the
-\texttt{.init} and \texttt{.fini} sections. Due to this similarity
+\texttt{.init} and \texttt{.fini} sections. Because of this similarity
 between some of the functionality needed by patching and the
 functionality offered by dynamic
 libraries, some previous systems have performed patching by creating
-patches as dynamic libraries which contain not only the code and data
-to be patched but the mechanism to perform the patching \cite{ginseng}
+patches as dynamic libraries that contain not only the code and data
+to be patched but also the mechanism to perform the patching \cite{ginseng}
 \cite{polus}. We argue that
-this is an unnecessary mixing of data and logic, and that a patch
-which contains merely the information necessary to fix a running
+this is an unnecessary mixing of data and logic and, further, that a patch
+that contains merely the information necessary to fix a running
 process and not the code to do so is more desirable. The code to apply
 the patch should live in one place on any given system, as most other
 executable content does. We do not embed Emacs within our text files,
@@ -64,7 +64,7 @@ symbols defined by the patch take precedence.
 These steps are all such fundamental operations that they should
 become universally supported by the ABI and the toolchain. 
 
-On the other hand, note the specification of a general patch
+On the other hand, note that the specification of a general patch
 format does not completely prescribe the patch application. From a
 standard patch format, a patcher is still free to make decisions such
 as when to patch safely and whether to patch functions by inserting
@@ -112,7 +112,7 @@ systems use only relocation sections of type \texttt{SHT\_REL}, we
 chose to use \texttt{SHT\_RELA} in our patch objects because they make
 addends much easier to keep track of as we relocate from patched
 binary to patch object to patched process in memory. This is all
-really nothing new, storing ELF sections to be injected in-memory has
+really nothing new; storing ELF sections to be injected in-memory has
 been done before in other systems \cite{eresi}. What is new in our patch object is
 the inclusion of DWARF sections. The \texttt{.debug\_info} section in
 an ordinary executable program contains a tree of DIEs (Debugging
@@ -124,19 +124,19 @@ changed variables. An example of the DWARF DIE information contained
 in a patch can be seen in Figure \ref{fig:dies}.
 
 Note that we store considerably less information about each entity
-than is typically contained. This is because we read most of the
+than is typically contained. This is so because we read most of the
 information from the DWARF and symbol table information of the
-executing process (unless it will have been stripped, then more
+executing process (unless it will have been stripped; then more
 information must be stored in the patch). This allows the patch to be
 more flexible as it does not require that all variables and procedures
 be located at exactly the addresses they were expected to be at when
 the patch was generated. This flexibility allows a single patch
 between versions \emph{va} and \emph{vb} to patch both an executable
-which was originally compiled to \emph{va} and an executable which was
+that was originally compiled to \emph{va} and an executable that was
 patched from earlier versions to be equivalent to \emph{va}. Ksplice,
-one of the few other patchers which operates solely at the binary
+one of the few other patchers that operate solely at the binary
 level, does not have this capability \cite{ksplice}. We will provide a
-mechanism for composing patches, such that a patch from version
+mechanism for composing patches such that a patch from version
 \emph{va} to \emph{vb} may be composed with a patch from \emph{vb} to
 \emph{vc} to produce a patch from \emph{va} to \emph{vb}. Note that
 patch versioning is currently a work in progress and not fully
@@ -179,7 +179,7 @@ implemented.
 \end{verbatim}
 \end{center}
 }
-\caption{Dwarf DIEs in the PO}
+\caption{DWARF DIEs in the PO}
 \label{fig:dies}
 \vspace{-10pt}
 \end{figure}
@@ -190,20 +190,20 @@ or how to locate code within the patch object (high and low pc). Of
 special interest, however, is the \texttt{fde} attribute of the
 \texttt{DW\_TAG\_structure\_type}. This attribute specifies an offset
 in the \texttt{.debug\_frame} section of an FDE (Frame Description
-Entity). Dwarf FDEs are designed for use in transforming one call
+Entity). DWARF FDEs are designed for use in transforming one call
 frame into the previous call frame, and thereby walking up a call
-stack for either debugging purposes or exception handling purposes
+stack for either debugging purposes or exception-handling purposes
 (using the \texttt{.eh\_frame} section). Transforming one call frame
 to another, however, is not such a different operation from
 transforming one structure to another version of the same
 structure. We have aided this use with an implementation of the DWARF
-virtual machine which defines several special register types
+virtual machine that defines several special register types
 (exploiting the fact that for the purposes of generality, DWARF
 registers are specified as LEB128 numbers, giving an unlimited number
 of registers). The DWARF register instructions contained in the FDE
 referenced in Figure \ref{fig:dies} for copying \texttt{field1}, \texttt{field2}, and
 \texttt{field3} from the original version of a structure \texttt{\_Foo}
-to a new version of \texttt{\_Foo} which has gained the extra member
+to a new version of \texttt{\_Foo} that has gained the extra member
 \texttt{field\_extra} in the middle of the existing fields would be
 represented as in Figure \ref{fig:fdeinstrs}.
 \begin{figure*}[ht]
@@ -222,8 +222,8 @@ DW_CFA_register {CURR_TARG_NEW,0x4 bytes,0xc off} {CURR_TARG_OLD,0x4 bytes,0x8 o
 
 \texttt{CURR\_TARG\_NEW} and \texttt{CURR\_TARG\_OLD} are special
 symbolic values defined by the virtual machine. If we are patching the
-variable 'bar', then the \texttt{CURR\_TARG\_OLD} will be the old address of bar
-(it's value in the symbol table) and \texttt{CURR\_TARG\_NEW} will be the new
+variable \texttt{bar}, then the \texttt{CURR\_TARG\_OLD} will be the old address of \texttt{bar}
+(its value in the symbol table), and \texttt{CURR\_TARG\_NEW} will be the new
 address bar is being relocated to. Our registers take advantage of the
 LEB128 encoding to hold a considerable amount of information in the
 register identifier. In the case seen above, the first byte identifies

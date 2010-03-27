@@ -5,19 +5,19 @@
 Dynamically updating a running application requires diligence and
 patience. One cannot update the target application without any
 knowledge of the program's execution state, by which we mean the
-program stack, processor registers {\it etc}.  Even after possessing
+program stack, processor registers, {\it etc}.  Even after possessing
 this information, the application has to be in what we call a ``safe
 state'' for Katana to apply the patch. We characterize a program state
 as a {\it safe state} if the following two conditions hold:
 \begin{itemize}
 \item All activation frames in the program stack belong to functions
   that {\it do not} get updated during code patching. It is easy to
-  verify this by comparing each function on the stack to the list of
+  verify this by comparing each function on the stack with the list of
   upgradeable functions contained within the PO.
 
 \item All activation frames in the program stack belong to functions
   that do not access any global/static symbols identified during {\it
-    Data Traversal}, and do not define any local variables of the
+    Data Traversal} and that do not define any local variables of the
   modified types identified during {\it Type Discovery}. Again, since
   we maintain type and variable definitions within the PO, verifying
   this condition is easy.
@@ -25,14 +25,14 @@ as a {\it safe state} if the following two conditions hold:
 
 Given the patch object, Katana uses Linux's {\tt ptrace} interface to
 temporarily halt the execution of the target process, query the
-current execution stack and determine if the application is currently
+current execution stack, and determine whether the application is currently
 in a safe state. If so, then Katana applies the code patch followed by
 the data patch. We note that it is not possible to apply the code and
 data patches at different times since new code likely uses the new
 data, and hence postponing data patching to when only the second
 condition is satisfied is impractical and unsafe.
 
-Let $A$ denote be the current activation frame on the program stack,
+Let $A$ denote the current activation frame on the program stack,
 and the notation $(X:Y)$ define all frames from $X$ to $Y$ (on a time
 scale, $X$ precedes $Y$) on the stack; so $(1:A)$ defines the current
 stack. Now, in case we determine $(1:A)$ to be an unsafe state, we
@@ -59,16 +59,16 @@ determining {\it when} the breakpoint will be hit is essentially a
 hard one, and so in such cases, Katana can provide no time-bounding
 guarantees. Still, this is a cleaner and more efficient approach than
 just na\"{i}vely retrying the full update procedure, which is both an
-expensive and incomplete solution.
+expensive and an incomplete solution.
 %JMHO:
 In cases where the timely (or even eventual) application of a patch
 seems unlikely, it would be possible to add support for programmers to
 manually specify safe places for patching to occur. For programs built
 around a central loop (the vast majority of long-running programs),
 the likelihood of safe patching can be expedited by isolating the main
-loop into a simple routine unlikely to ever need patching. While
+loop into a simple routine unlikely ever to need patching. While
 safety determination is implemented in our prototype, we do not yet
-have enough real data about the likelihood of applications failing to
+have enough real data about the likelihood of applications' failing to
 reach a safe state.
 %JHMO end
 
@@ -115,7 +115,7 @@ time. While there is no common ABI standard for saving this
 information, conceptually it is no different from saving virtual
 addresses of other files' loaded symbols in the {\it Global Offset Table}
 (GOT). We note that the names of the constituent object files themselves 
-are customarily included in the symbol tables, and that the symbol
+are customarily included in the symbol tables and that the symbol
 table entry format can be easily adopted for storing virtual addresses
 of the %``randomly'' 
 relocated objects.
@@ -127,7 +127,7 @@ our patching process driven by our POs.\footnote{We note that saving
 this information 
 %
 about the post-relocation layout of the process 
-does not weaken ``randomization'', because 
+does not weaken ``randomization,'' for 
 the latter does not assume the attacker's ability to arbitrarily read 
 process memory (in which case the addresses of required symbols are
 easily found by scanning it %). %
@@ -144,9 +144,14 @@ structures and variable addition. The remainder of the system is still
 under development. In the future we
 %JMHO end
 must address several 
-important engineering issues, such as interaction of patched code with
-dynamically loaded libraries (including the {\em dlopen} mechanism),
+important engineering issues, such as the interaction of patched code with
+dynamically loaded libraries (including the {\em dlopen} mechanism)
 and assuring that accumulation of administered patches does not lead to
-unacceptable performance degradation. It also poses a broader question
-of describing and detecting software designs not amenable to its runtime
-patching and steering programmers to avoid them if possible. 
+unacceptable performance degradation. 
+%JMHO: reword
+%% It also poses a broader question
+%% of describing and detecting software designs not amenable to its runtime
+%% patching and steering programmers to avoid them if possible. 
+We must also address the broader issue of describing and detecting
+software designs not amenable to runtime patching, and we must steer
+programmers to avoid them if possible.

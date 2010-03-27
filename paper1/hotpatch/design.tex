@@ -2,12 +2,12 @@
 \label{sec:design}
 
 In our prototype, a patch is may be generated as follows. The source
-directory corresponding to the target to be patched is replicated and
+directory corresponding to the target to be patched is replicated, and
 the source code is patched to the version desired. The modified source
-tree is then built, and compared with the original source tree at the
-object (.o) level. Those object files which have changed between the
+tree is then built and compared with the original source tree at the
+object (.o) level. Those object files that have changed between the
 modified and original source trees are added to the list of objects
-which must be examined for type and code transformations. Future work
+that must be examined for type and code transformations. Future work
 will include use of the {\it inotify} mechanism to avoid potentially
 expensive recursive directory comparison and provide more precise
 notification of changed files.
@@ -56,7 +56,7 @@ both the {\bf code} and the {\bf data} within the process.  It first
 creates a {\it patch object} (PO): an ELF file with sections that
 indicate the type of patch (code or data), the patch offsets and
 lengths within the process address space, patch data, function and
-data names, {\it etc.}. The patch object may then be applied to the
+data names, {\it etc}. The patch object may then be applied to the
 target at any time.
 %The following sections explain how Katana
 %handles both code and data patching.

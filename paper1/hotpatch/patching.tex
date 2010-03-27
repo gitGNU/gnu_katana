@@ -7,13 +7,13 @@ allow reasoning about the scope, extent, and impact of the patch ({\it
 
 %\subsection{Code Patching}
 {\bf Code Patching.} %\hskip 0.1in
-This process involves several stages.
+This process involves several stages:
 %\newline
 \newline
 (i) {\it Code Identification:} Katana first needs to identify the
 section(s) of text that need to be modified within the running
 process. To do this, we consider the list of all modified object files
-from our tracking step, and identify all functions (both static and
+from our tracking step and identify all functions (both static and
 global) within these files 
 %SB:
 from their symbol table. 
@@ -26,20 +26,20 @@ marked as code.
 (ii) {\it Symbol Resolution:} After identifying all functions that
 require a patch, we need to resolve outstanding symbol references
 within each function. Typically, symbol resolution for an application
-happens at both the linking stage (called {\it static linking}, when
+happens at both the linking stage (called {\it static linking} when
 the symbol is present within another object file or archive), and the
 execution stage (or {\it dynamic linking}, when the symbol is present
 within a shared library).  All code relocations are identified in the
 ELF sections {\tt .rel.text} and {\tt .rela.text}, within the object
 files and the final executable.  Each relocation entry contains, among
-other information, the code offset that requires relocation, and the
+other information, the code offset that requires relocation and the
 outstanding symbol that provides this fix-up.
 
 For each relocation entry, Katana copies the corresponding symbol into
 the PO. The actual value of the symbol is not necessary in the PO
 unless the target to be patched will be stripped, as the value of the
 symbol can be retrieved from the running target while performing the
-patching. This is key in allowing executables which have already been
+patching. This is key in allowing executables that have already been
 patched to be patched again.
 %Katana uses the replicated executable (from
 %{\it before} the patch) to figure out the address of the symbol.  If
@@ -55,14 +55,14 @@ procedure linkage table ({\it PLT}) of the executable.  The PLT is
 essentially a jump table with entries for each symbol that needs to be
 resolved at runtime by the dynamic linker.  When the process begins
 execution, the dynamic linker maps the required shared libraries into
-the address space of the process, and updates each PLT entry.
+the address space of the process and updates each PLT entry.
 
 For dynamic symbols, Katana traverses the PLT entries of the
 executable and compares the symbol name of each entry with
 the symbol name that requires relocation. Once a match is found, the
 symbol value can be determined. Our current prototype cannot add calls
 to previously unused functions in shared libraries, but support for
-this will be added using the ``ALTPLT'' technique described in \cite{elf-debugging}.
+this will be added using the ``ALTPLT'' technique described by \cite{elf-debugging}.
 
 %JMHO: this got too many negative comments from reviewers, removing
 %and clarifying above
@@ -78,20 +78,20 @@ this will be added using the ``ALTPLT'' technique described in \cite{elf-debuggi
 % , although support for this is planned.
 
 Finally, if the outstanding symbol's definition was not found within
-the replicated executable (either within the symbol table or the PLT),
+the replicated executable (either within the symbol table or within the PLT),
 then it was newly added by the patch; it is marked as such and added
 to the PO.
 %\newline
 \newline
-(iii) {\it Patch Application:} Applying a code patch is simple enough,
+(iii) {\it Patch Application:} Applying a code patch is simple enough
 and has been researched in other
 systems~\cite{pannus,livepatch,ksplice,kaho}.  We map the new function
-in memory, and insert a trampoline {\tt jmp} instruction at the
+in memory and insert a trampoline {\tt jmp} instruction at the
 beginning of the old function within the process memory image. This
 interposition allows the caller to execute our new function instead of
 the previous one at the cost of an extra jump.  It is possible to
 avoid the overhead (from branch mis-prediction) of the {\tt jmp}
-instruction by adding code in the old function which traces up the
+instruction by adding into the old function code that traces up the
 stack and modifies the caller's {\tt call} instruction operand to
 point to the new address instead of the old one. Although this
 optimization would ensure that all subsequent calls from the same
@@ -114,7 +114,7 @@ synchronize the code and the data structures it acts on.\footnote{For
 Tracking down previously allocated data is nontrivial (one of the
 reasons why garbage collectors are interwoven with the language
 implementation).  Even after identifying the allocated chunks of
-memory, in the absence of some kind of a type specification, the {\it
+memory, in the absence of some kind of type specification, the {\it
   internal structure} of memory remains opaque.  We also need a method
 for extracting only the modified data variables from the patch and a
 means to discover the actual modifications that were performed. 
@@ -123,16 +123,16 @@ means to discover the actual modifications that were performed.
 Our system solves both of these problems.
 
 We first note that any code that acts on patch-modified data is
-already taken care of by Katana's code patching process. This is
+already taken care of by Katana's code patching process
 because we rely on {\tt make} to build the object files that
 correspond to all modified sources. We resolve the previously
 identified problems towards patching data by leveraging
 DWARF\footnote{\url{http://dwarfstd.org}} debugging information within the
 application executable. This requires the object files to be compiled
 with debugging support, but we do not see this as a limitation. Since
-we only need DWARF information while building the PO, all debugging
+we need DWARF information only while building the PO, all debugging
 symbols could be stripped from the executable during application
-deployment, if so desired 
+deployment, if desired 
 %JMHO:
 (this would require storing symbol values in the PO, however).
 %JMHO end
@@ -184,21 +184,22 @@ local, then we ensure that the corresponding function (the one that
 defines this variable) does not have an activation frame on  
 the program stack while
 applying the patch. Else, the variable has been defined as either
-global or static. We first check if the replicated executable defines
+global or static. We first check whether the replicated executable defines
 the same variable. If not, then this variable has been created by the
-patch and we need not worry about it and leave the symbol resolution upto
+patch and we need not worry about it and may leave the symbol
+resolution up to
 the compiler (as only {\it new} code can use this variable). Otherwise,
 we verify whether the variable's type is one of the
 modified types identified during {\it type discovery}. If it is, then
 we add the variable along with its {\it original} address from the replicated
-executable, its {\it new} address from the patch, and type information to the
+executable, its {\it new} address from the patch, and its type information to the
 PO. At the end of this stage, Katana would have identified all newly
 created or modified variables from the patch. 
 %\newline
 \newline
 (iii) {\it Patch Application: } Applying a data patch consists of
 first tracking down the relevant symbols in program memory. Katana
-reads in the PO, and for each data variable encountered, it checks if
+reads in the PO, and for each data variable encountered, it checks whether
 the variable is a pointer or not. If it is, then the current validity of the
 pointer is verified (by bounds-checking the pointer value to within
 heap boundaries).  If the pointer is found to be invalid, no further
@@ -213,7 +214,7 @@ Katana modifies all its references in the program text to the updated
 memory location from the patch. Katana supports default values in the
 sense that if the variable has an initializer in the new version of
 the program text, that initializer will be used for any member
-variables within structures which or array elements which did not
+variables within structures or array elements that did not
 previously exist in the executing target. Initializers from the new
 version are used for all \texttt{const} global variables.
 Eventually Katana it will support default values and programmer-written
@@ -229,8 +230,8 @@ the other hand, are generally quite opaque. If substantial changes
 have been made to one of the types in a union, Katana cannot do
 anything automatically, as there is no automatic way to determine
 which unioned type to act on. If an array changes size, Katana will
-assume that it is growing or shrinking at the end, and copy old data
-accordingly, but will issue a warning that this may not be the desired
+assume that it is growing or shrinking at the end and will copy old data
+accordingly, but it will also issue a warning that this may not be the desired
 behavior. Pointers are of course handled, but with some limitations
 currently. Unfortunately for our purposes, memory management is not
 part of the ABI. Further, there is no standard way to determine what
@@ -255,7 +256,7 @@ There is nothing inherent in our design which will not work with
 multithreading, but dealing with it through ptrace takes considerable
 work which we have not yet done. More importantly, the deadlock
 avoidance work required to ensure that we do at some point pause all
-threads, but that we never pause a thread that another thread may be
+threads but that we never pause a thread that another thread may be
 waiting on in order to reach a safe state is nontrivial. We plan to
 address this in the future.
 % We consider the program to be in a safe state if all

@@ -2,19 +2,19 @@
 \label{sec:related}
 
 There are several hot-patching systems preceding Katana. One of the
-most well known is probably Ginseng \cite{ginseng}. Ginseng (and
+most well-known is probably Ginseng \cite{ginseng}. Ginseng (and
 systems drawing inspiration from it such as Polus \cite{polus}) have
 successfully demonstrated patching of such important software as
 apache and sshd. These systems perform analysis of the differences
-between the original and patched versions at the source code
+between the original and the patched versions at the source code
 level. This introduces considerable (and we argue unnecessary)
 complexity and inability to deal well with some optimizations such as
 inlining and hand-written assembly. The complexity of analyzing the
 source code ties these systems to generally a single language (C in
 the case of both Ginseng and Polus). By contrast, Katana is language
 agnostic as it works at the level of the binary ABI, and although we
-have not yet demonstrated it doing so, it should eventually be able to
-patch binaries compiled from any language, providing the necessary
+have not yet demonstrated its doing so, it should eventually be able to
+patch binaries compiled from any language, providing that the necessary
 symbol and relocation information is supplied. Ginseng also requires
 significant programmer interaction in annotating the code
 \cite{ginseng-manual} and requires compiling the code to use
@@ -72,7 +72,7 @@ creation of frameworks like Loadable Kernel Modules for Linux, which
 allow for extending the kernel during runtime without a reboot.
 The ability to update the running kernel (as opposed to adding
 or removing modules) without rebooting was achieved at least ten years
-ago~\cite{cesare1998} and recently rediscovered, albiet mostly for
+ago~\cite{cesare1998} and recently rediscovered, albeit mostly for
 research, rather than commodity,
 kernels~\cite{nonLKMkernpatch,baumann2007osupdate,soules2003k42}).
 Even so,
@@ -85,7 +85,7 @@ Software self-healing aims at ensuring continuous or increased
 availability for systems subjected to exploited vulnerabilities,
 either by automatically generating
 patches~\cite{weimer2009genetic,stelios2005usenix} to gradually harden
-the application or seeking to avoid a restart altogether by modifying
+the application or by seeking to avoid a restart altogether by modifying
 certain runtime aspects ({\it e.g.,} the memory
 subsystem~\cite{rinard2004osdi}, properties of the execution
 environment~\cite{rx2005sosp}), 
@@ -94,7 +94,7 @@ or selected control
 paths~\cite{dira2005,locasto2007usenix}) of the system in response to
 attacks.
 One major risk of employing self-healing in production environments is
-that the semantics of follow-on execution remain largely uncontrolled,
+that the semantics of follow-on execution remains largely uncontrolled,
 although recent work in automatically correcting memory
 errors~\cite{exterminator2008cacm} seems to achieve fairly reliable
 results.  Both automated responses and traditional patches can make it
