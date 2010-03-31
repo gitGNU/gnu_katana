@@ -1,0 +1,7 @@
+James Oakley, originally a Massachusetts native, is a third-year
+undergraduate Computer Science student at Dartmouth College. Having
+come to computer programming by way of microcontroller programming, he
+enjoys hands-on work with low level systems. His interests include
+computer graphics (especially culling systems), digital electronics,
+security, and operating systems. In his unprofessional time he enjoys
+backpacking, science fiction, and designing games.
