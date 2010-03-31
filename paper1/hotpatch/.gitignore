@@ -1,3 +1,8 @@
+/#*.tex#
+/.#challenges.tex
+/.#design.tex
+/.#discussion.tex
+/.#patching.tex
 /.cvsignore
 /CVS
 /Makefile
