@@ -13,6 +13,9 @@ secse-main.pdf: ${TEX-FILES} *.bib $(DIAGRAMS)
 	pdflatex secse-main
 	pdflatex secse-main
 
+secse-main.rtf: ${TEX-FILES} *.bib $(DIAGRAMS)
+	latex2rtf secse-main
+
 
 main.pdf: ${TEX-FILES} *.bib $(DIAGRAMS)
 	pdflatex main
