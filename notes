@@ -225,7 +225,7 @@ tion
 
 ** call frame info/DWARF/Exception Handling
 *** libdwarf: http://reality.sgiweb.org/davea/dwarf.html
-*** dwarf standard http://dwarfstd.org/Dwarf3.pdf
+*** dwarf standard http://dwarfstd.org/doc/Dwarf3.pdf
 **** Call frame information in section 6.4 (p. 120 in the pdf, marked as p.108)
 **** section 6.4.4 discusses exactly how to practically unwind the stack
 **** example in Appendix D.6 (page 217 in the pdf)
