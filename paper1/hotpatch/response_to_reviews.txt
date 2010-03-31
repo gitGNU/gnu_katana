@@ -51,6 +51,9 @@ The quote has been moved to a more appropriate location.
 >> The extension from the workshop paper is not clear, it may be
 >> mentioned briefly by referring to the workshop paper in the
 >> Introduction or the related works.
+We do not think this is necessary. Anyone concerned with work done
+between the two papers can compare them. To detail how the workshop
+paper has been extended in the paper itself would be a waste of space.
 
 >> The title of both workshop and journal papers same. Based on the new
 >> addition in the journal version, the title of the paper needs to be
