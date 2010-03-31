@@ -3,3 +3,7 @@ patched
 patchee
 typepatch
 dump*
+real_tests/apache/v0/*
+real_tests/apache/v1/*
+real_tests/apache/v0_*
+real_tests/apache/v1_*
