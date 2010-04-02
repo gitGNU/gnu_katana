@@ -171,6 +171,8 @@ addr_t locateRuntimeSymbolInTarget(ElfInfo* e,char* name)
   for(;;memcpyFromTarget((byte*)&lm,(addr_t)lm.l_next,sizeof(lm)))
   {
     addr_t addr;//store the result address
+    //can't seem to get rid of a sign cast warning in below line, it seems
+    //different library versions of libelf have different signdness for the param there
     if(locateSymbolInLinkMap(&lm,&addr,name,elf_hash(name)))
     {
       return addr;
