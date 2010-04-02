@@ -180,8 +180,12 @@ Map* readDebugFrame(ElfInfo* elf)
   {
     dwarfErrorHandler(err,NULL);
   }
-  dwarf_get_fde_list(dbg, &cieData, &cieElementCount,
-                                   &fdeData, &fdeElementCount, &err); 
+  if(DW_DLV_OK!=dwarf_get_fde_list(dbg, &cieData, &cieElementCount,
+                     &fdeData, &fdeElementCount, &err))
+  {
+    dwarfErrorHandler(err,NULL);
+  }
+
   //read the CIE
   Dwarf_Unsigned cieLength = 0;
   Dwarf_Small version = 0;
@@ -191,7 +195,7 @@ Map* readDebugFrame(ElfInfo* elf)
   assert(1==cieElementCount);
   //todo: all the casting here is hackish
   //should respect types more
-  dwarf_get_cie_info(cieData[0],
+  if(DW_DLV_OK!=dwarf_get_cie_info(cieData[0],
                      &cieLength,
                      &version,
                      &augmenter,
@@ -199,7 +203,10 @@ Map* readDebugFrame(ElfInfo* elf)
                      &elf->cie->dataAlign,
                      &elf->cie->returnAddrRuleNum,
                      &initInstr,
-                     &initInstrLen, &err);
+                                   &initInstrLen, &err))
+  {
+    dwarfErrorHandler(err,NULL);
+  }
   //don't care about initial instructions, for patching,
   //but do if we're reading a debug frame for stack unwinding purposes
   //so that we can find activation frames
@@ -210,7 +217,7 @@ Map* readDebugFrame(ElfInfo* elf)
                                                      &elf->cie->numInitialInstructions);
   elf->cie->initialRules=dictCreate(100);//todo: get rid of arbitrary constant 100
   evaluateInstructionsToRules(elf->cie->initialInstructions,elf->cie->numInitialInstructions,
-                       elf->cie->initialRules,-1);
+  elf->cie->initialRules,-1);
   
   //todo: bizarre bug, it keeps coming out as -1, which is wrong
   elf->cie->codeAlign=1;
@@ -223,7 +230,10 @@ Map* readDebugFrame(ElfInfo* elf)
     Dwarf_Fde dfde=fdeData[i];
     Dwarf_Ptr instrs;
     Dwarf_Unsigned ilen;
-    dwarf_get_fde_instr_bytes(dfde, &instrs, &ilen, &err);
+    if(DW_DLV_OK!=dwarf_get_fde_instr_bytes(dfde, &instrs, &ilen, &err))
+    {
+      dwarfErrorHandler(err,NULL);
+    }
     elf->fdes[i].instructions=parseFDEInstructions(dbg,instrs,ilen,elf->cie->dataAlign,elf->cie->codeAlign,&elf->fdes[i].numInstructions);
     Dwarf_Addr lowPC = 0;
     Dwarf_Unsigned addrRange = 0;
