@@ -14,24 +14,9 @@
 #include <string.h>
 #include <stdlib.h>
 
-typedef struct _Foo
-{
-  int field1;
-  int field2;
-  int field3;
-} Foo;
-
-Foo bar={42,66,111};
-
 #define MILLISECOND 1000
 
-void printThings()
-{
-  printf("Foo: %i,%i\n",bar.field1,bar.field2);
-  printf("field 1 at addr: %lx, field 2 at addr: %lx\n",(unsigned long) &bar.field1,(unsigned long)&bar.field2);
-  fflush(stdout);
-}
-
+void printThings();
 int main(int argc,char** argv)
 {
   printf("has pid %i\n",getpid());
@@ -42,3 +27,22 @@ int main(int argc,char** argv)
   }
   return 0;
 }
+
+
+typedef struct _Foo
+{
+  int field1;
+  int field2;
+  int field3;
+} Foo;
+
+Foo bar={42,66,111};
+
+
+void printThings()
+{
+  printf("Foo: %i,%i\n",bar.field1,bar.field2);
+  printf("field 1 at addr: %lx, field 2 at addr: %lx\n",(unsigned long) &bar.field1,(unsigned long)&bar.field2);
+  fflush(stdout);
+}
+
