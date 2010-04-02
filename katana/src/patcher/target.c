@@ -97,17 +97,17 @@ void endPtrace()
 
 void modifyTarget(addr_t addr,word_t value)
 {
-  logprintf(ELL_INFO_V2,ELS_HOTPATCH,"Trying to poke data at 0x%x with value 0x%x\n",(uint)addr,(uint)value);
+  logprintf(ELL_INFO_V2,ELS_HOTPATCH,"Trying to poke data at 0x%x with value 0x%x\n",(word_t)addr,(word_t)value);
   if(ptrace(PTRACE_POKEDATA,pid,addr,value)<0)
   {
-    logprintf(ELL_ERR,ELS_HOTPATCH,"Failed to poke data at 0x%x with value 0x%x\n",(uint)addr,(uint)value);
+    logprintf(ELL_ERR,ELS_HOTPATCH,"Failed to poke data at 0x%x with value 0x%x\n",(word_t)addr,(word_t)value);
     perror("ptrace POKEDATA failed in modifyTarget\n");
     death(NULL);
   }
   //test to make sure the write went through
   if(isFlag(EKCF_CHECK_PTRACE_WRITES))
   {
-    uint val=ptrace(PTRACE_PEEKDATA,pid,addr);
+    word_t val=ptrace(PTRACE_PEEKDATA,pid,addr);
     if(errno)
     {
       perror("ptrace PEEKDATA failed\n");
@@ -129,7 +129,7 @@ void modifyTarget(addr_t addr,word_t value)
 #define require_ptrace_alignment
 
 //copies numBytes from data to addr in target
-void memcpyToTarget(long addr,byte* data,int numBytes)
+void memcpyToTarget(addr_t addr,byte* data,int numBytes)
 {
   #ifdef require_ptrace_alignment
   //ptrace requires all addresses to be word-aligned
@@ -331,35 +331,38 @@ addr_t mmapTarget(int size,int prot)
   //if we didn't have an executable stack we could temporarily replace
   //code in the text segment at the program counter
   REG_SP(newRegs)-=sizeof(int);
-  long code4Bytes;
-  assert(sizeof(code4Bytes)==4);
+  byte code4Bytes[4];
   memcpy(&code4Bytes,code,4);
   //printf("inserting code at eip 0x%x\n",newRegs.eip);
   byte oldText[4];
   memcpyFromTarget(oldText,REG_IP(newRegs),4);
-  modifyTarget(REG_IP(newRegs),code4Bytes);
+  memcpyToTarget(REG_IP(newRegs),code4Bytes,4);
   printf("inserted syscall call\n");
-  long returnAddr=REG_IP(newRegs)+2;//the int3 instruction
+  word_t returnAddr=REG_IP(newRegs)+2;//the int3 instruction
 
   
   //the call we want to make is
   //mmap(NULL,size,prot,MAP_PRIVATE|MAP_ANONYMOUS,-1,0)
   //mmap in libc is just a wrapper over a kernel call
   //we have a lot to put on the stack
-  modifyTarget(REG_SP(newRegs)-=4,0);
-  modifyTarget(REG_SP(newRegs)-=4,-1);
-  modifyTarget(REG_SP(newRegs)-=4,MAP_PRIVATE|MAP_ANONYMOUS);
-  modifyTarget(REG_SP(newRegs)-=4,prot);
-  modifyTarget(REG_SP(newRegs)-=4,size);
-  modifyTarget(REG_SP(newRegs)-=4,(word_t)NULL);
-  modifyTarget(REG_SP(newRegs)-=4,returnAddr);
-  REG_BX(newRegs)=REG_SP(newRegs)+4;//syscall, takes arguments in registers,
+  int params[4]={-1,MAP_PRIVATE|MAP_ANONYMOUS,prot,size};
+  modifyTarget(REG_SP(newRegs)-=sizeof(word_t),0);
+  memcpyToTarget(REG_SP(newRegs)-=sizeof(int),(byte*)&params[0],sizeof(int));
+  memcpyToTarget(REG_SP(newRegs)-=sizeof(int),(byte*)&params[1],sizeof(int));
+  memcpyToTarget(REG_SP(newRegs)-=sizeof(int),(byte*)&params[2],sizeof(int));
+  memcpyToTarget(REG_SP(newRegs)-=sizeof(int),(byte*)&params[3],sizeof(int));
+  /* modifyTarget(REG_SP(newRegs)-=4,-1); */
+  /* modifyTarget(REG_SP(newRegs)-=4,MAP_PRIVATE|MAP_ANONYMOUS); */
+  /* modifyTarget(REG_SP(newRegs)-=4,prot); */
+  /* modifyTarget(REG_SP(newRegs)-=4,size); */
+  modifyTarget(REG_SP(newRegs)-=sizeof(word_t),(word_t)NULL);
+  modifyTarget(REG_SP(newRegs)-=sizeof(addr_t),returnAddr);
+  REG_BX(newRegs)=REG_SP(newRegs)+sizeof(addr_t);//syscall, takes arguments in registers,
                             //this is a pointer to the arguments on the stack
   REG_AX(newRegs)=SYS_mmap;//syscall number to identify that this is an mmap call
-  printf("%x\n",SYS_mmap);
+  printf("%lx\n",REG_AX(newRegs));
   printf("inserted syscall params on stack\n");
   
-  REG_AX(newRegs)=SYS_mmap;//syscall number to identify that this is an mmap call
   //now actually tell the process about these registers
   setTargetRegs(&newRegs);
   
@@ -368,7 +371,7 @@ addr_t mmapTarget(int size,int prot)
   wait(NULL);
   getTargetRegs(&newRegs);//get the return value from the syscall
   word_t retval=REG_AX(newRegs);
-  printf("retval is 0x%x\n",(uint)retval);
+  printf("retval is 0x%lx\n",retval);
   if((void*)retval==MAP_FAILED)
   {
     fprintf(stderr,"mmap in target failed\n");
