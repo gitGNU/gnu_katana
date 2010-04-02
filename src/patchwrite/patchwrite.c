@@ -477,20 +477,7 @@ addr_t writeFuncToPatchText(SubprogramInfo* func,CompilationUnit* cu,idx_t* outS
   *outSymIdx=addSymtabEntry(getDataByERS(patch,ERS_SYMTAB),&sym);
   
 
-  //also include any relocations which exist for anything inside this function
-  //if -ffunction-sections is specified,
-  //each function will have its own relocation section,
-  //check this out first
-  snprintf(buf,1024,".rel.text.%s",func->name);
-  Elf_Scn* relocScn=getSectionByName(cu->elf,buf);
-  if(!relocScn)
-  {
-    relocScn=getSectionByName(cu->elf,".rel.text");
-  }
-  if(!relocScn)
-  {
-    death("%s does not have a .rel.text section\n");
-  }
+  Elf_Scn* relocScn=getRelocationSection(cu->elf,func->name);
   writeRelocationsInRange(func->lowpc,func->highpc,relocScn,funcSegmentBase,cu->elf);
   return offset;
 }

@@ -43,35 +43,10 @@ bool areSubprogramsIdentical(SubprogramInfo* patcheeFunc,SubprogramInfo* patched
      variable of a changed type.
   2. If there is no relocation, return false if the bytes differ
   */
-  Elf_Scn* relocScn=NULL;
-  //if -ffunction-sections is specified,
-  //each function will have its own relocation section,
-  //check this out first
-  char buf[1024];
-  snprintf(buf,1024,".rel.text.%s",patcheeFunc->name);
-  relocScn=getSectionByName(oldBinary,buf);
-  if(!relocScn)
-  {
-    relocScn=getSectionByName(oldBinary,".rel.text");
-  }
-  if(!relocScn)
-  {
-    death("%s does not have a .rel.text section\n");
-  }
+  Elf_Scn* relocScn=getRelocationSection(oldBinary,patcheeFunc->name);
   List* oldRelocations=getRelocationItemsInRange(oldBinary,relocScn,patcheeFunc->lowpc,patcheeFunc->highpc);
-  //if -ffunction-sections is specified,
-  //each function will have its own relocation section,
-  //check this out first
-  snprintf(buf,1024,".rel.text.%s",patchedFunc->name);
-  relocScn=getSectionByName(newBinary,buf);
-  if(!relocScn)
-  {
-    relocScn=getSectionByName(newBinary,".rel.text");
-  }
-  if(!relocScn)
-  {
-    death("%s does not have a .rel.text section\n");
-  }
+
+  relocScn=getRelocationSection(newBinary,patchedFunc->name);
   List* newRelocations=getRelocationItemsInRange(newBinary,relocScn,patchedFunc->lowpc,patchedFunc->highpc);
 
   if(listLength(oldRelocations) != listLength(newRelocations))
@@ -87,6 +62,7 @@ bool areSubprogramsIdentical(SubprogramInfo* patcheeFunc,SubprogramInfo* patched
   sortList(newRelocations,&cmpRelocs);
   //if -ffunction-sections is used, the function might have its own text section
   Elf_Scn* textScn=NULL;
+  char buf[1024];
   snprintf(buf,1024,".text.%s",patcheeFunc->name);
   textScn=getSectionByName(oldBinary,buf);
   if(!textScn)
