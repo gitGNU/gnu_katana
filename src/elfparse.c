@@ -346,6 +346,12 @@ void findELFSections(ElfInfo* e)
     {
       e->sectionIndices[ERS_RELA_TEXT]=elf_ndxscn(scn);
     }
+    else if(!strncmp(".rel.text",name,strlen(".rel.text"))) //allow versioned
+                         //sections in patches. //todo: problem with this. Also allows section-specific ones, probably don't want this
+    {
+      e->sectionIndices[ERS_REL_TEXT]=elf_ndxscn(scn);
+    }
+
     else if(!strcmp(".plt",name))
     {
       e->sectionIndices[ERS_PLT]=elf_ndxscn(scn);
