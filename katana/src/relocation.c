@@ -457,3 +457,34 @@ addr_t getAddendForReloc(RelocInfo* reloc)
   }
   return computeAddend(reloc->e,reloc->relocType,reloc->symIdx,reloc->r_offset,reloc->scnIdx);
 }
+
+//get the section containing relocations for the given function
+//if want only the general relocation section, pass null for function name
+Elf_Scn* getRelocationSection(ElfInfo* e,char* fnname)
+{
+ //also include any relocations which exist for anything inside this function
+  //if -ffunction-sections is specified,
+  //each function will have its own relocation section,
+  //check this out first
+  char buf[1024];
+  snprintf(buf,1024,".rel.text.%s",fnname);
+  Elf_Scn* relocScn=getSectionByName(e,buf);
+  if(!relocScn)
+  {
+    snprintf(buf,1024,".rela.text.%s",fnname);
+    relocScn=getSectionByName(e,buf);
+  }
+  if(!relocScn)
+  {
+    relocScn=getSectionByName(e,".rel.text");
+  }
+  if(!relocScn)
+  {
+    relocScn=getSectionByName(e,".rela.text");
+  }
+  if(!relocScn)
+  {
+    death("function %s in %s does not have a .rel.text section\n",fnname,e->fname);
+  }
+  return relocScn;
+}
