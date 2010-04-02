@@ -12,6 +12,20 @@
 #include <string.h>
 #include <stdlib.h>
 
+#define MILLISECOND 1000
+
+void printThings();
+int main(int argc,char** argv)
+{
+  printf("has pid %i\n",getpid());
+  while(1)
+  {
+    printThings();
+    usleep(100*MILLISECOND);
+  }
+  return 0;
+}
+
 typedef struct _Foo
 {
   int field1;
@@ -29,15 +43,4 @@ void printThings()
   printf("Foo: %i,%i\n",bar.field1,bar.field2);
   printf("field 1 at addr: %x, field 2 at addr: %x\n",(unsigned int)&bar.field1,(unsigned int)&bar.field2);
   fflush(stdout);
-}
-
-int main(int argc,char** argv)
-{
-  printf("has pid %i\n",getpid());
-  while(1)
-  {
-    printThings();
-    usleep(100000);
-  }
-  return 0;
 }
