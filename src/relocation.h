@@ -88,4 +88,8 @@ addr_t getAddendForReloc(RelocInfo* reloc);
 
 //todo: does this belong in this module?
 addr_t getPLTEntryForSym(ElfInfo* e,int symIdx);
+
+//get the section containing relocations for the given function
+//if want only the general relocation section, pass null for function name
+Elf_Scn* getRelocationSection(ElfInfo* e,char* fnname);
 #endif
