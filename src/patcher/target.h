@@ -28,7 +28,7 @@ void endPtrace();
 void modifyTarget(addr_t addr,word_t value);
 //copies numBytes from data to addr in target
 //todo: does addr have to be aligned
-void memcpyToTarget(long addr,byte* data,int numBytes);
+void memcpyToTarget(addr_t addr,byte* data,int numBytes);
 //copies numBytes to data from addr in target
 //todo: does addr have to be aligned
 void memcpyFromTarget(byte* data,long addr,int numBytes);
