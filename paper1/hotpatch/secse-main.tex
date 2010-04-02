@@ -1,16 +1,24 @@
-\documentclass[10pt, conference, compsocconf]{IEEEtran}
+\documentclass[12pt, conference, compsocconf]{IEEEtran}
+%\documentclass[12pt]{article}
 \IEEEoverridecommandlockouts % for \thanks
 \usepackage{graphicx}
 \usepackage{wrapfig}
 \usepackage{url}
-%\usepackage{natbib}
 \usepackage{apalike}
+\usepackage{endnotes}
+\let\footnote=\endnote
+
+%\sectionfont{\textbf}
+
 %\usepackage{hyperref} -- DISABLED: fails ``PDF express'' check
 
 % \usepackage{authblk} -- must use IEEE's own
 % \usepackage[margin=1in]{geometry}
 
-\title{Katana: Towards Patching as a Part of the ELF Toolchain}
+%\title{Katana: Towards Patching as a Part of the ELF Toolchain}
+\title{Katana: Towards Patching as a Runtime part of the
+  Compiler-Linker-Loader Toolchain}
+
 
 \author{\IEEEauthorblockN{Sergey Bratus, James Oakley, Ashwin Ramaswamy, 
 Sean W.\ Smith\thanks{The first four authors' work was supported in part by the National
@@ -38,7 +46,13 @@ Arlington, Virginia}}
 \maketitle
 %\pagestyle{plain}
 
+\addtoendnotes{ }%seems to be a bug in endnotes package, complains
+                 %about missing .ent file if we don't add something
+
+
 \input{abstract}
+
+\noindent{\bf Keywords:} \input{keywords}
 
 \input{intro}
 
@@ -70,6 +84,13 @@ Arlington, Virginia}}
 \bibliography{locasto,extras,oakley}
 }
 
+\newpage 
+\parindent 0pt 
+\parskip 2ex  
+\def\enotesize{\normalsize}  
+\theendnotes
+
+%\theendnotes
 
 
 \end{document}
