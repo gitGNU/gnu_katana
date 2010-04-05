@@ -10,6 +10,7 @@
 #include <sys/user.h>
 
 #if __WORDSIZE == 64
+#define KATANA_X86_64_ARCH
 #define REG_IP(regs_struct) (regs_struct).rip
 #define REG_SP(regs_struct) (regs_struct).rsp
 #define REG_AX(regs_struct) (regs_struct).rax
@@ -19,6 +20,9 @@
 #define REG_BP(regs_struct) (regs_struct).rbp
 #define REG_SI(regs_struct) (regs_struct).rsi
 #define REG_DI(regs_struct) (regs_struct).rdi
+#define REG_8(regs_struct) (regs_struct).r8
+#define REG_9(regs_struct) (regs_struct).r9
+#define REG_10(regs_struct) (regs_struct).r10
 #define ElfXX_Sym Elf64_Sym
 #define ElfXX_Rel Elf64_Rel
 #define ElfXX_Rela Elf64_Rela
@@ -37,6 +41,7 @@
 #define ElfXX_Word Elf64_Word
 #define PTRACE_WORD_SIZE 8
 #elif __WORDSIZE == 32
+#define KATANA_X86_ARCH
 #define REG_IP(regs_struct) (regs_struct).eip
 #define REG_SP(regs_struct) (regs_struct).esp
 #define REG_AX(regs_struct) (regs_struct).eax
