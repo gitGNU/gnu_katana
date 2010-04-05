@@ -361,6 +361,7 @@ addr_t mmapTarget(word_t size,int prot)
   modifyTarget(REG_SP(newRegs)-=4,size);
   modifyTarget(REG_SP(newRegs)-=4,(word_t)NULL);
   printf("inserted syscall params on stack\n");
+  modifyTarget(REG_SP(newRegs)-=sizeof(addr_t),returnAddr);
   REG_BX(newRegs)=REG_SP(newRegs)+sizeof(addr_t);//syscall, takes arguments in registers,
                             //this is a pointer to the arguments on the stack
 #elif defined(KATANA_X86_64_ARCH)
@@ -372,10 +373,11 @@ addr_t mmapTarget(word_t size,int prot)
   REG_8(newRegs)=-1;
   REG_9(newRegs)=0;
   REG_10(newRegs)=REG_CX(newRegs);
+  modifyTarget(REG_SP(newRegs)-=sizeof(addr_t),returnAddr);
 #else
 #error Unsupported architecture
 #endif
-  modifyTarget(REG_SP(newRegs)-=sizeof(addr_t),returnAddr);
+
   
   REG_AX(newRegs)=SYS_mmap;//syscall number to identify that this is an mmap call
   printf("%lx\n",REG_AX(newRegs));
