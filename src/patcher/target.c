@@ -165,7 +165,7 @@ void memcpyToTarget(addr_t addr,byte* data,int numBytes)
     if(i+PTRACE_WORD_SIZE<=numBytes)
     {
       word_t val;
-      memcpy(&val,data+i,4);
+      memcpy(&val,data+i,sizeof(word_t));
       modifyTarget(addr+i,val);
     }
     else
@@ -388,7 +388,6 @@ addr_t mmapTarget(word_t size,int prot)
   wait(NULL);
   getTargetRegs(&newRegs);//get the return value from the syscall
   word_t retval=REG_AX(newRegs);
-  printf("retval is 0x%lx\n",retval);
   if((void*)retval==MAP_FAILED)
   {
     fprintf(stderr,"mmap in target failed\n");
