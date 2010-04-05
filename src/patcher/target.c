@@ -126,7 +126,7 @@ void modifyTarget(addr_t addr,word_t value)
 
 //todo: look more into this. ptrace
 //man page says it's required but in practice doesn't seem to be
-#define require_ptrace_alignment
+//#define require_ptrace_alignment
 
 //copies numBytes from data to addr in target
 void memcpyToTarget(addr_t addr,byte* data,int numBytes)
@@ -310,18 +310,26 @@ addr_t mallocTarget(word_t len)
 //allocate a region of memory in the target
 //return the address (in the target) of the region
 //or NULL if the operation failed
-addr_t mmapTarget(int size,int prot)
+addr_t mmapTarget(word_t size,int prot)
 {
-  printf("requesting mmap of page of size %i\n",size);
+  printf("requesting mmap of page of size %zi\n",size);
   //map code influenced by code from livepatch
   //http://ukai.jp/Software/livepatch
 
+  #ifdef KATANA_X86_ARCH
   //0xcd indicates a trap
   //0x80 indicates that this trap is a syscall
   //0x0cc is int3 instruction, will cause the target
   //to halt execution until the controlling process calls wait
   byte code[]={0xcd,0x80,0xcc,0x00};
+  #elif defined(KATANA_X86_64_ARCH)
+  //x86_64 uses the new syscall instruction
+  byte code[]={0x0f,0x05,0xcc,0x00};
+  #else
+  #error Unknown architecture
+  #endif
 
+  
   struct user_regs_struct oldRegs,newRegs;
   getTargetRegs(&oldRegs);
   newRegs=oldRegs;
@@ -344,24 +352,33 @@ addr_t mmapTarget(int size,int prot)
   //the call we want to make is
   //mmap(NULL,size,prot,MAP_PRIVATE|MAP_ANONYMOUS,-1,0)
   //mmap in libc is just a wrapper over a kernel call
+#ifdef KATANA_X86_ARCH
   //we have a lot to put on the stack
-  int params[4]={-1,MAP_PRIVATE|MAP_ANONYMOUS,prot,size};
-  modifyTarget(REG_SP(newRegs)-=sizeof(word_t),0);
-  memcpyToTarget(REG_SP(newRegs)-=sizeof(int),(byte*)&params[0],sizeof(int));
-  memcpyToTarget(REG_SP(newRegs)-=sizeof(int),(byte*)&params[1],sizeof(int));
-  memcpyToTarget(REG_SP(newRegs)-=sizeof(int),(byte*)&params[2],sizeof(int));
-  memcpyToTarget(REG_SP(newRegs)-=sizeof(int),(byte*)&params[3],sizeof(int));
-  /* modifyTarget(REG_SP(newRegs)-=4,-1); */
-  /* modifyTarget(REG_SP(newRegs)-=4,MAP_PRIVATE|MAP_ANONYMOUS); */
-  /* modifyTarget(REG_SP(newRegs)-=4,prot); */
-  /* modifyTarget(REG_SP(newRegs)-=4,size); */
-  modifyTarget(REG_SP(newRegs)-=sizeof(word_t),(word_t)NULL);
-  modifyTarget(REG_SP(newRegs)-=sizeof(addr_t),returnAddr);
+  modifyTarget(REG_SP(newRegs)-=4,0);
+  modifyTarget(REG_SP(newRegs)-=4,-1);
+  modifyTarget(REG_SP(newRegs)-=4,MAP_PRIVATE|MAP_ANONYMOUS);
+  modifyTarget(REG_SP(newRegs)-=4,prot);
+  modifyTarget(REG_SP(newRegs)-=4,size);
+  modifyTarget(REG_SP(newRegs)-=4,(word_t)NULL);
+  printf("inserted syscall params on stack\n");
   REG_BX(newRegs)=REG_SP(newRegs)+sizeof(addr_t);//syscall, takes arguments in registers,
                             //this is a pointer to the arguments on the stack
+#elif defined(KATANA_X86_64_ARCH)
+  printf("64-bit arch\n");
+  REG_DI(newRegs)=(word_t)NULL;
+  REG_SI(newRegs)=size;
+  REG_DX(newRegs)=prot;
+  REG_CX(newRegs)=MAP_PRIVATE|MAP_ANONYMOUS;
+  REG_8(newRegs)=-1;
+  REG_9(newRegs)=0;
+  REG_10(newRegs)=REG_CX(newRegs);
+#else
+#error Unsupported architecture
+#endif
+  modifyTarget(REG_SP(newRegs)-=sizeof(addr_t),returnAddr);
+  
   REG_AX(newRegs)=SYS_mmap;//syscall number to identify that this is an mmap call
   printf("%lx\n",REG_AX(newRegs));
-  printf("inserted syscall params on stack\n");
   
   //now actually tell the process about these registers
   setTargetRegs(&newRegs);

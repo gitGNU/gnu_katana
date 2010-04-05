@@ -43,7 +43,7 @@ void setTargetRegs(struct user_regs_struct* regs);
 //allocate a region of memory in the target
 //return the address (in the target) of the region
 //or NULL if the operation failed
-addr_t mmapTarget(int size,int prot);
+addr_t mmapTarget(word_t size,int prot);
 
 //must be called before any calls to mallocTarget
 void setMallocAddress(addr_t addr);
