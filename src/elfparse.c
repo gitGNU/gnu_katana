@@ -360,6 +360,11 @@ void findELFSections(ElfInfo* e)
     {
       e->sectionIndices[ERS_REL_PLT]=elf_ndxscn(scn);
     }
+    else if(!strcmp(".rela.plt",name))
+    {
+      e->sectionIndices[ERS_RELA_PLT]=elf_ndxscn(scn);
+    }
+
     else if(!strcmp(".dynsym",name))
     {
       e->sectionIndices[ERS_DYNSYM]=elf_ndxscn(scn);

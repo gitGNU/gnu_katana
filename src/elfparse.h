@@ -32,6 +32,7 @@ typedef enum
   ERS_REL_TEXT,
   ERS_PLT,
   ERS_REL_PLT,
+  ERS_RELA_PLT,
   ERS_DYNSYM,
   ERS_DYNSTR,
   ERS_DYNAMIC,
