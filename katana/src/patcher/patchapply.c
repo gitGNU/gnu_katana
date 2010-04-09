@@ -82,18 +82,30 @@ void relocateVar(VarInfo* var,ElfInfo* targetBin)
 
 void insertTrampolineJump(addr_t insertAt,addr_t jumpTo)
 {
-  printf("inserting at 0x%x, address to jump to is 0x%x\n",(uint)insertAt,(uint)jumpTo);
+  printf("inserting at 0x%zx, address to jump to is 0x%zx\n",insertAt,jumpTo);
   
   //remember that the JMP absolute is indirect, have to specify
   //memory location which hold the memory location to jump to
+#ifdef KATANA_X86_ARCH
   int len=2+sizeof(addr_t)*2;
   byte *code=zmalloc(len);
   code[0]=0xFF;//jmp instruction for a near absolute jump
   code[1]=0x25;//specify the addressing mode
-
   addr_t addrAddr=insertAt+2+sizeof(addr_t);//address of mem location holding jmp target
   memcpy(code+2,&addrAddr,sizeof(addr_t));
   memcpy(code+2+sizeof(addr_t),&jumpTo,sizeof(addr_t));
+  #elif defined(KATANA_X86_64_ARCH)
+  int len=2+4+sizeof(addr_t);
+  byte *code=zmalloc(len);
+  code[0]=0xFF;//jmp instruction for a near absolute jump
+  code[1]=0x25;//specify the addressing mode
+  addr_t addrAddr=0;//insertAt+2+4;//address of mem location holding jmp target
+  memcpy(code+2,&addrAddr,sizeof(addr_t));
+  memcpy(code+2+4,&jumpTo,sizeof(addr_t));
+  #else
+  #error Unknown architecture
+  #endif
+  
   memcpyToTarget(insertAt,code,len);
   //todo: probably don't need verify as memcpyToTarget can
   //be made to verify it's writings
@@ -498,8 +510,14 @@ void fixupPatchRelocations(ElfInfo* patch)
         //for something relative to the patch
         addr_t diff=patchTextAddr-oldTextNewStart;
         logprintf(ELL_INFO_V2,ELS_RELOCATION,"for PC32 relocation, modifying access at 0x%x to access 0x%x by adding 0x%x\n",(uint)newOffset,(uint)(addrAccessed+diff),(uint)diff);
-        modifyTarget(newOffset,addrAccessed+diff);
-        //todo: I'm not sure this is necessary here, since we do relocations later
+        addr_t newAddr=addrAccessed+diff;
+        memcpyToTarget(newOffset,(byte*)&newAddr,4);//always copy only 4 bytes b/c this is PC32
+        //todo: I'm not sure this is necessary here, since we do
+        //relocations later. I think it is though. Look into this
+    }
+    if(R_X86_64_PC64==type)
+    {
+      death("Support for R_X86_64_PC64 still needs to be implemented. Please file a bug report\n");
     }
     rela->r_offset=newOffset;
   }
