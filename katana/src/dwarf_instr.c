@@ -273,6 +273,7 @@ uint leb128ToUInt(byte* bytes,usint* outLEBBytesRead)
   //valgrind gives this as a mem leak, but I can't figure out why,
   //as I free the result below. . .
   byte* result=decodeLEB128(bytes,false,&resultBytes,outLEBBytesRead);
+  printf("result bytes is %i\n",resultBytes);
   assert(resultBytes <= sizeof(uint));
   uint val=0;
   memcpy(&val,result,resultBytes);
