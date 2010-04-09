@@ -231,17 +231,17 @@ void writeTransformationToDwarf(Dwarf_P_Debug dbg,TypeTransform* trans)
   {
     DwarfInstruction inst;
     inst.opcode=DW_CFA_register;
-    byte bytes[1+sizeof(word_t)];
+    byte bytes[1+sizeof(int)];
     bytes[0]=ERT_CURR_TARG_NEW;
     assert(trans->from->length<=trans->to->length);
-    memcpy(bytes+1,&trans->to->length,sizeof(word_t));
+    memcpy(bytes+1,&trans->to->length,sizeof(int));
     //offset on the register is always 0, doing a complete copy of everything
-    inst.arg1Bytes=encodeAsLEB128(bytes,1+sizeof(word_t),false,&inst.arg1NumBytes);
+    inst.arg1Bytes=encodeAsLEB128(bytes,1+sizeof(int),false,&inst.arg1NumBytes);
     bytes[0]=ERT_CURR_TARG_OLD;
     //todo: should we just use the from length for everything, since it's the
     //shorter of the two
-    memcpy(bytes+1,&trans->from->length,sizeof(word_t));
-    inst.arg2Bytes=encodeAsLEB128(bytes,1+sizeof(word_t),false,&inst.arg2NumBytes);
+    memcpy(bytes+1,&trans->from->length,sizeof(int));
+    inst.arg2Bytes=encodeAsLEB128(bytes,1+sizeof(int),false,&inst.arg2NumBytes);
     addInstruction(&instrs,&inst);
     free(inst.arg1Bytes);
     free(inst.arg2Bytes);
@@ -260,14 +260,14 @@ void writeTransformationToDwarf(Dwarf_P_Debug dbg,TypeTransform* trans)
       writeTransformationToDwarf(dbg,transformer);
     }
     idx_t fdeIdx=transformer->fdeIdx;
-    byte bytes[1+sizeof(word_t)];
+    byte bytes[1+sizeof(int)];
     bytes[0]=ERT_CURR_TARG_NEW;
-    word_t size=sizeof(addr_t);
-    memcpy(bytes+1,&size,sizeof(word_t));
+    int size=sizeof(addr_t);
+    memcpy(bytes+1,&size,sizeof(int));
     //offset on the register is always 0
-    inst.arg1Bytes=encodeAsLEB128(bytes,1+sizeof(word_t),false,&inst.arg1NumBytes);
+    inst.arg1Bytes=encodeAsLEB128(bytes,1+sizeof(int),false,&inst.arg1NumBytes);
     bytes[0]=ERT_CURR_TARG_OLD;
-    inst.arg2Bytes=encodeAsLEB128(bytes,1+sizeof(word_t),false,&inst.arg2NumBytes);
+    inst.arg2Bytes=encodeAsLEB128(bytes,1+sizeof(int),false,&inst.arg2NumBytes);
     inst.arg3=fdeIdx;//might as well make both valid
     inst.arg3Bytes=encodeAsLEB128((byte*)&fdeIdx,sizeof(fdeIdx),false,&inst.arg3NumBytes);
     addInstruction(&instrs,&inst);
@@ -291,17 +291,17 @@ void writeTransformationToDwarf(Dwarf_P_Debug dbg,TypeTransform* trans)
         oldBytesSoFar+=trans->from->fieldLengths[i];
         continue;
       }
-      #define NUM_BYTES 1+2*sizeof(word_t)
+      #define NUM_BYTES 1+2*sizeof(int)
       byte bytes[NUM_BYTES];
       bytes[0]=ERT_CURR_TARG_NEW;
-      memcpy(bytes+1,&size,sizeof(word_t));
+      memcpy(bytes+1,&size,sizeof(int));
       //todo: waste of space, whole point of LEB128, could put this in one
       //byte instead of 4 most of the time
       logprintf(ELL_INFO_V3,ELS_DWARF_FRAME,"field offset for field %i is %i\n",i,off);
-      memcpy(bytes+1+sizeof(word_t),&off,sizeof(word_t));
+      memcpy(bytes+1+sizeof(int),&off,sizeof(int));
       inst.arg1Bytes=encodeAsLEB128(bytes,NUM_BYTES,false,&inst.arg1NumBytes);
       bytes[0]=ERT_CURR_TARG_OLD;
-      memcpy(bytes+1+sizeof(word_t),&oldBytesSoFar,sizeof(word_t));
+      memcpy(bytes+1+sizeof(int),&oldBytesSoFar,sizeof(int));
       inst.arg2Bytes=encodeAsLEB128(bytes,NUM_BYTES,false,&inst.arg2NumBytes);
       if(EFTT_RECURSE==transformType)
       {
@@ -337,7 +337,6 @@ void writeTransformationToDwarf(Dwarf_P_Debug dbg,TypeTransform* trans)
       logprintf(ELL_INFO_V3,ELS_DWARF_FRAME,"adding normal field to fde\n");
       //transforming a struct with fields that are base types, nice and easy
       inst.opcode=DW_CFA_register;
-    
       addInstruction(&instrs,&inst);
       free(inst.arg1Bytes);
       free(inst.arg2Bytes);
