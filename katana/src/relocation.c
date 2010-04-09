@@ -77,20 +77,55 @@ addr_t getPLTEntryForSym(ElfInfo* e,int symIdx)
   GElf_Shdr shdr;
   getShdrByERS(e,ERS_PLT,&shdr);
   addr_t pltStart=shdr.sh_addr;
+
+  Elf_Scn* pltRelScn=NULL;
+  if(e->sectionIndices[ERS_REL_PLT])
+  {
+    pltRelScn=getSectionByERS(e,ERS_REL_PLT);
+  }
+  else if(e->sectionIndices[ERS_RELA_PLT])
+  {
+    pltRelScn=getSectionByERS(e,ERS_RELA_PLT);
+  }
+  else
+  {
+    //todo: maybe don't die here, just return 0
+    death("Executable has neither rel.plt nor rela.plt\n");
+  }
+  
   //plt entries are aligned on 16-byte boundaries
   //we start with plt1, since plt0 has special function
+  //todo: support x86_64 large code PLT model (which is much more
+  //complicated and things are not separated nicely by 16 bytes)
   int i=0x10;
   for(;i<shdr.sh_size;i+=0x10)
   {
-    word_t relocOffset;
+    word_t relocOffset=0;
+    addr_t startWithOffset;
     //the first jmp instruction takes 6 bytes, then the
     //opcode of the push instruction takes 1 byte, so the reloc_offset
     //is after 7 bytes
+    startWithOffset=pltStart+7;
+    int offsetLen=4;
+    #if defined(KATANA_X86_64_ARCH)
+    //todo: support large-mode plt
+    //in which  offsetLen will be 8
+    //not supported yet because I'm not sure how to detect it best
+    #endif
+    
     //todo: does this need to be aligned, because it isn't
-    memcpyFromTarget((byte*)&relocOffset,pltStart+i+7,sizeof(word_t));
+    memcpyFromTarget((byte*)&relocOffset,startWithOffset+i,offsetLen);
     logprintf(ELL_INFO_V4,ELS_RELOCATION,"relocOffset is %i\n",relocOffset);
     //now look up the appropriate relocation entry
-    RelocInfo* reloc=getRelocationEntryAtOffset(e,getSectionByERS(e,ERS_REL_PLT),relocOffset);
+#if defined(KATANA_X86_64_ARCH)
+    //relocationOffset is actually an index, not an offset. We have to make it into
+    //an offset therefore
+    GElf_Shdr pltRelShdr;
+    getShdr(pltRelScn,&pltRelShdr);
+    relocOffset*=pltRelShdr.sh_entsize;
+#endif
+
+    RelocInfo* reloc=getRelocationEntryAtOffset(e,pltRelScn,relocOffset);
     if(reloc->symIdx==symIdx)
     {
       free(reloc);
@@ -144,11 +179,16 @@ RelocInfo* getRelocationEntryAtOffset(ElfInfo* e,Elf_Scn* relocScn,addr_t offset
 //apply the given relocation using oldSym for reference
 //to calculate the offset from the symol address
 //oldSym may be NULL if the relocation type is ERT_RELA instead of ERT_REL
+//todo: this function is poorly written. It draws too large a distinction
+//      between REL and RELA. If REL just need some extra code to compute the addend,
+//      then process as for RELA.
 void applyRelocation(RelocInfo* rel,GElf_Sym* oldSym,ELF_STORAGE_TYPE type)
 {
   addr_t addrToBeRelocated=rel->r_offset;
 
   addr_t newAddrAccessed;
+  int bytesInAddr=sizeof(addr_t);//this is needed because for x86_64, it may actually
+  //be less, some relocations are only for 32 bits
   int symIdx=rel->symIdx;
   GElf_Sym sym;
   getSymbol(rel->e,symIdx,&sym);
@@ -165,19 +205,17 @@ void applyRelocation(RelocInfo* rel,GElf_Sym* oldSym,ELF_STORAGE_TYPE type)
     newAddrAccessed=getPLTEntryForSym(rel->e,symIdxDynamic);
     logprintf(ELL_INFO_V2,ELS_RELOCATION,"Relocated address at 0x%x to 0x%x\n",(uint)addrToBeRelocated,newAddrAccessed);
     //may have to do some additional fixups
-    switch(rel->relocType)
+    byte relocType=rel->relocType;
+    //use if structure rather than switch b/c of duplicate
+    //case values
+    if(R_386_PC32==relocType || R_X86_64_PC32==relocType)
     {
-    case R_386_32: //also holds for R_X86_64_32, but the code is the
-                   //same so C will complain about duplicate case
-                   //value if we put it
-      break;
-    case R_386_PC32: //again, holds for X86_64 but C would complain
-                     //about duplicate case value
-      //-sizeof(addr_t) because relative to PC of next instruction
-      newAddrAccessed=newAddrAccessed-rel->r_offset-sizeof(addr_t);
-      break;
-    default:
-      death("relocation type %i we can't handle yet\n",rel->relocType);
+      newAddrAccessed=newAddrAccessed-rel->r_offset-4;//4 b/c 32 bits
+      bytesInAddr=4;
+    }
+    else if(R_X86_64_PC64==relocType)
+    {
+      newAddrAccessed=newAddrAccessed-rel->r_offset-8;
     }
   }
   else
@@ -187,18 +225,16 @@ void applyRelocation(RelocInfo* rel,GElf_Sym* oldSym,ELF_STORAGE_TYPE type)
     {
       addr_t addrOld=oldSym->st_value;
       addr_t oldAddrAccessed=0;
-      switch(rel->relocType)
+      if(rel->relocType==R_386_32 || rel->relocType==R_X86_64_32)
       {
-      case R_386_32: //also holds for R_X86_64_32, but the code is the
-                     //same so C will complain about duplicate case
-                    //value if we put it
         assert(sym.st_shndx!=SHN_UNDEF &&
                sym.st_shndx!=SHN_ABS &&
                sym.st_shndx!=SHN_COMMON);
         //todo: support abs and common sections
         oldAddrAccessed=getWordAtAbs(elf_getscn(rel->e->e,sym.st_shndx),rel->r_offset,IN_MEM);
-        break;
-      default:
+      }
+      else
+      {
         death("relocation type we can't handle yet (for REL)\n");
       }
       uint offset=oldAddrAccessed-addrOld;
@@ -208,18 +244,26 @@ void applyRelocation(RelocInfo* rel,GElf_Sym* oldSym,ELF_STORAGE_TYPE type)
     {
       logprintf(ELL_INFO_V2,ELS_RELOCATION,"applying RELA relocation at 0x%x for symbol %s\n",(uint)addrToBeRelocated,getString(rel->e,sym.st_name));
       logprintf(ELL_INFO_V3,ELS_RELOCATION,"Relocation type is %i and addend is 0x%x\n",rel->relocType,rel->r_addend);
-      switch(rel->relocType)
+      if(R_386_32==rel->relocType || R_X86_64_32==rel->relocType || R_X86_64_64==rel->relocType)
       {
-      case R_386_32: //holds for X86_X64 as well, has same numerical value
         newAddrAccessed=addrNew+rel->r_addend;
-        break;
-      case R_386_PC32: //holds for X86_X64 as well, has same numerical value
-        //off by one?
-        //printf("addrNew is 0x%x, addend ix 0x%x, offset is 0x%x\n",addrNew,rel->rela.r_addend,rel->rela.r_offset);
+        #ifdef KATANA_X86_64_ARCH
+        if(R_X86_64_32==rel->relocType)
+        {
+          bytesInAddr=4;//not using all 8 bytes the architecture might suggest
+        }
+        #endif
+      }
+      else if(R_386_PC32==rel->relocType || R_X86_64_PC32==rel->relocType)
+      {
          //-sizeof(addr_t) because relative to PC of next instruction
         newAddrAccessed=addrNew+rel->r_addend-rel->r_offset-sizeof(addr_t);
-        break;
-      default:
+        #ifdef KATANA_X86_64_ARCH
+        bytesInAddr=4;//not using all 8 bytes the architecture might suggest
+        #endif
+      }
+      else
+      {
         death("relocation type %i we can't handle yet (for RELA)\n",type);
       }
     }
@@ -227,7 +271,7 @@ void applyRelocation(RelocInfo* rel,GElf_Sym* oldSym,ELF_STORAGE_TYPE type)
   
   if(IN_MEM & type)
   {
-    memcpyToTarget(addrToBeRelocated,(byte*)&newAddrAccessed,sizeof(newAddrAccessed));
+    memcpyToTarget(addrToBeRelocated,(byte*)&newAddrAccessed,bytesInAddr);
   }
   if(ON_DISK & type)
   {
@@ -236,7 +280,7 @@ void applyRelocation(RelocInfo* rel,GElf_Sym* oldSym,ELF_STORAGE_TYPE type)
     GElf_Shdr shdr;
     gelf_getshdr(scn,&shdr);
     void* dataptr=data->d_buf+(addrToBeRelocated-shdr.sh_addr);
-    memcpy(dataptr,&newAddrAccessed,sizeof(addr_t));
+    memcpy(dataptr,&newAddrAccessed,bytesInAddr);
   }
 }
 
