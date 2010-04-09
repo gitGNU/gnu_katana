@@ -275,7 +275,7 @@ int reindexSymbol(ElfInfo* old,ElfInfo* new,int oldIdx,int flags)
   if(STN_UNDEF==idx)
   {
     char* symbolName=getString(old,sym.st_name);
-    fprintf(stderr,"Symbol '%s' could not be reindexed\n",symbolName);
+    logprintf(ELL_WARN,ELS_SYMBOL,"Symbol '%s' could not be reindexed\n",symbolName);
   }
   return idx;
 }
