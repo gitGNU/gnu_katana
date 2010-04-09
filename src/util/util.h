@@ -30,9 +30,8 @@ void death(char* reason,...);
 
 //! \brief Check whether \a s is NULL or not on a memory allocation. Quit this program if it is NULL.
 #define MALLOC_CHECK(s)  if ((s) == NULL)   {                     \
-    fprintf(stderr,"No enough memory at %s:line%d ", __FILE__, __LINE__); \
-    perror(":");                                                  \
-    exit(-1); \
+      perror("system error:");                                                  \
+      death("No enough memory at %s:line %d ", __FILE__, __LINE__); \
   }
 
 //! \brief Set memory space starts at pointer \a n of size \a m to zero. 
