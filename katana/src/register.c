@@ -14,6 +14,7 @@
 #include "symbol.h"
 #include <stdio.h>
 
+
 PoReg readRegFromLEB128(byte* leb,usint* bytesRead)
 {
   PoReg result;
@@ -36,10 +37,10 @@ PoReg readRegFromLEB128(byte* leb,usint* bytesRead)
   {
   case ERT_CURR_TARG_NEW:
   case ERT_CURR_TARG_OLD:
-    assert(numBytes>=1+sizeof(word_t) && numBytes<=1+2*sizeof(word_t));
-    memcpy(&result.size,bytes+1,sizeof(word_t));
+    assert(numBytes>=1+sizeof(int) && numBytes<=1+2*sizeof(int));
+    memcpy(&result.size,bytes+1,sizeof(int));
     result.u.offset=0;
-    memcpy(&result.u.offset,bytes+1+sizeof(word_t),min(numBytes-1-sizeof(word_t),sizeof(word_t)));
+    memcpy(&result.u.offset,bytes+1+sizeof(int),min(numBytes-1-sizeof(int),sizeof(int)));
     break;
   case ERT_EXPR:
     //todo: I forget what I was doing here
@@ -68,10 +69,10 @@ char* strForReg(PoReg reg)
   switch(reg.type)
   {
   case ERT_CURR_TARG_OLD:
-    snprintf(buf,128,"{CURR_TARG_OLD,0x%lx bytes,0x%x off}",(unsigned long)reg.size,reg.u.offset);
+    snprintf(buf,128,"{CURR_TARG_OLD,0x%x bytes,0x%x off}",(unsigned int)reg.size,reg.u.offset);
     break;
   case ERT_CURR_TARG_NEW:
-    snprintf(buf,128,"{CURR_TARG_NEW,0x%lx bytes,0x%x off}",(unsigned long)reg.size,reg.u.offset);
+    snprintf(buf,128,"{CURR_TARG_NEW,0x%x bytes,0x%x off}",(unsigned int)reg.size,reg.u.offset);
     break;
   case ERT_EXPR:
     //todo: print out expression

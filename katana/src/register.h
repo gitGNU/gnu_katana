@@ -37,7 +37,7 @@ static inline bool isPoRegType(byte b)
 typedef struct
 {
   E_REG_TYPE type;
-  word_t size;//used for ERT_CURR_TARG_*
+  int size;//used for ERT_CURR_TARG_*
   union
   {
     int offset;//for ERT_CURR_TARG_*, ERT_EXPR
