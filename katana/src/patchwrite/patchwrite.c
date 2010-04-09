@@ -698,7 +698,11 @@ void writePatch(char* oldSourceTree,char* newSourceTree,char* oldBinName,char* n
   findELFSections(oldBinary);
   patch=startPatchElf(patchOutName);
   Dwarf_Error err;
-  dbg=dwarf_producer_init(DW_DLC_WRITE,dwarfWriteSectionCallback,dwarfErrorHandler,NULL,&err);
+  //todo: always creating 32-bit Dwarf sections. DWARF standard
+  //recommends never having 64-bit Dwarf as the default, even on
+  //x86_64. We should have some way of recognizing when we want 64-bit
+  //though, if things are really huge.
+  dbg=dwarf_producer_init(DW_DLC_WRITE|DW_DLC_SIZE_32,dwarfWriteSectionCallback,dwarfErrorHandler,NULL,&err);
   Dwarf_P_Die tmpRootDie=dwarf_new_die(dbg,DW_TAG_compile_unit,NULL,NULL,NULL,NULL,&err);
   dwarf_add_die_to_debug(dbg,tmpRootDie,&err);
   cie=dwarf_add_frame_cie(dbg,"",1,1,0,NULL,0,&err);
