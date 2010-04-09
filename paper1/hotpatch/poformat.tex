@@ -2,13 +2,11 @@
 \label{sec:poformat}
 %\subsection{Reasons and Needs}
 {\bf Reasons and Needs.}
-We have developed a Patch Object format with the following properties
+We have developed a Patch Object format for which the following holds:
 \begin{itemize}
- \item a valid ELF file
- \item information about types and functions requiring patches contained
-   as DWARF information
- \item type transformations specified using a language defined by the
-   DWARF standard
+ \item A PO is a valid ELF file.
+ \item A PO utilizes DWARF information to describe types, variables, and functions requiring patching.
+ \item A PO allows type transformations to be specified using a language defined by the DWARF standard.
 \end{itemize}
 Through the use of existing standards and well-structured ELF files
 utilizing a simple expression language for data patching, we aim to
