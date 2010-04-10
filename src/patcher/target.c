@@ -268,26 +268,44 @@ addr_t mallocTarget(word_t len)
   addr_t modifyTextLocation=targetTextStart;
   REG_IP(newRegs)=modifyTextLocation;
   setTargetRegs(&newRegs);
+
+  //same for both x86 and x86_64 with the calling
+  //models we're using
+  int mallocAmountBytes=4;
   
-  //todo: diff for 64 bit
+  #ifdef KATANA_X86_ARCH
   //68 xx xx xx xx pushes amount to malloc onto the stack
   //e8 xx xx xx xx calls malloc
   //83 c4 04       adds 4 to esp (popping the stack without storing anywhere)
-  #define codeLen 13
-  byte code[codeLen]={0x68,0x00,0x00,0x00,0x00,
+  #define CODE_LEN 13
+  byte code[CODE_LEN]={0x68,0x00,0x00,0x00,0x00,
                       0xe8,0x00,0x00,0x00,0x00,
                       0x83,0xc4, 0x04};
-  memcpy(code+1,&len,sizeof(word_t));
   //+10 because the first instruction after the call instruction
   //(i.e. what the relative call will be relative to) is 10 instructions
   //after the start of the code
   addr_t relativeMallocPTAddr=mallocAddress-(modifyTextLocation+10);
   memcpy(code+6,&relativeMallocPTAddr,sizeof(addr_t));
-  byte oldText[13];
+#elif defined(KATANA_X86_64_ARCH)
+  //bf xx xx xx xx moves amount to malloc into register rdi
+  //ff 15 00 00 00 00 xx xx xx xx xx xx xx xx calls malloc (near indirect)
+  //we use a near absolute indirect call for x86_64 because relative call (opcode e8)
+  //uses 32-bit addressing mode and we have a raw address of the malloc procedure,
+  //don't know if it's within 32 bits
+  #define CODE_LEN 19
+  byte code[CODE_LEN]={0xbf,0x00,0x00,0x00,0x00,
+                       0xff,0x15,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+  memcpy(code+5+2+4,&mallocAddress,sizeof(addr_t));
   
+  #else
+#error "unknown architecture"
+  #endif
+  memcpy(code+1,&len,mallocAmountBytes);
   
-  memcpyFromTarget(oldText,modifyTextLocation,codeLen);
-  memcpyToTarget(modifyTextLocation,code,codeLen);
+  byte oldText[CODE_LEN];
+  
+  memcpyFromTarget(oldText,modifyTextLocation,CODE_LEN);
+  memcpyToTarget(modifyTextLocation,code,CODE_LEN);
   
   //and run the code
   continuePtrace();
@@ -301,7 +319,7 @@ addr_t mallocTarget(word_t len)
   }
   //printf("now at eip 0x%x\n",newRegs.eip);
   //restore the old code
-  memcpyToTarget(modifyTextLocation,oldText,codeLen);
+  memcpyToTarget(modifyTextLocation,oldText,CODE_LEN);
   //restore the old registers
   setTargetRegs(&oldRegs);
   return retval;
