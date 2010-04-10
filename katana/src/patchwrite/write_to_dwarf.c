@@ -269,7 +269,7 @@ void writeTransformationToDwarf(Dwarf_P_Debug dbg,TypeTransform* trans)
     bytes[0]=ERT_CURR_TARG_OLD;
     inst.arg2Bytes=encodeAsLEB128(bytes,1+sizeof(int),false,&inst.arg2NumBytes);
     inst.arg3=fdeIdx;//might as well make both valid
-    inst.arg3Bytes=encodeAsLEB128((byte*)&fdeIdx,sizeof(fdeIdx),false,&inst.arg3NumBytes);
+    inst.arg3Bytes=encodeAsLEB128((byte*)&fdeIdx,sizeof(int),false,&inst.arg3NumBytes);
     addInstruction(&instrs,&inst);
     free(inst.arg1Bytes);
     free(inst.arg2Bytes);
@@ -326,7 +326,7 @@ void writeTransformationToDwarf(Dwarf_P_Debug dbg,TypeTransform* trans)
         }
         idx_t fdeIdx=transformer->fdeIdx;
         inst.arg3=fdeIdx;//might as well make both valid
-        inst.arg3Bytes=encodeAsLEB128((byte*)&fdeIdx,sizeof(fdeIdx),false,&inst.arg3NumBytes);
+        inst.arg3Bytes=encodeAsLEB128((byte*)&fdeIdx,sizeof(int),false,&inst.arg3NumBytes);
         addInstruction(&instrs,&inst);
         free(inst.arg1Bytes);
         free(inst.arg2Bytes);
