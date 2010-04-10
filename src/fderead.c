@@ -116,7 +116,6 @@ RegInstruction* parseFDEInstructions(Dwarf_Debug dbg,unsigned char* bytes,int le
         }
         bytes+=uleblen;
         len-=uleblen;
-        //todo: is this 64-bit safe?
         result[*numInstrs].arg3=leb128ToUInt(bytes+1,&uleblen);
         logprintf(ELL_INFO_V4,ELS_DWARF_FRAME,"len was %i\n",uleblen);
         bytes+=uleblen;
