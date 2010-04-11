@@ -288,7 +288,7 @@ List* makePatchData(PoRegRule* rule,SpecialRegsState* state,ElfInfo* patch,ElfIn
         if(!gelf_getshdr(scn,&shdr))
         {death("gelf_getshdr failed\n");}
         pointedObjectNewLocation=shdr.sh_addr+sym.st_value;
-        logprintf(ELL_INFO_V2,ELS_DWARF_FRAME,"Found a symbol in target corresponding to this symbol, so we're making our new location be 0x%x as specified by the patch\n",pointedObjectNewLocation);
+        logprintf(ELL_INFO_V2,ELS_DWARF_FRAME,"Found a symbol in target corresponding to this symbol(%s), so we're making our new location be 0x%zx as specified by the patch\n",getString(patch,sym.st_name),pointedObjectNewLocation);
       }
       else
       {
@@ -307,7 +307,7 @@ List* makePatchData(PoRegRule* rule,SpecialRegsState* state,ElfInfo* patch,ElfIn
         
         //pointedObjectNewLocation=getFreeSpaceInTarget(patch->fdes[rule->index-1].memSize);
         pointedObjectNewLocation=mallocTarget(patch->fdes[rule->index-1].memSize);
-        logprintf(ELL_INFO_V2,ELS_DWARF_FRAME,"No symbol associated with object we have to relocate that we have a pointer to. Mallocced new memory at 0x%x\n",pointedObjectNewLocation);
+        logprintf(ELL_INFO_V2,ELS_DWARF_FRAME,"No symbol associated with object at address 0x%zx we have to relocate that we have a pointer to. Mallocced new memory at 0x%zx\n",tmpState.currAddrOld,pointedObjectNewLocation);
       }
 
       addr_t* value=zmalloc(sizeof(addr_t));
