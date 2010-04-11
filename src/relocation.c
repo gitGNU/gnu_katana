@@ -262,9 +262,13 @@ void applyRelocation(RelocInfo* rel,GElf_Sym* oldSym,ELF_STORAGE_TYPE type)
         bytesInAddr=4;//not using all 8 bytes the architecture might suggest
         #endif
       }
+      else if(R_X86_64_32S==rel->relocType)
+      {
+        newAddrAccessed=addrNew+signExtend32To64(rel->r_addend);
+      }
       else
       {
-        death("relocation type %i we can't handle yet (for RELA)\n",type);
+        death("relocation type %i we can't handle yet (for RELA)\n",rel->relocType);
       }
     }
   }
