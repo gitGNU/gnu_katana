@@ -14,7 +14,7 @@
 #include <stdio.h> //for fprintf
 #include <stdlib.h>
 #include <stdbool.h>
-
+#include <elf.h>
 
 typedef unsigned char byte;
 
@@ -40,5 +40,7 @@ void death(char* reason,...);
 #define GARBAGE 0xCC //204 decimal
 
 bool strEndsWith(char* str,char* suffix);
+
+uint64_t signExtend32To64(uint32_t val);
 
 #endif

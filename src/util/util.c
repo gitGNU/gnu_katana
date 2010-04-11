@@ -40,3 +40,13 @@ bool strEndsWith(char* str,char* suffix)
   int start=strLen-suffixLen;
   return !strcmp(str+start,suffix);
 }
+
+uint64_t signExtend32To64(uint32_t val)
+{
+  uint64_t result=val;
+  if(val & (1 << 31))
+  {
+    memset(((byte*)&result)+4,0xFF,4);
+  }
+  return result;
+}
