@@ -124,15 +124,22 @@ bool compareTypesAndGenTransforms(TypeInfo* a,TypeInfo* b)
     }
     break;
   case TT_ARRAY:
-    if(a->lowerBound != b->lowerBound || a->upperBound!=b->upperBound)
+    if(a->depth != b->depth)
     {
-      retval=false;
-      logprintf(ELL_WARN,ELS_TYPEDIFF,"Generating type transformation for array %s/%s by assuming anything new has been put on the end of the array. This may not be what you want\n",a->name,b->name);
-      if(a->lowerBound != b->lowerBound)
+      death("Array type changed dimensionality. Can't handle this. Bailing\n");
+    }
+    for(int i=0;i<a->depth;i++)
+    {
+      if(a->lowerBounds[i] != b->lowerBounds[i] || a->upperBounds[i] !=b->upperBounds[i])
       {
-        death("haven't actually figured out how to properly write a type transformer for arrays changing lower bound yet. Poke James to do this\n");
+        retval=false;
+        logprintf(ELL_WARN,ELS_TYPEDIFF,"Generating type transformation for array %s/%s by assuming anything new has been put on the end of the array. This may not be what you want\n",a->name,b->name);
+        if(a->lowerBounds[i] != b->lowerBounds[i])
+        {
+          death("haven't actually figured out how to properly write a type transformer for arrays changing lower bound yet. Poke James to do this\n");
+        }
+        break;
       }
-      break;
     }
     //deliberately no break here because want to check pointed type too
   case TT_POINTER:
@@ -177,6 +184,10 @@ bool compareTypesAndGenTransforms(TypeInfo* a,TypeInfo* b)
     //we'll bail later
 
     //it's not really the way we want to do an array, but arrays are pretty opaque
+    //for one dimensional arrays it can be right a lot of the time, because may just be
+    //appending constants to an array
+    //todo: this isn't correct at all for multidemnsional arrays where we're expanding
+    //      one of the inner dimensions. Should look into this further
     transform->straightCopy=true;
   }
 

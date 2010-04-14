@@ -130,8 +130,13 @@ void writeTypeToDwarf(Dwarf_P_Debug dbg,TypeInfo* type)
   }
   if(TT_ARRAY==type->type)
   {
-    dwarf_add_AT_signed_const(dbg,die,DW_AT_lower_bound,type->lowerBound,&err);
-    dwarf_add_AT_signed_const(dbg,die,DW_AT_upper_bound,type->upperBound,&err);
+    for(int i=0;i<type->depth;i++)
+    {
+      Dwarf_P_Die subrangeDie=dwarf_new_die(dbg,tag,parent,NULL,type->cu->lastDie,NULL,&err);
+      type->cu->lastDie=subrangeDie;
+      dwarf_add_AT_signed_const(dbg,subrangeDie,DW_AT_lower_bound,type->lowerBounds[i],&err);
+      dwarf_add_AT_signed_const(dbg,subrangeDie,DW_AT_upper_bound,type->upperBounds[i],&err);
+    }
   }
   else if(TT_STRUCT==type->type || TT_UNION==type->type)
   {

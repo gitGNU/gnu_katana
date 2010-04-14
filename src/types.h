@@ -161,8 +161,9 @@ typedef struct TypeInfo_
   ///////////////////////////////////////////
   //applicable only to arrays
   ///////////////////////////////////////////
-  int lowerBound;
-  int upperBound;
+  int* lowerBounds;//array of lower bounds b/c may be multidimensional array
+  int* upperBounds;
+  int depth;//dimensionality of array. >1 if multidimensional array
   ///////////////////////////////////////////
   //end applicable only to arrays
   ///////////////////////////////////////////

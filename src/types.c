@@ -103,6 +103,14 @@ void freeTypeInfo(TypeInfo* t)
   t->fieldTypes=(void*)0xbadf00d;
   t->fields=(void*)0xbadf00d;
   t->fieldLengths=(void*)0xbadf00d;
+  if(t->lowerBounds)
+  {
+    free(t->lowerBounds);
+  }
+  if(t->upperBounds)
+  {
+    free(t->upperBounds);
+  }
   if(t->transformer)
   {
     freeTypeTransform(t->transformer);
@@ -128,8 +136,11 @@ TypeInfo* duplicateTypeInfo(const TypeInfo* t)
     grabRefCounted((RC*)result->fieldTypes[i]);
   }
   result->pointedType=t->pointedType;
-  result->lowerBound=t->lowerBound;
-  result->upperBound=t->upperBound;
+  result->depth=t->depth;
+  result->lowerBounds=zmalloc(t->depth*sizeof(int));
+  memcpy(result->lowerBounds,t->lowerBounds,t->depth*sizeof(int));
+  result->upperBounds=zmalloc(t->depth*sizeof(int));
+  memcpy(result->upperBounds,t->upperBounds,t->depth*sizeof(int));
   return result;
 }
 
