@@ -682,11 +682,15 @@ void writeAllTypeAndFuncTransformationInfo(ElfInfo* elf)
 //don't necessarily need *all* the rodata
 void writeROData(ElfInfo* binary)
 {
-  Elf_Data* roData=getDataByERS(binary,ERS_RODATA);
-  Elf_Data* roDataPatch=getDataByERS(patch,ERS_RODATA);
-  uint len=roData->d_size;
-  rodataOffset=roDataPatch->d_size;//offset to put things off of now
-  addDataToScn(roDataPatch,roData->d_buf,len);
+  if(hasERS(binary,ERS_RODATA))
+  {
+    Elf_Data* roData=getDataByERS(binary,ERS_RODATA);
+    Elf_Data* roDataPatch=getDataByERS(patch,ERS_RODATA);
+    uint len=roData->d_size;
+    rodataOffset=roDataPatch->d_size;//offset to put things off of now
+    addDataToScn(roDataPatch,roData->d_buf,len);
+  }
+  //sometimes objects have no rodata. Not terribly common, but it happens
 }
 
 
@@ -719,7 +723,6 @@ void writePatch(char* oldSourceTree,char* newSourceTree,char* oldBinName,char* n
   //apropriately
   ElfXX_Shdr* shdr=elfxx_getshdr(getSectionByERS(patch,ERS_SYMTAB));
   shdr->sh_info=getDataByERS(patch,ERS_SYMTAB)->d_off/sizeof(ElfXX_Sym)+1;
-  printf("set symtab sh_info to %i\n",shdr->sh_info);
   
   //now that we've created the necessary things, actually run through
   //the stuff to write in our data
@@ -737,10 +740,23 @@ void writePatch(char* oldSourceTree,char* newSourceTree,char* oldBinName,char* n
         logprintf(ELL_INFO_V1,ELS_PATCHWRITE,"Finding differences between %s and %s and writing them to the patch\n",elf1->fname,elf2->fname);
         readDWARFTypes(elf1,oldSourceTree);
         readDWARFTypes(elf2,newSourceTree);
-        //all the object files had their own roData sections
-        //and now we're lumping them together
-        writeROData(elf2);
-        writeTypeAndFuncTransformationInfo(elf1,elf2);
+        if(!elf1->dwarfInfo && !elf2->dwarfInfo)
+        {
+          logprintf(ELL_WARN,ELS_PATCHWRITE,"Assuming that because %s and %s don't have Dwarf information, they will not need patching. If this assumption is incorrect, please fix your compilation process so they do contain DWARF information\n",elf1->fname,elf2->fname);
+        }
+        else if(!elf1->dwarfInfo || !elf2->dwarfInfo)
+        {
+          death("One of %s and %s has DWARF information and the other does not. This is unexpected\n",elf1->fname,elf2->fname);
+        }
+        else
+        {
+          //we actually got DWARF data!
+          
+          //all the object files had their own roData sections
+          //and now we're lumping them together
+          writeROData(elf2);
+          writeTypeAndFuncTransformationInfo(elf1,elf2);
+        }
         endELF(elf1);
         endELF(elf2);
       }
@@ -780,7 +796,7 @@ void writePatch(char* oldSourceTree,char* newSourceTree,char* oldBinName,char* n
   {
     dwarfErrorHandler(err,NULL);
   }
-  printf("wrote elf file %s\n",patchOutName);
+  logprintf(ELL_INFO_V1,ELS_ELFWRITE,"wrote elf file %s\n",patchOutName);
   endELF(oldBinary);
   endELF(newBinary);
 }
