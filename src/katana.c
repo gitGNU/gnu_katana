@@ -131,9 +131,7 @@ int main(int argc,char** argv)
       strcpy(outfile,oldBinPath);
       strcat(outfile,".po");
     }
-    printf("reading dwarf types from new binary\n############################################\n");
-
-    printf("outfile is %s",outfile);
+    
     writePatch(oldSourceTree,newSourceTree,oldBinPath,newBinPath,outfile);
     free(oldBinPath);
     free(newBinPath);
