@@ -81,7 +81,7 @@ void loggingDefaults()
   sourceEnables[ELS_PATCHAPPLY]=ELL_CNT;
   sourceEnables[ELS_LINKMAP]=ELL_INFO_V3;
   sourceEnables[ELS_DWARFTYPES]=ELL_WARN;
-  sourceEnables[ELS_SAFETY]=ELL_CNT;
+  sourceEnables[ELS_SAFETY]=ELL_INFO_V1;
   sourceEnables[ELS_PATCHWRITE]=ELL_WARN;
   sourceEnables[ELS_PATH]=ELL_CNT;
   sourceEnables[ELS_ELFWRITE]=ELL_WARN;
