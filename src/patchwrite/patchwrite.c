@@ -525,6 +525,11 @@ void writeFuncTransformationInfoForCU(CompilationUnit* cuOld,CompilationUnit* cu
       writeFuncToDwarf(dbg,func->name,offset,len,symIdx,cuNew,false);
       addUnsafeSubprogram(patchedFunc);
     }
+    else if(func->hasVariableParams)
+    {
+      logprintf(ELL_INFO_V2,ELS_SAFETY,"Function %s has variable parameters. Erring on the side of caution and adding it to unsafe list\n",patchedFunc->name);
+      addUnsafeSubprogram(patchedFunc);
+    }
     else
     {
       //even if the subprogram hasn't changed, it might possibly
@@ -543,7 +548,7 @@ void writeFuncTransformationInfoForCU(CompilationUnit* cuOld,CompilationUnit* cu
         logprintf(ELL_INFO_V3,ELS_DWARFTYPES,"Subprogram %s uses type %s\n",patchedFunc->name,type->name);
         if(type->transformer)
         {
-          logprintf(ELL_INFO_V2,ELS_DWARFTYPES,"type %s needs transform, marking subprogram %s as unsafe\n",type->name,patchedFunc->name);
+          logprintf(ELL_INFO_V2,ELS_SAFETY,"type %s needs transform, marking subprogram %s as unsafe\n",type->name,patchedFunc->name);
           addUnsafeSubprogram(patchedFunc);
           break;
         }

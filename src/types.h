@@ -72,6 +72,7 @@ typedef struct
                     //of them has a transformer then it can't have an
                     //activation frame during patching
   List* typesTail;
+  bool hasVariableParams;//i.e. we don't actually know what types it uses
   CompilationUnit* cu;
 } SubprogramInfo;
 

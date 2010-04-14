@@ -914,6 +914,22 @@ void parseFormalParameter(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
   }
 }
 
+//this means we found a function which has variable parameters
+void parseUnspecifiedParameters(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
+{
+  //we don't know what types it may be passed, so we live on the safe side
+  //and mark any functions using variable parameters as unsafe
+  //todo: do we actually need to list parent functions as unsafe in this case too?
+  DList* li=activeSubprogramsHead;
+  for(;li;li=li->next)
+  {
+    SubprogramInfo* sub=li->value;
+    assert(sub);
+    sub->hasVariableParams=true;
+  }
+
+}
+
 void* addVarFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
 {
   VarInfo* var=zmalloc(sizeof(VarInfo));
@@ -1215,6 +1231,8 @@ void* parseDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit** cu,bool* parseChi
   case DW_TAG_formal_parameter:
     parseFormalParameter(dbg,die,*cu);
     break;
+  case DW_TAG_unspecified_parameters:
+    parseUnspecifiedParameters(dbg,die,*cu);
     break;
   case DW_TAG_lexical_block:
     //we may care about its children, but not its definition itself
@@ -1223,7 +1241,7 @@ void* parseDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit** cu,bool* parseChi
     result=addSubroutineType(dbg,die,*cu);
     break;
   default:
-    logprintf(ELL_WARN,ELS_DWARFTYPES,"Unknown die type 0x%x. Ignoring it but this may not be what you want\n",tag);
+    logprintf(ELL_WARN,ELS_DWARFTYPES,"Unknown die type 0x%x. Ignoring it but this may not be what you want (%s)\n",tag,(*cu)->elf->fname);
     
   }
 
