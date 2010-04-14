@@ -48,7 +48,7 @@ void endELF(ElfInfo* e)
     for(Elf_Scn* scn=elf_nextscn (e->e,NULL);scn;scn=elf_nextscn(e->e,scn))
     {
       Elf_Data* data=elf_getdata(scn,NULL);
-      if(data->d_buf)
+      if(data && data->d_buf)
       {
         free(data->d_buf);
       }
@@ -452,4 +452,10 @@ void getShdr(Elf_Scn* scn,GElf_Shdr* shdr)
   {
     death("gelf_getshdr failed\n");
   }
+}
+
+bool hasERS(ElfInfo* e,E_RECOGNIZED_SECTION ers)
+{
+  assert(e);
+  return 0!=e->sectionIndices[ers];
 }
