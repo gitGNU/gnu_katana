@@ -31,27 +31,40 @@ int getIdxForField(TypeInfo* type,char* name)
   return FIELD_DELETED;
 }
 
+//mmap some contiguous space in the target, but don't
+//assume it's being used right now. It will be claimed
+//by later calls to getFreeSpaceInTarget
+void reserveFreeSpaceInTarget(uint howMuch)
+{
+  if(howMuch<=freeSpaceLeft)
+  {
+    return;
+  }
+  uint numPages=(uint)ceil((double)howMuch/(double)sysconf(_SC_PAGE_SIZE));
+  //todo: separate out different function/structure for executable code
+  addrFreeSpace=mmapTarget(numPages*sysconf(_SC_PAGE_SIZE),PROT_READ|PROT_WRITE|PROT_EXEC);
+  freeSpaceLeft=numPages*sysconf(_SC_PAGE_SIZE);
+  //todo: if there's a little bit of free space left,
+  //we just discard it. This is wasteful
+}
+
+
 addr_t getFreeSpaceInTarget(uint howMuch)
 {
-  uint numPages=(uint)ceil((double)howMuch/(double)sysconf(_SC_PAGE_SIZE));
-  //todo: support situation where need more than a page
   addr_t retval;
   if(howMuch<=freeSpaceLeft)
   {
     retval=addrFreeSpace;
   }
-  else
-  {
-    //todo: separate out different function/structure for executable code
-    retval=addrFreeSpace=mmapTarget(numPages=sysconf(_SC_PAGE_SIZE),PROT_READ|PROT_WRITE|PROT_EXEC);
-    freeSpaceLeft=sysconf(_SC_PAGE_SIZE);
-  }
+  reserveFreeSpaceInTarget(howMuch);
+  retval=addrFreeSpace;
   freeSpaceLeft-=howMuch;
   addrFreeSpace+=howMuch;
   return retval;
   //todo: if there's a little bit of free space left,
   //we just discard it. This is wasteful
 }
+
 
 //todo: does this function belong in this file?
 void performRelocations(ElfInfo* e,VarInfo* var)
