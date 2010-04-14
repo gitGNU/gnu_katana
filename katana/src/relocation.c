@@ -320,8 +320,11 @@ void applyRelocations(List* relocs,ElfInfo* oldElf)
 List* getRelocationItemsInRange(ElfInfo* e,Elf_Scn* relocScn,addr_t lowAddr,addr_t highAddr)
 {
   assert(e);
+  if(!relocScn)
+  {
+    return NULL;
+  }
 
-  assert(relocScn);
   RelocInfo* reloc=NULL;
   List* relocsHead=NULL;
   List* relocsTail=NULL;
@@ -508,6 +511,7 @@ addr_t getAddendForReloc(RelocInfo* reloc)
 
 //get the section containing relocations for the given function
 //if want only the general relocation section, pass null for function name
+//return NULL if there is no relocation section
 Elf_Scn* getRelocationSection(ElfInfo* e,char* fnname)
 {
  //also include any relocations which exist for anything inside this function
@@ -532,7 +536,7 @@ Elf_Scn* getRelocationSection(ElfInfo* e,char* fnname)
   }
   if(!relocScn)
   {
-    death("function %s in %s does not have a .rel.text section\n",fnname,e->fname);
+    logprintf(ELL_INFO_V1,ELS_RELOCATION,"function %s in %s does not have any sort of relocation function for it\n",fnname,e->fname);
   }
   return relocScn;
 }
