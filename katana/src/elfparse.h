@@ -93,7 +93,7 @@ char* getSectionNameFromIdx(ElfInfo* e,int idx);
 char* getScnHdrString(ElfInfo* e,int idx);
 char* getString(ElfInfo* e,int idx);//get a string from the normal string table
 char* getDynString(ElfInfo* e,int idx);//get a string from the dynamic string table
-
+bool hasERS(ElfInfo* e,E_RECOGNIZED_SECTION ers);
 
 
 #define SHT_KATANA_UNSAFE_FUNCTIONS SHT_LOUSER+0x1
