@@ -148,11 +148,18 @@ void setIdentifierForCU(CompilationUnit* cu,Dwarf_Die die)
   dictInsert(cuIdentifiers,cu->id,cu->id);
 }
 
-void getRangeFromDie(Dwarf_Debug dbg,Dwarf_Die die,int* lowerBound,int* upperBound)
+//ranges are not just a low and high. An array can be multiple levels deep.
+//This returns the range of all of these levels
+//todo: need more documentation, example of this
+//returns the number of nesting levels. *lowerBound and *upperBound should be
+//freed once the user is finished with them
+int getRangeFromDie(Dwarf_Debug dbg,Dwarf_Die die,int** lowerBound,int** upperBound)
 {
+  assert(lowerBound && upperBound);
   Dwarf_Error err;
   *lowerBound=0;
   *upperBound=0;
+  int cnt=0;
   Dwarf_Die child;
   int res=dwarf_child(die,&child,&err);
   if(res==DW_DLV_OK)
@@ -168,22 +175,33 @@ void getRangeFromDie(Dwarf_Debug dbg,Dwarf_Die die,int* lowerBound,int* upperBou
         fprintf(stderr,"within array type found tag not a subrange, this is bizarre\n");
         continue;
       }
+      cnt++;
+      *lowerBound=realloc(*lowerBound,sizeof(int)*cnt);
+      *upperBound=realloc(*upperBound,sizeof(int)*cnt);
       Dwarf_Attribute attr;
       
       int res=dwarf_attr(child,DW_AT_lower_bound,&attr,&err);
       if(res==DW_DLV_OK)
       {
-        *lowerBound=readAttributeAsInt(attr);
+        (*lowerBound)[cnt-1]=readAttributeAsInt(attr);
+      }
+      else
+      {
+        (*lowerBound)[cnt-1]=0;
       }
       res=dwarf_attr(child,DW_AT_upper_bound,&attr,&err);
       if(res==DW_DLV_OK)
       {
-        *upperBound=readAttributeAsInt(attr);
+        (*upperBound)[cnt-1]=readAttributeAsInt(attr);
+      }
+      else
+      {
+        (*upperBound)[cnt-1]=0;
       }
       
     }while(DW_DLV_OK==dwarf_siblingof(dbg,child,&child,&err));
   }
-
+  return cnt;
 }
 
 
@@ -267,10 +285,23 @@ char* getNameForDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
         {
           death("the type that DW_TAG_array_type references does not exist\n");
         }
-        int lowerBound=0,upperBound=0;
-        getRangeFromDie(dbg,die,&lowerBound,&upperBound);
-        snprintf(buf,2048,"%s[]_%i_%i",namePointed,lowerBound,upperBound);
+        int* lowerBound=0;
+        int* upperBound=0;
+        int depth=getRangeFromDie(dbg,die,&lowerBound,&upperBound);
+        snprintf(buf,2048,"%s",namePointed);
+        int lenNamePointed=strlen(namePointed);
+        char* bufToWrite=buf+lenNamePointed;
+        int lenRemaining=2048-lenNamePointed;
+        for(int i=0;i<depth;i++)
+        {
+          int cnt=snprintf(bufToWrite,lenRemaining,"[%i,%i]",lowerBound[i],upperBound[i]);
+          lenRemaining-=cnt;
+          bufToWrite+=cnt;
+          
+        }
         free(namePointed);
+        free(lowerBound);
+        free(upperBound);
       }
       break;
     case DW_TAG_subprogram:
@@ -728,10 +759,14 @@ void* addArrayTypeFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
     death("ERROR: cannot add array with no type\n");
   }
   type->pointedType=pointedType;
-  getRangeFromDie(dbg,die,&type->lowerBound,&type->upperBound);
-  type->length=type->pointedType->length*(type->upperBound-type->lowerBound);
+  type->depth=getRangeFromDie(dbg,die,&type->lowerBounds,&type->upperBounds);
 
-
+  type->length=0;
+  for(int i=0;i<type->depth;i++)
+  {
+    type->length+=type->pointedType->length*(type->upperBounds[i]-type->lowerBounds[i]);
+  }
+  
   //check for fde info for transformation
   Dwarf_Attribute attr;
   int res=dwarf_attr(die,DW_AT_MIPS_fde,&attr,&err);
@@ -1279,7 +1314,8 @@ DwarfInfo* readDWARFTypes(ElfInfo* elf,char* workingDir_)
   workingDir=workingDir_;
   if(!elf->sectionIndices[ERS_DEBUG_INFO])
   {
-    death("ELF file %s does not seem to have any dwarf DIE information\n",elf->fname);
+    logprintf(ELL_WARN,ELS_DWARFTYPES,"ELF file %s does not seem to have any dwarf DIE information\n",elf->fname);
+    return NULL;
   }
   
   di=zmalloc(sizeof(DwarfInfo));
