@@ -168,6 +168,12 @@ typedef struct TypeInfo_
   ///////////////////////////////////////////
   //end applicable only to arrays
   ///////////////////////////////////////////
+  //applicable only to subroutine types
+  ////////////////////////////////////////
+  bool hasVariableParams;//function type taking variable arguments
+  ////////////////////////////////////
+  //end applicable only to subroutine types
+  ////////////////////////////////////////
 } TypeInfo;
 
 TypeInfo* duplicateTypeInfo(const TypeInfo* t);
