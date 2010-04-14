@@ -126,7 +126,7 @@ void modifyTarget(addr_t addr,word_t value)
 
 //todo: look more into this. ptrace
 //man page says it's required but in practice doesn't seem to be
-//#define require_ptrace_alignment
+#define require_ptrace_alignment
 
 //copies numBytes from data to addr in target
 void memcpyToTarget(addr_t addr,byte* data,int numBytes)
@@ -244,7 +244,6 @@ addr_t mallocTarget(word_t len)
 {
   struct user_regs_struct oldRegs,newRegs;
   getTargetRegs(&oldRegs);
-  getTargetRegs(&oldRegs);
   newRegs=oldRegs;
 
   //so we have to do two things
@@ -266,53 +265,65 @@ addr_t mallocTarget(word_t len)
 
   //for some odd reason, sometimes having issues if we just used newRegs.eip
   addr_t modifyTextLocation=targetTextStart;
-  REG_IP(newRegs)=modifyTextLocation;
-  setTargetRegs(&newRegs);
+
 
   //same for both x86 and x86_64 with the calling
   //models we're using
-  int mallocAmountBytes=4;
   
   #ifdef KATANA_X86_ARCH
   //68 xx xx xx xx pushes amount to malloc onto the stack
   //e8 xx xx xx xx calls malloc
   //83 c4 04       adds 4 to esp (popping the stack without storing anywhere)
-  #define CODE_LEN 13
+  //cc           int3, causes process to wait for controlling process (us)
+  
+  #define CODE_LEN 14
   byte code[CODE_LEN]={0x68,0x00,0x00,0x00,0x00,
-                      0xe8,0x00,0x00,0x00,0x00,
-                      0x83,0xc4, 0x04};
+                       0xe8,0x00,0x00,0x00,0x00,
+                       0x83,0xc4, 0x04,
+                       0xcc};
   //+10 because the first instruction after the call instruction
   //(i.e. what the relative call will be relative to) is 10 instructions
   //after the start of the code
   addr_t relativeMallocPTAddr=mallocAddress-(modifyTextLocation+10);
+  memcpy(code+1,&len,4);
   memcpy(code+6,&relativeMallocPTAddr,sizeof(addr_t));
 #elif defined(KATANA_X86_64_ARCH)
-  //bf xx xx xx xx moves amount to malloc into register rdi
-  //ff 15 00 00 00 00 xx xx xx xx xx xx xx xx calls malloc (near indirect)
+  REG_DI(newRegs)=len;//put amount to malloc into register rdi
+  REG_BX(newRegs)=mallocAddress;
+  //ff 15 01 00 00 00                         calls malloc (near indirect)
+  //cc                                        int3, pass control to controlling process
+  //xx xx xx xx xx xx xx xx                   malloc address
   //we use a near absolute indirect call for x86_64 because relative call (opcode e8)
   //uses 32-bit addressing mode and we have a raw address of the malloc procedure,
   //don't know if it's within 32 bits
-  #define CODE_LEN 19
-  byte code[CODE_LEN]={0xbf,0x00,0x00,0x00,0x00,
-                       0xff,0x15,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
-  memcpy(code+5+2+4,&mallocAddress,sizeof(addr_t));
-  
+  #define CODE_LEN 15
+  byte code[CODE_LEN]={
+    0xff,0x15,0x01,0x00,0x00,0x00,
+    0xcc,
+    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+  memcpy(code+2+4+1,&mallocAddress,sizeof(addr_t));
   #else
 #error "unknown architecture"
   #endif
-  memcpy(code+1,&len,mallocAmountBytes);
   
   byte oldText[CODE_LEN];
   
   memcpyFromTarget(oldText,modifyTextLocation,CODE_LEN);
   memcpyToTarget(modifyTextLocation,code,CODE_LEN);
+
+  REG_IP(newRegs)=modifyTextLocation;
+  //todo: According to Taylor, x86_64 requires stack to be 128-bit aligned when making
+  //a function call. Need to look into this and check if it is. If it isn't just adjust %rsp
+  //a little bit, as long as we remember to adjust it back later
+  printf("stack pointer is 0x%zx (128-bit alignment is %zu)\n",REG_SP(newRegs),REG_SP(newRegs) % 16);
+  setTargetRegs(&newRegs);
+  
   
   //and run the code
   continuePtrace();
   wait(NULL);
   getTargetRegs(&newRegs);//get the return value from the syscall
   word_t retval=REG_AX(newRegs);
-  printf("retval is 0x%x\n",(uint)retval);
   if((void*)retval==NULL)
   {
     death("malloc in target of size %i failed\n",len);
@@ -337,7 +348,7 @@ addr_t mmapTarget(word_t size,int prot)
   #ifdef KATANA_X86_ARCH
   //0xcd indicates a trap
   //0x80 indicates that this trap is a syscall
-  //0x0cc is int3 instruction, will cause the target
+  //0xcc is int3 instruction, will cause the target
   //to halt execution until the controlling process calls wait
   byte code[]={0xcd,0x80,0xcc,0x00};
   #elif defined(KATANA_X86_64_ARCH)
