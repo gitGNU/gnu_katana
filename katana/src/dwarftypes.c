@@ -1106,9 +1106,13 @@ void* addSubroutineType(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
       //todo: do we really need to do this? Not really using them for anything
       Dwarf_Half tag = 0;
       dwarf_tag(child,&tag,&err);
-      if(tag!=DW_TAG_formal_parameter)
+      if(tag==DW_TAG_unspecified_parameters)
       {
-        logprintf(ELL_WARN,ELS_DWARFTYPES,"within subroutine type found tag not a formal parameter, this is bizarre\n");
+        type->hasVariableParams=true;
+      }
+      else if(tag!=DW_TAG_formal_parameter)
+      {
+        logprintf(ELL_WARN,ELS_DWARFTYPES,"within subroutine type found tag not a formal parameter, this is bizarre (%s)\n",cu->elf->fname);
         continue;
       }
       type->numFields++;
@@ -1236,6 +1240,8 @@ void* parseDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit** cu,bool* parseChi
     break;
   case DW_TAG_lexical_block:
     //we may care about its children, but not its definition itself
+    break;
+  case DW_TAG_label: //any reason we should care about labels?
     break;
   case DW_TAG_subroutine_type:
     result=addSubroutineType(dbg,die,*cu);
