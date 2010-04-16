@@ -13,5 +13,4 @@
 addr_t getFreeSpaceForTransformation(TransformationInfo* trans,uint howMuch);
 #endif
 addr_t getFreeSpaceInTarget(uint howMuch);
-void performRelocations(ElfInfo* e,VarInfo* var);
 #endif

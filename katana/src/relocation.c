@@ -13,22 +13,6 @@
 #include "symbol.h"
 #include "util/logging.h"
 
-/*
-//apply all relocations corresponding to the movement of certain symbols
-//The List parameter should be a List with values of type
-//SymMoveInfo. Relocations are applied into the newElf fields
-//in the SymMoveInfo structs
-void applyRelocationsForSymbols(List* symMoves);
-{
-  List* li=symMoves;
-  for(;li;li=li->next)
-  {
-    SymMoveInfo* symMove=(SymMoveInfo*)li->value;
-    List* moreRelocs=getRelocationItemsFor(symMove->newElf,);
-    relocsHead=concatLists(relocsHead,relocsTail,moreRelocs,NULL,&relocsTail);
-  }
-  }*/
-
 void applyAllRelocations(ElfInfo* e,ElfInfo* oldElf)
 {
   List* relocsHead=NULL;
@@ -61,7 +45,7 @@ void applyAllRelocations(ElfInfo* e,ElfInfo* oldElf)
       }
     }
   }
-  applyRelocations(relocsHead,oldElf);
+  applyRelocations(relocsHead,oldElf,ON_DISK);
   deleteList(relocsHead,free);
 }
 
@@ -292,7 +276,7 @@ void applyRelocation(RelocInfo* rel,GElf_Sym* oldSym,ELF_STORAGE_TYPE type)
 //oldElf is the elf object containing the symbol information
 //that items were originally located against. This is necessary
 //to compute the offsets from symbols
-void applyRelocations(List* relocs,ElfInfo* oldElf)
+void applyRelocations(List* relocs,ElfInfo* oldElf,ELF_STORAGE_TYPE type)
 {
   List* li=relocs;
   for(;li;li=li->next)
@@ -304,7 +288,7 @@ void applyRelocations(List* relocs,ElfInfo* oldElf)
     {
       GElf_Sym oldSym;
       getSymbol(oldElf,oldSymIdx,&oldSym);
-      applyRelocation(reloc,&oldSym,ON_DISK);//todo: is this right?
+      applyRelocation(reloc,&oldSym,type);
     }
     else
     {
@@ -540,3 +524,4 @@ Elf_Scn* getRelocationSection(ElfInfo* e,char* fnname)
   }
   return relocScn;
 }
+

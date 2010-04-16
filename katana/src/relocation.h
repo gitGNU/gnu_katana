@@ -54,12 +54,6 @@ List* getRelocationItemsInRange(ElfInfo* e,Elf_Scn* relocScn,addr_t lowAddr,addr
 
 RelocInfo* getRelocationEntryAtOffset(ElfInfo* e,Elf_Scn* relocScn,addr_t offset);
 
-/*
-//apply all relocations corresponding to the movement of certain symbols
-//The List parameter should be a List with values of type
-//SymMoveInfo. Relocations are applied into the newElf fields
-//in the SymMoveInfo structs
-void applyRelocationsForSymbols(List* symMoves);*/
 
 //apply the given relocation using oldSym for reference
 //to calculate the offset from the symol address
@@ -72,7 +66,8 @@ void applyRelocation(RelocInfo* rel,GElf_Sym* oldSym,ELF_STORAGE_TYPE type);
 //oldElf is the elf object containing the symbol information
 //that items were originally located against. This is necessary
 //to compute the offsets from symbols
-void applyRelocations(List* relocs,ElfInfo* oldElf);
+void applyRelocations(List* relocs,ElfInfo* oldElf,ELF_STORAGE_TYPE type);
+
 
 //apply all relocations in an executable
 //oldElf is used for reference, what things that
@@ -93,4 +88,5 @@ addr_t getPLTEntryForSym(ElfInfo* e,int symIdx);
 //if want only the general relocation section, pass null for function name
 //return NULL if there is no relocation section
 Elf_Scn* getRelocationSection(ElfInfo* e,char* fnname);
+
 #endif
