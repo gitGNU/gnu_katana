@@ -77,7 +77,8 @@ void relocateVar(VarInfo* var,ElfInfo* targetBin)
 
   //do need to do this because may contain some relocations
   //not in new code
-  performRelocations(targetBin,var);
+  List* relocItems=getRelocationItemsFor(patchedBin,symIdx);
+  applyRelocations(relocItems,targetBin,IN_MEM);
 }
 
 void insertTrampolineJump(addr_t insertAt,addr_t jumpTo)
