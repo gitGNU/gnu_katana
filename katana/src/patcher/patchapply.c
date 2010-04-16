@@ -78,7 +78,13 @@ void relocateVar(VarInfo* var,ElfInfo* targetBin)
   //do need to do this because may contain some relocations
   //not in new code
   List* relocItems=getRelocationItemsFor(patchedBin,symIdx);
-  applyRelocations(relocItems,targetBin,IN_MEM);
+  //todo: really should pass targedBin to applyRelocation so can find old
+  //values of the symbols that we've already written over, but that doesn't quite
+  //work either because applyRelocation crashes because relocations themselves
+  //from a different elf object than the symbols were from. To fix this, perhaps
+  //we should just compute all the addends at a time when we know what binary they come from
+  //perhaps should always compute all addends of all relocs when we have the chance?
+  applyRelocations(relocItems,patchedBin,IN_MEM);
 }
 
 void insertTrampolineJump(addr_t insertAt,addr_t jumpTo)
