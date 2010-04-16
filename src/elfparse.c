@@ -351,7 +351,14 @@ void findELFSections(ElfInfo* e)
     {
       e->sectionIndices[ERS_REL_TEXT]=elf_ndxscn(scn);
     }
-
+    else if(!strcmp(".got",name))
+    {
+      e->sectionIndices[ERS_GOT]=elf_ndxscn(scn);
+    }
+    else if(!strcmp(".got.plt",name))
+    {
+      e->sectionIndices[ERS_GOTPLT]=elf_ndxscn(scn);
+    }
     else if(!strcmp(".plt",name))
     {
       e->sectionIndices[ERS_PLT]=elf_ndxscn(scn);
