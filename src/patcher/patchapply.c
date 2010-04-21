@@ -530,31 +530,6 @@ void fixupPatchRelocations(ElfInfo* patch)
   }
 }
 
-void bringTargetToSafeState(ElfInfo* patch,int pid)
-{
-  addr_t safeBreakpointSpot=findSafeBreakpointForPatch(targetBin,patch,pid);
-  logprintf(ELL_INFO_V2,ELS_PATCHAPPLY,"Setting breakpoint to apply patch at 0x%x\n",
-            safeBreakpointSpot);
-  setBreakpoint(safeBreakpointSpot);
-  continuePtrace();
-  logprintf(ELL_INFO_V2,ELS_PATCHAPPLY,"Continuing until we reach safe spot to patch. . .\n");
-  bool breakpointReached=false;
-  for(int i=0;i<MAX_WAIT_FOR_PATCHING_LOOPS;i++)
-  {
-    logprintf(ELL_INFO_V3,ELS_PATCHAPPLY,"Iterating waiting for breakpoint to be hit\n");
-    if(0!=waitpid(-1,NULL,WNOHANG))
-    {
-      breakpointReached=true;
-      break;
-    }
-    usleep(WAIT_FOR_SAFE_PATCHING_USLEEP);
-  }
-  removeBreakpoint(safeBreakpointSpot);
-  if(!breakpointReached)
-  {
-    death("Program does not seem to be reaching safe state, aborting patching\n");
-  }
-}
 
 void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch)
 {
@@ -638,6 +613,8 @@ void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch)
   patchRodataAddr=copyInEntireSection(patch,".rodata.new");
 
   patchDataAddr=copyInEntireSection(patch,".data.new");
+
+  //katanaPLT();
   
   writeOutPatchedBin(false);
 
