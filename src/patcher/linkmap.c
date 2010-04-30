@@ -22,6 +22,8 @@
 #include "target.h"
 #include "util/logging.h"
 
+//locate the address of the link map
+//todo: this may be more architecture-specific than I'd like
 addr_t locateLinkMap(ElfInfo* e)
 {
   //go through all the dynamic entries until we find PLTGOT
@@ -165,6 +167,7 @@ addr_t locateRuntimeSymbolInTarget(ElfInfo* e,char* name)
   //todo: is there a global hash table or something we can use. Some comments in
   //the code by grugq (mentioned in Attribution in the file header) seem to indicate
   //that he considers this method slow
+  //for details of the linkmap structure see /usr/include/link.h
 
   struct link_map lm;
   memcpyFromTarget((byte*)&lm,linkmapAddr,sizeof(lm));
