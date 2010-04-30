@@ -36,7 +36,7 @@ int logprintf(E_LOG_LEVEL lvl,E_LOG_SOURCE src,char* fmt,...)
   else if(ELL_WARN==lvl)
   {
     fprintf(stderr,"WARNING: ");
-    if(src)
+    if(fmt)
     {
       retval=vfprintf(stderr,fmt,ap);
     }
@@ -70,7 +70,7 @@ void disableLogSource(E_LOG_SOURCE src)
 void loggingDefaults()
 {
   lvlEnabled=ELL_INFO_V4;
-  sourceEnables[ELS_MISC]=ELL_DISABLE;
+  sourceEnables[ELS_MISC]=ELL_WARN;
   sourceEnables[ELS_CODEDIFF]=ELL_WARN;
   sourceEnables[ELS_TYPEDIFF]=ELL_WARN;
   sourceEnables[ELS_DWARF_FRAME]=ELL_WARN;
