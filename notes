@@ -221,8 +221,6 @@ tion
     of working at the source code level, including difficulty patching
     inline functions.
 
-
-
 ** call frame info/DWARF/Exception Handling
 *** libdwarf: http://reality.sgiweb.org/davea/dwarf.html
 *** dwarf standard http://dwarfstd.org/doc/Dwarf3.pdf

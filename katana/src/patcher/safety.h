@@ -14,5 +14,5 @@ void printBacktrace(ElfInfo* elf,int pid);
 //find a location in the target where nothing that's being patched is being used.
 addr_t findSafeBreakpointForPatch(ElfInfo* targetBin,ElfInfo* patch,int pid);
 
-void bringTargetToSafeState(ElfInfo* patch,int pid);
+void bringTargetToSafeState(ElfInfo* targetBin,ElfInfo* patch,int pid);
 #endif

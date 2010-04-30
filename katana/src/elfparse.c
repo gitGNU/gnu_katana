@@ -330,17 +330,37 @@ void findELFSections(ElfInfo* e)
       e->dataStart[ON_DISK]=shdr.sh_offset;
       //printf("data size is 0x%x at offset 0x%x\n",dataData->d_size,(uint)dataData->d_off);
       //printf("data section starts at address 0x%x\n",dataStart);
+
+      //assuming that if we have a .data section at all, then
+      //using small code model. If using only large code model,
+      //would only have a .ldata section
+      #ifdef KATANA_X86_64_ARCH
+      e->textUsesSmallCodeModel=true;
+      #endif
     }
     else if(!strncmp(".text",name,strlen(".text"))) //allow versioned text sections in patches as well as .text
     {
       e->sectionIndices[ERS_TEXT]=elf_ndxscn(scn);
       e->textStart[IN_MEM]=shdr.sh_addr;
       e->textStart[ON_DISK]=shdr.sh_offset;
+      //assuming that if we have a .text section at all, then
+      //using small code model. If using only large code model,
+      //would only have a .ltext section
+      #ifdef KATANA_X86_64_ARCH
+      e->textUsesSmallCodeModel=true;
+      #endif
+
     }
     else if(!strncmp(".rodata",name,strlen(".rodata"))) //allow versioned
                          //sections in patches
     {
       e->sectionIndices[ERS_RODATA]=elf_ndxscn(scn);
+      //assuming that if we have a .rodata section at all, then
+      //using small code model. If using only large code model,
+      //would only have a .lrodata section
+      #ifdef KATANA_X86_64_ARCH
+      e->textUsesSmallCodeModel=true;
+      #endif
 
     }
     else if(!strncmp(".rela.text",name,strlen(".rela.text"))) //allow versioned
@@ -397,6 +417,7 @@ void findELFSections(ElfInfo* e)
       e->sectionIndices[ERS_DEBUG_INFO]=elf_ndxscn(scn);
     }
   }
+  //todo: support x86_64 sections ltext, ldata,lrdodata, etc
 }
 
 Elf_Scn* getSectionByName(ElfInfo* e,char* name)

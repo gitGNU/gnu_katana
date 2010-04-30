@@ -26,6 +26,7 @@
 #include "constants.h"
 #include <sys/wait.h>
 #include <unistd.h>
+#include "pmap.h"
 
 ElfInfo* patchedBin=NULL;
 ElfInfo* targetBin=NULL;
@@ -539,7 +540,158 @@ void fixupPatchRelocations(ElfInfo* patch)
   }
 }
 
+///todo: this function may not work for x86-64 Large Code Model
+void katanaPLT()
+{
+  //todo: need to handle this differently if patching
+  //something that's already been patched
+  
+  //we do the following
+  //1. copy .plt, .got, and .got.plt into new locations (%.katana)
+  //2. copy .rel(a).plt and .rel(a).rel(a).plt into new locations (%.katana)
+  //   rel(a).rel(a).plt not implemented yet because I don't know what it does
+  //3. fix up relocations/addresses as necessary
+  //currently we copy them without any changes. The purpose of this is so that
+  //32-bit calls in .text/etc will work correctly after we've relocated other
+  //sections. Eventually we will also allow adding in new symbols
 
+  GElf_Shdr shdr;
+  getShdrByERS(targetBin,ERS_GOT,&shdr);
+  addr_t oldGOTAddress=shdr.sh_addr;
+  addr_t oldGOTPLTAddress=0;
+  addr_t newGOTPLTAddress=0;
+  word_t oldGOTPLTSize=0;
+
+  //////////////////////////////////////////////////
+  //copy in the PLT section so other sections can reference it
+  getShdrByERS(targetBin,ERS_PLT,&shdr);
+  addr_t oldPLTAddress=shdr.sh_addr;
+  copyInEntireSection(targetBin,".plt",".plt.katana");
+  Elf_Scn* pltScn=getSectionByName(patchedBin,".plt.katana");
+  assert(pltScn);
+  patchedBin->sectionIndices[ERS_PLT]=elf_ndxscn(pltScn);
+
+  
+  //////////////////////////////////////////////////////////////////
+  //deal with GOT/PLTGOT stuff
+  //copy in .got and .got.plt. We will not have to do anything strange
+  //to these sections: they contain absolute addresses
+  //it is my understanding (based on p. 47 of the Elf Format Reference at
+  //http://www.skyfree.org/linux/references/Elf_Format.pdf) that the first
+  //entry will always be the address of the .dynamic section. I am not sure
+  //whether this resides in .got or .got.plt
+  //todo: figure out what does reside in .got if .got.plt exists
+  addr_t newGOTAddress=copyInEntireSection(targetBin,".got",".got.katana");
+  Elf_Scn* gotScn=getSectionByName(patchedBin,".got.katana");
+  assert(gotScn);
+  patchedBin->sectionIndices[ERS_GOT]=elf_ndxscn(gotScn);
+  if(getSectionByName(targetBin,".got.plt"))
+  {
+    getShdrByERS(targetBin,ERS_GOTPLT,&shdr);
+    oldGOTPLTAddress=shdr.sh_addr;
+    oldGOTPLTSize=shdr.sh_size;
+    newGOTPLTAddress=copyInEntireSection(targetBin,".got.plt",".got.plt.katana");
+    Elf_Scn* gotPltScn=getSectionByName(patchedBin,".got.plt.katana");
+    assert(gotPltScn);
+    patchedBin->sectionIndices[ERS_GOTPLT]=elf_ndxscn(gotPltScn);
+  }
+
+  ////////////////////////////////////////////////////////////////
+  //deal with RELPLT stuff
+  char* pltRelScnName=".rela.plt";
+  Elf_Scn* pltRelScn=getSectionByName(targetBin,pltRelScnName);
+  if(!pltRelScn)
+  {
+    pltRelScnName=".rel.plt";
+    pltRelScn=getSectionByName(targetBin,pltRelScnName);
+  }
+  if(pltRelScn)
+  {
+    char buffer[128];
+    snprintf(buffer,128,"%s.katana",pltRelScnName);
+    copyInEntireSection(targetBin,pltRelScnName,buffer);
+    pltRelScn=getSectionByName(patchedBin,buffer);
+    assert(pltRelScn);
+    patchedBin->sectionIndices[ERS_RELX_PLT]=elf_ndxscn(pltRelScn);
+    //now have to make this section reference our new plt section, not the old plt section
+    getShdr(pltRelScn,&shdr);
+    shdr.sh_link=elf_ndxscn(pltScn);
+    int numRelocations=shdr.sh_size/shdr.sh_entsize;
+    gelf_update_shdr(pltRelScn,&shdr);
+    //.rela.plt does not actually exist to relocate addresses in the PLT
+    //It provides relocation entries which describe how to get to GOT entries.
+    //so what we need to do now to make .rela.plt.katana behave properly
+    //is change the r_offset values to make it refer to entries in .got.plt.katana (if it exists)
+    //or .got.katana if it does not
+    //todo: should perhaps read the PLTGOT entry in .dynamic for this?
+    //      or maybe the symbol _GLOBAL_OFFSET_TABLE_?
+    //      It's unclear from the ABI
+    addr_t oldAddress=oldGOTPLTAddress;
+    addr_t newAddress=newGOTPLTAddress;
+    if(!oldAddress)
+    {
+      oldAddress=oldGOTAddress;
+      newAddress=newGOTAddress;
+    }
+    for(int i=0;i<numRelocations;i++)
+    {
+      RelocInfo* reloc=getRelocationEntryAtOffset(patchedBin,pltRelScn,i*shdr.sh_entsize);
+      //todo: should we check the type are are we just assuming it's always JUMP_SLOT
+      reloc->r_offset=reloc->r_offset-oldAddress+newAddress;
+      setRelocationEntryAtOffset(reloc,pltRelScn,i*shdr.sh_entsize);
+    }
+  }
+  //todo: what do we need to do with .rela.rela.plt? What is it for?
+  //      doesn't seem to be mentioned in any standards
+
+  ////////////////////////////////////////////////////
+  //actually deal with the PLT
+  getShdr(pltScn,&shdr);
+  //it contains lots of references to the GOT, which have now changed
+  Elf_Data* pltData=elf_getdata(pltScn,NULL);
+  //PLT0 is special, we fix it up first
+  //todo: support large code model under x86_64
+  //uint32 here is applicable for small and medium
+  uint32_t addr=newGOTAddress-(shdr.sh_addr+6); //subtraction because relative addressing
+#ifdef KATANA_X86_ARCH
+  addr+=4
+#elif defined(KATANA_X86_64_ARCH)
+    addr+=8;
+#else
+#error Unknown architecture
+#endif
+  memcpyToTarget(shdr.sh_addr+2,(byte*)&addr,sizeof(addr));
+  memcpy(pltData->d_buf+2,&addr,sizeof(addr));
+  //now fix up the jmp in PLT0
+  addr=newGOTAddress-(shdr.sh_addr+12); //subtraction because relative addressing
+#ifdef KATANA_X86_ARCH
+  addr+=8;
+#elif defined(KATANA_X86_64_ARCH)
+  addr+=16;
+#endif
+  memcpyToTarget(shdr.sh_addr+8,(byte*)&addr,sizeof(addr));
+  memcpy(pltData->d_buf+2,&addr,sizeof(addr));
+  //now we've fixed up PLT0,
+  //proceed to the rest
+  int numPLTEntries=shdr.sh_size/shdr.sh_entsize;
+  for(int i=1;i<numPLTEntries;i++)
+  {
+    //even though at present we only support small code model PLT,
+    //use full sized addresses internally because we turn relative addresses
+    //into absolute ones, and want to make sure we don't lose any information
+    addr_t oldAddr=0;
+    word_t entryOffset=i*shdr.sh_entsize;
+    //todo: support x86_64 large code model where will be 8 bytes,
+    //not 4
+    memcpy(&oldAddr,pltData->d_buf+entryOffset+2,4);
+    oldAddr+=oldPLTAddress+entryOffset+6;//was a PC-relative address
+    addr_t newAddr=oldAddr-oldGOTAddress+newGOTAddress;//create newAddr as an absolute address
+    newAddr-=shdr.sh_addr+entryOffset+6;
+    memcpyToTarget(shdr.sh_addr+entryOffset+2,(byte*)&newAddr,4);//todo: support large code model
+    memcpy(pltData->d_buf+entryOffset+2,&newAddr,4);
+  }
+
+}
 
 void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch)
 {
@@ -596,7 +748,8 @@ void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch)
   }
   setTargetTextStart(targetBin->textStart[IN_MEM]);
 
-  bringTargetToSafeState(patch,pid);
+  
+  bringTargetToSafeState(targetBin,patch,pid);
 
   //reserve memory in a big block so that we'll have as much as we need
   uint amount=0;
@@ -616,7 +769,30 @@ void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch)
   amount+=shdr.sh_size;
 
 
-  reserveFreeSpaceInTarget(amount,0);
+  addr_t desiredAddress=0;
+
+  #ifdef KATANA_X86_64_ARCH
+  MappedRegion* regions=0;
+  int numRegions=getMemoryMap(pid,&regions);
+  if(numRegions>=2)
+  {
+    desiredAddress=(regions[1].high+1+sizeof(word_t));
+    uint misalignment=desiredAddress%sizeof(word_t);
+    desiredAddress-=misalignment;
+  }
+  #endif
+
+  
+  addr_t receivedAddres=reserveFreeSpaceInTarget(amount,desiredAddress);
+
+
+  #ifdef KATANA_X86_64_ARCH
+  if(receivedAddres > 0xFFFFFFFF && patchedBin->textUsesSmallCodeModel)
+  {
+    //todo: if at first we don't succeed, try again
+    death("Needed to put new memory pages in the lower 32 bits of the address space and was unable to accomplish this");
+  }
+  #endif
     
 
   //map in the entirety of .text.new
@@ -627,6 +803,7 @@ void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch)
 
   patchDataAddr=copyInEntireSection(patch,".data.new",NULL);
 
+  katanaPLT();
   
   writeOutPatchedBin(false);
 

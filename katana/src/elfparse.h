@@ -64,6 +64,12 @@ typedef struct ElfInfo
   struct CIE* cie;
   bool dataAllocatedByKatana;//used for memory management
   bool isPO;//is this elf object a patch object?
+  #ifdef KATANA_X86_64_ARCH
+  //set true if text sections use a small code
+  //model, requiring any relocations of text, data, rodata, etc
+  //to be in the lower 32-bit address space of the program
+  bool textUsesSmallCodeModel;
+  #endif
 } ElfInfo;
 
 
