@@ -4,7 +4,7 @@ CFLAGS=-Wall -g -std=c99 -D_POSIX_SOURCE -D_BSD_SOURCE -D_XOPEN_SOURCE -D_GNU_SO
 CFLAGS_TYPEPATCH=-Doff64_t=__off64_t
 LDFLAGS_TYPEPATCH=-L /usr/local/lib -ldwarf -lelf -lm  -lunwind-generic -lunwind-ptrace
 
-PATCHER_SRC=src/patcher/hotpatch.c src/patcher/target.c src/patcher/patchapply.c src/patcher/versioning.c src/patcher/linkmap.c src/patcher/safety.c
+PATCHER_SRC=src/patcher/hotpatch.c src/patcher/target.c src/patcher/patchapply.c src/patcher/versioning.c src/patcher/linkmap.c src/patcher/safety.c src/patcher/pmap.c
 PATCHWRITE_SRC=src/patchwrite/patchwrite.c src/patchwrite/codediff.c src/patchwrite/typediff.c src/patchwrite/elfwriter.c src/patchwrite/sourcetree.c src/patchwrite/write_to_dwarf.c src/patchwrite/elfcmp.c
 UTIL_SRC=src/util/dictionary.c src/util/hash.c src/util/util.c src/util/map.c src/util/list.c src/util/logging.c src/util/path.c src/util/refcounted.c
 INFO_SRC=src/info/fdedump.c src/info/dwinfo_dump.c  src/info/unsafe_funcs_dump.c
