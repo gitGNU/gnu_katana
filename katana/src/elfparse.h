@@ -13,6 +13,7 @@
 #include "util/util.h"
 #include "types.h"
 #include <elf.h>
+#include "arch.h"
 
 typedef enum
 {
@@ -33,8 +34,7 @@ typedef enum
   ERS_GOT,
   ERS_GOTPLT,
   ERS_PLT,
-  ERS_REL_PLT,
-  ERS_RELA_PLT,
+  ERS_RELX_PLT,
   ERS_DYNSYM,
   ERS_DYNSTR,
   ERS_DYNAMIC,
@@ -85,6 +85,7 @@ void printSymTab(ElfInfo* e);
 ElfInfo* duplicateElf(ElfInfo* e,char* outfname,bool flushToDisk,bool keepLayout);
 void writeOut(ElfInfo* e,char* outfname,bool keepLayout);
 void findELFSections(ElfInfo* e);
+//returns NULL if the section does not exist
 Elf_Scn* getSectionByName(ElfInfo* e,char* name);
 Elf_Data* getDataByIdx(ElfInfo* e,idx_t idx);
 Elf_Data* getDataByERS(ElfInfo* e,E_RECOGNIZED_SECTION scn);

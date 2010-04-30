@@ -52,7 +52,10 @@ List* getRelocationItemsFor(ElfInfo* e,int symIdx);
 //list value type is RelocInfo
 List* getRelocationItemsInRange(ElfInfo* e,Elf_Scn* relocScn,addr_t lowAddr,addr_t highAddr);
 
+//get the relocation entry at the given offset from the start of relocScn
 RelocInfo* getRelocationEntryAtOffset(ElfInfo* e,Elf_Scn* relocScn,addr_t offset);
+//modify the relocation entry at the given offset from the start of relocScn
+void setRelocationEntryAtOffset(RelocInfo* reloc,Elf_Scn* relocScn,addr_t offset);
 
 
 //apply the given relocation using oldSym for reference
