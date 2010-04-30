@@ -294,7 +294,8 @@ void findELFSections(ElfInfo* e)
   //(elf_getshdrstrndx) isn't linking on my system. This may betray some
   //more important screw-up somewhere)
   elf_getshdrstrndx(e->e, &e->sectionHdrStrTblIdx);
-  
+
+  memset(e->sectionIndices,0,sizeof(int)*ERS_CNT);
   for(Elf_Scn* scn=elf_nextscn (e->e,NULL);scn;scn=elf_nextscn(e->e,scn))
   {
     GElf_Shdr shdr;
@@ -340,6 +341,7 @@ void findELFSections(ElfInfo* e)
                          //sections in patches
     {
       e->sectionIndices[ERS_RODATA]=elf_ndxscn(scn);
+
     }
     else if(!strncmp(".rela.text",name,strlen(".rela.text"))) //allow versioned
                          //sections in patches
@@ -365,11 +367,13 @@ void findELFSections(ElfInfo* e)
     }
     else if(!strcmp(".rel.plt",name))
     {
-      e->sectionIndices[ERS_REL_PLT]=elf_ndxscn(scn);
+      assert(!e->sectionIndices[ERS_RELX_PLT]);
+      e->sectionIndices[ERS_RELX_PLT]=elf_ndxscn(scn);
     }
     else if(!strcmp(".rela.plt",name))
     {
-      e->sectionIndices[ERS_RELA_PLT]=elf_ndxscn(scn);
+      assert(!e->sectionIndices[ERS_RELX_PLT]);
+      e->sectionIndices[ERS_RELX_PLT]=elf_ndxscn(scn);
     }
 
     else if(!strcmp(".dynsym",name))

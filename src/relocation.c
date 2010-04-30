@@ -62,20 +62,18 @@ addr_t getPLTEntryForSym(ElfInfo* e,int symIdx)
   getShdrByERS(e,ERS_PLT,&shdr);
   addr_t pltStart=shdr.sh_addr;
 
-  Elf_Scn* pltRelScn=NULL;
-  if(e->sectionIndices[ERS_REL_PLT])
-  {
-    pltRelScn=getSectionByERS(e,ERS_REL_PLT);
-  }
-  else if(e->sectionIndices[ERS_RELA_PLT])
-  {
-    pltRelScn=getSectionByERS(e,ERS_RELA_PLT);
-  }
-  else
+  Elf_Scn* pltRelScn=getSectionByERS(e,ERS_RELX_PLT);
+  if(!pltRelScn)
   {
     //todo: maybe don't die here, just return 0
     death("Executable has neither rel.plt nor rela.plt\n");
   }
+
+#if defined(KATANA_X86_64_ARCH)
+  //we'll need it later
+  GElf_Shdr pltRelShdr;
+  getShdr(pltRelScn,&pltRelShdr);
+#endif
   
   //plt entries are aligned on 16-byte boundaries
   //we start with plt1, since plt0 has special function
@@ -104,8 +102,6 @@ addr_t getPLTEntryForSym(ElfInfo* e,int symIdx)
 #if defined(KATANA_X86_64_ARCH)
     //relocationOffset is actually an index, not an offset. We have to make it into
     //an offset therefore
-    GElf_Shdr pltRelShdr;
-    getShdr(pltRelScn,&pltRelShdr);
     relocOffset*=pltRelShdr.sh_entsize;
 #endif
 
@@ -122,6 +118,35 @@ addr_t getPLTEntryForSym(ElfInfo* e,int symIdx)
   //false or something and applyRelocation can continue as normal
   death("could not find symbol in PLT\n");
   return 0;
+}
+
+//modify the relocation entry at the given offset from the start of relocScn
+void setRelocationEntryAtOffset(RelocInfo* reloc,Elf_Scn* relocScn,addr_t offset)
+{
+  GElf_Shdr shdr;
+  if(!gelf_getshdr(relocScn,&shdr))
+  {
+    death("in getRelocationItemsInRange, could not get shdr for reloc section\n");
+  }
+  assert(SHT_REL==shdr.sh_type || SHT_RELA==shdr.sh_type);
+  E_RELOC_TYPE type=SHT_REL==shdr.sh_type?ERT_REL:ERT_RELA;
+  Elf_Data* data=elf_getdata(relocScn,NULL);
+  assert(shdr.sh_size>offset);
+  ElfXX_Rel rel;
+  ElfXX_Rela rela;
+  if(ERT_REL==type)
+  {
+    rel.r_offset=reloc->r_offset;
+    rel.r_info=ELFXX_R_INFO(reloc->symIdx,reloc->relocType);
+    memcpy(data->d_buf+offset,&rel,sizeof(rel));
+  }
+  else //RELA
+  {
+    rela.r_offset=reloc->r_offset;
+    rela.r_info=ELFXX_R_INFO(reloc->symIdx,reloc->relocType);
+    rela.r_addend=reloc->r_addend;
+    memcpy(data->d_buf+offset,&rela,sizeof(rela));
+  }
 }
 
 RelocInfo* getRelocationEntryAtOffset(ElfInfo* e,Elf_Scn* relocScn,addr_t offset)
@@ -240,11 +265,11 @@ void applyRelocation(RelocInfo* rel,GElf_Sym* oldSym,ELF_STORAGE_TYPE type)
       }
       else if(R_386_PC32==rel->relocType || R_X86_64_PC32==rel->relocType)
       {
-         //-sizeof(addr_t) because relative to PC of next instruction
-        newAddrAccessed=addrNew+rel->r_addend-rel->r_offset-sizeof(addr_t);
         #ifdef KATANA_X86_64_ARCH
         bytesInAddr=4;//not using all 8 bytes the architecture might suggest
         #endif
+        //-bytesInAddr because relative to PC of next instruction
+        newAddrAccessed=addrNew+rel->r_addend-rel->r_offset-bytesInAddr;
       }
       else if(R_X86_64_32S==rel->relocType)
       {
