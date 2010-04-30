@@ -315,8 +315,15 @@ ElfInfo* startPatchElf(char* fname)
   ehdr->e_ident[EI_CLASS]=ELFCLASSXX;
   ehdr->e_ident[EI_DATA]=ELFDATA2LSB;
   ehdr->e_ident[EI_VERSION]=EV_CURRENT;
-  ehdr->e_ident[EI_OSABI]=ELFOSABI_NONE;
+  ehdr->e_ident[EI_OSABI]=ELFOSABI_LINUX;//todo: support systems other than Linux
+#ifdef KATANA_X86_ARCH
   ehdr->e_machine=EM_386;
+#elif defined(KATANA_X86_64_ARCH)
+  ehdr->e_machine=EM_X86_64;
+#else
+#error Unknown architecture
+#endif
+  
   ehdr->e_type=ET_NONE;//not relocatable, or executable, or shared object, or core, etc
   ehdr->e_version=EV_CURRENT;
 
