@@ -15,6 +15,9 @@
 #include <libunwind.h> //for determining the backtrace
 #include <libunwind-ptrace.h>
 #include "util/logging.h"
+#include "constants.h"
+#include <unistd.h>
+#include <sys/wait.h>
 
 FDE* getFDEForPC(ElfInfo* elf,addr_t pc)
 {
@@ -353,7 +356,7 @@ addr_t findSafeBreakpointForPatch(ElfInfo* targetBin,ElfInfo* patch,int pid)
 }
 
 
-void bringTargetToSafeState(ElfInfo* patch,int pid)
+void bringTargetToSafeState(ElfInfo* targetBin,ElfInfo* patch,int pid)
 {
   addr_t safeBreakpointSpot=findSafeBreakpointForPatch(targetBin,patch,pid);
   logprintf(ELL_INFO_V2,ELS_PATCHAPPLY,"Setting breakpoint to apply patch at 0x%x\n",
