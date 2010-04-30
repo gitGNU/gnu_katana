@@ -248,7 +248,7 @@ void writeVarTransforms(List* varTrans)
     if(vt->transform) //will be no transformation if just changing the initializer
     {
       writeTransformationToDwarf(dbg,vt->transform);
-      printf("writing transformation for var %s\n",vt->var->name);
+      logprintf(ELL_INFO_V2,ELS_PATCHWRITE,"writing transformation for var %s\n",vt->var->name);
     }
     /*
     //create the symbol entry
