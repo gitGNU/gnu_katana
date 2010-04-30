@@ -142,7 +142,7 @@ void memcpyToTarget(addr_t addr,byte* data,int numBytes)
     //we'll be copying back a few bytes that already existed
     memcpyFromTarget(firstWord,addr-misalignment,PTRACE_WORD_SIZE);
     logprintf(ELL_INFO_V4,ELS_HOTPATCH,"copied bytes {0x%x,0x%x,0x%x,0%x} from 0x%x\n",(uint)firstWord[0],(uint)firstWord[1],(uint)firstWord[2],(uint)firstWord[3],(uint)(addr-misalignment));
-    int bytesInWd=PTRACE_WORD_SIZE-misalignment;
+    int bytesInWd=min(PTRACE_WORD_SIZE-misalignment,numBytes);
     logprintf(ELL_INFO_V4,ELS_HOTPATCH,"copying in %i patch bytes in first wd\n",bytesInWd);
     memcpy(&firstWord[misalignment],data,bytesInWd);
     logprintf(ELL_INFO_V4,ELS_HOTPATCH,"now copying bytes {0x%x,0x%x,0x%x,0x%x} to 0x%x\n",(uint)firstWord[0],(uint)firstWord[1],(uint)firstWord[2],(uint)firstWord[3],addr-misalignment);
@@ -153,6 +153,10 @@ void memcpyToTarget(addr_t addr,byte* data,int numBytes)
     numBytes-=bytesInWd;
     addr+=bytesInWd;
     logprintf(ELL_INFO_V4,ELS_HOTPATCH,"addr is now 0x%x\n",addr);
+    if(0==numBytes)
+    {
+      return;
+    }
     //now we're all set to carry on copying normally from an aligned address
   }
 
@@ -339,7 +343,9 @@ addr_t mallocTarget(word_t len)
 //allocate a region of memory in the target
 //return the address (in the target) of the region
 //or NULL if the operation failed
-addr_t mmapTarget(word_t size,int prot)
+//if desiredAddress is non-NULL, will attempt
+//to mmap in at that address but does not pass MAP_FIXED
+addr_t mmapTarget(word_t size,int prot,addr_t desiredAddress)
 {
   printf("requesting mmap of page of size %zi\n",size);
   //map code influenced by code from livepatch
@@ -388,14 +394,14 @@ addr_t mmapTarget(word_t size,int prot)
   modifyTarget(REG_SP(newRegs)-=4,MAP_PRIVATE|MAP_ANONYMOUS);
   modifyTarget(REG_SP(newRegs)-=4,prot);
   modifyTarget(REG_SP(newRegs)-=4,size);
-  modifyTarget(REG_SP(newRegs)-=4,(word_t)NULL);
+  modifyTarget(REG_SP(newRegs)-=4,(word_t)desiredAddress);
   printf("inserted syscall params on stack\n");
   modifyTarget(REG_SP(newRegs)-=sizeof(addr_t),returnAddr);
   REG_BX(newRegs)=REG_SP(newRegs)+sizeof(addr_t);//syscall, takes arguments in registers,
                             //this is a pointer to the arguments on the stack
 #elif defined(KATANA_X86_64_ARCH)
   printf("64-bit arch\n");
-  REG_DI(newRegs)=(word_t)NULL;
+  REG_DI(newRegs)=(word_t)desiredAddress;
   REG_SI(newRegs)=size;
   REG_DX(newRegs)=prot;
   REG_CX(newRegs)=MAP_PRIVATE|MAP_ANONYMOUS;

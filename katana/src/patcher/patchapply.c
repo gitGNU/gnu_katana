@@ -1,5 +1,5 @@
 /*
-  File: patchread.c
+  File: patchapply.c
   Author: James Oakley
   Project: Katana
   Date: January 2010
@@ -264,14 +264,22 @@ int addSymtabEntryToExisting(ElfInfo* e,ElfXX_Sym* sym)
   memcpy((char*)data->d_buf+data->d_size,sym,len);
   data->d_size=newSize;
   e->symTabCount=newSize/len;
-  printf("symtab count is now %i\n",e->symTabCount);
+  //printf("symtab count is now %i\n",e->symTabCount);
   elf_flagdata(data,ELF_C_SET,ELF_F_DIRTY);
   return e->symTabCount-1;
 }
 
 
-addr_t copyInEntireSection(ElfInfo* patch,char* name)
+//copies the section with name from patch into patchedBin with name newName
+//if newName is NULL, it will be taken to be the same as name
+addr_t copyInEntireSection(ElfInfo* patch,char* name,char* newName)
 {
+  //todo: make sure copy in section word-aligned. Maybe even page
+  //aligned? I don't think the latter is required though
+  if(!newName)
+  {
+    newName=name;
+  }
   //todo: perhaps might make more sense to mmap that part of the file?
   Elf_Scn* scn=getSectionByName(patch,name);
   if(!scn)
@@ -286,7 +294,7 @@ addr_t copyInEntireSection(ElfInfo* patch,char* name)
   addr_t addr=getFreeSpaceInTarget(data->d_size);
   if(data->d_size)
   {
-    printf("mapping in the entirety of %s Copying %li bytes to 0x%lx\n",name,(long)data->d_size,(unsigned long)addr);
+    logprintf(ELL_INFO_V1,ELS_PATCHAPPLY,"mapping in the entirety of %s Copying %li bytes to 0x%lx\n",name,(long)data->d_size,(unsigned long)addr);
     memcpyToTarget(addr,data->d_buf,data->d_size);
   }
   else
@@ -300,7 +308,7 @@ addr_t copyInEntireSection(ElfInfo* patch,char* name)
   gelf_getshdr(scn,&shdr);
   gelf_getshdr(scn,&shdrNew);
   shdrNew.sh_addr=addr;
-  shdrNew.sh_name=addStrtabEntryToExisting(patchedBin,name,true);
+  shdrNew.sh_name=addStrtabEntryToExisting(patchedBin,newName,true);
   shdrNew.sh_type=shdr.sh_type;
   shdrNew.sh_flags=shdr.sh_flags;
   shdrNew.sh_size=shdr.sh_size;
@@ -518,6 +526,7 @@ void fixupPatchRelocations(ElfInfo* patch)
         addr_t diff=patchTextAddr-oldTextNewStart;
         logprintf(ELL_INFO_V2,ELS_RELOCATION,"for PC32 relocation, modifying access at 0x%x to access 0x%x by adding 0x%x\n",(uint)newOffset,(uint)(addrAccessed+diff),(uint)diff);
         addr_t newAddr=addrAccessed+diff;
+        
         memcpyToTarget(newOffset,(byte*)&newAddr,4);//always copy only 4 bytes b/c this is PC32
         //todo: I'm not sure this is necessary here, since we do
         //relocations later. I think it is though. Look into this
@@ -529,6 +538,7 @@ void fixupPatchRelocations(ElfInfo* patch)
     rela->r_offset=newOffset;
   }
 }
+
 
 
 void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch)
@@ -573,6 +583,8 @@ void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch)
   Map* fdeMap=readDebugFrame(patch);//get mapping between fde offsets and fde structures
 
 
+  //we need to know where malloc lives in the target because
+  //we may need it when dealing with the heap
   addr_t mallocAddr=locateRuntimeSymbolInTarget(targetBin,"malloc");
   if(mallocAddr)
   {
@@ -584,7 +596,6 @@ void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch)
   }
   setTargetTextStart(targetBin->textStart[IN_MEM]);
 
-  
   bringTargetToSafeState(patch,pid);
 
   //reserve memory in a big block so that we'll have as much as we need
@@ -603,18 +614,19 @@ void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch)
   amount+=shdr.sh_size;
   getShdrByERS(targetBin,ERS_GOTPLT,&shdr);
   amount+=shdr.sh_size;
-  reserveFreeSpaceInTarget(amount);
 
+
+  reserveFreeSpaceInTarget(amount,0);
+    
 
   //map in the entirety of .text.new
-  patchTextAddr=copyInEntireSection(patch,".text.new");
+  patchTextAddr=copyInEntireSection(patch,".text.new",NULL);
 
   //map in entirety of .rodata.new
-  patchRodataAddr=copyInEntireSection(patch,".rodata.new");
+  patchRodataAddr=copyInEntireSection(patch,".rodata.new",NULL);
 
-  patchDataAddr=copyInEntireSection(patch,".data.new");
+  patchDataAddr=copyInEntireSection(patch,".data.new",NULL);
 
-  //katanaPLT();
   
   writeOutPatchedBin(false);
 
@@ -645,7 +657,7 @@ void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch)
   mapDelete(fdeMap,NULL,free);
   logprintf(ELL_INFO_V1,ELS_PATCHAPPLY,"======Fixup Patch Relocations=======\n");
   fixupPatchRelocations(patch);
-  patchRelTextAddr=copyInEntireSection(patch,".rela.text.new");
+  patchRelTextAddr=copyInEntireSection(patch,".rela.text.new",NULL);
 
   writeOutPatchedBin(false);
 
