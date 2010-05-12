@@ -122,6 +122,7 @@ def validate(logname):
     return False
   if not bazSizeChanged:
     sys.stderr.write("sizeof(Baz) never changed\n")
+    return False
   if not addrs['delta.foo1'] or not addrs['delta.foo2']:
     sys.stderr.write("It appears patching in of delta never happened\n")
     return False
