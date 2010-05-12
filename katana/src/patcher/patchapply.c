@@ -658,7 +658,7 @@ void katanaPLT()
   //uint32 here is applicable for small and medium
   uint32_t addr=newGOTAddress-(shdr.sh_addr+6); //subtraction because relative addressing
 #ifdef KATANA_X86_ARCH
-  addr+=4
+  addr+=4;
 #elif defined(KATANA_X86_64_ARCH)
     addr+=8;
 #else
