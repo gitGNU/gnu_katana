@@ -1,10 +1,10 @@
 /*
-  File: main_v0.c
+  File: v0/main.c
   Author: James Oakley
-  Project: Katana - Preliminary Work
+  Project: Katana
   Date: January 10
-  Description: Very simple program that exists to have one of its data
-               types patched. main_v1.c is the same thing with an extra
+  Description: Very simple program that exists to have its data types patched
+               types patched. v1/main.c is the same thing with an extra
                field in one of the types
 */
 #include <stdio.h>
@@ -50,7 +50,7 @@ void printFoo(char* name,Foo* foo)
 {
   printf("name is %s\n",name);
   fflush(stdout);
-  printf("%s lives at 0x%x\n",name,(unsigned int)foo);
+  printf("%s lives at 0x%zx\n",name,(size_t)foo);
   printf("layout is {%x,%x,%x,%x}\n",(unsigned int)foo->field1,(unsigned int)foo->field2,(unsigned int)foo->field3,(unsigned int)foo->other);
   printf("%s: %i, %i, %i\n",name,*(foo->field1),*(foo->field2),*(foo->field3));
   if(foo->other)
