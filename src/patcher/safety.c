@@ -18,6 +18,7 @@
 #include "constants.h"
 #include <unistd.h>
 #include <sys/wait.h>
+#include "safety.h"
 
 FDE* getFDEForPC(ElfInfo* elf,addr_t pc)
 {
@@ -350,6 +351,7 @@ addr_t findSafeBreakpointForPatch(ElfInfo* targetBin,ElfInfo* patch,int pid)
   }
   if(!deepestGoodPC)
   {
+    printBacktrace(targetBin,pid);
     death("All functions with activation frames on the stack require patching. The application will never be in a patchable state!");
   }
   return deepestGoodPC;
