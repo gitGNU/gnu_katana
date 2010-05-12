@@ -54,10 +54,13 @@ void printFoo(char* name,Foo* foo)
 {
   printf("name is %s\n",name);
   fflush(stdout);
-  printf("%s lives at 0x%x\n",name,(unsigned int)foo);
+  printf("%s lives at 0x%zx\n",name,(size_t)foo);
   printf("layout is {%x,%x,%x,%x,%x}\n",(unsigned int)foo->field1,(unsigned int)foo->field_extra,(unsigned int)foo->field2,(unsigned int)foo->field3,(unsigned int)foo->other);
   fflush(stdout);
+  fflush(stdout);
+  return;
   printf("%s: %i, %i, %i\n",name,*(foo->field1),*(foo->field2),*(foo->field3));
+  fflush(stdout);
   if(foo->other)
   {
     char buf[256];
@@ -67,6 +70,7 @@ void printFoo(char* name,Foo* foo)
   else
   {
     printf("%s has no other member\n",name);
+    fflush(stdout);
   }
 }
 
