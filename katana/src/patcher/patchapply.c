@@ -776,6 +776,10 @@ void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch)
   addr_t desiredAddress=0;
 
   #ifdef KATANA_X86_64_ARCH
+  //we need to request a memory address near the beginning
+  //of the binary to accomodate small code model
+  //TODO: make sure this is scalable, that I've taken
+  //all possibilities into account
   MappedRegion* regions=0;
   int numRegions=getMemoryMap(pid,&regions);
   if(numRegions>=2)
