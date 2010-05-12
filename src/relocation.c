@@ -205,14 +205,16 @@ void applyRelocation(RelocInfo* rel,GElf_Sym* oldSym,ELF_STORAGE_TYPE type)
   byte symType=ELF64_ST_TYPE(sym.st_info);
   if(sym.st_shndx==SHN_UNDEF && 0==sym.st_value && STT_FUNC==symType)
   {
-    logprintf(ELL_INFO_V1,ELS_RELOCATION,"Found symbol %s which should be relocated from the PLT\n",getString(rel->e,sym.st_name));
+    char* symName=getString(rel->e,sym.st_name);
+    logprintf(ELL_INFO_V2,ELS_RELOCATION,"applying relocation at 0x%x for symbol %s\n",(uint)addrToBeRelocated,symName);
+    logprintf(ELL_INFO_V1,ELS_RELOCATION,"Symbol %s should be relocated from the PLT\n",symName);
     //get the index of the symbol in the dynamic symbol table, because
     //that's what we'll be matching against when looking at the symbols
     //referenced in .rel.plt
     idx_t symIdxDynamic=reindexSymbol(rel->e,rel->e,symIdx,ESFF_FUZZY_MATCHING_OK | ESFF_NEW_DYNAMIC);
 
     newAddrAccessed=getPLTEntryForSym(rel->e,symIdxDynamic);
-    logprintf(ELL_INFO_V2,ELS_RELOCATION,"Relocated address at 0x%x to 0x%x\n",(uint)addrToBeRelocated,newAddrAccessed);
+    logprintf(ELL_INFO_V2,ELS_RELOCATION,"Relocated address at 0x%x to 0x%x, after PLT lookup\n",(uint)addrToBeRelocated,newAddrAccessed);
     //may have to do some additional fixups
     byte relocType=rel->relocType;
     //use if structure rather than switch b/c of duplicate
