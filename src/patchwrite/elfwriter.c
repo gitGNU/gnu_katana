@@ -131,7 +131,10 @@ void createSections(Elf* outelf)
   shdr->sh_addralign=1;  //todo: should this be word-aligned? It seems
                          //that it is in the ELF files I've examined,
                          //but does it have to be?
+  shdr->sh_flags=SHF_ALLOC | SHF_WRITE;
   shdr->sh_name=addStrtabEntry(".data.new");
+
+
 
   #ifdef RENAMED_DWARF_SCNS
   
@@ -227,6 +230,7 @@ void createSections(Elf* outelf)
   shdr->sh_addralign=1;//normally text is aligned, but we never actually execute from this section
   shdr->sh_name=addStrtabEntry(".text.new");
   shdr->sh_addr=0;//going to have to relocate anyway so no point in trying to keep the same address
+  shdr->sh_flags=SHF_ALLOC | SHF_EXECINSTR;
   scnInfo[ERS_TEXT].scn=text_scn;
   scnInfo[ERS_TEXT].data=text_data;
 
@@ -249,6 +253,7 @@ void createSections(Elf* outelf)
   shdr->sh_link=0;
   shdr->sh_info=0;
   shdr->sh_addralign=1;//normally text is aligned, but we never actually execute from this section
+  shdr->sh_flags=SHF_ALLOC;
   shdr->sh_name=addStrtabEntry(".rodata.new");
 
   //rela.text.new
