@@ -265,11 +265,12 @@ void applyRelocation(RelocInfo* rel,GElf_Sym* oldSym,ELF_STORAGE_TYPE type)
       }
       else if(R_386_PC32==rel->relocType || R_X86_64_PC32==rel->relocType)
       {
+        logprintf(ELL_INFO_V3,ELS_RELOCATION,"\tRELA relocation at 0x%zx is PC32\n",addrToBeRelocated);
         #ifdef KATANA_X86_64_ARCH
         bytesInAddr=4;//not using all 8 bytes the architecture might suggest
         #endif
-        //-bytesInAddr because relative to PC of next instruction
-        newAddrAccessed=addrNew+rel->r_addend-rel->r_offset-bytesInAddr;
+        newAddrAccessed=addrNew+rel->r_addend-rel->r_offset;
+
       }
       else if(R_X86_64_32S==rel->relocType)
       {
