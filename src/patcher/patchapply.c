@@ -844,6 +844,7 @@ void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch)
   mapDelete(fdeMap,NULL,free);
   logprintf(ELL_INFO_V1,ELS_PATCHAPPLY,"======Fixup Patch Relocations=======\n");
   fixupPatchRelocations(patch);
+  logprintf(ELL_INFO_V1,ELS_PATCHAPPLY,"====================================\n");
   patchRelTextAddr=copyInEntireSection(patch,".rela.text.new",NULL);
 
   writeOutPatchedBin(false);
