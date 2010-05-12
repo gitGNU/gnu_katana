@@ -193,6 +193,16 @@ RelocInfo* getRelocationEntryAtOffset(ElfInfo* e,Elf_Scn* relocScn,addr_t offset
 //      then process as for RELA.
 void applyRelocation(RelocInfo* rel,GElf_Sym* oldSym,ELF_STORAGE_TYPE type)
 {
+  Elf_Scn* relScn=elf_getscn(rel->e->e,rel->scnIdx);
+  GElf_Shdr shdr;
+  getShdr(relScn,&shdr);
+  printf("shdr.sh_flags %li, name is %s\n",shdr.sh_flags,rel->e->fname);
+  if(type==IN_MEM && !(shdr.sh_flags&SHF_ALLOC))
+  {
+    //nothing to do, this section isn't in memory
+    return;
+  }
+    
   addr_t addrToBeRelocated=rel->r_offset;
 
   addr_t newAddrAccessed;
@@ -284,17 +294,15 @@ void applyRelocation(RelocInfo* rel,GElf_Sym* oldSym,ELF_STORAGE_TYPE type)
       }
     }
   }
-  
-  if(IN_MEM & type)
+
+  printf("section with name %s has flags %li\n",getScnHdrString(rel->e,shdr.sh_name),shdr.sh_flags);
+  if(IN_MEM & type && shdr.sh_flags & SHF_ALLOC)
   {
     memcpyToTarget(addrToBeRelocated,(byte*)&newAddrAccessed,bytesInAddr);
   }
   if(ON_DISK & type)
   {
-    Elf_Scn* scn=elf_getscn(rel->e->e,rel->scnIdx);
-    Elf_Data* data=elf_getdata(scn,NULL);
-    GElf_Shdr shdr;
-    gelf_getshdr(scn,&shdr);
+    Elf_Data* data=elf_getdata(relScn,NULL);
     void* dataptr=data->d_buf+(addrToBeRelocated-shdr.sh_addr);
     memcpy(dataptr,&newAddrAccessed,bytesInAddr);
   }
@@ -405,21 +413,16 @@ List* getRelocationItemsInRange(ElfInfo* e,Elf_Scn* relocScn,addr_t lowAddr,addr
 
 List* getRelocationItemsFor(ElfInfo* e,int symIdx)
 {
-  //note: system V architecture only uses REL entries,
-  //as long as we're sticking with Linux shouldn't
-  //have to worry about RELA
-  //todo:make sure this is what we want, since our patch objects use rela sections
   RelocInfo* reloc=NULL;
   List* relocsHead=NULL;
   List* relocsTail=NULL;
-  GElf_Rel rel;
   for(Elf_Scn* scn=elf_nextscn (e->e,NULL);scn;scn=elf_nextscn(e->e,scn))
   {
     GElf_Shdr shdr;
     if(!gelf_getshdr(scn,&shdr))
     {death("gelf_getshdr failed in getRelocationItemsFor\n");}
     int scnIdx=shdr.sh_info;
-    if(SHT_REL==shdr.sh_type)//todo: support RELA
+    if(SHT_REL==shdr.sh_type || SHT_RELA==shdr.sh_type)
     {
       //this is a relocations section
       Elf_Data* data=elf_getdata(scn,NULL);
@@ -429,17 +432,34 @@ List* getRelocationItemsFor(ElfInfo* e,int symIdx)
         {
           reloc=zmalloc(sizeof(RelocInfo));
           reloc->e=e;
+          reloc->type=shdr.sh_type;
         }
         reloc->scnIdx=scnIdx;
-        gelf_getrel(data,j,&rel);
-        //printf("found relocation item for symbol %u\n",(unsigned int)ELF64_R_SYM(rel.r_info));
-        if(ELF64_R_SYM(rel.r_info)!=symIdx)
+        if(SHT_REL==shdr.sh_type)
         {
-          continue;
+          GElf_Rel rel;
+          gelf_getrel(data,j,&rel);
+          if(ELF64_R_SYM(rel.r_info)!=symIdx)
+          {
+            continue;
+          }
+          reloc->r_offset=rel.r_offset;
+          reloc->relocType=ELF64_R_TYPE(rel.r_info);//elf64 because it's GElf
+          reloc->symIdx=ELF64_R_SYM(rel.r_info);//elf64 because it's GElf
         }
-        reloc->r_offset=rel.r_offset;
-        reloc->relocType=ELF64_R_TYPE(rel.r_info);//elf64 because it's GElf
-        reloc->symIdx=ELF64_R_SYM(rel.r_info);//elf64 because it's GElf
+        else //SHT_RELA
+        {
+          GElf_Rela rela;
+          gelf_getrela(data,j,&rela);
+          if(ELF64_R_SYM(rela.r_info)!=symIdx)
+          {
+            continue;
+          }
+          reloc->r_offset=rela.r_offset;
+          reloc->relocType=ELF64_R_TYPE(rela.r_info);//elf64 because it's GElf
+          reloc->symIdx=ELF64_R_SYM(rela.r_info);//elf64 because it's GElf
+          reloc->r_addend=rela.r_addend;
+        }
         List* li=zmalloc(sizeof(List));
         li->value=reloc;
         reloc=NULL;
