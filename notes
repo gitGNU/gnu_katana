@@ -101,12 +101,6 @@ type that pointer is, we can't really patch it
 ** fix tainted state
    callbacks at beginning and end of patch? Talked about on p. 5 of
    the POLUS paper
-** backtracing from within a program
-   is possible using the backtrace call
-   http://www.gnu.org/software/libtool/manual/libc/Backtraces.html
-   generally requires compiling with -rdynamic
-** 32-bit vs 64-bit
-   look into dwarf_get_address_size for some help on at least addresses
 ** extraneous object code changes
    as ksplice points out (in section 3.2 of the ksplice paper) it is
    possible that small changes to the source code produce large
@@ -118,7 +112,7 @@ type that pointer is, we can't really patch it
    than making assumptions about where things are. We may need to have
    these relocation entries anyway.
 ** generating relocations
-*** yalnix
+*** e.g. yalnix
     316k w/ relocs
     241k w/o relocs
     This is a 31% increase in size
@@ -502,6 +496,14 @@ to promote a standard patch object format, since Dwarf is already a standard.
     chunk. Our patcher could test for this behaviour to make sure a
     recent glibc or something compatible is being used.
     
+** howto debug the target in gdb after patching
+   + modify Katana to send SIGSTOP after PTRACE_DETACH instead of SIGCONT
+   + after running katana, start GDB on the process
+  
+   This is not perfect, as PTRACE_DETACH sends SIGCONT, and some time may elapse between
+   that SIGCONT and the SIGSTOP we send. I haven't found a better reliable way to do it though.
+   If we just start GDB on the process that is still be traced by Katana, GDB (at least in
+   some situations) reports that ptrace is not allowed
 * definitions
 ** ET_REL
    ELF file type recognized by linux. Denotes relocatable object
