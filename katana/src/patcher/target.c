@@ -316,10 +316,12 @@ addr_t mallocTarget(word_t len)
   memcpyToTarget(modifyTextLocation,code,CODE_LEN);
 
   REG_IP(newRegs)=modifyTextLocation;
-  //todo: According to Taylor, x86_64 requires stack to be 128-bit aligned when making
+  //todo: According to Taylor Campbell, x86_64 requires stack to be 128-bit aligned when making
   //a function call. Need to look into this and check if it is. If it isn't just adjust %rsp
   //a little bit, as long as we remember to adjust it back later
-  printf("stack pointer is 0x%zx (128-bit alignment is %zu)\n",REG_SP(newRegs),REG_SP(newRegs) % 16);
+
+  //printf("stack pointer is 0x%zx (128-bit alignment is %zu)\n",REG_SP(newRegs),REG_SP(newRegs) % 16);
+
   setTargetRegs(&newRegs);
   
   
