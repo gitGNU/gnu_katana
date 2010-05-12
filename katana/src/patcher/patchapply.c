@@ -471,6 +471,9 @@ void writeOutPatchedBin(bool flushToDisk)
 }
 
 
+//called once the sections have been mapped from the patch into
+//the binary so that relocations are correct: refer to the correct
+//symbol indices and PC relative relocations are ok
 void fixupPatchRelocations(ElfInfo* patch)
 {
   Elf_Scn* relTextScn=getSectionByName(patch,".rela.text.new");
@@ -518,6 +521,7 @@ void fixupPatchRelocations(ElfInfo* patch)
     //if some not taken care of?
     if(type==R_386_PC32 || type==R_X86_64_PC32)
     {
+      //todo: BROKEN. Shouldn't be assuming we're using textData, might not be in text
         assert(rela->r_offset<textData->d_size);
         word_t addrAccessed=*((word_t*)(textData->d_buf+rela->r_offset));
         //if we were using a PC-relative relocation and the PC wasn't in the patch text,
@@ -803,6 +807,8 @@ void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch)
 
   patchDataAddr=copyInEntireSection(patch,".data.new",NULL);
 
+  //todo: now that we're trying to copy everything into the lower 32-bits even if
+  //on x86_64, this isn't really necessary, is it?
   katanaPLT();
   
   writeOutPatchedBin(false);
