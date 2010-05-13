@@ -677,14 +677,22 @@ void katanaPLT()
   memcpy(pltData->d_buf+2,&addr,sizeof(addr));
   //now we've fixed up PLT0,
   //proceed to the rest
-  int numPLTEntries=shdr.sh_size/shdr.sh_entsize;
+  uint pltEntsize=shdr.sh_entsize;
+  #ifdef KATANA_X86_ARCH
+  //will always be the case, since it doesn't vary on x86
+  //gcc seems to set it to 4, which seems incorrect by any metric
+  //I can think of. gcc on x86_64 sets it in a sensible manner
+  pltEntsize=0x10;
+  #endif
+
+  int numPLTEntries=shdr.sh_size/pltEntsize;
   for(int i=1;i<numPLTEntries;i++)
   {
     //even though at present we only support small code model PLT,
     //use full sized addresses internally because we turn relative addresses
     //into absolute ones, and want to make sure we don't lose any information
     addr_t oldAddr=0;
-    word_t entryOffset=i*shdr.sh_entsize;
+    word_t entryOffset=i*pltEntsize;
     //todo: support x86_64 large code model where will be 8 bytes,
     //not 4
     memcpy(&oldAddr,pltData->d_buf+entryOffset+2,4);
