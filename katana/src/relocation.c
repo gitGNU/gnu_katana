@@ -196,7 +196,7 @@ void applyRelocation(RelocInfo* rel,GElf_Sym* oldSym,ELF_STORAGE_TYPE type)
   Elf_Scn* relScn=elf_getscn(rel->e->e,rel->scnIdx);
   GElf_Shdr shdr;
   getShdr(relScn,&shdr);
-  printf("shdr.sh_flags %li, name is %s\n",shdr.sh_flags,rel->e->fname);
+  printf("shdr.sh_flags %li, elf filename is %s\n",shdr.sh_flags,rel->e->fname);
   if(type==IN_MEM && !(shdr.sh_flags&SHF_ALLOC))
   {
     //nothing to do, this section isn't in memory
@@ -252,7 +252,8 @@ void applyRelocation(RelocInfo* rel,GElf_Sym* oldSym,ELF_STORAGE_TYPE type)
                sym.st_shndx!=SHN_ABS &&
                sym.st_shndx!=SHN_COMMON);
         //todo: support abs and common sections
-        oldAddrAccessed=getWordAtAbs(elf_getscn(rel->e->e,sym.st_shndx),rel->r_offset,IN_MEM);
+        //oldAddrAccessed=getWordAtAbs(elf_getscn(rel->e->e,sym.st_shndx),rel->r_offset,IN_MEM);
+	oldAddrAccessed=getWordAtAbs(elf_getscn(rel->e->e,rel->scnIdx),rel->r_offset,IN_MEM);
       }
       else
       {
