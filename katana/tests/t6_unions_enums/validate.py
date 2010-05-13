@@ -12,7 +12,7 @@ def validate(logname):
   regexBetaVal="beta: 43, 44"
   regexGammaIdx="gamma idx is 45"
   regexGammaFooVal="gamma\.foo: 43, 46"
-  regexSizeof="sizeof\(Baz\) is ([0-9])"
+  regexSizeof="sizeof\(Baz\) is ([0-9]*)"
   regexDeltaIdx="delta idx is 1"
   regexDeltaFoo1Val="delta\.foo1: NULL, 2"
   regexDeltaFoo2Val="delta\.foo2: NULL, 3"
@@ -23,8 +23,10 @@ def validate(logname):
   addressChanged['alpha']=False
   addressChanged['beta']=False
   addressChanged['gamma.foo']=False
-  bazSizeChanged=False
-  bazSize=None;
+  bazSizeChanged=[False]
+  bazSize={}
+  bazSize[0]=None #I don't get python. Behaviour of dicts closed in
+                    #functions is different from ordinary variables? I don't get it
   addrs={}
   addrs['alpha']=None
   addrs['beta']=None
@@ -49,21 +51,23 @@ def validate(logname):
     return True
 
   def validateSizeof(match):
-    if bazSizeChanged:
-      if match.group(1)!=bazSize:
+    if not bazSize[0]:
+      bazSize[0]=match.group(1)
+      print "set baz size to " + bazSize[0]
+      if bazSize[0]!="12" and bazSize[0]!="24": #12 or 24 depends on x86 vs x86_64
+        sys.stderr.write("Unexpected sizeof(Baz), expected 12 or 24 and got %s\n" % match.group(1));
+        return False
+    elif bazSizeChanged[0]:
+      if match.group(1)!=bazSize[0]:
         sys.stderr.write("sizeof(Baz) changed more than once\n")
         return False
-    elif not bazSize:
-      bazSize=match.group(1)
-      if bazSize!="12":
-        sys.stderr.write("Unexpected sizeof(Baz), expected 12\n");
+    elif match.group(1)!=bazSize[0]:
+      bazSizeChanged[0]=True
+      bazSize[0]=match.group(1)
+      if bazSize[0]!="20" and bazSize[0]!="40":
+        sys.stderr.write("Unexpected sizeof(Baz), expected 20 or 40\n");
         return False
-    elif match.group(1)!=bazSize:
-      bazSizeChanged=True
-      bazSize=match.group(1)
-      if bazSize!="20":
-        sys.stderr.write("Unexpected sizeof(Baz), expected 20\n");
-        return False
+    return True
 
   for line in f:
     validateFunc=None
@@ -103,6 +107,7 @@ def validate(logname):
       pattern=regexDeltaFoo2Val
     elif line.startswith("sizeof"):
       pattern=regexSizeof
+      validateFunc=validateSizeof
     else:
       pattern="line doesn't even start like any pattern"
       patternError()
@@ -120,7 +125,7 @@ def validate(logname):
   if not addressChanged['gamma.foo']:
     sys.stderr.write("It appears patching of gamma never happened\n")
     return False
-  if not bazSizeChanged:
+  if not bazSizeChanged[0]:
     sys.stderr.write("sizeof(Baz) never changed\n")
     return False
   if not addrs['delta.foo1'] or not addrs['delta.foo2']:
