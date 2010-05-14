@@ -1,6 +1,9 @@
 *.po
 *.po.rel
 *_log
+/Makefile
+/aclocal.m4
+/autom4te.cache
 /t
 a.out
 core
