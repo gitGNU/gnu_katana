@@ -1,0 +1,19 @@
+
+
+DEPENDENCIES
+libelf
+libdwarf
+  you can get the latest version of libdwarf from
+  http://reality.sgiweb.org/davea/dwarf.html. 
+
+
+BUILDING
+./configure
+make
+
+make
+./install libdwarf.so DEST
+
+TESTING
+To make sure katana works:
+make check

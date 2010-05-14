@@ -4,8 +4,7 @@
 #This is the configure.ac file for the phitautext project
 
 AC_DEFUN([doMissingLibrary],[
-  echo "A required library is missing, abort"
-  exit 1
+  AC_MSG_ERROR([A required library is missing, abort])
 ])
 
 
@@ -25,7 +24,7 @@ AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 AC_PROG_CC
 AC_PROG_OBJC
 AC_CONFIG_HEADERS([config.h])
-AC_CONFIG_FILES([Makefile src/Makefile])
+AC_CONFIG_FILES([Makefile code_tests/Makefile src/Makefile tests/Makefile tests/t1_basic/Makefile tests/t1_basic/v0/Makefile tests/t1_basic/v1/Makefile tests/t2_nested_types/Makefile tests/t2_nested_types/v0/Makefile tests/t2_nested_types/v1/Makefile tests/t3_multiple_cu/Makefile tests/t3_multiple_cu/v0/Makefile tests/t3_multiple_cu/v1/Makefile tests/t4_new_var/Makefile tests/t4_new_var/v0/Makefile tests/t4_new_var/v1/Makefile tests/t5_pointers/Makefile tests/t5_pointers/v0/Makefile tests/t5_pointers/v1/Makefile tests/t6_unions_enums/Makefile tests/t6_unions_enums/v0/Makefile tests/t6_unions_enums/v1/Makefile tests/t7_const/Makefile tests/t7_const/v0/Makefile tests/t7_const/v1/Makefile])
 
 #set up variables for use in Makefile.am
 AC_CHECK_LIB(elf,elf_begin,[fndlibPlaceholder],[doMissingLibrary])
@@ -49,6 +48,12 @@ case $host_cpu in
      i686) SUPPORTED_CPU=yes ;;
      *) echo "Your CPU architecture is not supported by Katana. Please contact the Katana maintainers if you would like this fixed"; exit 1
 esac
+
+AC_CHECK_PROG(HAVE_PYTHON,python,yes,[no])
+
+if test x$HAVE_PYTHON != xyes; then
+   AC_MSG_WARN(["No python on this system. Unit tests will not work"])
+fi
 
 AC_OUTPUT
 

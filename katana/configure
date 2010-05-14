@@ -560,6 +560,7 @@ ac_subst_vars='am__EXEEXT_FALSE
 am__EXEEXT_TRUE
 LTLIBOBJS
 LIBOBJS
+HAVE_PYTHON
 am__fastdepOBJC_FALSE
 am__fastdepOBJC_TRUE
 OBJCDEPMODE
@@ -3827,7 +3828,7 @@ fi
 
 ac_config_headers="$ac_config_headers config.h"
 
-ac_config_files="$ac_config_files Makefile src/Makefile"
+ac_config_files="$ac_config_files Makefile code_tests/Makefile src/Makefile tests/Makefile tests/t1_basic/Makefile tests/t1_basic/v0/Makefile tests/t1_basic/v1/Makefile tests/t2_nested_types/Makefile tests/t2_nested_types/v0/Makefile tests/t2_nested_types/v1/Makefile tests/t3_multiple_cu/Makefile tests/t3_multiple_cu/v0/Makefile tests/t3_multiple_cu/v1/Makefile tests/t4_new_var/Makefile tests/t4_new_var/v0/Makefile tests/t4_new_var/v1/Makefile tests/t5_pointers/Makefile tests/t5_pointers/v0/Makefile tests/t5_pointers/v1/Makefile tests/t6_unions_enums/Makefile tests/t6_unions_enums/v0/Makefile tests/t6_unions_enums/v1/Makefile tests/t7_const/Makefile tests/t7_const/v0/Makefile tests/t7_const/v1/Makefile"
 
 
 #set up variables for use in Makefile.am
@@ -3874,8 +3875,7 @@ if test "x$ac_cv_lib_elf_elf_begin" = x""yes; then :
 
 else
 
-  echo "A required library is missing, abort"
-  exit 1
+  as_fn_error "A required library is missing, abort" "$LINENO" 5
 
 fi
 
@@ -3921,8 +3921,7 @@ if test "x$ac_cv_lib_dwarf_dwarf_dealloc" = x""yes; then :
 
 else
 
-  echo "A required library is missing, abort"
-  exit 1
+  as_fn_error "A required library is missing, abort" "$LINENO" 5
 
 fi
 
@@ -3972,8 +3971,7 @@ if test "x$ac_cv_lib_unwind_ptrace__UPT_create" = x""yes; then :
 
 else
 
-  echo "A required library is missing, abort"
-  exit 1
+  as_fn_error "A required library is missing, abort" "$LINENO" 5
 
 fi
 
@@ -4019,8 +4017,7 @@ if test "x$ac_cv_lib_m_ceil" = x""yes; then :
 
 else
 
-  echo "A required library is missing, abort"
-  exit 1
+  as_fn_error "A required library is missing, abort" "$LINENO" 5
 
 fi
 
@@ -4037,6 +4034,50 @@ case $host_cpu in
      i686) SUPPORTED_CPU=yes ;;
      *) echo "Your CPU architecture is not supported by Katana. Please contact the Katana maintainers if you would like this fixed"; exit 1
 esac
+
+# Extract the first word of "python", so it can be a program name with args.
+set dummy python; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if test "${ac_cv_prog_HAVE_PYTHON+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  if test -n "$HAVE_PYTHON"; then
+  ac_cv_prog_HAVE_PYTHON="$HAVE_PYTHON" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
+    ac_cv_prog_HAVE_PYTHON="yes"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  test -z "$ac_cv_prog_HAVE_PYTHON" && ac_cv_prog_HAVE_PYTHON="no"
+fi
+fi
+HAVE_PYTHON=$ac_cv_prog_HAVE_PYTHON
+if test -n "$HAVE_PYTHON"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $HAVE_PYTHON" >&5
+$as_echo "$HAVE_PYTHON" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+
+if test x$HAVE_PYTHON != xyes; then
+   { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: \"No python on this system. Unit tests will not work\"" >&5
+$as_echo "$as_me: WARNING: \"No python on this system. Unit tests will not work\"" >&2;}
+fi
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -4755,7 +4796,30 @@ do
     "depfiles") CONFIG_COMMANDS="$CONFIG_COMMANDS depfiles" ;;
     "config.h") CONFIG_HEADERS="$CONFIG_HEADERS config.h" ;;
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
+    "code_tests/Makefile") CONFIG_FILES="$CONFIG_FILES code_tests/Makefile" ;;
     "src/Makefile") CONFIG_FILES="$CONFIG_FILES src/Makefile" ;;
+    "tests/Makefile") CONFIG_FILES="$CONFIG_FILES tests/Makefile" ;;
+    "tests/t1_basic/Makefile") CONFIG_FILES="$CONFIG_FILES tests/t1_basic/Makefile" ;;
+    "tests/t1_basic/v0/Makefile") CONFIG_FILES="$CONFIG_FILES tests/t1_basic/v0/Makefile" ;;
+    "tests/t1_basic/v1/Makefile") CONFIG_FILES="$CONFIG_FILES tests/t1_basic/v1/Makefile" ;;
+    "tests/t2_nested_types/Makefile") CONFIG_FILES="$CONFIG_FILES tests/t2_nested_types/Makefile" ;;
+    "tests/t2_nested_types/v0/Makefile") CONFIG_FILES="$CONFIG_FILES tests/t2_nested_types/v0/Makefile" ;;
+    "tests/t2_nested_types/v1/Makefile") CONFIG_FILES="$CONFIG_FILES tests/t2_nested_types/v1/Makefile" ;;
+    "tests/t3_multiple_cu/Makefile") CONFIG_FILES="$CONFIG_FILES tests/t3_multiple_cu/Makefile" ;;
+    "tests/t3_multiple_cu/v0/Makefile") CONFIG_FILES="$CONFIG_FILES tests/t3_multiple_cu/v0/Makefile" ;;
+    "tests/t3_multiple_cu/v1/Makefile") CONFIG_FILES="$CONFIG_FILES tests/t3_multiple_cu/v1/Makefile" ;;
+    "tests/t4_new_var/Makefile") CONFIG_FILES="$CONFIG_FILES tests/t4_new_var/Makefile" ;;
+    "tests/t4_new_var/v0/Makefile") CONFIG_FILES="$CONFIG_FILES tests/t4_new_var/v0/Makefile" ;;
+    "tests/t4_new_var/v1/Makefile") CONFIG_FILES="$CONFIG_FILES tests/t4_new_var/v1/Makefile" ;;
+    "tests/t5_pointers/Makefile") CONFIG_FILES="$CONFIG_FILES tests/t5_pointers/Makefile" ;;
+    "tests/t5_pointers/v0/Makefile") CONFIG_FILES="$CONFIG_FILES tests/t5_pointers/v0/Makefile" ;;
+    "tests/t5_pointers/v1/Makefile") CONFIG_FILES="$CONFIG_FILES tests/t5_pointers/v1/Makefile" ;;
+    "tests/t6_unions_enums/Makefile") CONFIG_FILES="$CONFIG_FILES tests/t6_unions_enums/Makefile" ;;
+    "tests/t6_unions_enums/v0/Makefile") CONFIG_FILES="$CONFIG_FILES tests/t6_unions_enums/v0/Makefile" ;;
+    "tests/t6_unions_enums/v1/Makefile") CONFIG_FILES="$CONFIG_FILES tests/t6_unions_enums/v1/Makefile" ;;
+    "tests/t7_const/Makefile") CONFIG_FILES="$CONFIG_FILES tests/t7_const/Makefile" ;;
+    "tests/t7_const/v0/Makefile") CONFIG_FILES="$CONFIG_FILES tests/t7_const/v0/Makefile" ;;
+    "tests/t7_const/v1/Makefile") CONFIG_FILES="$CONFIG_FILES tests/t7_const/v1/Makefile" ;;
 
   *) as_fn_error "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
   esac

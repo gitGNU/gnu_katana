@@ -1,1 +1,3 @@
+/.deps
+/Makefile.am
 listsort

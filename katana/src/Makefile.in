@@ -71,7 +71,7 @@ am_katana_OBJECTS = katana-katana.$(OBJEXT) \
 	$(am__objects_1) $(am__objects_2) $(am__objects_3) \
 	$(am__objects_4)
 katana_OBJECTS = $(am_katana_OBJECTS)
-katana_LDADD = $(LDADD)
+katana_DEPENDENCIES =
 katana_LINK = $(CCLD) $(katana_CFLAGS) $(CFLAGS) $(katana_LDFLAGS) \
 	$(LDFLAGS) -o $@
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
@@ -104,6 +104,7 @@ ECHO_C = @ECHO_C@
 ECHO_N = @ECHO_N@
 ECHO_T = @ECHO_T@
 EXEEXT = @EXEEXT@
+HAVE_PYTHON = @HAVE_PYTHON@
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
@@ -186,8 +187,9 @@ target_vendor = @target_vendor@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-katana_CFLAGS = -I ../include -std=c99 -D_POSIX_SOURCE -D_BSD_SOURCE -D_XOPEN_SOURCE -D_GNU_SOURCE  -I /usr/include/libdwarf -Doff64_t=__off64_t
-katana_LDFLAGS = -ldwarf -lelf -lm -lunwind-generic -lunwind-ptrace
+katana_CFLAGS = -I ../include -std=c99 -D_POSIX_SOURCE -D_BSD_SOURCE -D_XOPEN_SOURCE -D_GNU_SOURCE  -I /usr/local/include/libdwarf -I /usr/include/libdwarf -Doff64_t=__off64_t
+katana_LDFLAGS = -L /usr/local/lib
+katana_LDADD = -ldwarf -lelf -lm -lunwind-generic -lunwind-ptrace
 PATCHER_SRC = patcher/hotpatch.c patcher/target.c patcher/patchapply.c patcher/versioning.c patcher/linkmap.c patcher/safety.c patcher/pmap.c
 PATCHWRITE_SRC = patchwrite/patchwrite.c patchwrite/codediff.c patchwrite/typediff.c patchwrite/elfwriter.c patchwrite/sourcetree.c patchwrite/write_to_dwarf.c patchwrite/elfcmp.c
 UTIL_SRC = util/dictionary.c util/hash.c util/util.c util/map.c util/list.c util/logging.c util/path.c util/refcounted.c
