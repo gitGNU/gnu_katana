@@ -4,6 +4,11 @@
 /Makefile
 /aclocal.m4
 /autom4te.cache
+/config.h
+/config.log
+/config.status
+/nohup.out
+/stamp-h1
 /t
 a.out
 core
