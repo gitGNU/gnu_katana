@@ -3,9 +3,10 @@
 bin_PROGRAMS=katana
 
 
-katana_CFLAGS=-I ../include -std=c99 -D_POSIX_SOURCE -D_BSD_SOURCE -D_XOPEN_SOURCE -D_GNU_SOURCE  -I /usr/include/libdwarf -Doff64_t=__off64_t
+katana_CFLAGS=-I ../include -std=c99 -D_POSIX_SOURCE -D_BSD_SOURCE -D_XOPEN_SOURCE -D_GNU_SOURCE  -I /usr/local/include/libdwarf -I /usr/include/libdwarf -Doff64_t=__off64_t
 
-katana_LDFLAGS=-ldwarf -lelf -lm -lunwind-generic -lunwind-ptrace
+katana_LDFLAGS=-L /usr/local/lib
+katana_LDADD= -ldwarf -lelf -lm -lunwind-generic -lunwind-ptrace
 
 PATCHER_SRC=patcher/hotpatch.c patcher/target.c patcher/patchapply.c patcher/versioning.c patcher/linkmap.c patcher/safety.c patcher/pmap.c
 PATCHWRITE_SRC=patchwrite/patchwrite.c patchwrite/codediff.c patchwrite/typediff.c patchwrite/elfwriter.c patchwrite/sourcetree.c patchwrite/write_to_dwarf.c patchwrite/elfcmp.c
