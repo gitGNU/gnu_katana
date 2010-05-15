@@ -17,7 +17,7 @@ struct Foo
 {
   int field1;
   //an extra field will be inserted here
-  int field2
+  int field2;
 };
 
 struct Bar
@@ -46,7 +46,7 @@ struct Bar alpha={42,{111,128},69};
 void printThings()
 {
   printf("alpha: %i,(foo: %i,%i),%i\n",alpha.field1,alpha.foo.field1,alpha.foo.field2,alpha.field2);
-  printf("v0: field 1 at addr: %x, foo.field1 at %x, field 2 at %x\n",(unsigned int)&alpha.field1,(unsigned int)&alpha.foo.field1,(unsigned int)&alpha.field2);
+  printf("v0: field 1 at addr: %lx, foo.field1 at %lx, field 2 at %lx\n",(unsigned long)&alpha.field1,(unsigned long)&alpha.foo.field1,(unsigned long)&alpha.field2);
   fflush(stdout);
 }
 

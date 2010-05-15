@@ -23,7 +23,7 @@ Foo bar2={31,13};
 void otherPrintThings()
 {
   printf("(Other) Foo: %i,%i\n",bar2.field1,bar2.field2);
-  printf("(Other) field 1 at addr: %x, field 2 at addr: %x\n",(unsigned int) &bar2.field1,(unsigned int)&bar2.field2);
+  printf("(Other) field 1 at addr: %lx, field 2 at addr: %lx\n",(unsigned long) &bar2.field1,(unsigned long)&bar2.field2);
   fflush(stdout);
 }
 

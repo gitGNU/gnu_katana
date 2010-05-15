@@ -54,8 +54,8 @@ void printFoo(char* name,Foo* foo)
 {
   printf("name is %s\n",name);
   fflush(stdout);
-  printf("%s lives at 0x%zx\n",name,(size_t)foo);
-  printf("layout is {%x,%x,%x,%x,%x}\n",(unsigned int)foo->field1,(unsigned int)foo->field_extra,(unsigned int)foo->field2,(unsigned int)foo->field3,(unsigned int)foo->other);
+  printf("%s lives at 0x%zx\n",name,(size_t)foo); 
+  printf("layout is {%lx,%lx,%lx,%lx,%lx}\n",(unsigned long)foo->field1,(unsigned long)foo->field_extra,(unsigned long)foo->field2,(unsigned long)foo->field3,(unsigned long)foo->other);
   fflush(stdout);
   fflush(stdout);
   return;
