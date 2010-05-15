@@ -35,7 +35,7 @@ void otherPrintThings();
 void printThings()
 {
   printf("Foo: %i,%i\n",bar.field1,bar.field2);
-  printf("field 1 at addr: %x, field 2 at addr: %x\n",(unsigned int) &bar.field1,(unsigned int)&bar.field2);
+  printf("field 1 at addr: %lx, field 2 at addr: %lx\n",(unsigned long) &bar.field1,(unsigned long)&bar.field2);
   fflush(stdout);
 }
 

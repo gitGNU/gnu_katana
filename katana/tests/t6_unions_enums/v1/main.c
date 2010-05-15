@@ -68,7 +68,7 @@ int main(int argc,char** argv)
 
 void printFoo(char* name,Foo* foo)
 {
-  printf("%s lives at 0x%x\n",name,(unsigned int)foo);
+  printf("%s lives at 0x%lx\n",name,(unsigned long)foo);
   if(foo->field1)
   {
     printf("%s: %i, %i\n",name,*(foo->field1),foo->field2);
@@ -110,7 +110,7 @@ void printThings()
   printFoo("beta",&beta.f);
   printBar("gamma",&gamma.b);
   printMumble("delta",&delta.m);
-  printf("sizeof(Baz) is %i\n",sizeof(Baz));
+  printf("sizeof(Baz) is %lu\n",sizeof(Baz)); 
   fflush(stdout);
 }
 
