@@ -59,10 +59,12 @@ void genStraightCopyTransform(TypeInfo* a,TypeInfo* b)
 //todo: cache results for determining that a transformation isn't needed
 bool compareTypesAndGenTransforms(TypeInfo* a,TypeInfo* b)
 {
+  logprintf(ELL_INFO_V1,ELS_TYPEDIFF,"Looking for changes in type %s (against %s)\n",a->name,b->name);
   TypeTransform* transform=NULL;
   if(a->type!=b->type)
   {
     //don't know how to perform the transformation
+      logprintf(ELL_INFO_V1,ELS_TYPEDIFF,"Don't know how to perform the transformation\n",a->name,b->name);
     return false;
   }
   if(a->diffAgainst)
@@ -72,6 +74,7 @@ bool compareTypesAndGenTransforms(TypeInfo* a,TypeInfo* b)
     {
       death("cannot transform a type to two different types\n");
     }
+    logprintf(ELL_INFO_V1,ELS_TYPEDIFF,"Already computed the transformation\n",a->name,b->name);
     if(ETS_DIFFERED==a->typediffStatus)
     {
       return false;
@@ -83,7 +86,6 @@ bool compareTypesAndGenTransforms(TypeInfo* a,TypeInfo* b)
   }
 
   a->diffAgainst=b;
-  
   bool retval=true;
   if(strcmp(a->name,b->name) ||
      a->numFields!=b->numFields ||
