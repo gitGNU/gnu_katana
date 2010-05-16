@@ -117,10 +117,14 @@ int main(int argc,char** argv)
   {
     if(argc-optind<3)
     {
-      death("Usage to generate patch: katana -g [-o OUT_FILE] OLD_SOURCE_TREE NEW_SOURCE_TREEEXEC");
+      death("Usage to generate patch: katana -g [-o OUT_FILE] OLD_SOURCE_TREE NEW_SOURCE_TREE EXEC\n");
     }
     char* oldSourceTree=argv[optind];
     char* newSourceTree=argv[optind+1];
+    if(!strcmp(oldSourceTree,newSourceTree))
+    {
+      death("OLD_SOURCE_TREE and NEW_SOURCE_TREE must be different paths\n");
+    }
     char* execRelName=argv[optind+2];
     char* oldBinPath=joinPaths(oldSourceTree,execRelName);
     char* newBinPath=joinPaths(newSourceTree,execRelName);
@@ -140,7 +144,7 @@ int main(int argc,char** argv)
   {
     if(argc-optind<2)
     {
-      death("Usage to apply patch: katana -p PATCH_FILE PID");
+      death("Usage to apply patch: katana -p PATCH_FILE PID\n");
     }
     char* patchFile=argv[optind];
     printf("patch file is %s\n",patchFile);
