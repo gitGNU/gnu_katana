@@ -23,7 +23,7 @@ typedef enum
 
 typedef enum
 {
-  ELS_MISC,
+  ELS_MISC=0,
   ELS_DWARFTYPES,
   ELS_CODEDIFF,
   ELS_TYPEDIFF,
