@@ -73,7 +73,7 @@ AUTOMAKE = ${SHELL} /home/james/school/katana/katana/missing --run automake-1.11
 AWK = gawk
 CC = gcc
 CCDEPMODE = depmode=gcc3
-CFLAGS = -g -O2
+CFLAGS = 
 CPPFLAGS = 
 CYGPATH_W = echo
 DEFS = -DHAVE_CONFIG_H
@@ -94,9 +94,6 @@ LIBS =
 LTLIBOBJS = 
 MAKEINFO = ${SHELL} /home/james/school/katana/katana/missing --run makeinfo
 MKDIR_P = /bin/mkdir -p
-OBJC = gcc
-OBJCDEPMODE = depmode=gcc3
-OBJCFLAGS = 
 OBJEXT = o
 PACKAGE = katana
 PACKAGE_BUGREPORT = electron100@gmail.com
@@ -115,7 +112,6 @@ abs_srcdir = /home/james/school/katana/katana/tests/t5_pointers/v1
 abs_top_builddir = /home/james/school/katana/katana
 abs_top_srcdir = /home/james/school/katana/katana
 ac_ct_CC = gcc
-ac_ct_OBJC = gcc
 am__include = include
 am__leading_dot = .
 am__quote = 
