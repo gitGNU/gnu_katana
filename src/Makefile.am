@@ -3,7 +3,7 @@
 bin_PROGRAMS=katana
 
 
-katana_CFLAGS=-I ../include -std=c99 -D_POSIX_SOURCE -D_BSD_SOURCE -D_XOPEN_SOURCE -D_GNU_SOURCE  -I /usr/local/include/libdwarf -I /usr/include/libdwarf -Doff64_t=__off64_t
+katana_CFLAGS=-I ../include -g -std=c99 -D_POSIX_SOURCE -D_BSD_SOURCE -D_XOPEN_SOURCE -D_GNU_SOURCE  -I /usr/local/include/libdwarf -I /usr/include/libdwarf -Doff64_t=__off64_t
 
 katana_LDFLAGS=-L /usr/local/lib
 katana_LDADD= -ldwarf -lelf -lm -lunwind-generic -lunwind-ptrace
