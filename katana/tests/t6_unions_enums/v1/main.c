@@ -110,7 +110,7 @@ void printThings()
   printFoo("beta",&beta.f);
   printBar("gamma",&gamma.b);
   printMumble("delta",&delta.m);
-  printf("sizeof(Baz) is %lu\n",sizeof(Baz)); 
+  printf("sizeof(Baz) is %zu\n",sizeof(Baz)); 
   fflush(stdout);
 }
 
