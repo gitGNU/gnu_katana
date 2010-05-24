@@ -2,10 +2,12 @@
 
 DEPENDENCIES
 libelf
+  widely available with a couple different implementations
 libdwarf
   you can get the latest version of libdwarf from
   http://reality.sgiweb.org/davea/dwarf.html. 
-
+libunwind
+  http://www.nongnu.org/libunwind/
 
 BUILDING
 ./configure

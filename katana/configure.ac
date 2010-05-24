@@ -16,7 +16,7 @@ AC_DEFUN([fndlibPlaceholder],[
 ])
 
 
-AC_INIT([katana],[1.0b],[electron100@gmail.com])
+AC_INIT([katana],[0.1.0b],[electron100@gmail.com])
 
 
 AC_CANONICAL_TARGET
