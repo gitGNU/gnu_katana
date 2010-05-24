@@ -1,3 +1,7 @@
+This is a preliminary version of Katana, a toolchain-oriented
+hotpatching system for userland (in contrast to kernel-patching
+systems such as KSplice). More complete documentation will reside in
+./doc, although such is currently in a very early state
 
 
 DEPENDENCIES
@@ -19,3 +23,11 @@ make
 TESTING
 To make sure katana works:
 make check
+
+USAGE
+To generate a patch file, run
+katana -g [-o OUT_FULE] OLD_OBJECT_TREE NEW_OBJECT_TREE EXEC
+(EXEC is the name of the executable file whose process will be patched)
+
+To patch a process run
+katana -p PATCH_FILE PID
