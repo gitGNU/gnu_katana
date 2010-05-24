@@ -1,6 +1,8 @@
 /*
   File: linkmap.c
   Author: James Oakley
+  Written For: Dartmouth College
+  License: GNU General Public License
   Project:  katana
   Date: March 2010
   Description: This file contains methods to facilitate finding functions that have been

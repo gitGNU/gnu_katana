@@ -1,6 +1,8 @@
 /*
   File: elfparse.c
   Author: James Oakley
+  Written For: Dartmouth College
+  License: GNU General Public License
   Project: Katana
   Date: January 10
   Description: Read information from an ELF file

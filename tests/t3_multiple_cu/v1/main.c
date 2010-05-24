@@ -1,6 +1,8 @@
 /*
   File: main.c v1
   Author: James Oakley
+  Written For: Dartmouth College
+  License: GNU General Public License
   Project: Katana - Test Harness
   Date: January 10
   Description: Very simple program that exists to have one of its data

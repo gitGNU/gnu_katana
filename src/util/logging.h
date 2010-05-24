@@ -1,6 +1,8 @@
 /*
   File: logging.h
   Author: James Oakley
+  Written For: Dartmouth College
+  License: GNU General Public License
   Project:  katana
   Date: February 2010
   Description: Interface for logging information, errors, etc

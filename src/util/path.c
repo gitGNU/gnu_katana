@@ -1,6 +1,8 @@
 /*
   File: path.c
   Author: James Oakley
+  Written For: Dartmouth College
+  License: GNU General Public License
   Project:  katana
   Date: February 2010
   Description: Functions for dealing with filepaths

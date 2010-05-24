@@ -1,6 +1,8 @@
 /*
   File: dwarftypes.c
   Author: James Oakley
+  Written For: Dartmouth College
+  License: GNU General Public License
   Project: Katana (Preliminary Work)
   Date: January 10
   Description: functions for reading/manipulating DWARF type information in an ELF file

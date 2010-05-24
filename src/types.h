@@ -1,6 +1,8 @@
 /*
   File: types.h
   Author: James Oakley
+  Written For: Dartmouth College
+  License: GNU General Public License
   Project: Katana
   Date: January 10
   Description: types for keeping track of types :)

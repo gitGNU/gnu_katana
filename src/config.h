@@ -1,6 +1,8 @@
 /*
   File: config.h
   Author: James Oakley
+  Written For: Dartmouth College
+  License: GNU General Public License
   Project:  katana
   Date: February 2010
   Description: Program environment, options that can be configured

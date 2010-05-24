@@ -1,6 +1,8 @@
 /*
   File: fderead.c
   Author: James Oakley
+  Written For: Dartmouth College
+  License: GNU General Public License
   Project: Katana
   Date: February 2010
   Description: Read the FDE's from the section formatted as a .debug_frame section.

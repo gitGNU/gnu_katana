@@ -1,6 +1,8 @@
 /*
   File: register.h
   Author: James Oakley
+  Written For: Dartmouth College
+  License: GNU General Public License
   Project: Katana
   Date: January 2010
   Description: registers in the patching VM. Exploitation of the fact that Dwarf

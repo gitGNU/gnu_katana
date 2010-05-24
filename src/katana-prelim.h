@@ -1,6 +1,8 @@
 /*
   File: katana-prelim.h
   Author: James Oakley
+  Written For: Dartmouth College
+  License: GNU General Public License
   Project: Katana
   Date: January 2010
   Description: preliminary test functions for katana. They don't need to

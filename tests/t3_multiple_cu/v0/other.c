@@ -1,6 +1,8 @@
 /*
   File: other2.c
   Author: James Oakley
+  Written For: Dartmouth College
+  License: GNU General Public License
   Project: Katana - Testing
   Date: January 2010
   Description: different definition of struct Foo than in main.c to make sure

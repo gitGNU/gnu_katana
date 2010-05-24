@@ -1,6 +1,8 @@
 /*
   File: patchread.h
   Author: James Oakley
+  Written For: Dartmouth College
+  License: GNU General Public License
   Project: Katana
   Date: January 2010
   Description: Read patch object files and apply them

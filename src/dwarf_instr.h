@@ -1,6 +1,8 @@
 /*
   File: dwarf_instr.h
   Author: James Oakley
+  Written For: Dartmouth College
+  License: GNU General Public License
   Project: Katana
   Date: January 2010
   Description: Functions for manipulating dwarf instructions
