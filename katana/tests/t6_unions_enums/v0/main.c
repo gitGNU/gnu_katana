@@ -93,7 +93,7 @@ void printThings()
   printf("alpha is %i\n",alpha.i);
   printFoo("beta",&beta.f);
   printBar("gamma",&gamma.b);
-  printf("sizeof(Baz) is %lu\n",sizeof(Baz));
+  printf("sizeof(Baz) is %zu\n",sizeof(Baz));
   fflush(stdout);
 }
 
