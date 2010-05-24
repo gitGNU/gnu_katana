@@ -1,0 +1,256 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+               "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+lang="en" xml:lang="en">
+<head>
+<title>Katana: A Userland Toolchain-Oriented Hotpatching System</title>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
+<meta name="generator" content="Org-mode"/>
+<meta name="generated" content="2010-05-24 14:33:58 EDT"/>
+<meta name="author" content="James Oakley"/>
+<meta name="description" content=""/>
+<meta name="keywords" content=""/>
+<style type="text/css">
+ <!--/*--><![CDATA[/*><!--*/
+  html { font-family: Times, serif; font-size: 12pt; }
+  .title  { text-align: center; }
+  .todo   { color: red; }
+  .done   { color: green; }
+  .tag    { background-color: #add8e6; font-weight:normal }
+  .target { }
+  .timestamp { color: #bebebe; }
+  .timestamp-kwd { color: #5f9ea0; }
+  p.verse { margin-left: 3% }
+  pre {
+	border: 1pt solid #AEBDCC;
+	background-color: #F3F5F7;
+	padding: 5pt;
+	font-family: courier, monospace;
+        font-size: 90%;
+        overflow:auto;
+  }
+  table { border-collapse: collapse; }
+  td, th { vertical-align: top; }
+  dt { font-weight: bold; }
+  div.figure { padding: 0.5em; }
+  div.figure p { text-align: center; }
+  .linenr { font-size:smaller }
+  .code-highlighted {background-color:#ffff00;}
+  .org-info-js_info-navigation { border-style:none; }
+  #org-info-js_console-label { font-size:10px; font-weight:bold;
+                               white-space:nowrap; }
+  .org-info-js_search-highlight {background-color:#ffff00; color:#000000;
+                                 font-weight:bold; }
+  /*]]>*/-->
+</style>
+<script type="text/javascript">
+<!--/*--><![CDATA[/*><!--*/
+ function CodeHighlightOn(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(null != target) {
+     elem.cacheClassElem = elem.className;
+     elem.cacheClassTarget = target.className;
+     target.className = "code-highlighted";
+     elem.className   = "code-highlighted";
+   }
+ }
+ function CodeHighlightOff(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(elem.cacheClassElem)
+     elem.className = elem.cacheClassElem;
+   if(elem.cacheClassTarget)
+     target.className = elem.cacheClassTarget;
+ }
+/*]]>*///-->
+</script>
+</head>
+<body>
+<div id="content">
+
+<h1 class="title">Katana: A Userland Toolchain-Oriented Hotpatching System</h1>
+
+
+<div id="table-of-contents">
+<h2>Table of Contents</h2>
+<div id="text-table-of-contents">
+<ul>
+<li><a href="#sec-1">1 Introduction </a></li>
+<li><a href="#sec-2">2 What Katana Does </a></li>
+<li><a href="#sec-3">3 What Katan Does Not Do (Yet) </a></li>
+<li><a href="#sec-4">4 How to Use Katana </a>
+<ul>
+<li><a href="#sec-4.1">4.1 Preparing a Package for Patching Support </a></li>
+<li><a href="#sec-4.2">4.2 To Generate a Patch </a></li>
+<li><a href="#sec-4.3">4.3 To Apply a Patch </a></li>
+<li><a href="#sec-4.4">4.4 To View a Patch </a></li>
+<li><a href="#sec-4.5">4.5 See Also </a></li>
+</ul>
+</li>
+<li><a href="#sec-5">5 Patch Object Format </a></li>
+<li><a href="#sec-6">6 Patch Generation Process </a></li>
+<li><a href="#sec-7">7 Patch Application Process </a></li>
+<li><a href="#sec-8">8 Roadmap </a></li>
+</ul>
+</div>
+</div>
+
+<div id="outline-container-1" class="outline-2">
+<h2 id="sec-1"><span class="section-number-2">1</span> Introduction </h2>
+<div class="outline-text-2" id="text-1">
+
+
+</div>
+
+</div>
+
+<div id="outline-container-2" class="outline-2">
+<h2 id="sec-2"><span class="section-number-2">2</span> What Katana Does </h2>
+<div class="outline-text-2" id="text-2">
+
+</div>
+
+</div>
+
+<div id="outline-container-3" class="outline-2">
+<h2 id="sec-3"><span class="section-number-2">3</span> What Katan Does Not Do (Yet) </h2>
+<div class="outline-text-2" id="text-3">
+
+</div>
+
+</div>
+
+<div id="outline-container-4" class="outline-2">
+<h2 id="sec-4"><span class="section-number-2">4</span> How to Use Katana </h2>
+<div class="outline-text-2" id="text-4">
+
+<p>Katana is intended to be used in two stages. The first stage
+generates a patch object from two different versions of an
+treee. By an object tree, we mean the set of object files (.o files)
+and the executable binary they comprise. Katana works completely at
+the object level, so the source code itself is not strictly
+required, although all objects must be compiled with debugging
+information. This step may be done by the software vendor. In the
+second stage, the patch is applied to a running process. The
+original source trees are not necessary during patch application, as
+the patch object contains all information necessary to patch the
+in-memory process at the object level. It is also possible to view
+the contents of a patch object in a human-readable way for the
+purposes of sanity-checking, determining what changes the patch
+makes, etc.
+</p>
+</div>
+
+<div id="outline-container-4.1" class="outline-3">
+<h3 id="sec-4.1"><span class="section-number-3">4.1</span> Preparing a Package for Patching Support </h3>
+<div class="outline-text-3" id="text-4.1">
+
+<p>Katana aims to be much less invasive than other hot-patching system
+and require minimal work to be used with any project. It does,
+however, have some requirements.<br/>
+Required CFLAGS:
+</p><ul>
+<li>
+-g
+
+</li>
+</ul>
+
+<p>Recommended CFLAGS:
+</p><ul>
+<li>
+-ffunction-sections
+</li>
+<li>
+-fdata-sections
+
+</li>
+</ul>
+
+<p>Recommended LDFLAGS:
+</p><ul>
+<li>
+&ndash;emit-relocs
+
+</li>
+</ul>
+</div>
+
+</div>
+
+<div id="outline-container-4.2" class="outline-3">
+<h3 id="sec-4.2"><span class="section-number-3">4.2</span> To Generate a Patch </h3>
+<div class="outline-text-3" id="text-4.2">
+
+</div>
+
+</div>
+
+<div id="outline-container-4.3" class="outline-3">
+<h3 id="sec-4.3"><span class="section-number-3">4.3</span> To Apply a Patch </h3>
+<div class="outline-text-3" id="text-4.3">
+
+</div>
+
+</div>
+
+<div id="outline-container-4.4" class="outline-3">
+<h3 id="sec-4.4"><span class="section-number-3">4.4</span> To View a Patch </h3>
+<div class="outline-text-3" id="text-4.4">
+
+</div>
+
+</div>
+
+<div id="outline-container-4.5" class="outline-3">
+<h3 id="sec-4.5"><span class="section-number-3">4.5</span> See Also </h3>
+<div class="outline-text-3" id="text-4.5">
+
+<p>the katana manpage
+</p></div>
+</div>
+
+</div>
+
+<div id="outline-container-5" class="outline-2">
+<h2 id="sec-5"><span class="section-number-2">5</span> Patch Object Format </h2>
+<div class="outline-text-2" id="text-5">
+
+</div>
+
+</div>
+
+<div id="outline-container-6" class="outline-2">
+<h2 id="sec-6"><span class="section-number-2">6</span> Patch Generation Process </h2>
+<div class="outline-text-2" id="text-6">
+
+</div>
+
+</div>
+
+<div id="outline-container-7" class="outline-2">
+<h2 id="sec-7"><span class="section-number-2">7</span> Patch Application Process </h2>
+<div class="outline-text-2" id="text-7">
+
+</div>
+
+</div>
+
+<div id="outline-container-8" class="outline-2">
+<h2 id="sec-8"><span class="section-number-2">8</span> Roadmap </h2>
+<div class="outline-text-2" id="text-8">
+
+</div>
+</div>
+<div id="postamble">
+<p class="author"> Author: James Oakley
+<a href="mailto:james.oakley@dartmouth.edu">&lt;james.oakley@dartmouth.edu&gt;</a>
+</p>
+<p class="date"> Date: 2010-05-24 14:33:58 EDT</p>
+<p class="creator">HTML generated by org-mode 6.33x in emacs 23</p>
+</div>
+</div>
+</body>
+</html>
