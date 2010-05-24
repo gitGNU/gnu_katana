@@ -1,6 +1,8 @@
 /*
   File: target.h
   Author: James Oakley
+  Written For: Dartmouth College
+  License: GNU General Public License
   Project: Katana
   Date: January 10
   Description: prototypes for functions to operate on an in-memory target

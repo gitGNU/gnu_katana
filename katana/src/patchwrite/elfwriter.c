@@ -1,6 +1,8 @@
 /*
   File: elfwriter.c
   Author: James Oakley
+  Written For: Dartmouth College
+  License: GNU General Public License
   Project:  katana
   Date: February 2010
   Description: routines for building an elf file for a patch-> Not thread safe

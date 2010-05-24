@@ -1,6 +1,8 @@
 /*
   File: constants.h
   Author: James Oakley
+  Written For: Dartmouth College
+  License: GNU General Public License
   Project:  katana
   Date: March 2010
   Description: miscellaneous constants for Katana

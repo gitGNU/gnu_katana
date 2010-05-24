@@ -10,3 +10,4 @@ notes.txt
 *.aux
 *.blg
 dump*
+.#*

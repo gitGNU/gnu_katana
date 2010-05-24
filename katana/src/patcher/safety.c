@@ -1,6 +1,8 @@
 /*
   File: safety.c
   Author: James Oakley
+  Written For: Dartmouth College
+  License: GNU General Public License
   Project:  katana
   Date: March 2010
   Description: Determines when it is safe to patch and sets a breakpoint at the next safe point

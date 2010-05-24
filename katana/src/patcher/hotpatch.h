@@ -1,6 +1,8 @@
 /*
   File: hotpatch.h
   Author: James Oakley
+  Written For: Dartmouth College
+  License: GNU General Public License
   Project: Katana
   Date: January 10
   Description: functions for actually modifying the target and performing the hotpatching

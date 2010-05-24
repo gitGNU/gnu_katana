@@ -2,6 +2,8 @@
 
   FILE: map.c
   Author: James Oakley
+  Written For: Dartmouth College
+  License: GNU General Public License
   Data: May, 2009
   Description: structure and prototypes for a general-purpose mapping
   from one type to another

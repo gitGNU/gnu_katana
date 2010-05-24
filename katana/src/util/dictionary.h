@@ -2,6 +2,8 @@
 
   FILE: dictionary.h
   Author: James Oakley
+  Written For: Dartmouth College
+  License: GNU General Public License
   Date: February, 2008
   Modified: Jan, 2010
   Description: structure and prototypes for a general-purpose string-keyed dictionary

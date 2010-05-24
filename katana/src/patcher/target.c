@@ -1,6 +1,8 @@
 /*
   File: target.c
   Author: James Oakley
+  Written For: Dartmouth College
+  License: GNU General Public License
   Project: Katana
   Date: January 10
   Description:  low-level functions for modifying an in-memory target

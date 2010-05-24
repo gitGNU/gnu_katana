@@ -1,6 +1,8 @@
 /*
   File: elfcmp.c
   Author: James Oakley
+  Written For: Dartmouth College
+  License: GNU General Public License
   Project:  katana
   Date: March 2010
   Description: Compares two elf files for equality. The idea and name come from Red Hat Elfutils but the code is not in any way based upon that code.

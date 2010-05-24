@@ -1,6 +1,8 @@
 /*
   File: typediff.c
   Author: James Oakley
+  Written For: Dartmouth College
+  License: GNU General Public License
   Project:  katana
   Date: February 2010
   Description: functions relating to finding difference between types and building

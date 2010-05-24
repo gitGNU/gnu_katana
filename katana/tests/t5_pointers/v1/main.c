@@ -1,6 +1,8 @@
 /*
   File: v1/main.c
   Author: James Oakley
+  Written For: Dartmouth College
+  License: GNU General Public License
   Project: Katana - Preliminary Work
   Date: January 10
   Description: Very simple program that exists to have one of its data

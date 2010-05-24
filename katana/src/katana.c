@@ -1,6 +1,8 @@
 /*
   File: typepatch.c
   Author: James Oakley
+  Written For: Dartmouth College
+  License: GNU General Public License
   Project: Katana
   Date: January, 2010
   Description: Preliminary patching program just for patching main_v0.c's structure Foo to have an extra field

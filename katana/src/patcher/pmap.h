@@ -1,6 +1,8 @@
 /*
   File: pmap.h
   Author: James Oakley
+  Written For: Dartmouth College
+  License: GNU General Public License
   Project:  katana
   Date: April 2010
   Description: Find out information about the target processes memory map.

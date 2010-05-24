@@ -1,6 +1,8 @@
 /*
   File: write_to_dwarf.h
   Author: James Oakley
+  Written For: Dartmouth College
+  License: GNU General Public License
   Project:  katana
   Date: March 2010
   Description: methods for writing the dwarf information part of the patch

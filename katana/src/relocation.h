@@ -1,6 +1,8 @@
 /*
   File: relocation.h
   Author: James Oakley
+  Written For: Dartmouth College
+  License: GNU General Public License
   Project: Katana
   Date: February 2010
   Description:  methods to deal with relocation and by association with some symbol issues

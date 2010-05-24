@@ -1,6 +1,8 @@
 /*
   File: types.c
   Author: James Oakley
+  Written For: Dartmouth College
+  License: GNU General Public License
   Project: Katana
   Date: January 10
   Description: utility functions for dealing with the types defined in types.h

@@ -1,6 +1,8 @@
 /*
   File: pmap.c
   Author: James Oakley
+  Written For: Dartmouth College
+  License: GNU General Public License
           Inspired by Albert Cahalan's pmap.c in procps
   Project:  katana
   Date: April 2010
