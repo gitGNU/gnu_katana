@@ -25,7 +25,7 @@ SAVED_CFLAGS="$CFLAGS"
 AC_PROG_CC
 CFLAGS=$SAVED_CFLAGS #avoid the default CFLAGS set by AC_PROG_CC
 AC_CONFIG_HEADERS([config.h])
-AC_CONFIG_FILES([Makefile code_tests/Makefile src/Makefile tests/Makefile tests/t1_basic/Makefile tests/t1_basic/v0/Makefile tests/t1_basic/v1/Makefile tests/t2_nested_types/Makefile tests/t2_nested_types/v0/Makefile tests/t2_nested_types/v1/Makefile tests/t3_multiple_cu/Makefile tests/t3_multiple_cu/v0/Makefile tests/t3_multiple_cu/v1/Makefile tests/t4_new_var/Makefile tests/t4_new_var/v0/Makefile tests/t4_new_var/v1/Makefile tests/t5_pointers/Makefile tests/t5_pointers/v0/Makefile tests/t5_pointers/v1/Makefile tests/t6_unions_enums/Makefile tests/t6_unions_enums/v0/Makefile tests/t6_unions_enums/v1/Makefile tests/t7_const/Makefile tests/t7_const/v0/Makefile tests/t7_const/v1/Makefile])
+AC_CONFIG_FILES([Makefile code_tests/Makefile src/Makefile tests/Makefile tests/t1_basic/Makefile tests/t1_basic/v0/Makefile tests/t1_basic/v1/Makefile tests/t2_nested_types/Makefile tests/t2_nested_types/v0/Makefile tests/t2_nested_types/v1/Makefile tests/t3_multiple_cu/Makefile tests/t3_multiple_cu/v0/Makefile tests/t3_multiple_cu/v1/Makefile tests/t4_new_var/Makefile tests/t4_new_var/v0/Makefile tests/t4_new_var/v1/Makefile tests/t5_pointers/Makefile tests/t5_pointers/v0/Makefile tests/t5_pointers/v1/Makefile tests/t6_unions_enums/Makefile tests/t6_unions_enums/v0/Makefile tests/t6_unions_enums/v1/Makefile tests/t7_const/Makefile tests/t7_const/v0/Makefile tests/t7_const/v1/Makefile doc/Makefile])
 
 #set up variables for use in Makefile.am
 AC_CHECK_LIB(elf,elf_begin,[fndlibPlaceholder],[doMissingLibrary])
