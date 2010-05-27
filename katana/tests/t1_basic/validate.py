@@ -1,3 +1,10 @@
+#File: validate.py
+#Author: James Oakley
+#Written For: Dartmouth College
+#License: GNU General Public License
+#Date, January, 2010
+#Description: validate the output of a single unit test for katana
+
 import sys,re
 def validate(logname):
   f=open(logname)
