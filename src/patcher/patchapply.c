@@ -693,14 +693,26 @@ void katanaPLT()
     //even though at present we only support small code model PLT,
     //use full sized addresses internally because we turn relative addresses
     //into absolute ones, and want to make sure we don't lose any information
-    addr_t oldAddr=0;
+    addr_t oldAddr=0;//old address of the GOT entry corresponding to this plt entry
     word_t entryOffset=i*pltEntsize;
     //todo: support x86_64 large code model where will be 8 bytes,
     //not 4
     memcpy(&oldAddr,pltData->d_buf+entryOffset+2,4);
+    printf("old addr is 0x%zx\n",oldAddr);
+    getchar();
+    #ifdef KATANA_X86_64_ARCH
     oldAddr+=oldPLTAddress+entryOffset+6;//was a PC-relative address
-    addr_t newAddr=oldAddr-oldGOTAddress+newGOTAddress;//create newAddr as an absolute address
+    #endif
+    printf("old addr is now 0x%zx\n",oldAddr);
+
+    //create newAddr as an absolute address, the new address of the
+    //GOT entry corresponding to this PLT entry
+    addr_t newAddr=oldAddr-oldGOTAddress+newGOTAddress;
+
+#ifdef KATANA_X86_64_ARCH
+    //make it a pc-relative address again
     newAddr-=shdr.sh_addr+entryOffset+6;
+#endif
     memcpyToTarget(shdr.sh_addr+entryOffset+2,(byte*)&newAddr,4);//todo: support large code model
     memcpy(pltData->d_buf+entryOffset+2,&newAddr,4);
   }
