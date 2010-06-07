@@ -37,7 +37,7 @@ AC_CHECK_LIB(dwarf,dwarf_dealloc,[fndlibPlaceholder],[doMissingLibrary])
 AC_CHECK_LIB(unwind-ptrace,_UPT_create,[fndlibPlaceholder],[doMissingLibrary])
 AC_CHECK_LIB(m,ceil,[fndlibPlaceholder],[doMissingLibrary])
 
-
+echo "operation system....."$host_os
 case $host_os in
      linux*) SUPPORTED_OS=yes ;;
      *) echo "Your operating system is not supported by Katana. Please contact the Katana maintainers if you would like this fixed"; exit 1 ;;
