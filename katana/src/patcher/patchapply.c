@@ -699,12 +699,9 @@ void katanaPLT()
     //todo: support x86_64 large code model where will be 8 bytes,
     //not 4
     memcpy(&oldAddr,pltData->d_buf+entryOffset+2,4);
-    printf("old addr is 0x%zx\n",oldAddr);
-    getchar();
     #ifdef KATANA_X86_64_ARCH
     oldAddr+=oldPLTAddress+entryOffset+6;//was a PC-relative address
     #endif
-    printf("old addr is now 0x%zx\n",oldAddr);
 
     //create newAddr as an absolute address, the new address of the
     //GOT entry corresponding to this PLT entry

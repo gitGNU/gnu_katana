@@ -3573,7 +3573,7 @@ else
 fi
 
 
-
+echo "operation system....."$host_os
 case $host_os in
      linux*) SUPPORTED_OS=yes ;;
      *) echo "Your operating system is not supported by Katana. Please contact the Katana maintainers if you would like this fixed"; exit 1 ;;
