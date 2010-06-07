@@ -26,7 +26,7 @@
 
 void startPtrace();
 void continuePtrace();
-void endPtrace();
+void endPtrace(bool stopProcess);
 void modifyTarget(addr_t addr,word_t value);
 //copies numBytes from data to addr in target
 //todo: does addr have to be aligned

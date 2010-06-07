@@ -76,6 +76,7 @@ int main(int argc,char** argv)
   int opt;
   E_KATANA_MODE mode=EKM_NONE;
   char* outfile=NULL;
+  int flags=0;
   if(elf_version(EV_CURRENT)==EV_NONE)
   {
     death("Failed to init ELF library\n");
@@ -108,6 +109,19 @@ int main(int argc,char** argv)
       }
       mode=EKM_PATCH_INFO;
       break;
+    case 's':
+      if(EKM_NONE==mode)
+      {
+	death("Must specify a mode (-g,-p, or -l) before any other options");
+      }
+      if(EKM_PATCH_INFO==mode)
+      {
+	flags|=PF_STOP_TARGET;
+      }
+      else
+      {
+	death("-s flag has no meaning for this mode\n");
+      }
       
     }
   }
@@ -119,7 +133,7 @@ int main(int argc,char** argv)
   {
     if(argc-optind<3)
     {
-      death("Usage to generate patch: katana -g [-o OUT_FILE] OLD_SOURCE_TREE NEW_SOURCE_TREE EXEC\n");
+      death("Usage to generate patch: katana -g [-o OUT_FILE] OLD_SOURCE_TREE NEW_SOURCE_TREE EXEC");
     }
     char* oldSourceTree=argv[optind];
     char* newSourceTree=argv[optind+1];
@@ -146,7 +160,7 @@ int main(int argc,char** argv)
   {
     if(argc-optind<2)
     {
-      death("Usage to apply patch: katana -p PATCH_FILE PID\n");
+      death("Usage to apply patch: katana -p [OPTIOJNS] PATCH_FILE PID\nSee the man page for a description of options\n");
     }
     char* patchFile=argv[optind];
     printf("patch file is %s\n",patchFile);
@@ -156,7 +170,7 @@ int main(int argc,char** argv)
     ElfInfo* patch=openELFFile(patchFile);
     findELFSections(patch);
     patch->isPO=true;
-    readAndApplyPatch(pid,oldBinElfInfo,patch);
+    readAndApplyPatch(pid,oldBinElfInfo,patch,flags);
   }
   else if(EKM_PATCH_INFO==mode)
   {

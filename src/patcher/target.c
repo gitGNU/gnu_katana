@@ -85,7 +85,7 @@ void continuePtrace()
 
 }
 
-void endPtrace()
+void endPtrace(bool stopProcess)
 {
   
   if(ptrace(PTRACE_DETACH,pid,NULL,NULL)<0)
@@ -93,7 +93,15 @@ void endPtrace()
     fprintf(stderr,"ptrace failed to detach\n");
     death(NULL);
   }
-  kill(pid,SIGCONT);
+  if(stopProcess)
+  {
+    kill(pid,SIGSTOP);
+  }
+  else
+  {
+    kill(pid,SIGCONT);
+  }
+
 }
 
 
