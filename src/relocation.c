@@ -198,7 +198,7 @@ void applyRelocation(RelocInfo* rel,GElf_Sym* oldSym,ELF_STORAGE_TYPE type)
   Elf_Scn* relScn=elf_getscn(rel->e->e,rel->scnIdx);
   GElf_Shdr shdr;
   getShdr(relScn,&shdr);
-  printf("shdr.sh_flags %li, elf filename is %s\n",shdr.sh_flags,rel->e->fname);
+  //printf("shdr.sh_flags %li, elf filename is %s\n",shdr.sh_flags,rel->e->fname);
   if(type==IN_MEM && !(shdr.sh_flags&SHF_ALLOC))
   {
     //nothing to do, this section isn't in memory
@@ -267,7 +267,7 @@ void applyRelocation(RelocInfo* rel,GElf_Sym* oldSym,ELF_STORAGE_TYPE type)
     else //RELA
     {
       logprintf(ELL_INFO_V2,ELS_RELOCATION,"applying RELA relocation at 0x%x for symbol %s\n",(uint)addrToBeRelocated,getString(rel->e,sym.st_name));
-      logprintf(ELL_INFO_V3,ELS_RELOCATION,"Relocation type is %i and addend is 0x%x\n",rel->relocType,rel->r_addend);
+      logprintf(ELL_INFO_V3,ELS_RELOCATION,"\tRelocation type is %i and addend is 0x%x\n",rel->relocType,rel->r_addend);
       if(R_386_32==rel->relocType || R_X86_64_32==rel->relocType || R_X86_64_64==rel->relocType)
       {
         logprintf(ELL_INFO_V3,ELS_RELOCATION,"\tRELA relocation at 0x%zx is straight 32 or 64 bit\n",addrToBeRelocated);
@@ -300,9 +300,10 @@ void applyRelocation(RelocInfo* rel,GElf_Sym* oldSym,ELF_STORAGE_TYPE type)
     }
   }
 
-  printf("section with name %s has flags %li\n",getScnHdrString(rel->e,shdr.sh_name),shdr.sh_flags);
+  //printf("section with name %s has flags %li\n",getScnHdrString(rel->e,shdr.sh_name),shdr.sh_flags);
   if(IN_MEM & type && shdr.sh_flags & SHF_ALLOC)
   {
+    logprintf(ELL_INFO_V4,ELS_RELOCATION,"Writing 0x%zx at 0x%zx\n",newAddrAccessed,addrToBeRelocated);
     memcpyToTarget(addrToBeRelocated,(byte*)&newAddrAccessed,bytesInAddr);
   }
   if(ON_DISK & type)
@@ -524,7 +525,17 @@ addr_t computeAddend(ElfInfo* e,byte type,idx_t symIdx,addr_t r_offset,idx_t scn
         //and we certainly have no reason to think that any addend is called for
         //(addends are never really used with functions, except perhaps
         //with goto-style programming, need to check that out)
-        return 0;
+	
+	//the above paragraph describes the rational for returning zero.
+	//that didn't seem to actually be working out so well, so now we
+	//return an addend which makes us address properly based on
+	//the end of the instruction rather than the beginning of the relocation
+	//(I think). I'm still not 100% positive this is correct,
+	//but it seems similar to what gcc does with x86_64 compilation
+
+        return -sizeof(addr_t);//necessary because address is relative to the
+	//end of the instruction. This is what gcc for x86_64 does for PC32
+	//relocations
       }
       return computation;
     }
