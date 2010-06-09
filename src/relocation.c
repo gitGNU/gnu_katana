@@ -255,7 +255,7 @@ void applyRelocation(RelocInfo* rel,GElf_Sym* oldSym,ELF_STORAGE_TYPE type)
                sym.st_shndx!=SHN_COMMON);
         //todo: support abs and common sections
         //oldAddrAccessed=getWordAtAbs(elf_getscn(rel->e->e,sym.st_shndx),rel->r_offset,IN_MEM);
-	oldAddrAccessed=getWordAtAbs(elf_getscn(rel->e->e,rel->scnIdx),rel->r_offset,IN_MEM);
+        oldAddrAccessed=getWordAtAbs(elf_getscn(rel->e->e,rel->scnIdx),rel->r_offset,IN_MEM);
       }
       else
       {
@@ -270,6 +270,7 @@ void applyRelocation(RelocInfo* rel,GElf_Sym* oldSym,ELF_STORAGE_TYPE type)
       logprintf(ELL_INFO_V3,ELS_RELOCATION,"Relocation type is %i and addend is 0x%x\n",rel->relocType,rel->r_addend);
       if(R_386_32==rel->relocType || R_X86_64_32==rel->relocType || R_X86_64_64==rel->relocType)
       {
+        logprintf(ELL_INFO_V3,ELS_RELOCATION,"\tRELA relocation at 0x%zx is straight 32 or 64 bit\n",addrToBeRelocated);
         newAddrAccessed=addrNew+rel->r_addend;
         #ifdef KATANA_X86_64_ARCH
         if(R_X86_64_32==rel->relocType)
@@ -284,6 +285,7 @@ void applyRelocation(RelocInfo* rel,GElf_Sym* oldSym,ELF_STORAGE_TYPE type)
         #ifdef KATANA_X86_64_ARCH
         bytesInAddr=4;//not using all 8 bytes the architecture might suggest
         #endif
+        logprintf(ELL_INFO_V4,ELS_RELOCATION,"\taddrNew: 0x%zx, r_offset: 0x%zx\n",addrNew,rel->r_offset);
         newAddrAccessed=addrNew+rel->r_addend-rel->r_offset;
 
       }
