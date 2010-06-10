@@ -161,15 +161,8 @@ void writeRelocationsInRange(addr_t lowpc,addr_t highpc,Elf_Scn* scn,
     #endif
 
     rela.r_info=ELFXX_R_INFO(reindex,type);
-    
-    if(ERT_REL==reloc->type)
-    {
-      rela.r_addend=computeAddend(binary,type,symIdx,reloc->r_offset,reloc->scnIdx);
-    }
-    else
-    {
-      rela.r_addend=reloc->r_addend;
-    }
+    rela.r_addend=reloc->r_addend;
+
 
     //special handling for rodata, because each object has its own rodata
     //and we're no lumping them all together, we have to increase the addend
