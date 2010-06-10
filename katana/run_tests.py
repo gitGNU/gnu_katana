@@ -5,7 +5,7 @@
 #Description: runs unit tests and reports their success or failure
 
 import subprocess,sys,string,os,os.path
-
+from optparse import OptionParser
 passTests=0
 totalTests=0
 
@@ -28,24 +28,39 @@ def runTestInDir(dir,execName="test"):
     sys.stdout.write("FAILED\n")
     return False
 
-if len(sys.argv)>1:
-  print "Taking test to run from the command line"
-  if len(sys.argv)>2:
-    execName=sys.argv[2]
-  else:
-    execName="test"
-  if True==runTestInDir(sys.argv[1],execName):
-    passTests+=1
-  totalTests+=1
-else:
-  print "Running all tests"
-  for dir in sorted(os.listdir("tests")):
-    if os.path.isdir("tests/"+dir):
+def runTestsInDir(dirName,execName):
+  passTests=0
+  totalTests=0
+  for dir in sorted(os.listdir(dirName)):
+    if os.path.isdir(os.path.join(dirName,dir)):
       if dir.startswith("t"):
-        if True==runTestInDir("tests/"+dir):
+        if True==runTestInDir(os.path.join(dirName,dir)):
           passTests+=1
         totalTests+=1
+  return (passTests,totalTests)
+
+  
+parser=OptionParser()
+parser.add_option("-d", action="store_true", dest="runDirectory", default=False, help="Take the following argument as directories of tests rather than as a single test")
+(options,args)=parser.parse_args()
+if len(args)>2:
+  sys.stderr.write("Too many arguments\n")
+  sys.exit(1)
+  
+if len(args)>0:
+  if len(args)>1:
+    execName=args[1]
+  else:
+    execName="test"
+  if options.runDirectory:
+    (passTests,totalTests)=runTestsInDir(args[0],execName)
+  else:
+    if True==runTestInDir(args[0],execName):
+      passTests+=1
+    totalTests+=1
+else:
   #run the special tests, for large, real programs
+  (passTests,totalTests)=runTestsInDir("tests","test")
   if True==runTestInDir("real_tests/apache","httpd"):
     passTests+=1
   totalTests+=1

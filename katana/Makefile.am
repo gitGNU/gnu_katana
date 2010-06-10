@@ -1,6 +1,6 @@
 SUBDIRS=src tests code_tests doc
 
-TESTS=code_tests/listsort ./run_tests.py
+TESTS=code_tests/listsort ./patch_unit_tests ./apache_test
 
 EXTRA_DIST=LICENSE $(TESTS) validator.py
 
