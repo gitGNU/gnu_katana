@@ -19,6 +19,7 @@
 #include "util/logging.h"
 #include "util/refcounted.h"
 #include "util/path.h"
+#include "dwarfvm.h"
 
 Dictionary* cuIdentifiers=NULL;
 DwarfInfo* di;
@@ -72,7 +73,9 @@ int readAttributeAsInt(Dwarf_Attribute attr)
   return result;
 }
 
-addr_t readAttributeAsAddr(Dwarf_Attribute attr)
+//startAddress used for certain attributes which are relative to another address
+//(i.e. DW_AT_data_member_location)
+addr_t readAttributeAsAddr(Dwarf_Attribute attr,Dwarf_Debug dbg,addr_t startAddress)
 {
   Dwarf_Half form;
   Dwarf_Error err;
@@ -85,6 +88,26 @@ addr_t readAttributeAsAddr(Dwarf_Attribute attr)
       Dwarf_Addr addr;
       dwarf_formaddr(attr,&addr,&err);
       result=addr;
+    }
+    break;
+  case DW_FORM_block:
+  case DW_FORM_block1:
+    {
+      Dwarf_Block* block;
+      dwarf_formblock(attr,&block,&err);
+      word_t* startStack=NULL;
+      int stackLen=0;
+      Dwarf_Half attrID;
+      dwarf_whatattr(attr,&attrID,&err);
+      if(DW_AT_data_member_location==attrID)
+      {
+        startStack=&startAddress;
+        stackLen=1;
+        assert(sizeof(addr_t)==sizeof(word_t));
+      }
+      //todo: do we need to handle others?
+      result=evaluateDwarfExpression(block->bl_data,block->bl_len,startStack,stackLen);
+      dwarf_dealloc(dbg,block,DW_DLA_BLOCK);
     }
     break;
   default:
@@ -598,6 +621,7 @@ void* addStructureFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
   res=dwarf_child(die,&child,&err);
   if(res==DW_DLV_OK)
   {
+    long offsetGuessSoFar=0;
     int idx=0;
     do
     {
@@ -612,8 +636,8 @@ void* addStructureFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
       type->numFields++;
       type->fields=realloc(type->fields,type->numFields*sizeof(char*));
       MALLOC_CHECK(type->fields);
-      type->fieldLengths=realloc(type->fieldLengths,type->numFields*sizeof(int));
-      MALLOC_CHECK(type->fieldLengths);
+      type->fieldOffsets=realloc(type->fieldOffsets,type->numFields*sizeof(int));
+      MALLOC_CHECK(type->fieldOffsets);
       type->fieldTypes=realloc(type->fieldTypes,type->numFields*sizeof(char*));
       MALLOC_CHECK(type->fieldTypes);
 
@@ -627,8 +651,18 @@ void* addStructureFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
         death(NULL);//logprintf(ELL_ERR calls death, but just in case. . .
       }
       
-      //todo: perhaps use DW_AT_location instead of this?
-      type->fieldLengths[idx]=typeOfField->length;
+      res=dwarf_attr(child,DW_AT_data_member_location,&attr,&err);
+      if(DW_DLV_OK==res)
+      {
+        type->fieldOffsets[idx]=readAttributeAsAddr(attr,dbg,0);
+        printf("from location attribute, set offset for %s.%s to %i\n",name,type->fields[idx],type->fieldOffsets[idx]);
+      }
+      else
+      {
+        type->fieldOffsets[idx]=offsetGuessSoFar;
+        printf("from guess, set offset for %s.%s  to %i\n",name,type->fields[idx],type->fieldOffsets[idx]);
+      }
+      offsetGuessSoFar+=typeOfField->length;
       type->fieldTypes[idx]=typeOfField;
       grabRefCounted((RC*)typeOfField);
       idx++;
@@ -834,6 +868,7 @@ void* addUnionFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
   res=dwarf_child(die,&child,&err);
   if(res==DW_DLV_OK)
   {
+    unsigned long offsetGuessSoFar=0;
     int idx=0;
     do
     {
@@ -848,8 +883,8 @@ void* addUnionFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
       type->numFields++;
       type->fields=realloc(type->fields,type->numFields*sizeof(char*));
       MALLOC_CHECK(type->fields);
-      type->fieldLengths=realloc(type->fieldLengths,type->numFields*sizeof(int));
-      MALLOC_CHECK(type->fieldLengths);
+      type->fieldOffsets=realloc(type->fieldOffsets,type->numFields*sizeof(int));
+      MALLOC_CHECK(type->fieldOffsets);
       type->fieldTypes=realloc(type->fieldTypes,type->numFields*sizeof(char*));
       MALLOC_CHECK(type->fieldTypes);
 
@@ -862,9 +897,18 @@ void* addUnionFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
         logprintf(ELL_ERR,ELS_DWARFTYPES,"field type doesn't seem to exist, cannot create type %s\n",type->name);
         death(NULL);//logprintf(ELL_ERR calls death, but just in case. . .
       }
-      
-      //todo: perhaps use DW_AT_location instead of this?
-      type->fieldLengths[idx]=typeOfField->length;
+
+      Dwarf_Attribute attr;
+      res=dwarf_attr(child,DW_AT_data_member_location,&attr,&err);
+      if(DW_DLV_OK==res)
+      {
+        type->fieldOffsets[idx]=readAttributeAsAddr(attr,dbg,0);
+      }
+      else
+      {
+        type->fieldOffsets[idx]=offsetGuessSoFar;
+      }
+      offsetGuessSoFar+=typeOfField->length;
       type->fieldTypes[idx]=typeOfField;
       grabRefCounted((RC*)typeOfField);
       idx++;
@@ -1056,12 +1100,12 @@ SubprogramInfo* addSubprogramFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUn
   int res=dwarf_attr(die,DW_AT_low_pc,&attr,&err);
   if(DW_DLV_OK==res)
   {
-    prog->lowpc=readAttributeAsAddr(attr);
+    prog->lowpc=readAttributeAsAddr(attr,dbg,0);
   }
   res=dwarf_attr(die,DW_AT_high_pc,&attr,&err);
   if(DW_DLV_OK==res)
   {
-    prog->highpc=readAttributeAsAddr(attr);
+    prog->highpc=readAttributeAsAddr(attr,dbg,0);
   }
   dictInsert(cu->subprograms,prog->name,prog);
   return prog;

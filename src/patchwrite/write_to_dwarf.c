@@ -284,7 +284,6 @@ void writeTransformationToDwarf(Dwarf_P_Debug dbg,TypeTransform* trans)
   }
   else if(TT_STRUCT==trans->from->type) //look at structure, not just straight copy
   {
-    int oldBytesSoFar=0;
     for(int i=0;i<trans->from->numFields;i++)
     {
       DwarfInstruction inst;
@@ -295,7 +294,6 @@ void writeTransformationToDwarf(Dwarf_P_Debug dbg,TypeTransform* trans)
       if(EFTT_DELETE==transformType)
       {
         logprintf(ELL_INFO_V3,ELS_DWARF_FRAME,"not addingfield to fde\n");
-        oldBytesSoFar+=trans->from->fieldLengths[i];
         continue;
       }
       #define NUM_BYTES 1+2*sizeof(int)
@@ -308,7 +306,7 @@ void writeTransformationToDwarf(Dwarf_P_Debug dbg,TypeTransform* trans)
       memcpy(bytes+1+sizeof(int),&off,sizeof(int));
       inst.arg1Bytes=encodeAsLEB128(bytes,NUM_BYTES,false,&inst.arg1NumBytes);
       bytes[0]=ERT_CURR_TARG_OLD;
-      memcpy(bytes+1+sizeof(int),&oldBytesSoFar,sizeof(int));
+      memcpy(bytes+1+sizeof(int),&trans->from->fieldOffsets[i],sizeof(int));
       inst.arg2Bytes=encodeAsLEB128(bytes,NUM_BYTES,false,&inst.arg2NumBytes);
       if(EFTT_RECURSE==transformType)
       {
@@ -338,7 +336,6 @@ void writeTransformationToDwarf(Dwarf_P_Debug dbg,TypeTransform* trans)
         free(inst.arg1Bytes);
         free(inst.arg2Bytes);
         free(inst.arg3Bytes);
-        oldBytesSoFar+=trans->from->fieldLengths[i];
         continue;
       }
       logprintf(ELL_INFO_V3,ELS_DWARF_FRAME,"adding normal field to fde\n");
@@ -347,7 +344,6 @@ void writeTransformationToDwarf(Dwarf_P_Debug dbg,TypeTransform* trans)
       addInstruction(&instrs,&inst);
       free(inst.arg1Bytes);
       free(inst.arg2Bytes);
-      oldBytesSoFar+=trans->from->fieldLengths[i];
     }
   }
   else
