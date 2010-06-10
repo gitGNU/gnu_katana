@@ -3,7 +3,7 @@
 bin_PROGRAMS=katana
 
 
-katana_CFLAGS=-I ../include -g -Wall -Werror -std=c99 -D_POSIX_SOURCE -D_BSD_SOURCE -D_XOPEN_SOURCE -D_GNU_SOURCE  -I /usr/local/include/libdwarf -I /usr/include/libdwarf -Doff64_t=__off64_t -DDEBUG
+katana_CFLAGS=-I ../include -g -Wall -Werror -Wno-error=pointer-sign -std=c99 -D_POSIX_SOURCE -D_BSD_SOURCE -D_XOPEN_SOURCE -D_GNU_SOURCE  -I /usr/local/include/libdwarf -I /usr/include/libdwarf -Doff64_t=__off64_t -DDEBUG
 
 katana_LDFLAGS=-L /usr/local/lib
 katana_LDADD= -ldwarf -lelf -lm -lunwind-generic -lunwind-ptrace
