@@ -570,7 +570,9 @@ void katanaPLT()
   //////////////////////////////////////////////////
   //copy in the PLT section so other sections can reference it
   getShdrByERS(targetBin,ERS_PLT,&shdr);
+  #ifdef KATANA_X86_64_ARCH
   addr_t oldPLTAddress=shdr.sh_addr;
+  #endif
   copyInEntireSection(targetBin,".plt",".plt.katana");
   Elf_Scn* pltScn=getSectionByName(patchedBin,".plt.katana");
   assert(pltScn);
@@ -795,9 +797,10 @@ void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch,int flags)
   amount+=shdr.sh_size;
 
 
-  addr_t desiredAddress=0;
 
   #ifdef KATANA_X86_64_ARCH
+  addr_t desiredAddress=0;
+
   //we need to request a memory address near the beginning
   //of the binary to accomodate small code model
   //TODO: make sure this is scalable, that I've taken
@@ -813,10 +816,10 @@ void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch,int flags)
   #endif
 
   
-  addr_t receivedAddres=reserveFreeSpaceInTarget(amount,desiredAddress);
 
 
   #ifdef KATANA_X86_64_ARCH
+  addr_t receivedAddres=reserveFreeSpaceInTarget(amount,desiredAddress);
   if(receivedAddres > 0xFFFFFFFF && patchedBin->textUsesSmallCodeModel)
   {
     //todo: if at first we don't succeed, try again
