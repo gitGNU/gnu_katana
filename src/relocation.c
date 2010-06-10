@@ -455,6 +455,15 @@ List* getRelocationItemsFor(ElfInfo* e,int symIdx)
 //scnIdx is section the relocation refers to
 addr_t computeAddend(ElfInfo* e,byte type,idx_t symIdx,addr_t r_offset,idx_t scnIdx)
 {
+
+  if(R_386_COPY==type || R_386_GLOB_DAT==type || R_386_JMP_SLOT==type)
+  {
+    //addend doesn't matter for any of these, and for some off them
+    //(like JMP_SLOT) r_offset may not actually be where the
+    //relocation is applied, which means computation of addrAccessed
+    //later could segfault, so we just return 0
+  }
+  
   GElf_Sym sym;
   getSymbol(e,symIdx,&sym);
   addr_t symVal=sym.st_value;
