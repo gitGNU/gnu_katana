@@ -243,60 +243,69 @@ void applyRelocation(RelocInfo* rel,GElf_Sym* oldSym,ELF_STORAGE_TYPE type)
   }
   else
   {
+    //regular relocation, not dealing with the PLT
     addr_t addrNew=sym.st_value;
     if(ERT_REL==rel->type)
     {
-      addr_t addrOld=oldSym->st_value;
-      addr_t oldAddrAccessed=0;
-      if(rel->relocType==R_386_32 || rel->relocType==R_X86_64_32)
-      {
-        assert(sym.st_shndx!=SHN_UNDEF &&
-               sym.st_shndx!=SHN_ABS &&
-               sym.st_shndx!=SHN_COMMON);
-        //todo: support abs and common sections
-        //oldAddrAccessed=getWordAtAbs(elf_getscn(rel->e->e,sym.st_shndx),rel->r_offset,IN_MEM);
-	oldAddrAccessed=getWordAtAbs(elf_getscn(rel->e->e,rel->scnIdx),rel->r_offset,IN_MEM);
-      }
-      else
-      {
-        death("relocation type we can't handle yet (for REL)\n");
-      }
-      uint offset=oldAddrAccessed-addrOld;
-      newAddrAccessed=addrNew+offset;
-    }
-    else //RELA
-    {
-      logprintf(ELL_INFO_V2,ELS_RELOCATION,"applying RELA relocation at 0x%x for symbol %s\n",(uint)addrToBeRelocated,getString(rel->e,sym.st_name));
-      logprintf(ELL_INFO_V3,ELS_RELOCATION,"\tRelocation type is %i and addend is 0x%x\n",rel->relocType,rel->r_addend);
-      if(R_386_32==rel->relocType || R_X86_64_32==rel->relocType || R_X86_64_64==rel->relocType)
-      {
-        newAddrAccessed=addrNew+rel->r_addend;
-        #ifdef KATANA_X86_64_ARCH
-        if(R_X86_64_32==rel->relocType)
-        {
-          bytesInAddr=4;//not using all 8 bytes the architecture might suggest
-        }
-        #endif
-      }
-      else if(R_386_PC32==rel->relocType || R_X86_64_PC32==rel->relocType)
-      {
-        logprintf(ELL_INFO_V3,ELS_RELOCATION,"\tRELA relocation at 0x%zx is PC32\n",addrToBeRelocated);
-        #ifdef KATANA_X86_64_ARCH
-        bytesInAddr=4;//not using all 8 bytes the architecture might suggest
-        #endif
-	logprintf(ELL_INFO_V4,ELS_RELOCATION,"\taddrNew: 0x%zx, r_offset: 0x%zx\n",addrNew,rel->r_offset);
-        newAddrAccessed=addrNew+rel->r_addend-rel->r_offset;
+      logprintf(ELL_INFO_V2,ELS_RELOCATION,"applying REL relocation at 0x%x for symbol %s\nConverting it to RELA relocation for further processing\n",(uint)addrToBeRelocated,getString(rel->e,sym.st_name));
+      static RelocInfo relReloc;
+      memcpy(&relReloc,rel,sizeof(RelocInfo));
+      relReloc.r_addend=getAddendForReloc(rel);
+      relReloc.type=ERT_RELA;
+      rel=&relReloc;//so now we just handle it as if rel were RELA all along
 
-      }
-      else if(R_X86_64_32S==rel->relocType)
-      {
-        newAddrAccessed=addrNew+signExtend32To64(rel->r_addend);
-      }
-      else
-      {
-        death("relocation type %i we can't handle yet (for RELA)\n",rel->relocType);
-      }
+      //LEGACY, remove the below
+/*       addr_t addrOld=oldSym->st_value; */
+/*       addr_t oldAddrAccessed=0; */
+/*       if(rel->relocType==R_386_32 || rel->relocType==R_X86_64_32) */
+/*       { */
+/*         assert(sym.st_shndx!=SHN_UNDEF && */
+/*                sym.st_shndx!=SHN_ABS && */
+/*                sym.st_shndx!=SHN_COMMON); */
+/*         //todo: support abs and common sections */
+/*         //oldAddrAccessed=getWordAtAbs(elf_getscn(rel->e->e,sym.st_shndx),rel->r_offset,IN_MEM); */
+/* 	oldAddrAccessed=getWordAtAbs(elf_getscn(rel->e->e,rel->scnIdx),rel->r_offset,IN_MEM); */
+/*       } */
+/*       else */
+/*       { */
+/*         death("relocation type we can't handle yet (for REL)\n"); */
+/*       } */
+/*       uint offset=oldAddrAccessed-addrOld; */
+/*       newAddrAccessed=addrNew+offset; */
     }
+    //RELA (which now everything is since we converted the REL stuff to RELA)
+
+    logprintf(ELL_INFO_V2,ELS_RELOCATION,"applying RELA relocation at 0x%x for symbol %s\n",(uint)addrToBeRelocated,getString(rel->e,sym.st_name));
+    logprintf(ELL_INFO_V3,ELS_RELOCATION,"\tRelocation type is %i and addend is 0x%x\n",rel->relocType,rel->r_addend);
+    if(R_386_32==rel->relocType || R_X86_64_32==rel->relocType || R_X86_64_64==rel->relocType)
+    {
+      newAddrAccessed=addrNew+rel->r_addend;
+#ifdef KATANA_X86_64_ARCH
+      if(R_X86_64_32==rel->relocType)
+      {
+	bytesInAddr=4;//not using all 8 bytes the architecture might suggest
+      }
+#endif
+    }
+    else if(R_386_PC32==rel->relocType || R_X86_64_PC32==rel->relocType)
+    {
+      logprintf(ELL_INFO_V3,ELS_RELOCATION,"\tRELA relocation at 0x%zx is PC32\n",addrToBeRelocated);
+#ifdef KATANA_X86_64_ARCH
+      bytesInAddr=4;//not using all 8 bytes the architecture might suggest
+#endif
+      logprintf(ELL_INFO_V4,ELS_RELOCATION,"\taddrNew: 0x%zx, r_offset: 0x%zx\n",addrNew,rel->r_offset);
+      newAddrAccessed=addrNew+rel->r_addend-rel->r_offset;
+
+    }
+    else if(R_X86_64_32S==rel->relocType)
+    {
+      newAddrAccessed=addrNew+signExtend32To64(rel->r_addend);
+    }
+    else
+    {
+      death("relocation type %i we can't handle yet (for RELA)\n",rel->relocType);
+    }
+
   }
 
   //printf("section with name %s has flags %li\n",getScnHdrString(rel->e,shdr.sh_name),shdr.sh_flags);
@@ -418,6 +427,9 @@ List* getRelocationItemsInRange(ElfInfo* e,Elf_Scn* relocScn,addr_t lowAddr,addr
 
 List* getRelocationItemsFor(ElfInfo* e,int symIdx)
 {
+  GElf_Sym sym;
+  getSymbol(e,symIdx,&sym);
+  logprintf(ELL_INFO_V2,ELS_RELOCATION,"getting relocation items for symbol %s\n",getString(e,sym.st_name));
   RelocInfo* reloc=NULL;
   List* relocsHead=NULL;
   List* relocsTail=NULL;
@@ -437,11 +449,11 @@ List* getRelocationItemsFor(ElfInfo* e,int symIdx)
         {
           reloc=zmalloc(sizeof(RelocInfo));
           reloc->e=e;
-          reloc->type=shdr.sh_type;
         }
         reloc->scnIdx=scnIdx;
         if(SHT_REL==shdr.sh_type)
         {
+          reloc->type=ERT_REL;
           GElf_Rel rel;
           gelf_getrel(data,j,&rel);
           if(ELF64_R_SYM(rel.r_info)!=symIdx)
@@ -454,6 +466,7 @@ List* getRelocationItemsFor(ElfInfo* e,int symIdx)
         }
         else //SHT_RELA
         {
+          reloc->type=ERT_RELA;
           GElf_Rela rela;
           gelf_getrela(data,j,&rela);
           if(ELF64_R_SYM(rela.r_info)!=symIdx)
