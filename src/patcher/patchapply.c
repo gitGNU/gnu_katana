@@ -616,7 +616,8 @@ void katanaPLT()
     patchedBin->sectionIndices[ERS_RELX_PLT]=elf_ndxscn(pltRelScn);
     //now have to make this section reference our new plt section, not the old plt section
     getShdr(pltRelScn,&shdr);
-    shdr.sh_link=elf_ndxscn(pltScn);
+    shdr.sh_link=patchedBin->sectionIndices[ERS_SYMTAB];
+    shdr.sh_info=elf_ndxscn(pltScn);
     int numRelocations=shdr.sh_size/shdr.sh_entsize;
     gelf_update_shdr(pltRelScn,&shdr);
     //.rela.plt does not actually exist to relocate addresses in the PLT
