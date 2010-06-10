@@ -16,15 +16,14 @@
 
 int getOffsetForField(TypeInfo* type,char* name)
 {
-  int offset=0;
   for(int i=0;i<type->numFields;i++)
   {
     if(!strcmp(name,type->fields[i]))
     {
+      int offset=type->fieldOffsets[i];
       logprintf(ELL_INFO_V4,ELS_MISC,"offset for field returning %i for field %s\n",offset,name);
       return offset;
     }
-    offset+=type->fieldLengths[i];
   }
   return FIELD_DELETED;
 }
@@ -108,10 +107,10 @@ bool compareTypesAndGenTransforms(TypeInfo* a,TypeInfo* b)
       //todo: do we need to update if just the name changes?
       //certainly won't need to relocate. Or do we just assume
       //that if the name changes it's all different
-      if(a->fieldLengths[i]!=b->fieldLengths[i] ||
+      if(a->fieldTypes[i]->length!=b->fieldTypes[i]->length ||
          strcmp(a->fieldTypes[i]->name,b->fieldTypes[i]->name) || strcmp(a->fields[i],b->fields[i]))
       {
-        if(!strncmp(a->fieldTypes[i]->name,"anon_",5) && !strncmp(a->fieldTypes[i]->name,"anon_",5) && a->fieldTypes[i]->type==b->fieldTypes[i]->type && !strcmp(a->fields[i],b->fields[i]) && a->fieldLengths[i]==b->fieldLengths[i])
+        if(!strncmp(a->fieldTypes[i]->name,"anon_",5) && !strncmp(a->fieldTypes[i]->name,"anon_",5) && a->fieldTypes[i]->type==b->fieldTypes[i]->type && !strcmp(a->fields[i],b->fields[i]) && a->fieldTypes[i]->length==b->fieldTypes[i]->length)
         {
           logprintf(ELL_WARN,ELS_TYPEDIFF,"Struct or union %s has member %s of type %s/%s. Because this is an anonymous type, we aren't automatically assuming that a small name change means a change of type, but this may not be what you want\n",a->name,a->fields[i],a->fieldTypes[i]->name,b->fieldTypes[i]->name);
         }

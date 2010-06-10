@@ -100,11 +100,11 @@ void freeTypeInfo(TypeInfo* t)
     t->fieldTypes[i]=(void*)0xbadf00d;
   }
   free(t->fields);
-  free(t->fieldLengths);
+  free(t->fieldOffsets);
   free(t->fieldTypes);
   t->fieldTypes=(void*)0xbadf00d;
   t->fields=(void*)0xbadf00d;
-  t->fieldLengths=(void*)0xbadf00d;
+  t->fieldOffsets=(void*)0xbadf00d;
   if(t->lowerBounds)
   {
     free(t->lowerBounds);
@@ -128,12 +128,12 @@ TypeInfo* duplicateTypeInfo(const TypeInfo* t)
   result->rc.refcount=0;
   result->name=strdup(t->name);
   result->fields=zmalloc(sizeof(char*)*t->numFields);
-  result->fieldLengths=zmalloc(sizeof(int)*t->numFields);
+  result->fieldOffsets=zmalloc(sizeof(int)*t->numFields);
   result->fieldTypes=zmalloc(sizeof(TypeInfo*)*t->numFields);
   for(int i=0;i<t->numFields;i++)
   {
     result->fields[i]=strdup(t->fields[i]);
-    result->fieldLengths[i]=t->fieldLengths[i];
+    result->fieldOffsets[i]=t->fieldOffsets[i];
     result->fieldTypes[i]=t->fieldTypes[i];
     grabRefCounted((RC*)result->fieldTypes[i]);
   }

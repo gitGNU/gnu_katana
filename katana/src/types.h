@@ -151,7 +151,7 @@ typedef struct TypeInfo_
   ///////////////////////////////////////////
   int numFields;
   char** fields;
-  int* fieldLengths;
+  int* fieldOffsets;//because of packed structs, may not be calculatable from fieldTypes[idx]->length
   struct TypeInfo_** fieldTypes;
   ///////////////////////////////////////////
   //end only applicable to structs and unions
