@@ -79,16 +79,10 @@ void relocateVar(VarInfo* var,ElfInfo* targetBin)
 
   logprintf(ELL_INFO_V4,ELS_PATCHAPPLY,"var new location is 0x%x\n",var->newLocation);
 
-  //do need to do this because may contain some relocations
+  //we do need to do this because may contain some relocations
   //not in new code
   List* relocItems=getRelocationItemsFor(patchedBin,symIdx);
-  //todo: really should pass targedBin to applyRelocation so can find old
-  //values of the symbols that we've already written over, but that doesn't quite
-  //work either because applyRelocation crashes because relocations themselves
-  //from a different elf object than the symbols were from. To fix this, perhaps
-  //we should just compute all the addends at a time when we know what binary they come from
-  //perhaps should always compute all addends of all relocs when we have the chance?
-  applyRelocations(relocItems,patchedBin,IN_MEM);
+  applyRelocations(relocItems,IN_MEM);
 }
 
 void insertTrampolineJump(addr_t insertAt,addr_t jumpTo)
@@ -879,7 +873,6 @@ void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch,int flags)
   RelocInfo reloc;
   memset(&reloc,0,sizeof(reloc));
   reloc.e=patchedBin;
-  reloc.type=ERT_RELA;
   reloc.scnIdx=elf_ndxscn(getSectionByName(patchedBin,".text.new"));
   GElf_Rela rela;
   int numRelocs=data->d_size/sizeof(ElfXX_Rela);
@@ -893,7 +886,7 @@ void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch,int flags)
     reloc.r_addend=rela.r_addend;
     reloc.relocType=ELF64_R_TYPE(rela.r_info);//elf64 because it's GElf
     reloc.symIdx=ELF64_R_SYM(rela.r_info);//elf64 because it's GElf
-    applyRelocation(&reloc,NULL,IN_MEM);//todo: on disk as well
+    applyRelocation(&reloc,IN_MEM);//todo: on disk as well
   }
 
   writeOutPatchedBin(true);
