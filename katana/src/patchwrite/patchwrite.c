@@ -470,8 +470,8 @@ addr_t writeFuncToPatchText(SubprogramInfo* func,CompilationUnit* cu,idx_t* outS
   //if -ffunction-sections is used, the function might have its own text section
   ElfXX_Sym sym;
   sym.st_name=addStrtabEntry(func->name);
-  sym.st_value=textData->d_off;//is it ok that this is section-relative, since
-  //we set st_shndx to be the text section
+  sym.st_value=offset;//is it ok that this is section-relative, since
+  //we set st_shndx to be the text section?
   sym.st_size=0;
   sym.st_info=ELFXX_ST_INFO(STB_GLOBAL,STT_FUNC);
   sym.st_other=0;
