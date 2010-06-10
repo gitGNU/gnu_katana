@@ -462,6 +462,7 @@ addr_t computeAddend(ElfInfo* e,byte type,idx_t symIdx,addr_t r_offset,idx_t scn
     //(like JMP_SLOT) r_offset may not actually be where the
     //relocation is applied, which means computation of addrAccessed
     //later could segfault, so we just return 0
+    return 0;
   }
   
   GElf_Sym sym;
