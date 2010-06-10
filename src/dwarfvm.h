@@ -20,5 +20,8 @@ void patchDataWithFDE(VarInfo* var,FDE* transformerFDE,ElfInfo* targetBin,ElfInf
 //if stopLocation is negative, it is ignored
 void evaluateInstructionsToRules(RegInstruction* instrs,int numInstrs,Dictionary* rules,int stopLocation);
 
+//stack length given in words
+word_t evaluateDwarfExpression(byte* bytes,int len,word_t* startingStack,int stackLen);
+
 void cleanupDwarfVM();
 #endif

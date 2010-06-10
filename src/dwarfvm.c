@@ -221,6 +221,7 @@ List* makePatchData(PoRegRule* rule,SpecialRegsState* state,ElfInfo* patch,ElfIn
     break;
   case ERRT_RECURSE_FIXUP_POINTER:
     {
+      break;
       //there are some special challenges when fixing up a pointer
       //0. make sure it isn't a NULL pointer
       //1. we have to make sure we have't already fixed up at that location yet
@@ -409,6 +410,61 @@ void patchDataWithFDE(VarInfo* var,FDE* fde,ElfInfo* oldBinaryElf,ElfInfo* patch
     memcpyToTarget(pd->addr,pd->data,pd->len);
   }
   deleteList(patchesList,(FreeFunc)freePatchData);
+}
+
+//helper function for evaluationDwarfExpression
+word_t popDWVMStack(word_t* stack,int* stackLen)
+{
+  if(0==*stackLen)
+  {
+    death("Attempt to pop empty Dwarf stack\n");
+  }
+  (*stackLen)--;
+  return stack[*stackLen];
+}
+
+//helper function for evaluationDwarfExpression
+void pushDWVMStack(word_t** stack,int* stackLen,int* stackAlloced,word_t value)
+{
+  if(*stackLen+1==*stackAlloced)
+  {
+    *stackAlloced=max(2*(*stackAlloced),2);
+    *stack=realloc(stack,*stackAlloced);
+    MALLOC_CHECK(*stack);
+  }
+  (*stack)[*stackLen]=value;
+  (*stackLen)++;
+}
+
+//stack length given in words
+word_t evaluateDwarfExpression(byte* bytes,int len,word_t* startingStack,int stackLen)
+{
+  int stackAlloced=stackLen+10;
+  word_t* stack=zmalloc(stackAlloced*sizeof(word_t));//alloc more as needed
+  if(stackLen)
+  {
+    memcpy(stack,startingStack,stackLen);
+  }
+  
+  for(int cnt=0;cnt<len;)
+  {
+    byte op=bytes[cnt++];
+    switch(op)
+    {
+    case DW_OP_plus_uconst:
+      {
+        word_t top=popDWVMStack(stack,&stackLen);
+        usint bytesRead;
+        word_t uconst=leb128ToUWord(bytes+cnt,&bytesRead);
+        cnt+=bytesRead;
+        pushDWVMStack(&stack,&stackLen,&stackAlloced,top+uconst);
+      }
+      break;
+    default:
+      death("Dwarf expression operand %i not supported yet\n",(int)op);
+    }
+  }
+  return popDWVMStack(stack,&stackLen);
 }
 
 void cleanupDwarfVM()
