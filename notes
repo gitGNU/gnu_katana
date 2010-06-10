@@ -807,3 +807,27 @@ to be the case.
 *** debugging info: 
     built with
     env CFLAGS=-g ./configure
+* registering on Savannah
+** Technical Description
+   Katana is a hot-patcher (a system for applying a patch to a process
+   while it is running) with a general method similar to the successful
+   KSplice project (http://www.ksplice.com/doc/ksplice.pdf). Unlike
+   KSplice, Katana operates on userland processes rather than on the
+   kernel. Katana, unlike any other known system, utilizes binary
+   debugging information (DWARF) to allow patching of variables as
+   well as functions with minimal user interaction. We attempt to
+   provide a patching method that is as transparent as possible and
+   paves the way for integrating hot-patching with the standard
+   toolchain.
+
+   More information on the details of Katana can be found in the paper at
+   http://www.cs.dartmouth.edu/~sws/pubs/rbls10.pdf.
+
+   Katana is not currently mature. It is in proof-of-concept stage and
+   passes seven tests, but it is not yet ready to patch production software.
+
+** Dependencies
+   Libelf     LGPL http://www.mr511.de/software/english.html
+   Libdwarf   LGPL http://reality.sgiweb.org/davea/dwarf.html
+   Libunwind  X11  http://www.nongnu.org/libunwind
+** 
