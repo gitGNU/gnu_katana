@@ -68,8 +68,13 @@ void transformVarData(VarInfo* var,Map* fdeMap,ElfInfo* patch)
 
 void relocateVar(VarInfo* var,ElfInfo* targetBin)
 {
-  //record in the patched binary that we're putting the variable here
   int symIdx=getSymtabIdx(targetBin,var->name,0);
+
+  //do this first so that addend computation will be done
+  //before we change the symtab entry
+  List* relocItems=getRelocationItemsFor(patchedBin,symIdx);
+
+  //record in the patched binary that we're putting the variable here
   GElf_Sym sym;
   getSymbol(targetBin,symIdx,&sym);
   sym.st_value=var->newLocation;
@@ -81,7 +86,6 @@ void relocateVar(VarInfo* var,ElfInfo* targetBin)
 
   //we do need to do this because may contain some relocations
   //not in new code
-  List* relocItems=getRelocationItemsFor(patchedBin,symIdx);
   applyRelocations(relocItems,IN_MEM);
 }
 
