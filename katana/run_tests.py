@@ -13,8 +13,6 @@ if os.path.exists("katana_log"):
   os.remove("katana_log")
 if os.path.exists("katana_err_log"):
   os.remove("katana_err_log")
-if os.path.exists("validator_log"):
-  os.remove("validator_log")
 
 def runTestInDir(dir,execName="test"):
   msg="running test "+os.path.basename(dir)
