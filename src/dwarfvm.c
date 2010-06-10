@@ -221,7 +221,6 @@ List* makePatchData(PoRegRule* rule,SpecialRegsState* state,ElfInfo* patch,ElfIn
     break;
   case ERRT_RECURSE_FIXUP_POINTER:
     {
-      break;
       //there are some special challenges when fixing up a pointer
       //0. make sure it isn't a NULL pointer
       //1. we have to make sure we have't already fixed up at that location yet
