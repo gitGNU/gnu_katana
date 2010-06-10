@@ -606,6 +606,7 @@ void katanaPLT()
     pltRelScnName=".rel.plt";
     pltRelScn=getSectionByName(targetBin,pltRelScnName);
   }
+  Elf_Scn* originalPltRelScn=pltRelScn;
   if(pltRelScn)
   {
     char buffer[128];
@@ -635,11 +636,13 @@ void katanaPLT()
       oldAddress=oldGOTAddress;
       newAddress=newGOTAddress;
     }
+    int scnIdx=elf_ndxscn(originalPltRelScn);
     for(int i=0;i<numRelocations;i++)
     {
-      RelocInfo* reloc=getRelocationEntryAtOffset(patchedBin,pltRelScn,i*shdr.sh_entsize);
+      RelocInfo* reloc=getRelocationEntryAtOffset(patchedBin,originalPltRelScn,i*shdr.sh_entsize);
       //todo: should we check the type are are we just assuming it's always JUMP_SLOT
       reloc->r_offset=reloc->r_offset-oldAddress+newAddress;
+      reloc->scnIdx=scnIdx;
       setRelocationEntryAtOffset(reloc,pltRelScn,i*shdr.sh_entsize);
     }
   }
