@@ -283,6 +283,21 @@ uint leb128ToUInt(byte* bytes,usint* outLEBBytesRead)
   return val;
 }
 
+word_t leb128ToUWord(byte* bytes,usint* outLEBBytesRead)
+{
+
+  usint resultBytes;
+  //valgrind gives this as a mem leak, but I can't figure out why,
+  //as I free the result below. . .
+  byte* result=decodeLEB128(bytes,false,&resultBytes,outLEBBytesRead);
+  //printf("result bytes is %i\n",resultBytes);
+  assert(resultBytes <= sizeof(word_t));
+  word_t val=0;
+  memcpy(&val,result,resultBytes);
+  free(result);
+  return val;
+}
+
 void printInstruction(RegInstruction inst)
 {
   switch(inst.type)
