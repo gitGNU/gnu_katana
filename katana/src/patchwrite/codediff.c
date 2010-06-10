@@ -180,7 +180,7 @@ bool areSubprogramsIdentical(SubprogramInfo* patcheeFunc,SubprogramInfo* patched
       //but the chances of false negatives (which could lead to system instability)
       //are small. False positives will lead to more functions than necessary
       //being patched, which may make it harder to apply a patch
-      if(getAddendForReloc(relocOld) != getAddendForReloc(relocNew))
+      if(relocOld->r_addend != relocNew->r_addend)
       {
         retval=false;
         logprintf(ELL_INFO_V1,ELS_CODEDIFF,"subprogram for %s changed, relocation addends differ for symbol '%s'' in section %s (ndx %i)\n",patcheeFunc->name,newSymName,scnNameNew,(int)symNew.st_shndx);

@@ -14,23 +14,13 @@
 #include "elfparse.h"
 #include <gelf.h>
 
-typedef enum
-{
-  ERT_REL,
-  ERT_RELA,
-} E_RELOC_TYPE;
-
+//we always store the addend for relocations, it's just easier that way
 typedef struct
 {
-  /*GElf_Rel rel;//the relocation
-  GElf_Rela rela;
-  
-  */
   addr_t r_offset;
   idx_t symIdx;//extracted from r_info
   byte relocType;//extracted from r_info
-  addr_t r_addend;//may not always be valid. 0 if invalid
-  E_RELOC_TYPE type;//if ERT_RELA then r_addend is valid, otherwise it is not
+  addr_t r_addend;
   ElfInfo* e;//the elf object the relocation is for
   int scnIdx;//which section this relocation applies to in e
 } RelocInfo;
@@ -60,18 +50,13 @@ RelocInfo* getRelocationEntryAtOffset(ElfInfo* e,Elf_Scn* relocScn,addr_t offset
 void setRelocationEntryAtOffset(RelocInfo* reloc,Elf_Scn* relocScn,addr_t offset);
 
 
-//apply the given relocation using oldSym for reference
-//to calculate the offset from the symol address
-//oldSym may be NULL if the relocation type is ERT_RELA instead of ERT_REL
+//apply the given relocation
 //type determines whether the relocation is being applied
 //in-memory or on-disk or both
-void applyRelocation(RelocInfo* rel,GElf_Sym* oldSym,ELF_STORAGE_TYPE type);
+void applyRelocation(RelocInfo* rel,ELF_STORAGE_TYPE type);
 
 //apply a list of relocations (list value type is GElf_Reloc)
-//oldElf is the elf object containing the symbol information
-//that items were originally located against. This is necessary
-//to compute the offsets from symbols
-void applyRelocations(List* relocs,ElfInfo* oldElf,ELF_STORAGE_TYPE type);
+void applyRelocations(List* relocs,ELF_STORAGE_TYPE type);
 
 
 //apply all relocations in an executable

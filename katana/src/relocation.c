@@ -47,7 +47,7 @@ void applyAllRelocations(ElfInfo* e,ElfInfo* oldElf)
       }
     }
   }
-  applyRelocations(relocsHead,oldElf,ON_DISK);
+  applyRelocations(relocsHead,ON_DISK);
   deleteList(relocsHead,free);
 }
 
@@ -131,12 +131,11 @@ void setRelocationEntryAtOffset(RelocInfo* reloc,Elf_Scn* relocScn,addr_t offset
     death("in getRelocationItemsInRange, could not get shdr for reloc section\n");
   }
   assert(SHT_REL==shdr.sh_type || SHT_RELA==shdr.sh_type);
-  E_RELOC_TYPE type=SHT_REL==shdr.sh_type?ERT_REL:ERT_RELA;
   Elf_Data* data=elf_getdata(relocScn,NULL);
   assert(shdr.sh_size>offset);
   ElfXX_Rel rel;
   ElfXX_Rela rela;
-  if(ERT_REL==type)
+  if(SHT_REL==shdr.sh_type)
   {
     rel.r_offset=reloc->r_offset;
     rel.r_info=ELFXX_R_INFO(reloc->symIdx,reloc->relocType);
@@ -159,7 +158,6 @@ RelocInfo* getRelocationEntryAtOffset(ElfInfo* e,Elf_Scn* relocScn,addr_t offset
     death("in getRelocationItemsInRange, could not get shdr for reloc section\n");
   }
   assert(SHT_REL==shdr.sh_type || SHT_RELA==shdr.sh_type);
-  E_RELOC_TYPE type=SHT_REL==shdr.sh_type?ERT_REL:ERT_RELA;
   Elf_Data* data=elf_getdata(relocScn,NULL);
   assert(shdr.sh_size>offset);
   int scnIdx=shdr.sh_info;//section relocation applies to
@@ -168,8 +166,7 @@ RelocInfo* getRelocationEntryAtOffset(ElfInfo* e,Elf_Scn* relocScn,addr_t offset
   RelocInfo* reloc=zmalloc(sizeof(RelocInfo));
   reloc->e=e;
   reloc->scnIdx=scnIdx;
-  reloc->type=type;
-  if(ERT_REL==type)
+  if(SHT_REL==shdr.sh_type)
   {
     memcpy(&rel,data->d_buf+offset,sizeof(rel));
     reloc->r_offset=rel.r_offset;
@@ -187,13 +184,8 @@ RelocInfo* getRelocationEntryAtOffset(ElfInfo* e,Elf_Scn* relocScn,addr_t offset
   return reloc;
 }
 
-//apply the given relocation using oldSym for reference
-//to calculate the offset from the symol address
-//oldSym may be NULL if the relocation type is ERT_RELA instead of ERT_REL
-//todo: this function is poorly written. It draws too large a distinction
-//      between REL and RELA. If REL just need some extra code to compute the addend,
-//      then process as for RELA.
-void applyRelocation(RelocInfo* rel,GElf_Sym* oldSym,ELF_STORAGE_TYPE type)
+//apply the given relocation
+void applyRelocation(RelocInfo* rel,ELF_STORAGE_TYPE type)
 {
   Elf_Scn* relScn=elf_getscn(rel->e->e,rel->scnIdx);
   GElf_Shdr shdr;
@@ -244,59 +236,36 @@ void applyRelocation(RelocInfo* rel,GElf_Sym* oldSym,ELF_STORAGE_TYPE type)
   else
   {
     addr_t addrNew=sym.st_value;
-    if(ERT_REL==rel->type)
+    logprintf(ELL_INFO_V2,ELS_RELOCATION,"applying RELA relocation at 0x%x for symbol %s\n",(uint)addrToBeRelocated,getString(rel->e,sym.st_name));
+    logprintf(ELL_INFO_V3,ELS_RELOCATION,"\tRelocation type is %i and addend is 0x%x\n",rel->relocType,rel->r_addend);
+    if(R_386_32==rel->relocType || R_X86_64_32==rel->relocType || R_X86_64_64==rel->relocType)
     {
-      addr_t addrOld=oldSym->st_value;
-      addr_t oldAddrAccessed=0;
-      if(rel->relocType==R_386_32 || rel->relocType==R_X86_64_32)
+      logprintf(ELL_INFO_V3,ELS_RELOCATION,"\tRELA relocation at 0x%zx is straight 32 or 64 bit\n",addrToBeRelocated);
+      newAddrAccessed=addrNew+rel->r_addend;
+#ifdef KATANA_X86_64_ARCH
+      if(R_X86_64_32==rel->relocType)
       {
-        assert(sym.st_shndx!=SHN_UNDEF &&
-               sym.st_shndx!=SHN_ABS &&
-               sym.st_shndx!=SHN_COMMON);
-        //todo: support abs and common sections
-        //oldAddrAccessed=getWordAtAbs(elf_getscn(rel->e->e,sym.st_shndx),rel->r_offset,IN_MEM);
-        oldAddrAccessed=getWordAtAbs(elf_getscn(rel->e->e,rel->scnIdx),rel->r_offset,IN_MEM);
-      }
-      else
-      {
-        death("relocation type we can't handle yet (for REL)\n");
-      }
-      uint offset=oldAddrAccessed-addrOld;
-      newAddrAccessed=addrNew+offset;
-    }
-    else //RELA
-    {
-      logprintf(ELL_INFO_V2,ELS_RELOCATION,"applying RELA relocation at 0x%x for symbol %s\n",(uint)addrToBeRelocated,getString(rel->e,sym.st_name));
-      logprintf(ELL_INFO_V3,ELS_RELOCATION,"\tRelocation type is %i and addend is 0x%x\n",rel->relocType,rel->r_addend);
-      if(R_386_32==rel->relocType || R_X86_64_32==rel->relocType || R_X86_64_64==rel->relocType)
-      {
-        logprintf(ELL_INFO_V3,ELS_RELOCATION,"\tRELA relocation at 0x%zx is straight 32 or 64 bit\n",addrToBeRelocated);
-        newAddrAccessed=addrNew+rel->r_addend;
-        #ifdef KATANA_X86_64_ARCH
-        if(R_X86_64_32==rel->relocType)
-        {
-          bytesInAddr=4;//not using all 8 bytes the architecture might suggest
-        }
-        #endif
-      }
-      else if(R_386_PC32==rel->relocType || R_X86_64_PC32==rel->relocType)
-      {
-        logprintf(ELL_INFO_V3,ELS_RELOCATION,"\tRELA relocation at 0x%zx is PC32\n",addrToBeRelocated);
-        #ifdef KATANA_X86_64_ARCH
         bytesInAddr=4;//not using all 8 bytes the architecture might suggest
-        #endif
-        logprintf(ELL_INFO_V4,ELS_RELOCATION,"\taddrNew: 0x%zx, r_offset: 0x%zx\n",addrNew,rel->r_offset);
-        newAddrAccessed=addrNew+rel->r_addend-rel->r_offset;
+      }
+#endif
+    }
+    else if(R_386_PC32==rel->relocType || R_X86_64_PC32==rel->relocType)
+    {
+      logprintf(ELL_INFO_V3,ELS_RELOCATION,"\tRELA relocation at 0x%zx is PC32\n",addrToBeRelocated);
+#ifdef KATANA_X86_64_ARCH
+      bytesInAddr=4;//not using all 8 bytes the architecture might suggest
+#endif
+      logprintf(ELL_INFO_V4,ELS_RELOCATION,"\taddrNew: 0x%zx, r_offset: 0x%zx\n",addrNew,rel->r_offset);
+      newAddrAccessed=addrNew+rel->r_addend-rel->r_offset;
 
-      }
-      else if(R_X86_64_32S==rel->relocType)
-      {
-        newAddrAccessed=addrNew+signExtend32To64(rel->r_addend);
-      }
-      else
-      {
-        death("relocation type %i we can't handle yet (for RELA)\n",rel->relocType);
-      }
+    }
+    else if(R_X86_64_32S==rel->relocType)
+    {
+      newAddrAccessed=addrNew+signExtend32To64(rel->r_addend);
+    }
+    else
+    {
+      death("relocation type %i we can't handle yet (for RELA)\n",rel->relocType);
     }
   }
 
@@ -315,27 +284,13 @@ void applyRelocation(RelocInfo* rel,GElf_Sym* oldSym,ELF_STORAGE_TYPE type)
 }
 
 //apply a list of relocations (list value type is GElf_Reloc)
-//oldElf is the elf object containing the symbol information
-//that items were originally located against. This is necessary
-//to compute the offsets from symbols
-void applyRelocations(List* relocs,ElfInfo* oldElf,ELF_STORAGE_TYPE type)
+void applyRelocations(List* relocs,ELF_STORAGE_TYPE type)
 {
   List* li=relocs;
   for(;li;li=li->next)
   {
     RelocInfo* reloc=(RelocInfo*)li->value;
-    int symIdx=reloc->symIdx;
-    int oldSymIdx=reindexSymbol(reloc->e,oldElf,symIdx,ESFF_FUZZY_MATCHING_OK);
-    if(oldSymIdx>0)
-    {
-      GElf_Sym oldSym;
-      getSymbol(oldElf,oldSymIdx,&oldSym);
-      applyRelocation(reloc,&oldSym,type);
-    }
-    else
-    {
-      death("in apply relocations, unable to reindex symbol between the two elf files\n");
-    }
+    applyRelocation(reloc,type);
   }
 }
 
@@ -360,7 +315,6 @@ List* getRelocationItemsInRange(ElfInfo* e,Elf_Scn* relocScn,addr_t lowAddr,addr
     death("in getRelocationItemsInRange, could not get shdr for reloc section\n");
   }
   assert(SHT_REL==shdr.sh_type || SHT_RELA==shdr.sh_type);
-  E_RELOC_TYPE type=SHT_REL==shdr.sh_type?ERT_REL:ERT_RELA;
   Elf_Data* data=elf_getdata(relocScn,NULL);
   int scnIdx=shdr.sh_info;//section relocation applies to
   GElf_Rel rel;
@@ -372,9 +326,8 @@ List* getRelocationItemsInRange(ElfInfo* e,Elf_Scn* relocScn,addr_t lowAddr,addr
       reloc=zmalloc(sizeof(RelocInfo));
       reloc->e=e;
       reloc->scnIdx=scnIdx;
-      reloc->type=type;
     }
-    if(ERT_REL==type)
+    if(SHT_REL==shdr.sh_type)
     {
       gelf_getrel(data,i,&rel);
       if(rel.r_offset < lowAddr || rel.r_offset > highAddr)
@@ -384,6 +337,8 @@ List* getRelocationItemsInRange(ElfInfo* e,Elf_Scn* relocScn,addr_t lowAddr,addr
       reloc->r_offset=rel.r_offset;
       reloc->relocType=ELF64_R_TYPE(rel.r_info);//elf64 because it's GElf
       reloc->symIdx=ELF64_R_SYM(rel.r_info);//elf64 because it's GElf
+      reloc->r_addend=computeAddend(e,reloc->relocType,reloc->symIdx,reloc->r_offset,reloc->scnIdx);
+
     }
     else //RELA
     {
@@ -438,7 +393,6 @@ List* getRelocationItemsFor(ElfInfo* e,int symIdx)
         {
           reloc=zmalloc(sizeof(RelocInfo));
           reloc->e=e;
-          reloc->type=shdr.sh_type;
         }
         reloc->scnIdx=scnIdx;
         if(SHT_REL==shdr.sh_type)
@@ -490,6 +444,7 @@ List* getRelocationItemsFor(ElfInfo* e,int symIdx)
 
 
 //compute an addend for when we have REL instead of RELA
+//type is relocation type
 //scnIdx is section the relocation refers to
 addr_t computeAddend(ElfInfo* e,byte type,idx_t symIdx,addr_t r_offset,idx_t scnIdx)
 {
@@ -545,16 +500,6 @@ addr_t computeAddend(ElfInfo* e,byte type,idx_t symIdx,addr_t r_offset,idx_t scn
     break;
   }
   return 0;
-}
-
-//if the reloc has an addend, return it, otherwise compute it
-addr_t getAddendForReloc(RelocInfo* reloc)
-{
-  if(ERT_RELA==reloc->type)
-  {
-    return reloc->r_addend;
-  }
-  return computeAddend(reloc->e,reloc->relocType,reloc->symIdx,reloc->r_offset,reloc->scnIdx);
 }
 
 //get the section containing relocations for the given function
