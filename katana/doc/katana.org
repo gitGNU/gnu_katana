@@ -8,7 +8,32 @@
        Katana: A Userland Toolchain-Oriented Hotpatching System
 
 * Introduction
-  
+  Katana aims to provide a hot-patching system for userland. Further
+  it aims to work with existing toolchains and formats so as to be
+  easy to use and to hopefully pave the way for incorporating patching
+  as a standard part of the toolchain. Because of this aim, Katana
+  operates at the object level rather than requiring any access to the
+  source code itself. This has the added bonus of making it, in
+  theory, language agnostic (although no work has been done to test it
+  with anything besides programs written in C). A diagram of software
+  lifecycle with hotpatching is shown below
+
+  [[./software_lifecycle.png]]
+
+  There are other hotpatching systems in existence. The curious are
+  invited to explore Ginseng and Polus. Both of these systems parse
+  the source code, which adds significant complexity to them and
+  results in significant programmer annotation of the code to give
+  hints to the systems. Ginseng uses complicated type-wrappers
+  when patching variables which does not fit cleanly with existing
+  executables and has some impact on the performance of the
+  software. Ginseng is considerably more mature than Katana,
+  however. Neither system is production ready, but Ginseng is probably
+  closer than Katana at the moment.
+
+  The system most like Katana in many ways is KSplice, and the curious
+  reader is definitely invited to investigate. KSplice patches the
+  kernel and not userland, does not attempt to patch variables, 
 * What Katana Does
 * What Katan Does Not Do (Yet)
 * How to Use Katana
