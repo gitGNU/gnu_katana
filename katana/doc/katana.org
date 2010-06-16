@@ -169,3 +169,12 @@
   + Patch safety checking: make sure a patch actually corresponds to
     the process it's being applied to
   + Storing warnings from generation inside a patch
+* Credits and Licensing
+  Katana is under development at Dartmouth College and Copyright 2010
+  Dartmouth College. It may be distributed under the terms of the GNU
+  General Public License with attribution to Dartmouth College as
+  specified in the file COPYING distributed with Katana.
+
+  Katana is being written by James Oakley and was designed
+  by Sergey Bratus, Ashwin Ramaswamy, James Oakley, Michael Locasto,
+  and Sean Smith.
