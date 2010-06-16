@@ -1,7 +1,7 @@
 /*
   File: write_to_dwarf.c
   Author: James Oakley
-  Written For: Dartmouth College
+  Copyright (C): 2010 Dartmouth College
   License: GNU General Public License
   Project:  katana
   Date: March 2010

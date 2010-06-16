@@ -2,7 +2,7 @@
 
   FILE: map.c
   Author: James Oakley
-  Written For: Dartmouth College
+  Copyright (C): 2010 Dartmouth College
   License: GNU General Public License
   Data: May, 2009
   Description: structure and prototypes for a general-purpose mapping
