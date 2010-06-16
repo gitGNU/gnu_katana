@@ -7,7 +7,7 @@ lang="en" xml:lang="en">
 <title>Katana: A Userland Toolchain-Oriented Hotpatching System</title>
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
 <meta name="generator" content="Org-mode"/>
-<meta name="generated" content="2010-05-24 14:33:58 EDT"/>
+<meta name="generated" content="2010-06-15 21:55:54 PDT"/>
 <meta name="author" content="James Oakley"/>
 <meta name="description" content=""/>
 <meta name="keywords" content=""/>
@@ -78,21 +78,23 @@ lang="en" xml:lang="en">
 <div id="text-table-of-contents">
 <ul>
 <li><a href="#sec-1">1 Introduction </a></li>
-<li><a href="#sec-2">2 What Katana Does </a></li>
-<li><a href="#sec-3">3 What Katan Does Not Do (Yet) </a></li>
-<li><a href="#sec-4">4 How to Use Katana </a>
+<li><a href="#sec-2">2 Other Systems </a></li>
+<li><a href="#sec-3">3 What Katana Does </a></li>
+<li><a href="#sec-4">4 What Katana Does Not Do (Yet) </a></li>
+<li><a href="#sec-5">5 What Katana May Never Do </a></li>
+<li><a href="#sec-6">6 How to Use Katana </a>
 <ul>
-<li><a href="#sec-4.1">4.1 Preparing a Package for Patching Support </a></li>
-<li><a href="#sec-4.2">4.2 To Generate a Patch </a></li>
-<li><a href="#sec-4.3">4.3 To Apply a Patch </a></li>
-<li><a href="#sec-4.4">4.4 To View a Patch </a></li>
-<li><a href="#sec-4.5">4.5 See Also </a></li>
+<li><a href="#sec-6.1">6.1 Preparing a Package for Patching Support </a></li>
+<li><a href="#sec-6.2">6.2 To Generate a Patch </a></li>
+<li><a href="#sec-6.3">6.3 To Apply a Patch </a></li>
+<li><a href="#sec-6.4">6.4 To View a Patch </a></li>
+<li><a href="#sec-6.5">6.5 See Also </a></li>
 </ul>
 </li>
-<li><a href="#sec-5">5 Patch Object Format </a></li>
-<li><a href="#sec-6">6 Patch Generation Process </a></li>
-<li><a href="#sec-7">7 Patch Application Process </a></li>
-<li><a href="#sec-8">8 Roadmap </a></li>
+<li><a href="#sec-7">7 Patch Object Format </a></li>
+<li><a href="#sec-8">8 Patch Generation Process </a></li>
+<li><a href="#sec-9">9 Patch Application Process </a></li>
+<li><a href="#sec-10">10 Roadmap </a></li>
 </ul>
 </div>
 </div>
@@ -101,30 +103,142 @@ lang="en" xml:lang="en">
 <h2 id="sec-1"><span class="section-number-2">1</span> Introduction </h2>
 <div class="outline-text-2" id="text-1">
 
+<p>Katana aims to provide a hot-patching system for userland. Further
+it aims to work with existing toolchains and formats so as to be
+easy to use and to hopefully pave the way for incorporating patching
+as a standard part of the toolchain. Because of this aim, Katana
+operates at the object level rather than requiring any access to the
+source code itself. This has the added bonus of making it, in
+theory, language agnostic (although no work has been done to test it
+with anything besides programs written in C). A diagram of software
+lifecycle with hotpatching is shown below
+</p>
 
-</div>
+
+
+<img src="./software_lifecycle.png" /><br /><br />
+
+
+<p>
+This document is intended to provide a users guide to Katana,
+insight into its inner workings, and discussion of its flaws and
+plans for the future. As the software is not complete, making use of
+Katana without understanding the inner workings and technical
+shortcomings is not recommended. Nevertheless, the only sections of
+this document necessary for "Users' Guide" purposes are 
+<a href="#sec-3">"What Katana Does"</a>, <a href="#sec-4">"What Katana Does Not Do (Yet)"</a>, and most importantly 
+<a href="#sec-6">"How to Use Katana"</a>.
+</p>
+<p>
+This document is a work in progress. It is not a polished guide yet.
+</p></div>
 
 </div>
 
 <div id="outline-container-2" class="outline-2">
-<h2 id="sec-2"><span class="section-number-2">2</span> What Katana Does </h2>
+<h2 id="sec-2"><span class="section-number-2">2</span> Other Systems </h2>
 <div class="outline-text-2" id="text-2">
 
-</div>
+<p>There are other hotpatching systems in existence. The curious are
+invited to explore Ginseng and Polus. Both of these systems parse
+the source code, which adds significant complexity to them and
+results in significant programmer annotation of the code to give
+hints to the systems. Ginseng uses complicated type-wrappers
+when patching variables which does not fit cleanly with existing
+executables and has some impact on the performance of the
+software. Ginseng is considerably more mature than Katana,
+however. Neither system is production ready, but Ginseng is probably
+closer than Katana at the moment.
+</p>
+<p>
+The system most like Katana in many ways is KSplice, and the curious
+reader is definitely invited to investigate. KSplice patches the
+kernel and not userland, does not attempt to patch variables, and
+creates patches as kernel modules rather than working towards a
+general ELF-based patch format.
+</p></div>
 
 </div>
 
 <div id="outline-container-3" class="outline-2">
-<h2 id="sec-3"><span class="section-number-2">3</span> What Katan Does Not Do (Yet) </h2>
+<h2 id="sec-3"><span class="section-number-2">3</span> What Katana Does </h2>
 <div class="outline-text-2" id="text-3">
 
+<ul>
+<li>
+Runs on x86 and x86-64
+</li>
+<li>
+Generates patches for simple programs
+</li>
+<li>
+Applies simple patches
+</li>
+</ul>
 </div>
 
 </div>
 
 <div id="outline-container-4" class="outline-2">
-<h2 id="sec-4"><span class="section-number-2">4</span> How to Use Katana </h2>
+<h2 id="sec-4"><span class="section-number-2">4</span> What Katana Does Not Do (Yet) </h2>
 <div class="outline-text-2" id="text-4">
+
+<ul>
+<li>
+Patch any major programs: it has not yet been demonstrated on
+anything more than toy examples
+</li>
+<li>
+Provide any method to handle opaque data it cannot patch (void*,
+situations where which action a user would prefer is unclear, etc)
+</li>
+<li>
+Patch previously patched processes
+</li>
+<li>
+Provide robust operation
+</li>
+<li>
+Run on any architectures other than x86 and x86-64
+</li>
+<li>
+Tested on any operating system besides Linux
+</li>
+<li>
+Allow for calls in patched code to previously unused functions
+</li>
+<li>
+Work for programs which actually make use of some of the large
+code model features of the x86-64 ABI.
+</li>
+<li>
+And much more
+
+</li>
+</ul>
+
+<p>See <a href="#sec-10">Roadmap</a> for more things which are not complete
+</p>
+</div>
+
+</div>
+
+<div id="outline-container-5" class="outline-2">
+<h2 id="sec-5"><span class="section-number-2">5</span> What Katana May Never Do </h2>
+<div class="outline-text-2" id="text-5">
+
+<ul>
+<li>
+Work on any binary formats besides ELF
+</li>
+</ul>
+</div>
+
+</div>
+
+<div id="outline-container-6" class="outline-2">
+<h2 id="sec-6"><span class="section-number-2">6</span> How to Use Katana </h2>
+<div class="outline-text-2" id="text-6">
 
 <p>Katana is intended to be used in two stages. The first stage
 generates a patch object from two different versions of an
@@ -143,9 +257,9 @@ makes, etc.
 </p>
 </div>
 
-<div id="outline-container-4.1" class="outline-3">
-<h3 id="sec-4.1"><span class="section-number-3">4.1</span> Preparing a Package for Patching Support </h3>
-<div class="outline-text-3" id="text-4.1">
+<div id="outline-container-6.1" class="outline-3">
+<h3 id="sec-6.1"><span class="section-number-3">6.1</span> Preparing a Package for Patching Support </h3>
+<div class="outline-text-3" id="text-6.1">
 
 <p>Katana aims to be much less invasive than other hot-patching system
 and require minimal work to be used with any project. It does,
@@ -180,75 +294,150 @@ Required CFLAGS:
 
 </div>
 
-<div id="outline-container-4.2" class="outline-3">
-<h3 id="sec-4.2"><span class="section-number-3">4.2</span> To Generate a Patch </h3>
-<div class="outline-text-3" id="text-4.2">
+<div id="outline-container-6.2" class="outline-3">
+<h3 id="sec-6.2"><span class="section-number-3">6.2</span> To Generate a Patch </h3>
+<div class="outline-text-3" id="text-6.2">
+
+<p>Let the location of your project be /project. You must have two
+versions of your software available: the version identical to the
+running software which must be hotpatched, call it v0, and the
+version to which you wish to hotpatch the running software, call it
+v1. Let foo be the name of your program. Then /project/v0/foo must
+exist and /project/v0 must also contain (possibly in
+subdirectories) all of the object files which contributed to
+/project/v0/foo. The source code itself is immaterial, as Katana
+does not parse it. Similarly, /project/v1/foo must exist and
+/project/v1 contain all of the object files contributing to
+/project/v1/foo. Katana is then invoked as
+</p>
+<p>
+<code>katana -g [-o OUTPUT_FILE] /project/v0 /project/v1 foo</code>
+</p>
+<p>
+or more formally
+</p>
+<p>
+<code>katana -g [-o OUTUT_FILE] OLD_OBJECTS_DIR NEW_OBJECTS_DIR EXECUTABLE_NAME</code>
+</p>
+<p>
+If <code>-o OUTPUT_FILE</code> is not specified, the output file will be <code>OLD_OBJECTS_DIR/EXECUTABLE_NAME.po</code>
+</p></div>
 
 </div>
 
+<div id="outline-container-6.3" class="outline-3">
+<h3 id="sec-6.3"><span class="section-number-3">6.3</span> To Apply a Patch </h3>
+<div class="outline-text-3" id="text-6.3">
+
+<p>The process to be patched is running with a pid of PID. It can be
+patched from its current version to a more recent version by the
+Patch Object (PO) file PATCH. Katana is then invoked as
+</p>
+<p>
+<code>katana -p [-s] PATCH PID</code>
+</p>
+<p>
+If all goes well, the patcher will run, print out some status
+messages, and leave your program in better state than it found
+it. The optional -s flag tells Katana to stop the target program
+after patching it and detaching from it. This is mostly of use for
+debugging Katana.
+</p></div>
+
 </div>
 
-<div id="outline-container-4.3" class="outline-3">
-<h3 id="sec-4.3"><span class="section-number-3">4.3</span> To Apply a Patch </h3>
-<div class="outline-text-3" id="text-4.3">
+<div id="outline-container-6.4" class="outline-3">
+<h3 id="sec-6.4"><span class="section-number-3">6.4</span> To View a Patch </h3>
+<div class="outline-text-3" id="text-6.4">
+
+<p>One of the goals of Katana and its Patch Object (PO) format is to
+increase the transparency of patches: a user about to apply a patch
+should know what it will do. This goal is not yet fully realized,
+but it is possible to view some information about a patch with
+</p>
+<p>
+<code>katana -l PATCH</code>
+</p></div>
 
 </div>
 
-</div>
+<div id="outline-container-6.5" class="outline-3">
+<h3 id="sec-6.5"><span class="section-number-3">6.5</span> See Also </h3>
+<div class="outline-text-3" id="text-6.5">
 
-<div id="outline-container-4.4" class="outline-3">
-<h3 id="sec-4.4"><span class="section-number-3">4.4</span> To View a Patch </h3>
-<div class="outline-text-3" id="text-4.4">
-
-</div>
-
-</div>
-
-<div id="outline-container-4.5" class="outline-3">
-<h3 id="sec-4.5"><span class="section-number-3">4.5</span> See Also </h3>
-<div class="outline-text-3" id="text-4.5">
-
-<p>the katana manpage
+<p>the katana manpage (once it's written, which it is not yet)
 </p></div>
 </div>
 
 </div>
 
-<div id="outline-container-5" class="outline-2">
-<h2 id="sec-5"><span class="section-number-2">5</span> Patch Object Format </h2>
-<div class="outline-text-2" id="text-5">
-
-</div>
-
-</div>
-
-<div id="outline-container-6" class="outline-2">
-<h2 id="sec-6"><span class="section-number-2">6</span> Patch Generation Process </h2>
-<div class="outline-text-2" id="text-6">
-
-</div>
-
-</div>
-
 <div id="outline-container-7" class="outline-2">
-<h2 id="sec-7"><span class="section-number-2">7</span> Patch Application Process </h2>
+<h2 id="sec-7"><span class="section-number-2">7</span> Patch Object Format </h2>
 <div class="outline-text-2" id="text-7">
 
-</div>
+<p>This section of the document is not yet written. It will provide a description and specification of the PO format used by Katana
+</p></div>
 
 </div>
 
 <div id="outline-container-8" class="outline-2">
-<h2 id="sec-8"><span class="section-number-2">8</span> Roadmap </h2>
+<h2 id="sec-8"><span class="section-number-2">8</span> Patch Generation Process </h2>
 <div class="outline-text-2" id="text-8">
 
+<p>This section of the document is not yet written. It will provide a
+description of the internal process that Katana uses to generate a
+patch. Understanding it is not necessary for using Katana.
+</p></div>
+
+</div>
+
+<div id="outline-container-9" class="outline-2">
+<h2 id="sec-9"><span class="section-number-2">9</span> Patch Application Process </h2>
+<div class="outline-text-2" id="text-9">
+
+<p>This section of the document is not yet written. It will provide a
+description of the internal process that Katana uses to apply a
+patch. Understanding it is not necessary for using Katana.
+</p></div>
+
+</div>
+
+<div id="outline-container-10" class="outline-2">
+<h2 id="sec-10"><span class="section-number-2">10</span> Roadmap </h2>
+<div class="outline-text-2" id="text-10">
+
+<p>This section is highly incomplete. Future goals include
+</p><ul>
+<li>
+Better interaction with the heap and dynamically allocated variables
+</li>
+<li>
+Better interaction with void*
+</li>
+<li>
+More efficient use of .rodata
+</li>
+<li>
+Patching already patched processes
+</li>
+<li>
+Patch composition
+</li>
+<li>
+Patch safety checking: make sure a patch actually corresponds to
+the process it's being applied to
+</li>
+<li>
+Storing warnings from generation inside a patch
+</li>
+</ul>
 </div>
 </div>
 <div id="postamble">
 <p class="author"> Author: James Oakley
 <a href="mailto:james.oakley@dartmouth.edu">&lt;james.oakley@dartmouth.edu&gt;</a>
 </p>
-<p class="date"> Date: 2010-05-24 14:33:58 EDT</p>
+<p class="date"> Date: 2010-06-15 21:55:54 PDT</p>
 <p class="creator">HTML generated by org-mode 6.33x in emacs 23</p>
 </div>
 </div>
