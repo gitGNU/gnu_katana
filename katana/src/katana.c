@@ -112,15 +112,15 @@ int main(int argc,char** argv)
     case 's':
       if(EKM_NONE==mode)
       {
-	death("Must specify a mode (-g,-p, or -l) before any other options");
+        death("Must specify a mode (-g,-p, or -l) before any other options");
       }
       if(EKM_PATCH_INFO==mode)
       {
-	flags|=PF_STOP_TARGET;
+        flags|=PF_STOP_TARGET;
       }
       else
       {
-	death("-s flag has no meaning for this mode\n");
+        death("-s flag has no meaning for this mode\n");
       }
       
     }
