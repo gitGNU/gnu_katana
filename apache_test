@@ -1,2 +1,3 @@
 #!/bin/sh
+echo THIS TEST IS EXPECTED TO FAIL. IT HAS NEVER WORKED YET.
 ./run_tests.py real_tests/apache
