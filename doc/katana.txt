@@ -2,37 +2,109 @@
        ========================================================
 
 Author: James Oakley <james.oakley@dartmouth.edu>
-Date: 2010-05-24 14:33:54 EDT
+Date: 2010-06-15 22:07:39 PDT
+
 
 
 Table of Contents
 =================
 1 Introduction 
-2 What Katana Does 
-3 What Katan Does Not Do (Yet) 
-4 How to Use Katana 
-    4.1 Preparing a Package for Patching Support 
-    4.2 To Generate a Patch 
-    4.3 To Apply a Patch 
-    4.4 To View a Patch 
-    4.5 See Also 
-5 Patch Object Format 
-6 Patch Generation Process 
-7 Patch Application Process 
-8 Roadmap 
+2 Other Systems 
+3 What Katana Does 
+4 What Katana Does Not Do (Yet) 
+5 What Katana May Never Do 
+6 How to Use Katana 
+    6.1 Preparing a Package for Patching Support 
+    6.2 To Generate a Patch 
+    6.3 To Apply a Patch 
+    6.4 To View a Patch 
+    6.5 See Also 
+7 Patch Object Format 
+8 Patch Generation Process 
+9 Patch Application Process 
+10 Roadmap 
 
 
 1 Introduction 
 ~~~~~~~~~~~~~~~
-  
+  Katana aims to provide a hot-patching system for userland. Further
+  it aims to work with existing toolchains and formats so as to be
+  easy to use and to hopefully pave the way for incorporating patching
+  as a standard part of the toolchain. Because of this aim, Katana
+  operates at the object level rather than requiring any access to the
+  source code itself. This has the added bonus of making it, in
+  theory, language agnostic (although no work has been done to test it
+  with anything besides programs written in C). A diagram of software
+  lifecycle with hotpatching is shown below
 
-2 What Katana Does 
+
+
+
+  This document is intended to provide a users guide to Katana,
+  insight into its inner workings, and discussion of its flaws and
+  plans for the future. As the software is not complete, making use of
+  Katana without understanding the inner workings and technical
+  shortcomings is not recommended. Nevertheless, the only sections of
+  this document necessary for "Users' Guide" purposes are 
+  ["What Katana Does"], ["What Katana Does Not Do (Yet)"], and most importantly 
+  ["How to Use Katana"].
+ 
+  This document is a work in progress. It is not a polished guide yet.
+
+  ["What Katana Does"]: sec-3
+  ["What Katana Does Not Do (Yet)"]: sec-4
+  ["How to Use Katana"]: sec-6
+
+2 Other Systems 
+~~~~~~~~~~~~~~~~
+  There are other hotpatching systems in existence. The curious are
+  invited to explore Ginseng and Polus. Both of these systems parse
+  the source code, which adds significant complexity to them and
+  results in significant programmer annotation of the code to give
+  hints to the systems. Ginseng uses complicated type-wrappers
+  when patching variables which does not fit cleanly with existing
+  executables and has some impact on the performance of the
+  software. Ginseng is considerably more mature than Katana,
+  however. Neither system is production ready, but Ginseng is probably
+  closer than Katana at the moment.
+
+  The system most like Katana in many ways is KSplice, and the curious
+  reader is definitely invited to investigate. KSplice patches the
+  kernel and not userland, does not attempt to patch variables, and
+  creates patches as kernel modules rather than working towards a
+  general ELF-based patch format.
+
+3 What Katana Does 
 ~~~~~~~~~~~~~~~~~~~
+  + Runs on x86 and x86-64
+  + Generates patches for simple programs
+  + Applies simple patches
 
-3 What Katan Does Not Do (Yet) 
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+4 What Katana Does Not Do (Yet) 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  + Patch any major programs: it has not yet been demonstrated on
+    anything more than toy examples
+  + Provide any method to handle opaque data it cannot patch (void*,
+    situations where which action a user would prefer is unclear, etc)
+  + Patch previously patched processes
+  + Provide robust operation
+  + Run on any architectures other than x86 and x86-64
+  + Tested on any operating system besides Linux
+  + Allow for calls in patched code to previously unused functions
+  + Work for programs which actually make use of some of the large
+    code model features of the x86-64 ABI.
+  + And much more
 
-4 How to Use Katana 
+  See [Roadmap] for more things which are not complete
+
+
+  [Roadmap]: sec-10
+
+5 What Katana May Never Do 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  + Work on any binary formats besides ELF
+
+6 How to Use Katana 
 ~~~~~~~~~~~~~~~~~~~~
   Katana is intended to be used in two stages. The first stage
   generates a patch object from two different versions of an
@@ -49,7 +121,7 @@ Table of Contents
   purposes of sanity-checking, determining what changes the patch
   makes, etc.
 
-4.1 Preparing a Package for Patching Support 
+6.1 Preparing a Package for Patching Support 
 =============================================
    Katana aims to be much less invasive than other hot-patching system
    and require minimal work to be used with any project. It does,
@@ -64,27 +136,79 @@ Table of Contents
    Recommended LDFLAGS:
    + --emit-relocs
 
-4.2 To Generate a Patch 
+6.2 To Generate a Patch 
 ========================
+   Let the location of your project be /project. You must have two
+   versions of your software available: the version identical to the
+   running software which must be hotpatched, call it v0, and the
+   version to which you wish to hotpatch the running software, call it
+   v1. Let foo be the name of your program. Then /project/v0/foo must
+   exist and /project/v0 must also contain (possibly in
+   subdirectories) all of the object files which contributed to
+   /project/v0/foo. The source code itself is immaterial, as Katana
+   does not parse it. Similarly, /project/v1/foo must exist and
+   /project/v1 contain all of the object files contributing to
+   /project/v1/foo. Katana is then invoked as
 
-4.3 To Apply a Patch 
+   `katana -g [-o OUTPUT_FILE] /project/v0 /project/v1 foo'
+
+   or more formally
+
+   `katana -g [-o OUTUT_FILE] OLD_OBJECTS_DIR NEW_OBJECTS_DIR EXECUTABLE_NAME'
+
+   If `-o OUTPUT_FILE' is not specified, the output file will be `OLD_OBJECTS_DIR/EXECUTABLE_NAME.po'
+
+6.3 To Apply a Patch 
 =====================
+   The process to be patched is running with a pid of PID. It can be
+   patched from its current version to a more recent version by the
+   Patch Object (PO) file PATCH. Katana is then invoked as
 
-4.4 To View a Patch 
+   `katana -p [-s] PATCH PID'
+
+   If all goes well, the patcher will run, print out some status
+   messages, and leave your program in better state than it found
+   it. The optional -s flag tells Katana to stop the target program
+   after patching it and detaching from it. This is mostly of use for
+   debugging Katana.
+
+6.4 To View a Patch 
 ====================
+   One of the goals of Katana and its Patch Object (PO) format is to
+   increase the transparency of patches: a user about to apply a patch
+   should know what it will do. This goal is not yet fully realized,
+   but it is possible to view some information about a patch with
 
-4.5 See Also 
+   `katana -l PATCH'
+
+6.5 See Also 
 =============
-   the katana manpage
+   the katana manpage (once it's written, which it is not yet)
 
-5 Patch Object Format 
+7 Patch Object Format 
 ~~~~~~~~~~~~~~~~~~~~~~
+  This section of the document is not yet written. It will provide a description and specification of the PO format used by Katana
 
-6 Patch Generation Process 
+8 Patch Generation Process 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  This section of the document is not yet written. It will provide a
+  description of the internal process that Katana uses to generate a
+  patch. Understanding it is not necessary for using Katana.
 
-7 Patch Application Process 
+9 Patch Application Process 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  This section of the document is not yet written. It will provide a
+  description of the internal process that Katana uses to apply a
+  patch. Understanding it is not necessary for using Katana.
 
-8 Roadmap 
-~~~~~~~~~~
+10 Roadmap 
+~~~~~~~~~~~
+  This section is highly incomplete. Future goals include
+  + Better interaction with the heap and dynamically allocated variables
+  + Better interaction with void*
+  + More efficient use of .rodata
+  + Patching already patched processes
+  + Patch composition
+  + Patch safety checking: make sure a patch actually corresponds to
+    the process it's being applied to
+  + Storing warnings from generation inside a patch
