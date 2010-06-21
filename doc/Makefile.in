@@ -69,7 +69,10 @@ am__nobase_list = $(am__nobase_strip_setup); \
 am__base_list = \
   sed '$$!N;$$!N;$$!N;$$!N;$$!N;$$!N;$$!N;s/\n/ /g' | \
   sed '$$!N;$$!N;$$!N;$$!N;s/\n/ /g'
-am__installdirs = "$(DESTDIR)$(docdir)"
+man1dir = $(mandir)/man1
+am__installdirs = "$(DESTDIR)$(man1dir)" "$(DESTDIR)$(docdir)"
+NROFF = nroff
+MANS = $(man1_MANS)
 DATA = $(dist_doc_DATA)
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 ACLOCAL = @ACLOCAL@
@@ -170,6 +173,7 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 dist_doc_DATA = katana.html katana.org  katana.txt katana.pdf
 EXTRA_DIST = katana.tex
+man1_MANS = katana.man
 all: all-am
 
 .SUFFIXES:
@@ -203,6 +207,40 @@ $(top_srcdir)/configure:  $(am__configure_deps)
 $(ACLOCAL_M4):  $(am__aclocal_m4_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 $(am__aclocal_m4_deps):
+install-man1: $(man1_MANS)
+	@$(NORMAL_INSTALL)
+	test -z "$(man1dir)" || $(MKDIR_P) "$(DESTDIR)$(man1dir)"
+	@list='$(man1_MANS)'; test -n "$(man1dir)" || exit 0; \
+	{ for i in $$list; do echo "$$i"; done; \
+	} | while read p; do \
+	  if test -f $$p; then d=; else d="$(srcdir)/"; fi; \
+	  echo "$$d$$p"; echo "$$p"; \
+	done | \
+	sed -e 'n;s,.*/,,;p;h;s,.*\.,,;s,^[^1][0-9a-z]*$$,1,;x' \
+	      -e 's,\.[0-9a-z]*$$,,;$(transform);G;s,\n,.,' | \
+	sed 'N;N;s,\n, ,g' | { \
+	list=; while read file base inst; do \
+	  if test "$$base" = "$$inst"; then list="$$list $$file"; else \
+	    echo " $(INSTALL_DATA) '$$file' '$(DESTDIR)$(man1dir)/$$inst'"; \
+	    $(INSTALL_DATA) "$$file" "$(DESTDIR)$(man1dir)/$$inst" || exit $$?; \
+	  fi; \
+	done; \
+	for i in $$list; do echo "$$i"; done | $(am__base_list) | \
+	while read files; do \
+	  test -z "$$files" || { \
+	    echo " $(INSTALL_DATA) $$files '$(DESTDIR)$(man1dir)'"; \
+	    $(INSTALL_DATA) $$files "$(DESTDIR)$(man1dir)" || exit $$?; }; \
+	done; }
+
+uninstall-man1:
+	@$(NORMAL_UNINSTALL)
+	@list='$(man1_MANS)'; test -n "$(man1dir)" || exit 0; \
+	files=`{ for i in $$list; do echo "$$i"; done; \
+	} | sed -e 's,.*/,,;h;s,.*\.,,;s,^[^1][0-9a-z]*$$,1,;x' \
+	      -e 's,\.[0-9a-z]*$$,,;$(transform);G;s,\n,.,'`; \
+	test -z "$$files" || { \
+	  echo " ( cd '$(DESTDIR)$(man1dir)' && rm -f" $$files ")"; \
+	  cd "$(DESTDIR)$(man1dir)" && rm -f $$files; }
 install-dist_docDATA: $(dist_doc_DATA)
 	@$(NORMAL_INSTALL)
 	test -z "$(docdir)" || $(MKDIR_P) "$(DESTDIR)$(docdir)"
@@ -231,6 +269,19 @@ CTAGS:
 
 
 distdir: $(DISTFILES)
+	@list='$(MANS)'; if test -n "$$list"; then \
+	  list=`for p in $$list; do \
+	    if test -f $$p; then d=; else d="$(srcdir)/"; fi; \
+	    if test -f "$$d$$p"; then echo "$$d$$p"; else :; fi; done`; \
+	  if test -n "$$list" && \
+	    grep 'ab help2man is required to generate this page' $$list >/dev/null; then \
+	    echo "error: found man pages containing the \`missing help2man' replacement text:" >&2; \
+	    grep -l 'ab help2man is required to generate this page' $$list | sed 's/^/         /' >&2; \
+	    echo "       to fix them, install help2man, remove and regenerate the man pages;" >&2; \
+	    echo "       typically \`make maintainer-clean' will remove them" >&2; \
+	    exit 1; \
+	  else :; fi; \
+	else :; fi
 	@srcdirstrip=`echo "$(srcdir)" | sed 's/[].[^$$\\*]/\\\\&/g'`; \
 	topsrcdirstrip=`echo "$(top_srcdir)" | sed 's/[].[^$$\\*]/\\\\&/g'`; \
 	list='$(DISTFILES)'; \
@@ -262,9 +313,9 @@ distdir: $(DISTFILES)
 	done
 check-am: all-am
 check: check-am
-all-am: Makefile $(DATA)
+all-am: Makefile $(MANS) $(DATA)
 installdirs:
-	for dir in "$(DESTDIR)$(docdir)"; do \
+	for dir in "$(DESTDIR)$(man1dir)" "$(DESTDIR)$(docdir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
 	done
 install: install-am
@@ -312,7 +363,7 @@ info: info-am
 
 info-am:
 
-install-data-am: install-dist_docDATA
+install-data-am: install-dist_docDATA install-man
 
 install-dvi: install-dvi-am
 
@@ -328,7 +379,7 @@ install-info: install-info-am
 
 install-info-am:
 
-install-man:
+install-man: install-man1
 
 install-pdf: install-pdf-am
 
@@ -356,7 +407,9 @@ ps: ps-am
 
 ps-am:
 
-uninstall-am: uninstall-dist_docDATA
+uninstall-am: uninstall-dist_docDATA uninstall-man
+
+uninstall-man: uninstall-man1
 
 .MAKE: install-am install-strip
 
@@ -365,11 +418,12 @@ uninstall-am: uninstall-dist_docDATA
 	install install-am install-data install-data-am \
 	install-dist_docDATA install-dvi install-dvi-am install-exec \
 	install-exec-am install-html install-html-am install-info \
-	install-info-am install-man install-pdf install-pdf-am \
-	install-ps install-ps-am install-strip installcheck \
-	installcheck-am installdirs maintainer-clean \
+	install-info-am install-man install-man1 install-pdf \
+	install-pdf-am install-ps install-ps-am install-strip \
+	installcheck installcheck-am installdirs maintainer-clean \
 	maintainer-clean-generic mostlyclean mostlyclean-generic pdf \
-	pdf-am ps ps-am uninstall uninstall-am uninstall-dist_docDATA
+	pdf-am ps ps-am uninstall uninstall-am uninstall-dist_docDATA \
+	uninstall-man uninstall-man1
 
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.

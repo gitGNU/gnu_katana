@@ -1,3 +1,6 @@
+*.o
+*.s
+*.i
 *.po
 *.po.rel
 *_log
