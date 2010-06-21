@@ -1,9 +1,9 @@
 /*
   File: v0/main.c
   Author: James Oakley
-  Written For: Dartmouth College
+  Copyright (C): 2010 Dartmouth College
   License: GNU General Public License
-  Project: Katana - Preliminary Work
+  Project: Katana
   Date: January 10
   Description: Very simple program that exists to have one of its data
                types patched. v1/main.c is the same thing with slight

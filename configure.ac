@@ -1,7 +1,7 @@
 #File: configure.ac
 #Author: James Oakley
-#Tested with Automake 1.10 on Mac OSX (Darwin) and Ubuntu Linux
-#This is the configure.ac file for the phitautext project
+#Copyright (C): 2010 Dartmouth College
+#License: GNU General Public License
 
 AC_DEFUN([doMissingLibrary],[
   AC_MSG_ERROR([A required library is missing, abort])

@@ -2,8 +2,7 @@
        ========================================================
 
 Author: James Oakley <james.oakley@dartmouth.edu>
-Date: 2010-06-15 22:07:39 PDT
-
+Date: 2010-06-20 22:23:26 PDT
 
 
 Table of Contents
@@ -23,6 +22,7 @@ Table of Contents
 8 Patch Generation Process 
 9 Patch Application Process 
 10 Roadmap 
+11 Credits and Licensing 
 
 
 1 Introduction 
@@ -89,7 +89,7 @@ Table of Contents
   + Patch previously patched processes
   + Provide robust operation
   + Run on any architectures other than x86 and x86-64
-  + Tested on any operating system besides Linux
+  + Tested on any operating system besides GNU/Linux
   + Allow for calls in patched code to previously unused functions
   + Work for programs which actually make use of some of the large
     code model features of the x86-64 ABI.
@@ -212,3 +212,16 @@ Table of Contents
   + Patch safety checking: make sure a patch actually corresponds to
     the process it's being applied to
   + Storing warnings from generation inside a patch
+
+11 Credits and Licensing 
+~~~~~~~~~~~~~~~~~~~~~~~~~
+  Katana is under development at Dartmouth College and Copyright 2010
+  Dartmouth College. It may be distributed under the terms of the GNU
+  General Public License with attribution to Dartmouth College as
+  specified in the file COPYING distributed with Katana. This document
+  is Copyright 2010 Dartmouth College and may be distributed under the
+  terms of the GNU Free Documentation License
+
+  Katana is being written by James Oakley and was designed
+  by Sergey Bratus, Ashwin Ramaswamy, James Oakley, Michael Locasto,
+  and Sean Smith.

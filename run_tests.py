@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 #File: run_tests.py
 #Author: James Oakley
+#Copyright (C): 2010 Dartmouth College
+#License: GNU General Public License
 #Date: January, 2010
 #Description: runs unit tests and reports their success or failure
 

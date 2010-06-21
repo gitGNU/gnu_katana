@@ -1,7 +1,7 @@
 /*
   File: main.c
   Author: James Oakley
-  Written For: Dartmouth College
+  Copyright (C): 2010 Dartmouth College
   License: GNU General Public License
   Project: Katana (testing)
   Date: February 2010

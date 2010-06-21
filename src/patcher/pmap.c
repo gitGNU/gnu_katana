@@ -8,7 +8,7 @@
   Date: April 2010
   Description: Find out information about the target processes memory map.
                Requires a linux-like /proc filesystem. It should be useable
-               on BSD and Solaris as well as Linux, but these have not been tested.
+               on BSD and Solaris as well as GNU/Linux, but these have not been tested.
                FreeBSD seems to be getting rid of /proc
 
 */

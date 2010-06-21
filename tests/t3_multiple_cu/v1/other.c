@@ -1,9 +1,9 @@
 /*
   File: other2.c
   Author: James Oakley
-  Written For: Dartmouth College
+  Copyright (C): 2010 Dartmouth College
   License: GNU General Public License
-  Project: Katana - Testing
+  Project: Katana
   Date: January 2010
   Description: different definition of struct Foo than in main.c to make sure
                patching system treats the different versions properly

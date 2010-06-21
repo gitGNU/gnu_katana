@@ -1,7 +1,7 @@
 #File: katana.org
 #Author: James Oakley
-#Written For: Dartmouth College
-#License: GNU General Public License
+#Copyright (C): 2010 Dartmouth College
+#License: GNU Free Documentation License
 #Date, January, 2010
 #Description: validate the output of a single unit test for katana
 #+OPTIONS: LaTeX:t
@@ -69,7 +69,7 @@
   + Patch previously patched processes
   + Provide robust operation
   + Run on any architectures other than x86 and x86-64
-  + Tested on any operating system besides Linux
+  + Tested on any operating system besides GNU/Linux
   + Allow for calls in patched code to previously unused functions
   + Work for programs which actually make use of some of the large
     code model features of the x86-64 ABI.
@@ -173,7 +173,9 @@
   Katana is under development at Dartmouth College and Copyright 2010
   Dartmouth College. It may be distributed under the terms of the GNU
   General Public License with attribution to Dartmouth College as
-  specified in the file COPYING distributed with Katana.
+  specified in the file COPYING distributed with Katana. This document
+  is Copyright 2010 Dartmouth College and may be distributed under the
+  terms of the GNU Free Documentation License
 
   Katana is being written by James Oakley and was designed
   by Sergey Bratus, Ashwin Ramaswamy, James Oakley, Michael Locasto,

@@ -1,9 +1,10 @@
 /*
   File: main.c
   Author: James Oakley
-  Written For: Dartmouth College
+  Copyright (C): 2010k
+  Dartmouth College
   License: GNU General Public License
-  Project: Katana (testing)
+  Project: Katana
   Date: February 2010
   Description: Test program to demonstrate adding a variable to a program
 */

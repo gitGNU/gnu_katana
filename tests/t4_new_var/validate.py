@@ -1,6 +1,6 @@
 #File: validate.py
 #Author: James Oakley
-#Written For: Dartmouth College
+#Copyright (C): 2010 Dartmouth College
 #License: GNU General Public License
 #Date, February, 2010
 #Description: validate the output of a single unit test for katana

@@ -1,4 +1,4 @@
-% Created 2010-06-15 Tue 22:01
+% Created 2010-06-20 Sun 22:23
 \documentclass[11pt]{article}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
@@ -13,7 +13,7 @@
 
 \title{Katana: A Userland Toolchain-Oriented Hotpatching System}
 \author{James Oakley}
-\date{15 June 2010}
+\date{20 June 2010}
 
 \begin{document}
 
@@ -91,7 +91,7 @@
 \item Patch previously patched processes
 \item Provide robust operation
 \item Run on any architectures other than x86 and x86-64
-\item Tested on any operating system besides Linux
+\item Tested on any operating system besides GNU/Linux
 \item Allow for calls in patched code to previously unused functions
 \item Work for programs which actually make use of some of the large
     code model features of the x86-64 ABI.
@@ -220,5 +220,18 @@
     the process it's being applied to
 \item Storing warnings from generation inside a patch
 \end{itemize}
+\section{Credits and Licensing}
+\label{sec-11}
+
+  Katana is under development at Dartmouth College and Copyright 2010
+  Dartmouth College. It may be distributed under the terms of the GNU
+  General Public License with attribution to Dartmouth College as
+  specified in the file COPYING distributed with Katana. This document
+  is Copyright 2010 Dartmouth College and may be distributed under the
+  terms of the GNU Free Documentation License
+
+  Katana is being written by James Oakley and was designed
+  by Sergey Bratus, Ashwin Ramaswamy, James Oakley, Michael Locasto,
+  and Sean Smith.
 
 \end{document}

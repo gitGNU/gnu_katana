@@ -1,9 +1,9 @@
 /*
   File: main.c
   Author: James Oakley
-  Written For: Dartmouth College
+  Copyright (C): 2010 Dartmouth College
   License: GNU General Public License
-  Project: Katana (testing)
+  Project: Katana
   Date: February 2010
   Description: Test program to demonstrate patching a modified type
                which itself has a member which is a modified type

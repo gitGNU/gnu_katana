@@ -40,7 +40,7 @@ ElfInfo* getElfRepresentingProc(int pid)
     struct stat s;
     if(0!=stat(execPath,&s))
     {
-      fprintf(stderr,"%s does not exist. Is this a linux system or other unix system with a Plan-9 style /proc filesystem? If it is, then the process may have exited",execPath);
+      fprintf(stderr,"%s does not exist. Is this a GNU/Linux system or other unix system with a Plan-9 style /proc filesystem? If it is, then the process may have exited",execPath);
       death(NULL);
     }
     result=openELFFile(execPath);
