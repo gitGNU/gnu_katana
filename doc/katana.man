@@ -1,0 +1,93 @@
+.\ manpage for katana
+.TH "KATANA" 1 2010-06-20 "Dartmouth College" "Katana Manual"
+.SH NAME
+.B katana
+\- A binary-level hot-patching system for userland.
+.SH SYNOPSIS
+
+.\ disable filling
+.nf
+Generate a patch:
+\fBkatana\fP -g [-o OUTPUT_FILE] OLD_OBJECTS_DIR NEW_OBJECTS_DIR EXECUTABLE_NAME
+
+Apply a patch:
+\fBkatana\fP -p [-s] PATCH_FILENAME PID
+
+List patch information:
+\fBkatana\fP -l PATCH_FILE
+.\ enable filling again
+.fi
+
+.SH OVERVIEW
+Katana is intended to be used in two stages. The first stage generates
+a patch object from two different versions of an treee. By an object
+tree, we mean the set of object files (.o files) and the executable
+binary they comprise. Katana works completely at the object level, so
+the source code itself is not strictly required, although all objects
+must be compiled with debugging information. This step may be done by
+the software vendor. In the second stage, the patch is applied to a
+running process. The original source trees are not necessary during
+patch application, as the patch object contains all information
+necessary to patch the in-memory process at the object level. It is
+also possible to view the contents of a patch object in a
+human-readable way for the purposes of sanity-checking, determining
+what changes the patch makes, etc.
+
+.SH Preparing a Package for Patching Support
+Katana aims to be much less invasive than other hot-patching system
+and require minimal work to be used with any project. It does,
+however, have some requirements.
+
+Required CFLAGS:
+  -g
+
+Recommended CFLAGS:
+  -ffunction-sections
+  -fdata-sections
+     
+Recommended LDFLAGS:
+  --emit-relocs
+
+.SH GENERATING A PATCH
+Let the location of your project be /project. You must have two
+versions of your software available: the version identical to the
+running software which must be hotpatched, call it v0, and the version
+to which you wish to hotpatch the running software, call it v1. Let
+foo be the name of your program. Then /project/v0/foo must exist and
+/project/v0 must also contain (possibly in subdirectories) all of the
+object files which contributed to /project/v0/foo. The source code
+itself is immaterial, as Katana does not parse it. Similarly,
+/project/v1/foo must exist and /project/v1 contain all of the object
+files contributing to /project/v1/foo. Katana is then invoked as
+
+\fBkatana\fP -g [-o OUTPUT_FILE] /project/v0 /project/v1 foo
+
+If -o OUTPUT_FILE is not specified, the output file will be OLD_OBJECTS_DIR/EXECUTABLE_NAME.po
+(in this case /project/v0/foo.po)
+
+.SH APPLYING A PATCH
+The process to be patched is running with a pid of PID. It can be
+patched from its current version to a more recent version by the Patch
+Object (PO) file PATCH. Katana is then invoked as
+
+\fBkatana\fP -p [-s] PATCH_FILENAME PID
+
+If all goes well, the patcher will run, print out some status
+messages, and leave your program in better state than it found it. The
+optional -s flag tells Katana to stop the target program after
+patching it and detaching from it. This is mostly of use for debugging
+Katana.
+
+.SH VIEWING A PATCH
+One of the goals of Katana and its Patch Object (PO) format is to
+increase the transparency of patches: a user about to apply a patch
+should know what it will do. This goal is not yet fully realized, but
+it is possible to view some information about a patch with
+
+\fBkatana\fP -l PATCH_FILENAME
+
+.SH AUTHORS
+Katana was written by James Oakley <james.oakley@dartmouth.edu> or
+<electron100@gmail.com>. It was designed by Sergey Bratus, James
+Oakley, Ashwin Ramaswamy, Michael E. Locasto, and Sean
+W. Smith. Katana is Copyright (C) 2010 Dartmouth College.
