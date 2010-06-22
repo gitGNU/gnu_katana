@@ -4,6 +4,7 @@
 *.po
 *.po.rel
 *_log
+*.pyc
 /Makefile
 /aclocal.m4
 /autom4te.cache
