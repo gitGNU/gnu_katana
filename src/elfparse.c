@@ -32,7 +32,7 @@ ElfInfo* openELFFile(char* fname)
   e->e=elf_begin(e->fd,ELF_C_READ,NULL);
   if(!e->e)
   {
-    fprintf(stderr,"Failed to open as an ELF file %s\n",elf_errmsg(-1));
+    fprintf(stderr,"Failed to open file %s as an ELF file %s\n",fname,elf_errmsg(-1));
     free(e);
     death(NULL);
   }

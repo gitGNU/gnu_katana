@@ -655,7 +655,7 @@ void* addStructureFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
       if(DW_DLV_OK==res)
       {
         type->fieldOffsets[idx]=readAttributeAsAddr(attr,dbg,0);
-        printf("from location attribute, set offset for %s.%s to %i\n",name,type->fields[idx],type->fieldOffsets[idx]);
+        logprintf(ELL_INFO_V4,ELS_DWARFTYPES,"from location attribute, set offset for %s.%s to %i\n",name,type->fields[idx],type->fieldOffsets[idx]);
       }
       else
       {
