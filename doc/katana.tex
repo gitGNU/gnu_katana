@@ -1,4 +1,4 @@
-% Created 2010-06-20 Sun 22:23
+% Created 2010-06-20 Sun 23:06
 \documentclass[11pt]{article}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
@@ -125,19 +125,42 @@
 \subsection{Preparing a Package for Patching Support}
 \label{sec-6.1}
 
-   Katana aims to be much less invasive than other hot-patching system
-   and require minimal work to be used with any project. It does,
-   however, have some requirements.\\
-   Required CFLAGS:
+    Katana aims to be much less invasive than other hot-patching system
+    and require minimal work to be used with any project. It does,
+    however, have some requirements.\\
+\subsubsection{Source Code Practices}
+\label{sec-6.1.1}
+
+    Katana does not look at the source code, therefore unlike several
+    other hotpatching systems, it does not require any annotation in
+    the source code. There are, however, some best practices to
+    follow.
+\begin{itemize}
+\item Avoid the use of \texttt{void*} at least for global variables (since
+      Katana does not currently patch local variables, preferring to
+      wait until any functions using changed variables are no longer
+      on the stack). Since it is typeless and opaque, it is very hard
+      to analyze and patch.
+\item Avoid unnamed types. i.e., instead of \texttt{typedef struct \{...\} Foo;}
+      use \texttt{typedef struct Foo\_ \{...\} Foo;}.
+\item Avoid accessing structure members by offsets instead of by the
+      member names. As long as you keep all the code where you do this
+      up to date, it should not be a problem, but katana cannot detect
+      when you do this.
+\end{itemize}
+\subsubsection{Compilation/Linking}
+\label{sec-6.1.2}
+
+    Required CFLAGS:
 \begin{itemize}
 \item -g
 \end{itemize}
-   Recommended CFLAGS:
+    Recommended CFLAGS:
 \begin{itemize}
 \item -ffunction-sections
 \item -fdata-sections
 \end{itemize}
-   Recommended LDFLAGS:
+    Recommended LDFLAGS:
 \begin{itemize}
 \item --emit-relocs
 \end{itemize}

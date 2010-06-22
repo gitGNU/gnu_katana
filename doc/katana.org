@@ -95,18 +95,35 @@
   purposes of sanity-checking, determining what changes the patch
   makes, etc.
 ** Preparing a Package for Patching Support
-   Katana aims to be much less invasive than other hot-patching system
-   and require minimal work to be used with any project. It does,
-   however, have some requirements.\\
-   Required CFLAGS:
-   + -g
+    Katana aims to be much less invasive than other hot-patching system
+    and require minimal work to be used with any project. It does,
+    however, have some requirements.\\
+*** Source Code Practices
+    Katana does not look at the source code, therefore unlike several
+    other hotpatching systems, it does not require any annotation in
+    the source code. There are, however, some best practices to
+    follow.
+    + Avoid the use of =void*= at least for global variables (since
+      Katana does not currently patch local variables, preferring to
+      wait until any functions using changed variables are no longer
+      on the stack). Since it is typeless and opaque, it is very hard
+      to analyze and patch.
+    + Avoid unnamed types. i.e., instead of =typedef struct {...} Foo;=
+      use =typedef struct Foo_ {...} Foo;=. 
+    + Avoid accessing structure members by offsets instead of by the
+      member names. As long as you keep all the code where you do this
+      up to date, it should not be a problem, but katana cannot detect
+      when you do this.
+*** Compilation/Linking
+    Required CFLAGS:
+    + -g
 
-   Recommended CFLAGS:
-   + -ffunction-sections
-   + -fdata-sections
-     
-   Recommended LDFLAGS:
-   + --emit-relocs
+    Recommended CFLAGS:
+    + -ffunction-sections
+    + -fdata-sections
+      
+    Recommended LDFLAGS:
+    + --emit-relocs
 
 ** To Generate a Patch 
    Let the location of your project be /project. You must have two
