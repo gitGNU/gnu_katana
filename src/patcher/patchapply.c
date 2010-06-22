@@ -723,7 +723,7 @@ void katanaPLT()
 
 void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch,int flags)
 {
-  startPtrace();
+  startPtrace(pid);
   targetBin=targetBin_;
   
   

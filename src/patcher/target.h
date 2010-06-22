@@ -24,7 +24,9 @@
 #include "arch.h"
 //#include <sys/user.h>
 
-void startPtrace();
+//this must be called before any other functions in this file
+void startPtrace(int pid);
+
 void continuePtrace();
 void endPtrace(bool stopProcess);
 void modifyTarget(addr_t addr,word_t value);

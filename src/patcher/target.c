@@ -23,8 +23,8 @@
 #include "util/logging.h"
 #include "util/map.h"
 
-//todo: bad programming to have globals like this
-extern int pid;
+
+int pid;
 addr_t mallocAddress=0;
 addr_t targetTextStart=0;
 
@@ -45,8 +45,9 @@ void setTargetTextStart(addr_t addr)
   targetTextStart=addr;
 }
 
-void startPtrace()
+void startPtrace(int pid_)
 {
+  pid=pid_;
   if(ptrace(PTRACE_ATTACH,pid,NULL,NULL)<0)
   {
     fprintf(stderr,"ptrace failed to attach to process\n");
@@ -199,7 +200,6 @@ void memcpyToTarget(addr_t addr,byte* data,int numBytes)
 bool memcpyFromTargetNoDeath(byte* data,long addr,int numBytes)
 {
   logprintf(ELL_INFO_V4,ELS_HOTPATCH,"memcpyFromTarget: getting %i bytes from 0x%x\n",numBytes,(uint)addr);
-  //todo: force address to be aligned
   for(int i=0;i<numBytes;i+=4)
   {
     uint val=ptrace(PTRACE_PEEKDATA,pid,addr+i);
