@@ -2,7 +2,8 @@
 
   FILE: map.h
   Author: James Oakley
-  Copyright (C): 2010 Dartmouth College
+  Copyright (C): Portions 2010 Dartmouth College
+                 Portions 2009 James Oakley
   License: Katana is free software: you may redistribute it and/or
     modify it under the terms of the GNU General Public License as
     published by the Free Software Foundation, either version 3 of the
@@ -44,6 +45,12 @@
     PROGRAMS), EVEN IF SUCH HOLDER OR OTHER PARTY HAS BEEN ADVISED OF THE
     POSSIBILITY OF SUCH DAMAGES.
 
+    The complete text of the license may be found in the file COPYING
+    which should have been distributed with this software. The GNU
+    General Public License may be obtained at
+    http://www.gnu.org/licenses/gpl.html
+    
+  Project:  Katana
   Date: May, 2009
   Description: structure and prototypes for a general-purpose mapping
   from objects of any type to objects of any type

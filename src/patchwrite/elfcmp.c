@@ -43,7 +43,12 @@
     PROGRAMS), EVEN IF SUCH HOLDER OR OTHER PARTY HAS BEEN ADVISED OF THE
     POSSIBILITY OF SUCH DAMAGES.
 
-  Project:  katana
+    The complete text of the license may be found in the file COPYING
+    which should have been distributed with this software. The GNU
+    General Public License may be obtained at
+    http://www.gnu.org/licenses/gpl.html
+
+  Project: Katana
   Date: March 2010
   Description: Compares two elf files for equality. The idea and name come from Red Hat Elfutils but the code is not in any way based upon that code.
 */

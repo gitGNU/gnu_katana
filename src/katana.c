@@ -1,5 +1,5 @@
 /*
-  File: typepatch.c
+  File: katana.c
   Author: James Oakley
   Copyright (C): 2010 Dartmouth College
   License: Katana is free software: you may redistribute it and/or
@@ -43,7 +43,12 @@
     PROGRAMS), EVEN IF SUCH HOLDER OR OTHER PARTY HAS BEEN ADVISED OF THE
     POSSIBILITY OF SUCH DAMAGES.
 
- 
+  
+    The complete text of the license may be found in the file COPYING
+    which should have been distributed with this software. The GNU
+    General Public License may be obtained at
+    http://www.gnu.org/licenses/gpl.html
+
   Project: Katana
   Date: January, 2010
   Description: Preliminary patching program just for patching main_v0.c's structure Foo to have an extra field

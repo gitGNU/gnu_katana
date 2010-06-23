@@ -43,7 +43,12 @@
     PROGRAMS), EVEN IF SUCH HOLDER OR OTHER PARTY HAS BEEN ADVISED OF THE
     POSSIBILITY OF SUCH DAMAGES.
 
-  Project:  katana
+    The complete text of the license may be found in the file COPYING
+    which should have been distributed with this software. The GNU
+    General Public License may be obtained at
+    http://www.gnu.org/licenses/gpl.html
+
+  Project: Katana
   Date: February 2010
   Description: functions relating to finding difference between types and building
                transformers for them

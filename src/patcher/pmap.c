@@ -44,7 +44,12 @@
     POSSIBILITY OF SUCH DAMAGES.
 
           Inspired by Albert Cahalan's pmap.c in procps
-  Project:  katana
+    The complete text of the license may be found in the file COPYING
+    which should have been distributed with this software. The GNU
+    General Public License may be obtained at
+    http://www.gnu.org/licenses/gpl.html
+
+  Project: Katana
   Date: April 2010
   Description: Find out information about the target processes memory map.
                Requires a linux-like /proc filesystem. It should be useable
