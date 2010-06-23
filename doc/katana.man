@@ -91,3 +91,9 @@ Katana was written by James Oakley <james.oakley@dartmouth.edu> or
 <electron100@gmail.com>. It was designed by Sergey Bratus, James
 Oakley, Ashwin Ramaswamy, Michael E. Locasto, and Sean
 W. Smith. Katana is Copyright (C) 2010 Dartmouth College.
+
+This document is Copyright 2010 Dartmouth College and may be
+distributed under the terms of the GNU Free Documentation License as
+found in the file FDL which should have been distributed with this
+documentation. If it was not, it may be found at
+http://www.gnu.org/licenses/fdl.txt.

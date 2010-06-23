@@ -2,7 +2,7 @@
        ========================================================
 
 Author: James Oakley <james.oakley@dartmouth.edu>
-Date: 2010-06-20 23:06:27 PDT
+Date: 2010-06-22 19:27:16 PDT
 
 
 
@@ -244,7 +244,9 @@ Table of Contents
   General Public License with attribution to Dartmouth College as
   specified in the file COPYING distributed with Katana. This document
   is Copyright 2010 Dartmouth College and may be distributed under the
-  terms of the GNU Free Documentation License
+  terms of the GNU Free Documentation License as found in the file FDL
+  which should have been distributed with this documentation. If it
+  was not, it may be found at [http://www.gnu.org/licenses/fdl.txt].
 
   Katana is being written by James Oakley and was designed
   by Sergey Bratus, Ashwin Ramaswamy, James Oakley, Michael Locasto,
