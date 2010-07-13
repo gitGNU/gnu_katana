@@ -6,6 +6,7 @@
 #Description: validate the output of a single unit test for katana
 
 import subprocess,sys,os,os.path,time,string
+from optparse import OptionParser
 
 proc=None
 
@@ -14,39 +15,56 @@ def cleanup():
   hotlogerrf.close()
   vlogf.close()
   if proc:
-    proc.terminate() #kill it if it is still active
+    if options.superuser:
+      subprocess.call(['sudo','kill',str(proc.pid)])
+    else:
+      proc.terminate() #kill it if it is still active
   sys.stdout.flush()
 
 vlogf=open("validator_log","a")
 
-if len(sys.argv)<2:
+parser=OptionParser()
+parser.add_option("-s", action="store_true", dest="superuser", default=False, help="Specifies that the program must be run as root")
+(options,args)=parser.parse_args()
+
+
+if len(args)<1:
   print "Wrong number of arguments"
   print "Usage: "+sys.argv[0]+" DIRECTORY_TO_TEST [EXECUTABLE_NAME]"
   print "Default executable name is 'test'"
   sys.exit(1)
 
-sys.path.append(os.path.abspath(sys.argv[1]))
+subprocess.call(['sudo','true']) #the actual command will be run separately from this process, this one will not block on it, so make a blocking call first to get the sudo password cached
+  
+sys.path.append(os.path.abspath(args[0]))
 validateModule=__import__("validate")
 
 vlogf.write("############################\n")
-vlogf.write("Validator running in dir: "+sys.argv[1]+"\n")
-oldTree=os.path.join(sys.argv[1],"v0")
-newTree=os.path.join(sys.argv[1],"v1")
+vlogf.write("Validator running in dir: "+args[0]+"\n")
+oldTree=os.path.join(args[0],"v0")
+newTree=os.path.join(args[0],"v1")
 execName="test"
-if len(sys.argv)>2:
-  execName=sys.argv[2]
-logfname=os.path.join(sys.argv[1],"log")
+if len(args)>1:
+  execName=args[1]
+programArguments=[]
+if len(args)>2:
+  programArguments=args[2:]
+  for i in range(0,len(programArguments)):
+    #unescape options for the executable
+    if programArguments[i][0]=='\\':
+      programArguments[i]=programArguments[i][1:]
+logfname=os.path.join(args[0],"log")
 logf=open(logfname,"w")
 logf.truncate()
 
 #generate the patch
-klogfname=os.path.join(sys.argv[1],"katana_log")
+klogfname=os.path.join(args[0],"katana_log")
 hotlogf=open(klogfname,"w")
-klogerrfname=os.path.join(sys.argv[1],"katana_err_log")
+klogerrfname=os.path.join(args[0],"katana_err_log")
 hotlogerrf=open(klogerrfname,"w")
 hotlogf.write("\nStarting patch of "+os.path.join(oldTree,execName)+"\n-------------------------------------------\n")
 hotlogf.flush()
-patchOut=os.sys.argv[1]+".po"
+patchOut=args[0]+".po"
 args=["./katana","-g","-o",patchOut,oldTree,newTree,execName]
 vlogf.write("running:\n "+string.join(args," ")+"\n")
 kproc=subprocess.Popen(args,stdout=hotlogf,stderr=hotlogerrf)
@@ -61,7 +79,16 @@ if 0!=kproc.wait():
 sys.stdout.write("...gen...|")
 sys.stdout.flush()
 
-proc=subprocess.Popen([os.path.join(oldTree,execName)],stdout=logf)
+procCmd=[];
+if options.superuser:
+  procCmd=['sudo']
+procCmd.extend([os.path.join(oldTree,execName)])
+if(len(programArguments)):
+  procCmd.extend(programArguments)
+print '\n'+str(procCmd)
+
+
+proc=subprocess.Popen(procCmd,stdout=logf)
 #sleep for a moment to let the process run
 time.sleep(0.5)
 #now start the hotpatcher

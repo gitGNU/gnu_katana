@@ -1,3 +1,6 @@
 #!/bin/sh
 echo THIS TEST IS EXPECTED TO FAIL. IT HAS NEVER WORKED YET.
-./run_tests.py real_tests/apache httpd
+#start apache with our special configuration file and running in debug mode
+#we must start apache as root, so this will require your password
+echo "You will be prompted for your password because httpd must be run as root"
+./run_tests.py -s real_tests/apache httpd '\-d' real_tests/apache '\-X'
