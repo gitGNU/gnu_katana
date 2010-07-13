@@ -85,6 +85,8 @@ typedef enum
   ELS_PATCHWRITE,
   ELS_PATH,
   ELS_ELFWRITE,
+  ELS_VERSION,
+  ELS_DWARFWRITE,
   ELS_CNT
 } E_LOG_SOURCE;//describes what subsystem the message came from
 

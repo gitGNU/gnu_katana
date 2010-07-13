@@ -242,7 +242,7 @@ int getRangeFromDie(Dwarf_Debug dbg,Dwarf_Die die,int** lowerBound,int** upperBo
       dwarf_tag(child,&tag,&err);
       if(tag!=DW_TAG_subrange_type)
       {
-        fprintf(stderr,"within array type found tag not a subrange, this is bizarre\n");
+        logprintf(ELL_WARN,ELS_DWARFTYPES,"within array type found tag not a subrange, this is bizarre\n");
         continue;
       }
       cnt++;

@@ -56,6 +56,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <dirent.h>
+#include "util/logging.h"
 
 ElfInfo* getElfRepresentingProc(int pid)
 {
@@ -85,8 +86,7 @@ ElfInfo* getElfRepresentingProc(int pid)
     struct stat s;
     if(0!=stat(execPath,&s))
     {
-      fprintf(stderr,"%s does not exist. Is this a GNU/Linux system or other unix system with a Plan-9 style /proc filesystem? If it is, then the process may have exited",execPath);
-      death(NULL);
+      logprintf(ELL_ERR,ELS_VERSION,"%s does not exist. Is this a GNU/Linux system or other unix system with a Plan-9 style /proc filesystem? If it is, then the process may have exited",execPath);
     }
     result=openELFFile(execPath);
   }

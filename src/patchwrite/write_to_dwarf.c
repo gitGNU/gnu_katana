@@ -113,6 +113,16 @@ void writeTypeToDwarf(Dwarf_P_Debug dbg,TypeInfo* type)
   {
     return;//already written
   }
+  static char* indent=NULL;
+  static int indentLevel=0;
+  indentLevel++;
+  indent=realloc(indent,indentLevel+1);
+  for(int i=0;i<indentLevel;i++)
+  {
+    indent[i]='\t';
+  }
+  indent[indentLevel]='\0';
+  logprintf(ELL_INFO_V3,ELS_DWARFWRITE,"%swriting %s %s to dwarf\n",indent,typeTypeStrings[type->type],type->name);
   int tag=0;
   switch(type->type)
   {
@@ -141,6 +151,7 @@ void writeTypeToDwarf(Dwarf_P_Debug dbg,TypeInfo* type)
     tag=DW_TAG_subroutine_type;
     break;
   case TT_VOID:
+    indentLevel--;
     return;//don't actually need to write out the void type, DWARF doesn't represent it
     break;
   default:
@@ -177,10 +188,14 @@ void writeTypeToDwarf(Dwarf_P_Debug dbg,TypeInfo* type)
   }
   if(TT_ARRAY==type->type)
   {
+    logprintf(ELL_INFO_V4,ELS_DWARFWRITE,"type is array and has depth of %i\n",type->depth);
+    if(TT_VOID==type->pointedType->type)
+    {
+      death("array should not have void type\n");
+    }
     for(int i=0;i<type->depth;i++)
     {
-      Dwarf_P_Die subrangeDie=dwarf_new_die(dbg,tag,parent,NULL,type->cu->lastDie,NULL,&err);
-      type->cu->lastDie=subrangeDie;
+      Dwarf_P_Die subrangeDie=dwarf_new_die(dbg,DW_TAG_subrange_type,die,NULL,NULL,NULL,&err);
       dwarf_add_AT_signed_const(dbg,subrangeDie,DW_AT_lower_bound,type->lowerBounds[i],&err);
       dwarf_add_AT_signed_const(dbg,subrangeDie,DW_AT_upper_bound,type->upperBounds[i],&err);
     }
@@ -207,6 +222,7 @@ void writeTypeToDwarf(Dwarf_P_Debug dbg,TypeInfo* type)
       //to identify connections to the FDEs for fixing up types.
     }
   }
+  indentLevel--;
 }
 
 
@@ -219,6 +235,7 @@ void writeTypeToDwarf(Dwarf_P_Debug dbg,TypeInfo* type)
 //We note old types by appending a ~ to the name
 void writeOldTypeToDwarf(Dwarf_P_Debug dbg,TypeInfo* type,CompilationUnit* cuToWriteIn)
 {
+  logprintf(ELL_INFO_V3,ELS_DWARFWRITE,"writing old type\n");
   CompilationUnit* oldCu=type->cu;
   type->cu=cuToWriteIn;
   char* oldName=type->name;
@@ -234,6 +251,7 @@ void writeOldTypeToDwarf(Dwarf_P_Debug dbg,TypeInfo* type,CompilationUnit* cuToW
 void writeVarToDwarf(Dwarf_P_Debug dbg,VarInfo* var,CompilationUnit* cu,bool new)
 {
   assert(cu);
+  logprintf(ELL_INFO_V3,ELS_DWARFWRITE,"writing var %s %s to dwarf\n",var->type->name,var->name);
   if(!cu->die)
   {
     writeCUToDwarf(dbg,cu);

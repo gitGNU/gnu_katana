@@ -145,6 +145,8 @@ typedef enum
   TT_VOID //the void type
 } TYPE_TYPE;
 
+static const char* const typeTypeStrings[]={"INVALID","STRUCT","BASE","POINTER","ARRAY","UNION","ENUM","SUBROUTINE_TYPE","CONST","VOID"};
+
 struct TypeTransform_;//forward declare
 
 typedef enum E_TYPEDIFF_STATUS

@@ -132,4 +132,6 @@ void loggingDefaults()
   sourceEnables[ELS_PATH]=ELL_CNT;
   sourceEnables[ELS_ELFWRITE]=ELL_WARN;
   sourceEnables[ELS_PATCHWRITE]=ELL_WARN;
+  sourceEnables[ELS_VERSION]=ELL_WARN;
+  sourceEnables[ELS_DWARFWRITE]=ELL_INFO_V4;
 }
