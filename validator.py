@@ -34,7 +34,8 @@ if len(args)<1:
   print "Default executable name is 'test'"
   sys.exit(1)
 
-subprocess.call(['sudo','true']) #the actual command will be run separately from this process, this one will not block on it, so make a blocking call first to get the sudo password cached
+if options.superuser:
+  subprocess.call(['sudo','true']) #the actual command will be run separately from this process, this one will not block on it, so make a blocking call first to get the sudo password cached
   
 sys.path.append(os.path.abspath(args[0]))
 validateModule=__import__("validate")
@@ -85,7 +86,6 @@ if options.superuser:
 procCmd.extend([os.path.join(oldTree,execName)])
 if(len(programArguments)):
   procCmd.extend(programArguments)
-print '\n'+str(procCmd)
 
 
 proc=subprocess.Popen(procCmd,stdout=logf)
