@@ -50,7 +50,9 @@
 
   Project: Katana
   Date: March 2010
-  Description: Compares two elf files for equality. The idea and name come from Red Hat Elfutils but the code is not in any way based upon that code.
+  Description: Compares two elf files for equality. The idea and name
+  come from Red Hat Elfutils but the code is not in any way based upon
+  that code.
 */
 
 #include <libelf.h>

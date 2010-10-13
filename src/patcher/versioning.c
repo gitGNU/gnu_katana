@@ -86,7 +86,7 @@ ElfInfo* getElfRepresentingProc(int pid)
     struct stat s;
     if(0!=stat(execPath,&s))
     {
-      logprintf(ELL_ERR,ELS_VERSION,"%s does not exist. Is this a GNU/Linux system or other unix system with a Plan-9 style /proc filesystem? If it is, then the process may have exited",execPath);
+      logprintf(ELL_ERR,ELS_VERSION,"%s does not exist or permission is denied. Is this a GNU/Linux system or other unix system with a Plan-9 style /proc filesystem? If it is, then the process may have exited",execPath);
     }
     result=openELFFile(execPath);
   }
