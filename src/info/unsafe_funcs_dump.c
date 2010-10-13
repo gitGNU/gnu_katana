@@ -59,6 +59,10 @@
 
 void printPatchUnsafeFuncsInfo(ElfInfo* patch)
 {
+  if(!patch->sectionIndices[ERS_UNSAFE_FUNCTIONS])
+  {
+    printf("This object file does not contain any safety information\n");
+  }
   Elf_Data* unsafeFunctionsData=getDataByERS(patch,ERS_UNSAFE_FUNCTIONS);
   if(!unsafeFunctionsData)
   {
