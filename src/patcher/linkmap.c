@@ -117,7 +117,7 @@ bool locateSymbolInLinkMap(struct link_map* lm,addr_t* result,char* symName,int 
     return false;
   }
   
-  logprintf(ELL_INFO_V2,ELS_LINKMAP,"Looking for symbol %s in link map for object %s\n",symName,nameBuf);
+  logprintf(ELL_INFO_V2,ELS_LINKMAP,"Looking for symbol %s in link map for object %s loaded at 0x%x with dynamic section at 0x%x\n",symName,nameBuf,lm->l_addr,lm->l_ld);
     
   addr_t strtab=0;
   addr_t symtab=0;
@@ -136,7 +136,7 @@ bool locateSymbolInLinkMap(struct link_map* lm,addr_t* result,char* symName,int 
     {
       break;//end of .dynamic
     }
-    logprintf(ELL_INFO_V4,ELS_LINKMAP,"tag is %i\n",dyn.d_tag);
+    //logprintf(ELL_INFO_V4,ELS_LINKMAP,"on dynamic tag %i tag is %i\n",i,dyn.d_tag);
     switch(dyn.d_tag)
     {
     case DT_HASH:
@@ -161,6 +161,7 @@ bool locateSymbolInLinkMap(struct link_map* lm,addr_t* result,char* symName,int 
     logprintf(ELL_WARN,ELS_LINKMAP,"Not examining symbols in library %s because not all the needed entries were found in the .dynamic section\n",nameBuf);
     return false;
   }
+          
 
   //in practice, I sometimes see invalid hashtable entries and no good way that
   //I've found to detect them. So we just look for an invalid memory access and
@@ -170,6 +171,10 @@ bool locateSymbolInLinkMap(struct link_map* lm,addr_t* result,char* symName,int 
     logprintf(ELL_WARN,ELS_LINKMAP,"Not examining symbols in this library ('%s'), doesn't seem to contain valid hashtable\n",nameBuf);
     return false;
   }
+  ElfXX_Word numChains;
+  memcpyFromTarget((byte*)&numChains,hashtable + sizeof(ElfXX_Word),sizeof(ElfXX_Word));
+  
+  logprintf(ELL_INFO_V4,ELS_LINKMAP,"there are %i hashtable buckets and %i chains\n The hashtable lives at 0x%x\n",numBuckets,numChains,hashtable);
   hashtableBuckets=hashtable+2*sizeof(ElfXX_Word);
   hashtableChains=hashtable+2*sizeof(ElfXX_Word)+numBuckets*sizeof(ElfXX_Word);
 
@@ -177,26 +182,29 @@ bool locateSymbolInLinkMap(struct link_map* lm,addr_t* result,char* symName,int 
   //the hash table
   ElfXX_Word symIdx=0;
   memcpyFromTarget((byte*)&symIdx,hashtableBuckets+sizeof(ElfXX_Word)*(symNameHash % numBuckets),sizeof(ElfXX_Word));
-  for(;
-      symIdx;
-      memcpyFromTarget((byte*)&symIdx,hashtableChains+sizeof(idx_t)*symIdx,sizeof(ElfXX_Word)))
+  for(;symIdx != STN_UNDEF;memcpyFromTarget((byte*)&symIdx,hashtableChains+sizeof(ElfXX_Word)*symIdx,sizeof(ElfXX_Word)))
   {
+    
+    logprintf(ELL_INFO_V4,ELS_LINKMAP,"symbol index is %i\n",symIdx);
     ElfXX_Sym sym;
     memcpyFromTarget((byte*)&sym,symtab+sizeof(ElfXX_Sym)*symIdx,sizeof(ElfXX_Sym));
 
-    if(0==sym.st_value && SHN_UNDEF==sym.st_shndx)
-    {
-      //this is an import symbol
-      return false;
-    }
-    
     //todo: using strnmatchTarget we don't support symbols with names
     //that are a substring of another symbol's name
     if(strnmatchTarget(symName,strtab+sym.st_name))
     {
+      if(0==sym.st_value && SHN_UNDEF==sym.st_shndx)
+      {
+        //this is an import symbol
+        return false;
+      }
       logprintf(ELL_INFO_V1,ELS_LINKMAP,"Found symbol %s in %s\n",symName,nameBuf);
       *result=lm->l_addr+sym.st_value;//l_addr is used to rebase the symbol index
       return true;
+    }
+    if(symIdx > numChains)
+    {
+      return false;
     }
   }
   return false;  
