@@ -4,6 +4,7 @@
 *.po.rel
 *.pyc
 *.s
+*.~*~
 *_log
 /Makefile
 /aclocal.m4
@@ -15,6 +16,8 @@
 /katana-0.1.0b.tar.gz
 /katana-0.1.0b.tar.gz.sig
 /nohup.out
+/pullAll.sh
+/pushAll.sh
 /stamp-h1
 /t
 a.out
