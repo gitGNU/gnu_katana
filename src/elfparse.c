@@ -337,9 +337,6 @@ void getShdrByERS(ElfInfo* e,E_RECOGNIZED_SECTION ers,GElf_Shdr* shdr)
 }
 void findELFSections(ElfInfo* e)
 {
-  //todo: this is deprecated but the non deprecated version
-  //(elf_getshdrstrndx) isn't linking on my system. This may betray some
-  //more important screw-up somewhere)
   elf_getshdrstrndx(e->e, &e->sectionHdrStrTblIdx);
 
   memset(e->sectionIndices,0,sizeof(int)*ERS_CNT);
@@ -387,6 +384,11 @@ void findELFSections(ElfInfo* e)
     }
     else if(!strncmp(".text",name,strlen(".text"))) //allow versioned text sections in patches as well as .text
     {
+      if(!strcmp(".text.new",name))
+      {
+        //If there's a .text.new section then we assume it's a patch object
+        e->isPO=true;
+      }
       e->sectionIndices[ERS_TEXT]=elf_ndxscn(scn);
       e->textStart[IN_MEM]=shdr.sh_addr;
       e->textStart[ON_DISK]=shdr.sh_offset;
@@ -513,6 +515,8 @@ char* getDynString(ElfInfo* e,int idx)
   return (char*)data->d_buf+idx;
 }
 
+//idx should be the index in the section header string table, not the
+//section index
 char* getScnHdrString(ElfInfo* e,int idx)
 {
   assert(e);

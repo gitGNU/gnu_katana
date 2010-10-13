@@ -54,12 +54,23 @@
 */
 #include "config.h"
 #include <assert.h>
+#ifdef USING_JSON
+#include "json.h"
+#endif
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include "util/logging.h"
+#include "util/util.h"
 
 bool flags[EKCF_COUNT];
+const char* flagNames[]={"checkPtraceWrites","invalid"};
+struct Config config;
 
 void setDefaultConfig()
 {
   setFlag(EKCF_CHECK_PTRACE_WRITES,true);
+  config.maxWaitForPatching=100;
 }
 
 bool isFlag(E_KATANA_CONFIG_FLAGS flag)
@@ -73,3 +84,112 @@ void setFlag(E_KATANA_CONFIG_FLAGS flag,bool state)
   assert(flag>=0 && flag<EKCF_COUNT);
   flags[flag]=state;
 }
+#ifdef USING_JSON
+void parseFlags(json_t* flagsRoot)
+{
+  for(json_t* node=flagsRoot->child;node;node=node->next)
+  {
+    bool value=true;
+    if(JSON_FALSE==node->child->type)
+    {
+      value=false;
+    }
+    char* name=node->text;
+    for(int i=0;i<EKCF_COUNT;i++)
+    {
+      if(!strcasecmp(name,flagNames[i]))
+      {
+        setFlag(i,value);
+      }
+    }
+  }
+}
+
+
+void parseOptions(json_t* optionsRoot)
+{
+  for(json_t* node=optionsRoot->child;node;node=node->next)
+  {
+    if(JSON_STRING==node->type && node->child)
+    {
+      char* name=node->text;
+      logprintf(ELL_INFO_V3,ELS_CONFIG,"Setting %s=%s\n",name,node->child->text);
+      if(!strcasecmp(name,"maxWaitForPatching"))
+      {
+        config.maxWaitForPatching=atoi(node->child->text);
+      }
+      else
+      {
+        printf("Ignoring unknown configuration setting %s\n",name);
+      }
+      
+    }
+    else
+    {
+      logprintf(ELL_WARN,ELS_CONFIG,"Ignoring option %s because it is malformed",node->text);
+    }
+  }
+}
+
+void parseJSONTree(json_t* root)
+{
+  switch(root->type)
+  {
+  case JSON_ARRAY:
+  case JSON_OBJECT:
+    for(json_t* node = root->child;node;node=node->next)
+    {
+      parseJSONTree(node);
+    }
+    break;
+  case JSON_STRING:
+    //see if this is the start of a property
+    if(root->child)
+    {
+      char* name=root->text;
+      if(!strcmp(name,"flags"))
+      {
+        parseFlags(root->child);
+      }
+      else if(!strcmp(name,"options"))
+      {
+        parseOptions(root->child);
+      }
+    }
+    break;
+  default:
+    logprintf(ELL_WARN,ELS_CONFIG,"Ignoring unexpected node in JSON document");
+  }
+}
+#endif
+
+void loadConfigurationFile(char* fname)
+{
+  #ifdef USING_JSON
+  FILE* f = fopen(fname,"r");
+  if(!f)
+  {
+    death("Unable to load configuration file %s\n",fname);
+  }
+  json_t* document=NULL;
+  enum json_error err = json_stream_parse(f,&document);
+  switch(err)
+  {
+  case JSON_OK:
+    break;
+  case JSON_INCOMPLETE_DOCUMENT:
+    death("Error parsing configuration file %s, incomplete JSON document");
+    break;
+  case JSON_MALFORMED_DOCUMENT:
+    death("Error parsing configuration file %s, malformed JSON document");
+  default:
+    death("Parsing of configuration file gave JSON parse error %i",err);
+  }
+
+  for(json_t* node = document;node;node=node->next)
+  {
+    parseJSONTree(document);
+  }
+  #endif
+}
+

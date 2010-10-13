@@ -114,6 +114,24 @@ int main(int argc,char** argv)
   #endif
   loggingDefaults();
   setDefaultConfig();
+
+  struct stat s;
+  if(0==stat("/etc/katana",&s))
+  {
+    loadConfigurationFile("~/.katana");
+  }
+  if(0==stat("~/.katana",&s))
+  {
+    loadConfigurationFile("~/.katana");
+  }
+  if(0==stat("~/.config/katana",&s))
+  {
+    loadConfigurationFile("~/.config/katana");
+  }
+  if(0==stat(".katana",&s))
+  {
+    loadConfigurationFile(".katana");
+  }
   
   struct sigaction act;
   memset(&act,0,sizeof(struct sigaction));
@@ -127,7 +145,7 @@ int main(int argc,char** argv)
   {
     death("Failed to init ELF library\n");
   }
-  while((opt=getopt(argc,argv,"lgpo:"))>0)
+  while((opt=getopt(argc,argv,"cslgpo:"))>0)
   {
     switch(opt)
     {
@@ -168,7 +186,11 @@ int main(int argc,char** argv)
       {
         death("-s flag has no meaning for this mode\n");
       }
-      
+      break;
+    case 'c':
+      loadConfigurationFile(optarg);
+      break;
+
     }
   }
   if(EKM_NONE==mode)
@@ -227,7 +249,6 @@ int main(int argc,char** argv)
     char* patchFile=argv[optind];
     logprintf(ELL_INFO_V3,ELS_MISC,"patch file is %s\n",patchFile);
     ElfInfo* patch=openELFFile(patchFile);
-    patch->isPO=true;//todo: this should be detected by openELFFile
     Map* fdeMap=readDebugFrame(patch);
     printf("*********Type and Function Info****************\n");
     printPatchDwarfInfo(patch,fdeMap);

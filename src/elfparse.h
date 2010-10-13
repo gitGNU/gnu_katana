@@ -146,6 +146,8 @@ Elf_Scn* getSectionByERS(ElfInfo* e,E_RECOGNIZED_SECTION ers);
 void getShdrByERS(ElfInfo* e,E_RECOGNIZED_SECTION ers,GElf_Shdr* shdr);
 void getShdr(Elf_Scn* scn,GElf_Shdr* shdr);
 char* getSectionNameFromIdx(ElfInfo* e,int idx);
+//idx should be the index in the section header string table, not the
+//section index
 char* getScnHdrString(ElfInfo* e,int idx);
 char* getString(ElfInfo* e,int idx);//get a string from the normal string table
 char* getDynString(ElfInfo* e,int idx);//get a string from the dynamic string table

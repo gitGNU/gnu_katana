@@ -59,11 +59,25 @@
 
 typedef enum
 {
-  EKCF_CHECK_PTRACE_WRITES,//check writes done into target memory
+  EKCF_CHECK_PTRACE_WRITES=0,//check writes done into target memory
   EKCF_COUNT
 } E_KATANA_CONFIG_FLAGS;
+
+extern const char* flagNames[];
+
+
+struct Config
+{
+  // The maximum number of seconds to wait for the target to enter a safe state.
+  int maxWaitForPatching;
+};
+
+extern struct Config config;
+
+
 void setDefaultConfig();//called on startup
 bool isFlag(E_KATANA_CONFIG_FLAGS flag);
 void setFlag(E_KATANA_CONFIG_FLAGS flag,bool state);
+void loadConfigurationFile(char* fname);
 
 #endif
