@@ -8,15 +8,16 @@
 .\ disable filling
 .nf
 Generate a patch:
-\fBkatana\fP -g [-o OUTPUT_FILE] OLD_OBJECTS_DIR NEW_OBJECTS_DIR EXECUTABLE_NAME
+\fBkatana\fP [-c CONFIG]-g [-o OUTPUT_FILE] OLD_OBJECTS_DIR NEW_OBJECTS_DIR EXECUTABLE_NAME
 
 Apply a patch:
-\fBkatana\fP -p [-s] PATCH_FILENAME PID
+\fBkatana\fP [-c CONFIG] -p [-s] PATCH_FILENAME PID
 
 List patch information:
 \fBkatana\fP -l PATCH_FILE
 .\ enable filling again
 .fi
+
 
 .SH OVERVIEW
 Katana is intended to be used in two stages. The first stage generates
@@ -86,9 +87,20 @@ it is possible to view some information about a patch with
 
 \fBkatana\fP -l PATCH_FILENAME
 
+.SH CONFIGURATION FILES
+The -c CONFIG option tells katana to load the configuration file
+CONFIG. Additionally, and of the files /etc/katana, ~/.katana,
+~/.config/katana, and ./.katana which exist will be loaded (in that
+order) as configuration files regardless of the -c option. The CONFIG
+file specified by -c will be loaded last. Later configuration files
+may override settings from earlier ones. Configuration files are
+written in JSON (with the requirement to quote strings relaxed). For a
+complete guide to configuration options, see the Katana User's Guide
+which should be available at http://katana.nongnu.org.
+
 .SH AUTHORS
-Katana was written by James Oakley <james.oakley@dartmouth.edu> or
-<electron100@gmail.com>. It was designed by Sergey Bratus, James
+Katana was written by James Oakley (<james.oakley@dartmouth.edu> or
+<electron100@gmail.com>). It was designed by Sergey Bratus, James
 Oakley, Ashwin Ramaswamy, Michael E. Locasto, and Sean
 W. Smith. Katana is Copyright (C) 2010 Dartmouth College.
 

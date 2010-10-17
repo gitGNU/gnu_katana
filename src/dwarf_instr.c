@@ -426,7 +426,7 @@ void printInstruction(RegInstruction inst)
     printf("%li \n",(long)inst.arg2);
     break;
   case DW_CFA_def_cfa_register:
-    printf("DW_CFA_def_cfa_register");
+    printf("DW_CFA_def_cfa_register ");
     if(ERT_NONE==inst.arg1Reg.type)
     {
       printf("r%i\n",inst.arg1);

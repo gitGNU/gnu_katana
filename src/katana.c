@@ -141,6 +141,7 @@ int main(int argc,char** argv)
   E_KATANA_MODE mode=EKM_NONE;
   char* outfile=NULL;
   int flags=0;
+  bool ehInsteadOfDebug=false;
   if(elf_version(EV_CURRENT)==EV_NONE)
   {
     death("Failed to init ELF library\n");
@@ -190,7 +191,9 @@ int main(int argc,char** argv)
     case 'c':
       loadConfigurationFile(optarg);
       break;
-
+    case 'h':
+      ehInsteadOfDebug=true;
+      break;
     }
   }
   if(EKM_NONE==mode)
@@ -249,7 +252,7 @@ int main(int argc,char** argv)
     char* patchFile=argv[optind];
     logprintf(ELL_INFO_V3,ELS_MISC,"patch file is %s\n",patchFile);
     ElfInfo* patch=openELFFile(patchFile);
-    Map* fdeMap=readDebugFrame(patch);
+    Map* fdeMap=readDebugFrame(patch,ehInsteadOfDebug);
     printf("*********Type and Function Info****************\n");
     printPatchDwarfInfo(patch,fdeMap);
     printf("\n*********Safety Info****************\n");

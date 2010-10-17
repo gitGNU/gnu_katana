@@ -61,7 +61,7 @@
 //returns a Map between the numerical offset of an FDE
 //(accessible via the DW_AT_MIPS_fde attribute of the relevant type)
 //and the FDE structure
-Map* readDebugFrame(ElfInfo* elf);
+Map* readDebugFrame(ElfInfo* elf,bool ehInsteadOfDebug);
 
 
 //not really using CIE at the moment

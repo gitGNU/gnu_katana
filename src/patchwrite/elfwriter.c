@@ -182,43 +182,6 @@ void createSections(Elf* outelf)
   shdr->sh_name=addStrtabEntry(".data.new");
 
 
-
-  #ifdef RENAMED_DWARF_SCNS
-  
-  //now create patch rules
-  patch_rules_scn=elf_newscn(outelf);
-  patch_rules_data=elf_newdata(patch_rules_scn);
-  patch_rules_data->d_align=1;
-  patch_rules_data->d_buf=NULL;
-  patch_rules_data->d_off=0;
-  patch_rules_data->d_size=0
-  patch_rules_data->d_version=EV_CURRENT;
-  
-  shdr=elfxx_getshdr(patch_rules_scn);
-  shdr->sh_type=SHT_PROGBITS;
-  shdr->sh_link=1;//index of string table
-  shdr->sh_info=SHN_UNDEF;
-  shdr->sh_addralign=1;
-  shdr->sh_name=addStrtabEntry(".patch_rules");
-
-  //now create patch expressions
-  patch_expr_scn=elf_newscn(outelf);
-  patch_expr_data=elf_newdata(patch_expr_scn);
-  patch_expr_data->d_align=1;
-  patch_expr_data->d_buf=NULL;
-  patch_expr_data->d_off=0;
-  patch_expr_data->d_size=0;
-  patch_expr_data->d_version=EV_CURRENT;
-  
-  shdr=elfxx_getshdr(patch_expr_scn);
-  shdr->sh_type=SHT_PROGBITS;
-  shdr->sh_link=1;//index of string table
-  shdr->sh_info=SHN_UNDEF;
-  shdr->sh_addralign=1;
-  shdr->sh_name=addStrtabEntry(".patch_expr");
-
-  #endif
-
   //ordinary symtab
   symtab_scn=elf_newscn(outelf);
   symtab_data=elf_newdata(symtab_scn);
@@ -354,6 +317,9 @@ ElfInfo* startPatchElf(char* fname)
   }
 
   outelf = elf_begin (outfd, ELF_C_WRITE, NULL);
+  //todo: get rid of the need for permissive. Need it right now
+  //because libdwarf creates some sections with wrong entsizes.
+  elf_flagelf(outelf,ELF_C_SET,ELF_F_PERMISSIVE);
   patch->e=outelf;
   ElfXX_Ehdr* ehdr=elfxx_newehdr(outelf);
   if(!ehdr)
@@ -392,17 +358,12 @@ void finalizeDataSize(Elf_Scn* scn,Elf_Data* data)
 {
   ElfXX_Shdr* shdr=elfxx_getshdr(scn);
   shdr->sh_size=data->d_size;
-  logprintf(ELL_INFO_V3,ELS_ELFWRITE,"finalizing data size to %i for section with index %i\n",shdr->sh_size,elf_ndxscn(scn));
+  logprintf(ELL_INFO_V3,ELS_ELFWRITE,"finalizing data size to %i for section with name %s(%i)\n",shdr->sh_size,getScnHdrString(patch,shdr->sh_name),shdr->sh_name);
 }
 
 void finalizeDataSizes()
 {
   finalizeDataSize(strtab_scn,strtab_data);
-  #ifdef RENAMED_DWARF_SCNS
-  
-  //then patch expressions
-  finalizeDataSize(patch_expr_scn,patch_expr_data);
-  #endif
 
   //ordinary symtab
   finalizeDataSize(symtab_scn,symtab_data);
@@ -548,6 +509,8 @@ int dwarfWriteSectionCallback(char* name,int size,Dwarf_Unsigned type,
   shdr->sh_type=type;
   shdr->sh_flags=flags;
   shdr->sh_size=size;
+  shdr->sh_entsize=1; //todo: find some way to actually set this intelligently
+  printf("creating new dwarf section %s with name at %d and size %zd\n",name,shdr->sh_name,shdr->sh_size);
   shdr->sh_link=link;
   if(0==link && SHT_REL==type)
   {

@@ -74,8 +74,9 @@ Map* dataMoved=NULL;
 //the initial condition of regarray IS taken into account
 //execution continues until the end of the instructions or until the location is advanced
 //past stopLocation. stopLocation should be relative to the start of the instructions (i.e. the instructions are considered to start at 0)
-//if stopLocation is negative, it is ignored
-void evaluateInstructionsToRules(RegInstruction* instrs,int numInstrs,Dictionary* rules,int stopLocation)
+//if stopLocation is negative, it is ignored (evaluation continues to the end of the instructions)
+//returns the location stopped at
+int evaluateInstructionsToRules(RegInstruction* instrs,int numInstrs,Dictionary* rules,int stopLocation)
 {
   PoRegRule* rule=NULL;
   int loc=0;
@@ -121,7 +122,7 @@ void evaluateInstructionsToRules(RegInstruction* instrs,int numInstrs,Dictionary
       loc=inst.arg1;
       if(stopLocation >= 0 && loc>stopLocation)
       {
-        return;
+        return loc;
       }
       break;
     case DW_CFA_advance_loc:
@@ -130,7 +131,7 @@ void evaluateInstructionsToRules(RegInstruction* instrs,int numInstrs,Dictionary
       loc+=inst.arg1;
       if(stopLocation >= 0 && loc>stopLocation)
       {
-        return;
+        return loc;
       }
       break;
     case DW_CFA_offset:
@@ -171,6 +172,7 @@ void evaluateInstructionsToRules(RegInstruction* instrs,int numInstrs,Dictionary
       death("unexpected instruction in evaluateInstructions");
     }
   }
+  return loc;
 }
 
 //structure for holding one contiguous chunk of data

@@ -208,10 +208,11 @@ int fdeCmp(const void* a,const void* b)
   return fdeA->lowpc-fdeB->lowpc;
 }
 
-//returns a Map between the numerical offset of an FDE
-//(accessible via the DW_AT_MIPS_fde attribute of the relevant type)
-//and the FDE structure
-Map* readDebugFrame(ElfInfo* elf)
+//returns a Map between the numerical offset of an FDE (accessible via
+//the DW_AT_MIPS_fde attribute of the relevant type) and the FDE
+//structure.  if ehInsteadOfDebug is true, then read information from
+//.eh_frame instead of .debug_frame.
+Map* readDebugFrame(ElfInfo* elf,bool ehInsteadOfDebug)
 {
   Dwarf_Fde *fdeData = NULL;
   Dwarf_Signed fdeElementCount = 0;
@@ -226,11 +227,23 @@ Map* readDebugFrame(ElfInfo* elf)
   {
     dwarfErrorHandler(err,NULL);
   }
-  if(DW_DLV_OK!=dwarf_get_fde_list(dbg, &cieData, &cieElementCount,
-                     &fdeData, &fdeElementCount, &err))
+  if(!ehInsteadOfDebug)
   {
-    dwarfErrorHandler(err,NULL);
+    if(DW_DLV_OK!=dwarf_get_fde_list(dbg, &cieData, &cieElementCount,
+                                     &fdeData, &fdeElementCount, &err))
+    {
+      dwarfErrorHandler(err,NULL);
+    }
   }
+  else
+  {
+    if(DW_DLV_OK!=dwarf_get_fde_list_eh(dbg, &cieData, &cieElementCount,
+                                     &fdeData, &fdeElementCount, &err))
+    {
+      dwarfErrorHandler(err,NULL);
+    }
+  }
+    
 
   //read the CIE
   Dwarf_Unsigned cieLength = 0;
@@ -238,6 +251,10 @@ Map* readDebugFrame(ElfInfo* elf)
   char* augmenter = "";
   Dwarf_Ptr initInstr = 0;
   Dwarf_Unsigned initInstrLen = 0;
+  //todo: some use in being able to read things with multiple CIE's?
+  //(i.e. executables with more than one compilation unit. Usually we
+  //read from the original .o files one compilation unit at a time,b
+  //ut there might be some use for this
   assert(1==cieElementCount);
   //todo: all the casting here is hackish
   //should respect types more

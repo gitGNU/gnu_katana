@@ -93,8 +93,10 @@ void printFDEInfo(CIE* cie,FDE* fde,int num)
     printInstruction(fde->instructions[i]);
   }
   printf("    The table would be as follows\n");
-  //todo: figure out what we're actually using highpc for
-  for(int i=fde->lowpc;i</*fde->highpc*/1 || 0==i;i++)
+  //todo: figure out what we're actually using highpc for.
+  //at one point I had highpc replaced by 1 in the below check but I'm
+  //not sure what the purpose of that was
+  for(int i=fde->lowpc;i<fde->highpc || 0==i;i++)
   {
     Dictionary* rulesDict=dictDuplicate(cie->initialRules,NULL);
     evaluateInstructionsToRules(fde->instructions,fde->numInstructions,rulesDict,i-fde->lowpc);

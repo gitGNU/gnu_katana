@@ -1,6 +1,6 @@
 #!/bin/sh
 
 #start fresh with a new log file
-rm validator_log 
+rm -f validator_log 
 
 ./run_tests.py -d tests

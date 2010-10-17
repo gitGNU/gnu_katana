@@ -138,11 +138,11 @@
    /project/v1 contain all of the object files contributing to
    /project/v1/foo. Katana is then invoked as
 
-   =katana -g [-o OUTPUT_FILE] /project/v0 /project/v1 foo=
+   =katana [OPTIONS] -g [-o OUTPUT_FILE] /project/v0 /project/v1 foo=
 
    or more formally
 
-   =katana -g [-o OUTUT_FILE] OLD_OBJECTS_DIR NEW_OBJECTS_DIR EXECUTABLE_NAME=
+   =katana [OPTIONS] -g [-o OUTUT_FILE] OLD_OBJECTS_DIR NEW_OBJECTS_DIR EXECUTABLE_NAME=
 
    If =-o OUTPUT_FILE= is not specified, the output file will be =OLD_OBJECTS_DIR/EXECUTABLE_NAME.po=
 ** To Apply a Patch
@@ -150,7 +150,7 @@
    patched from its current version to a more recent version by the
    Patch Object (PO) file PATCH. Katana is then invoked as
 
-   =katana -p [-s] PATCH PID=
+   =katana [OPTIONS] -p [-s] PATCH PID=
 
    If all goes well, the patcher will run, print out some status
    messages, and leave your program in better state than it found
@@ -163,9 +163,40 @@
    should know what it will do. This goal is not yet fully realized,
    but it is possible to view some information about a patch with
 
-   =katana -l PATCH=
+   =katana [OPTIONS] -l PATCH=
+** Options
+   The following options may be passed to katana regardless of whether
+   one is generating, applying, or viewing a patch:
+   + -c CONFIG
+     where CONFIG is the name of a configuration file to load
+** Configuration Files
+   Katana loads configuration files as follows. Configuration files
+   loaded later in the sequence may overwrite settings from files
+   earlier in the sequence.
+   + /etc/katana
+   + ~/.katana
+   + ~/.config/katana
+   + ./katana
+   + any file specified with -c
+
+   Configuration files are written in JSON. The JSON requirement that
+   strings be quoted is relaxed (i.e. anything is assumed to be a
+   string unless it can be interpreted otherwise). The following
+   properties are recognized:
+   + maxWaitForPatching <INTEGER>
+     This value specifies the maximum number of seconds to wait for
+     the target to enter a safe state.
+   + flags <OBJECT>
+     The value of flags should be an object which may contain the
+     following properties, all of which should be bool-valued:
+     + checkPtraceWrites
+       Whenever something is written into the target memory, read the
+       value back out and verify that it was written correctly. This
+       has a performance penalty, but does provide some more robust
+       error checking, although it should not be necessary.
 ** See Also 
-   the katana manpage (once it's written, which it is not yet)
+   the katana manpage (although the information in this document is
+   considerably more extensive than in the manpage)
 * Patch Object Format
   This section of the document is not yet written. It will provide a description and specification of the PO format used by Katana
 * Patch Generation Process

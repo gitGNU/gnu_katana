@@ -1,1 +1,2 @@
 :relevant-files '("\\.c$" "\\.h$" "\\.c++$" "configure.ac$" "Makefile.am$" "\\.org$")
+:irrelevant-files '("^[#]" "~$" ".*\/real_tests\/apache\/v[01]\/.*" )

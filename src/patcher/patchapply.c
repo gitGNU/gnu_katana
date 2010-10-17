@@ -805,7 +805,7 @@ void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch,int flags)
   char cwd[PATH_MAX];
   getcwd(cwd,PATH_MAX);
   DwarfInfo* diPatch=readDWARFTypes(patch,cwd);
-  Map* fdeMap=readDebugFrame(patch);//get mapping between fde offsets and fde structures
+  Map* fdeMap=readDebugFrame(patch,false);//get mapping between fde offsets and fde structures
 
 
   //we need to know where malloc lives in the target because

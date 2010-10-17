@@ -3,10 +3,10 @@
 bin_PROGRAMS=katana
 
 
-katana_CFLAGS=-I ../include -g -Wall -Werror -Wno-error=pointer-sign -std=c99 -D_POSIX_SOURCE -D_BSD_SOURCE -D_XOPEN_SOURCE -D_GNU_SOURCE  -I /usr/local/include/libdwarf -I /usr/include/libdwarf -Doff64_t=__off64_t -DDEBUG
+katana_CFLAGS=-I ../include -g -Wall -Werror -Wno-error=pointer-sign -std=c99 -D_POSIX_SOURCE -D_BSD_SOURCE -D_XOPEN_SOURCE -D_GNU_SOURCE  -I /usr/local/include/libdwarf -I /usr/include/libdwarf -Doff64_t=__off64_t -DDEBUG -I ../external/json-1.2/src/
 
-katana_LDFLAGS=-L /usr/local/lib
-katana_LDADD= -ldwarf -lelf -lm -lunwind-generic -lunwind-ptrace
+katana_LDFLAGS=-L /usr/local/lib -L ../external/
+katana_LDADD= -ldwarf -lelf -lm -lunwind-generic -lunwind-ptrace ../external/libmjson.a
 
 PATCHER_SRC=patcher/hotpatch.c patcher/target.c patcher/patchapply.c patcher/versioning.c patcher/linkmap.c patcher/safety.c patcher/pmap.c
 PATCHER_H=patcher/hotpatch.h patcher/target.h patcher/patchapply.h patcher/versioning.h patcher/linkmap.h patcher/safety.h patcher/pmap.h

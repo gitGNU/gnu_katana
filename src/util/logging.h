@@ -58,7 +58,9 @@
 
 typedef enum
 {
-  ELL_DISABLE=0,//exists for the purpose of something lower than all log levels, should never be used in a call to logprintf
+  ELL_DISABLE=0,//exists for the purpose of something lower than all
+                //log levels, should never be used in a call to
+                //logprintf
   ELL_ERR,
   ELL_WARN,
   ELL_INFO_V1,
@@ -87,6 +89,7 @@ typedef enum
   ELS_ELFWRITE,
   ELS_VERSION,
   ELS_DWARFWRITE,
+  ELS_CONFIG,
   ELS_CNT
 } E_LOG_SOURCE;//describes what subsystem the message came from
 

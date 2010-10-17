@@ -1,4 +1,4 @@
-SUBDIRS=src tests code_tests doc
+SUBDIRS= src tests code_tests doc
 
 TESTS=code_tests/listsort ./patch_unit_tests ./apache_test
 

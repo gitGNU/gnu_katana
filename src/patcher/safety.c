@@ -66,6 +66,7 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include "safety.h"
+#include "config.h"
 
 FDE* getFDEForPC(ElfInfo* elf,addr_t pc)
 {
@@ -364,7 +365,7 @@ addr_t findSafeBreakpointForPatch(ElfInfo* targetBin,ElfInfo* patch,int pid)
     }
     unsafeFunctions[i]=symIdxTarget;
   }
-  addr_t deepestGoodPC=0;
+  DList* deepestGoodFrameLi=NULL;
   DList* li=activationFrames;
   for(;li;li=li->next)
   {
@@ -392,16 +393,21 @@ addr_t findSafeBreakpointForPatch(ElfInfo* targetBin,ElfInfo* patch,int pid)
     }
     else
     {
-      deepestGoodPC=((ActivationFrame*)li->value)->pc;
-      logprintf(ELL_INFO_V1,ELS_SAFETY,"Activation frame at 0x%x (%s) passed safety check\n",deepestGoodPC,getFunctionNameAtPC(targetBin,frame->pc));
+      deepestGoodFrameLi=li;
+      logprintf(ELL_INFO_V1,ELS_SAFETY,"Activation frame at 0x%x (%s) passed safety check\n",((ActivationFrame*)deepestGoodFrameLi->value)->pc,getFunctionNameAtPC(targetBin,frame->pc));
     }
   }
-  if(!deepestGoodPC)
+  if(!deepestGoodFrameLi)
   {
     printBacktrace(targetBin,pid);
     death("All functions with activation frames on the stack require patching. The application will never be in a patchable state!");
   }
-  return deepestGoodPC;
+  if(deepestGoodFrameLi->prev)
+  {
+    //never break in the current function if possible
+    deepestGoodFrameLi = deepestGoodFrameLi->prev;
+  }
+  return ((ActivationFrame*)deepestGoodFrameLi->value)->pc;
 }
 
 
@@ -414,18 +420,23 @@ void bringTargetToSafeState(ElfInfo* targetBin,ElfInfo* patch,int pid)
   continuePtrace();
   logprintf(ELL_INFO_V2,ELS_PATCHAPPLY,"Continuing until we reach safe spot to patch. . .\n");
   bool breakpointReached=false;
-  for(int i=0;i<MAX_WAIT_FOR_PATCHING_LOOPS;i++)
+  int numIterations = config.maxWaitForPatching*1e6/WAIT_FOR_SAFE_PATCHING_USLEEP;
+  for(int i=0;i<numIterations;i++)
   {
     logprintf(ELL_INFO_V3,ELS_PATCHAPPLY,"Iterating waiting for breakpoint to be hit\n");
     if(0!=waitpid(-1,NULL,WNOHANG))
     {
+      logprintf(ELL_INFO_V2,ELS_PATCHAPPLY,"Reached breakpoint\n");
       breakpointReached=true;
       break;
     }
     usleep(WAIT_FOR_SAFE_PATCHING_USLEEP);
   }
-  removeBreakpoint(safeBreakpointSpot);
-  if(!breakpointReached)
+  if(breakpointReached)
+  {
+    removeBreakpoint(safeBreakpointSpot);
+  }
+  else
   {
     death("Program does not seem to be reaching safe state, aborting patching\n");
   }
