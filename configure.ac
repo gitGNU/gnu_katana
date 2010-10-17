@@ -17,7 +17,7 @@ AC_DEFUN([fndlibPlaceholder],[
 
 
 
-AC_INIT([katana],[0.1.1b],[electron100@gmail.com])
+AC_INIT([katana],[0.2a],[electron100@gmail.com])
 
 
 AC_CANONICAL_TARGET
@@ -32,7 +32,7 @@ AC_CONFIG_SUBDIRS([external/json-1.2])
 
 #set up variables for use in Makefile.am
 AC_CHECK_LIB(elf,elf_begin,[fndlibPlaceholder],[doMissingLibrary])
-AC_CHECK_LIB(dwarf,dwarf_dealloc,[fndlibPlaceholder],[doMissingLibrary])
+#AC_CHECK_LIB(dwarf,dwarf_dealloc,[fndlibPlaceholder],[doMissingLibrary])
 #todo: should include check for libunwind-generic, but it seems to compile
 #such that all its functions are prefixed differently on different platforms,
 #so not sure what function to check for

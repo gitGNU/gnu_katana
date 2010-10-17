@@ -74,47 +74,65 @@ Map* dataMoved=NULL;
 //the initial condition of regarray IS taken into account
 //execution continues until the end of the instructions or until the location is advanced
 //past stopLocation. stopLocation should be relative to the start of the instructions (i.e. the instructions are considered to start at 0)
+//if stopLocation is negative, it is ignored
 //if stopLocation is negative, it is ignored (evaluation continues to the end of the instructions)
 //returns the location stopped at
-int evaluateInstructionsToRules(RegInstruction* instrs,int numInstrs,Dictionary* rules,int stopLocation)
+int evaluateInstructionsToRules(RegInstruction* instrs,int numInstrs,Dictionary* rules,int startLocation, int stopLocation)
 {
   PoRegRule* rule=NULL;
-  int loc=0;
+  int loc=startLocation;
   for(int i=0;i<numInstrs;i++)
   {
     RegInstruction inst=instrs[i];
-    if(ERT_NONE==inst.arg1Reg.type)
+    if(inst.type==DW_CFA_set_loc)
     {
-      death("cannot evaluate register with type ERT_NONE\n");
-      break;
+      loc=inst.arg1;
+      if(stopLocation >= 0 && loc>stopLocation)
+      {
+        return loc;
+      }
+      continue;
+    }
+    else if(inst.type==DW_CFA_advance_loc ||
+       inst.type==DW_CFA_advance_loc1 ||
+       inst.type==DW_CFA_advance_loc2)
+    {
+      loc+=inst.arg1;
+      if(stopLocation >=0 && loc>stopLocation)
+      {
+        return loc;
+      }
+      continue;
+    }
+
+/*     if(ERT_NONE==inst.arg1Reg.type) */
+/*     { */
+/*       death("cannot evaluate register with type ERT_NONE\n"); */
+/*     } */
+    PoReg reg;
+    char* str=NULL;
+    if(DW_CFA_def_cfa==inst.type ||
+       DW_CFA_def_cfa_register==inst.type ||
+       DW_CFA_def_cfa_offset==inst.type)
+    {
+      memset(&reg,0,sizeof(reg));
+      reg.type=ERT_CFA;
     }
     else
     {
-      PoReg reg;
-      char* str=NULL;
-      if(DW_CFA_def_cfa==inst.type ||
-         DW_CFA_def_cfa_register==inst.type ||
-         DW_CFA_def_cfa_offset==inst.type)
-      {
-        memset(&reg,0,sizeof(reg));
-        reg.type=ERT_CFA;
-      }
-      else
-      {
-        reg=inst.arg1Reg;
-      }
-      str=strForReg(reg);
-              
-      rule=dictGet(rules,str);
-      if(!rule)
-      {
-        rule=zmalloc(sizeof(PoRegRule));
-        rule->regLH=reg;
-        dictInsert(rules,str,rule);
-        
-      }
-      free(str);
+      reg=inst.arg1Reg;
     }
+    str=strForReg(reg);
+              
+    rule=dictGet(rules,str);
+    if(!rule)
+    {
+      rule=zmalloc(sizeof(PoRegRule));
+      rule->regLH=reg;
+      dictInsert(rules,str,rule);
+        
+    }
+    free(str);
     //printf("evaluating instruction of type 0x%x\n",(uint)inst.type);
     switch(inst.type)
     {
@@ -396,7 +414,7 @@ List* generatePatchesFromFDEAndState(FDE* fde,SpecialRegsState* state,ElfInfo* p
   //we build up rules for each register from the DW_CFA instructions
   Dictionary* rulesDict=dictCreate(100);//todo: get rid of arbitrary constant 100
   //todo: versioning?
-  evaluateInstructionsToRules(fde->instructions,fde->numInstructions,rulesDict,fde->highpc);
+  evaluateInstructionsToRules(fde->instructions,fde->numInstructions,rulesDict,fde->lowpc,fde->highpc);
   PoRegRule** rules=(PoRegRule**)dictValues(rulesDict);
   //we gather all of the the patch data together first before actually poking the target
   //because everything is supposed to be applied in parallel, as a table, and
