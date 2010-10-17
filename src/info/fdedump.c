@@ -84,8 +84,8 @@ void printFDEInfo(CIE* cie,FDE* fde,int num)
 {
   printf("--------FDE #%i-----\n",num);
   //printf("\tfunction guess:%s\n",get_fde_proc_name(dbg,fde->lowpc));
-  //printf("\tlowpc: 0x%x\n",fde->lowpc);
-  //printf("\thighpc:0x%x\n",fde->highpc);
+  printf("\tlowpc: 0x%x\n",fde->lowpc);
+  printf("\thighpc:0x%x\n",fde->highpc);
   printf("  Instructions:\n");
   for(int i=0;i<fde->numInstructions;i++)
   {
@@ -94,10 +94,14 @@ void printFDEInfo(CIE* cie,FDE* fde,int num)
   }
   printf("    The table would be as follows\n");
   //todo: figure out what we're actually using highpc for
-  for(int i=fde->lowpc;i</*fde->highpc*/1 || 0==i;i++)
+  for(int i=fde->lowpc;i<fde->highpc || fde->lowpc==i;i++)
   {
     Dictionary* rulesDict=dictDuplicate(cie->initialRules,NULL);
-    evaluateInstructionsToRules(fde->instructions,fde->numInstructions,rulesDict,i-fde->lowpc);
+    int stopLocation=evaluateInstructionsToRules(fde->instructions,fde->numInstructions,rulesDict,fde->lowpc,i);
+    if(stopLocation < i)
+    {
+      continue;//Don't need to print this because will be dup
+    }
     printf("    ----Register Rules at text address 0x%x------\n",i);
     printRules(rulesDict,"      ");
     dictDelete(rulesDict,NULL);

@@ -263,7 +263,7 @@ Map* readDebugFrame(ElfInfo* elf)
                                                      &elf->cie->numInitialInstructions);
   elf->cie->initialRules=dictCreate(100);//todo: get rid of arbitrary constant 100
   evaluateInstructionsToRules(elf->cie->initialInstructions,elf->cie->numInitialInstructions,
-  elf->cie->initialRules,-1);
+                              elf->cie->initialRules,0,-1);
   
   //todo: bizarre bug, it keeps coming out as -1, which is wrong
   elf->cie->codeAlign=1;
