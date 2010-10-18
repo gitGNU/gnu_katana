@@ -68,10 +68,10 @@ am_katana_OBJECTS = katana-katana.$(OBJEXT) \
 	katana-register.$(OBJEXT) katana-relocation.$(OBJEXT) \
 	katana-symbol.$(OBJEXT) katana-fderead.$(OBJEXT) \
 	katana-dwarfvm.$(OBJEXT) katana-config.$(OBJEXT) \
-	$(am__objects_1) $(am__objects_2) $(am__objects_3) \
-	$(am__objects_4)
+	katana-leb.$(OBJEXT) $(am__objects_1) $(am__objects_2) \
+	$(am__objects_3) $(am__objects_4)
 katana_OBJECTS = $(am_katana_OBJECTS)
-katana_DEPENDENCIES = ../external/libmjson.a
+katana_DEPENDENCIES =
 katana_LINK = $(CCLD) $(katana_CFLAGS) $(CFLAGS) $(katana_LDFLAGS) \
 	$(LDFLAGS) -o $@
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
@@ -183,9 +183,9 @@ target_vendor = @target_vendor@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-katana_CFLAGS = -I ../include -g -Wall -Werror -Wno-error=pointer-sign -std=c99 -D_POSIX_SOURCE -D_BSD_SOURCE -D_XOPEN_SOURCE -D_GNU_SOURCE  -I /usr/local/include/libdwarf -I /usr/include/libdwarf -Doff64_t=__off64_t -DDEBUG -I ../external/json-1.2/src/
+katana_CFLAGS = -I ../include -g -Wall -Werror -Wno-error=pointer-sign -std=c99 -D_POSIX_SOURCE -D_BSD_SOURCE -D_XOPEN_SOURCE -D_GNU_SOURCE  -I /usr/local/include/libdwarf -I /usr/include/libdwarf -Doff64_t=__off64_t -DDEBUG
 katana_LDFLAGS = -L /usr/local/lib -L ../external/
-katana_LDADD = -ldwarf -lelf -lm -lunwind-generic -lunwind-ptrace ../external/libmjson.a
+katana_LDADD = -ldwarf -lelf -lm -lunwind-generic -lunwind-ptrace
 PATCHER_SRC = patcher/hotpatch.c patcher/target.c patcher/patchapply.c patcher/versioning.c patcher/linkmap.c patcher/safety.c patcher/pmap.c
 PATCHER_H = patcher/hotpatch.h patcher/target.h patcher/patchapply.h patcher/versioning.h patcher/linkmap.h patcher/safety.h patcher/pmap.h
 PATCHWRITE_SRC = patchwrite/patchwrite.c patchwrite/codediff.c patchwrite/typediff.c patchwrite/elfwriter.c patchwrite/sourcetree.c patchwrite/write_to_dwarf.c patchwrite/elfcmp.c
@@ -194,9 +194,9 @@ UTIL_SRC = util/dictionary.c util/hash.c util/util.c util/map.c util/list.c util
 UTIL_H = util/dictionary.h util/hash.h util/util.h util/map.h util/list.h util/logging.h util/path.h util/refcounted.h
 INFO_SRC = info/fdedump.c info/dwinfo_dump.c  info/unsafe_funcs_dump.c
 INFO_H = info/fdedump.h info/dwinfo_dump.h  info/unsafe_funcs_dump.h
-H_FILES = dwarftypes.h elfparse.h types.h dwarf_instr.h register.h relocation.h symbol.h fderead.h dwarfvm.h config.h arch.h constants.h $(PATCHER_H) $(PATCHWRITE_H) $(UTIL_H) $(INFO_H)
+H_FILES = dwarftypes.h elfparse.h types.h dwarf_instr.h register.h relocation.h symbol.h fderead.h dwarfvm.h config.h arch.h constants.h leg.h $(PATCHER_H) $(PATCHWRITE_H) $(UTIL_H) $(INFO_H)
 EXTRA_DIST = $(H_FILES)
-katana_SOURCES = katana.c dwarftypes.c   elfparse.c  types.c  dwarf_instr.c register.c relocation.c symbol.c fderead.c dwarfvm.c config.c $(PATCHWRITE_SRC) $(PATCHER_SRC) $(UTIL_SRC) $(INFO_SRC)
+katana_SOURCES = katana.c dwarftypes.c   elfparse.c  types.c  dwarf_instr.c register.c relocation.c symbol.c fderead.c dwarfvm.c config.c leb.c $(PATCHWRITE_SRC) $(PATCHER_SRC) $(UTIL_SRC) $(INFO_SRC)
 all: all-am
 
 .SUFFIXES:
@@ -293,6 +293,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-hash.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-hotpatch.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-katana.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-leb.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-linkmap.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-list.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-logging.Po@am__quote@
@@ -482,6 +483,20 @@ katana-config.obj: config.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='config.c' object='katana-config.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-config.obj `if test -f 'config.c'; then $(CYGPATH_W) 'config.c'; else $(CYGPATH_W) '$(srcdir)/config.c'; fi`
+
+katana-leb.o: leb.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-leb.o -MD -MP -MF $(DEPDIR)/katana-leb.Tpo -c -o katana-leb.o `test -f 'leb.c' || echo '$(srcdir)/'`leb.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-leb.Tpo $(DEPDIR)/katana-leb.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='leb.c' object='katana-leb.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-leb.o `test -f 'leb.c' || echo '$(srcdir)/'`leb.c
+
+katana-leb.obj: leb.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-leb.obj -MD -MP -MF $(DEPDIR)/katana-leb.Tpo -c -o katana-leb.obj `if test -f 'leb.c'; then $(CYGPATH_W) 'leb.c'; else $(CYGPATH_W) '$(srcdir)/leb.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-leb.Tpo $(DEPDIR)/katana-leb.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='leb.c' object='katana-leb.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-leb.obj `if test -f 'leb.c'; then $(CYGPATH_W) 'leb.c'; else $(CYGPATH_W) '$(srcdir)/leb.c'; fi`
 
 katana-patchwrite.o: patchwrite/patchwrite.c
 @am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-patchwrite.o -MD -MP -MF $(DEPDIR)/katana-patchwrite.Tpo -c -o katana-patchwrite.o `test -f 'patchwrite/patchwrite.c' || echo '$(srcdir)/'`patchwrite/patchwrite.c

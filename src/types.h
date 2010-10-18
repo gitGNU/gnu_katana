@@ -67,6 +67,7 @@
 typedef unsigned int uint;
 typedef size_t addr_t;
 typedef size_t word_t;
+typedef ssize_t sword_t;
 typedef short unsigned int usint;
 typedef size_t idx_t;
 

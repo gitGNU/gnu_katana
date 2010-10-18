@@ -57,6 +57,7 @@
 #include <dwarf.h>
 #include "dwarf_instr.h"
 #include "util/logging.h"
+#include "leb.h"
 
 //todo: using externs is poor form, fix this
 extern Dwarf_P_Die firstCUDie;

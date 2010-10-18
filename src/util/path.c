@@ -105,7 +105,7 @@ char** getPathComponents(char* path)
     if('/'==path[i] && (i==0  || path[i-1]!='\\'))
     {
       cnt++;
-      components=realloc(components,cnt*sizeof(char**));
+      components=realloc(components,(cnt+1)*sizeof(char**));
       MALLOC_CHECK(components);
       components[cnt-1]=path+i+1;
       path[i]='\0';
@@ -113,11 +113,12 @@ char** getPathComponents(char* path)
     else if(i==0)
     {
       cnt++;
-      components=realloc(components,cnt*sizeof(char**));
+      components=realloc(components,(cnt+1)*sizeof(char**));
       MALLOC_CHECK(components);
       components[cnt-1]=path;
     }
   }
+  components[cnt]=NULL;
   return components;
 }
 

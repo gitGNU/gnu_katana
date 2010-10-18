@@ -60,7 +60,7 @@
 #include "patcher/target.h"
 #include "symbol.h"
 #include <stdio.h>
-
+#include "leb.h"
 
 PoReg readRegFromLEB128(byte* leb,usint* bytesRead)
 {

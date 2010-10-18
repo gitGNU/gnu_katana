@@ -100,11 +100,11 @@ void printFDEInfo(CIE* cie,FDE* fde,int num)
   {
     Dictionary* rulesDict=dictDuplicate(cie->initialRules,NULL);
     int stopLocation=evaluateInstructionsToRules(fde->instructions,fde->numInstructions,rulesDict,fde->lowpc,i);
-    if(stopLocation < i)
+    if(stopLocation != i)
     {
       continue;//Don't need to print this because will be dup
     }
-    printf("    ----Register Rules at text address 0x%x------\n",i);
+    printf("    ----Register Rules at text address 0x%x(%x)------\n",i,stopLocation);
     printRules(rulesDict,"      ");
     dictDelete(rulesDict,NULL);
   }

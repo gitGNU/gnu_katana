@@ -54,6 +54,7 @@
 */
 
 #include "dwarfvm.h"
+#include "leb.h"
 #include "register.h"
 #include <dwarf.h>
 #include "util/dictionary.h"
@@ -70,13 +71,15 @@ List* generatePatchesFromFDEAndState(FDE* fde,SpecialRegsState* state,ElfInfo* p
 //keys are old addresses of data objects (variables). Values are the new addresses
 Map* dataMoved=NULL;
 
-//evaluates the given instructions and stores them in the output rules dictionary
-//the initial condition of regarray IS taken into account
-//execution continues until the end of the instructions or until the location is advanced
-//past stopLocation. stopLocation should be relative to the start of the instructions (i.e. the instructions are considered to start at 0)
-//if stopLocation is negative, it is ignored
-//if stopLocation is negative, it is ignored (evaluation continues to the end of the instructions)
-//returns the location stopped at
+//evaluates the given instructions and stores them in the output rules
+//dictionary.The initial condition of regarray IS taken into account.
+//Execution continues until the end of the instructions or until the
+//location is advanced past stopLocation. stopLocation should be
+//relative to the start of the instructions (i.e. the instructions are
+//considered to start at 0) if stopLocation is negative, it is ignored
+//if stopLocation is negative, it is ignored (evaluation continues to
+//the end of the instructions) returns the location stopped at (will
+//be the lowest location that a change was actually made)
 int evaluateInstructionsToRules(RegInstruction* instrs,int numInstrs,Dictionary* rules,int startLocation, int stopLocation)
 {
   PoRegRule* rule=NULL;
@@ -86,22 +89,22 @@ int evaluateInstructionsToRules(RegInstruction* instrs,int numInstrs,Dictionary*
     RegInstruction inst=instrs[i];
     if(inst.type==DW_CFA_set_loc)
     {
-      loc=inst.arg1;
-      if(stopLocation >= 0 && loc>stopLocation)
+      if(stopLocation >= 0 && inst.arg1>stopLocation)
       {
         return loc;
       }
+      loc=inst.arg1;
       continue;
     }
     else if(inst.type==DW_CFA_advance_loc ||
        inst.type==DW_CFA_advance_loc1 ||
        inst.type==DW_CFA_advance_loc2)
     {
-      loc+=inst.arg1;
-      if(stopLocation >=0 && loc>stopLocation)
+      if(stopLocation >=0 && loc+inst.arg1>stopLocation)
       {
         return loc;
       }
+      loc+=inst.arg1;
       continue;
     }
 
@@ -137,11 +140,11 @@ int evaluateInstructionsToRules(RegInstruction* instrs,int numInstrs,Dictionary*
     switch(inst.type)
     {
     case DW_CFA_set_loc:
-      loc=inst.arg1;
-      if(stopLocation >= 0 && loc>stopLocation)
+      if(stopLocation >= 0 && loc+inst.arg1>stopLocation)
       {
         return loc;
       }
+      loc=inst.arg1;
       break;
     case DW_CFA_advance_loc:
     case DW_CFA_advance_loc1:

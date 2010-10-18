@@ -55,6 +55,7 @@
 */
 
 #include "dwarftypes.h"
+#include "leb.h"
 #include "fderead.h"
 #include "register.h"
 #include "dwarf_instr.h"
@@ -98,7 +99,7 @@ RegInstruction* parseFDEInstructions(Dwarf_Debug dbg,unsigned char* bytes,int le
       result[*numInstrs].arg1=low;
       result[*numInstrs].arg1Reg.type=ERT_BASIC;
       result[*numInstrs].arg1Reg.u.index=low;
-      result[*numInstrs].arg2=leb128ToUInt(bytes + 1, &uleblen)*dataAlign;
+      result[*numInstrs].arg2=leb128ToUWord(bytes + 1, &uleblen)*dataAlign;
       bytes+=uleblen;
       len-=uleblen;
       break;

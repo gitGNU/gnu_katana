@@ -17,9 +17,9 @@ UTIL_H=util/dictionary.h util/hash.h util/util.h util/map.h util/list.h util/log
 INFO_SRC=info/fdedump.c info/dwinfo_dump.c  info/unsafe_funcs_dump.c
 INFO_H=info/fdedump.h info/dwinfo_dump.h  info/unsafe_funcs_dump.h
 
-H_FILES=dwarftypes.h elfparse.h types.h dwarf_instr.h register.h relocation.h symbol.h fderead.h dwarfvm.h config.h arch.h constants.h $(PATCHER_H) $(PATCHWRITE_H) $(UTIL_H) $(INFO_H)
+H_FILES=dwarftypes.h elfparse.h types.h dwarf_instr.h register.h relocation.h symbol.h fderead.h dwarfvm.h config.h arch.h constants.h leg.h $(PATCHER_H) $(PATCHWRITE_H) $(UTIL_H) $(INFO_H)
 
 EXTRA_DIST=$(H_FILES)
 
-katana_SOURCES=katana.c dwarftypes.c   elfparse.c  types.c  dwarf_instr.c register.c relocation.c symbol.c fderead.c dwarfvm.c config.c $(PATCHWRITE_SRC) $(PATCHER_SRC) $(UTIL_SRC) $(INFO_SRC)
+katana_SOURCES=katana.c dwarftypes.c   elfparse.c  types.c  dwarf_instr.c register.c relocation.c symbol.c fderead.c dwarfvm.c config.c leb.c $(PATCHWRITE_SRC) $(PATCHER_SRC) $(UTIL_SRC) $(INFO_SRC)
 

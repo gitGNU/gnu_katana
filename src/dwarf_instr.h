@@ -62,15 +62,6 @@
 #include <dwarf.h>
 #include "register.h"
 
-//return value should be freed when you're finished with it
-byte* encodeAsLEB128(byte* bytes,int numBytes,bool signed_,usint* numBytesOut);
-
-//return value should be freed when you're finished with it
-byte* decodeLEB128(byte* bytes,bool signed_,usint* numBytesOut,usint* numSeptetsRead);
-
-uint leb128ToUInt(byte* bytes,usint* outLEBBytesRead);
-
-word_t leb128ToUWord(byte* bytes,usint* outLEBBytesRead);
 
 
 typedef struct
@@ -89,11 +80,11 @@ typedef struct
   usint arg1NumBytes;
   byte* arg2Bytes;
   usint arg2NumBytes;
-  int arg1;
-  int arg2;
+  word_t arg1;
+  word_t arg2;
   byte* arg3Bytes;
   usint arg3NumBytes;
-  int arg3;
+  word_t arg3;
   //both the integer and bytes values for an argument are not valid at any one time
   //which is valid depends on the opcode
 } DwarfInstruction;
