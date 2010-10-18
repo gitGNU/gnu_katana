@@ -146,7 +146,7 @@ int main(int argc,char** argv)
   {
     death("Failed to init ELF library\n");
   }
-  while((opt=getopt(argc,argv,"cslgpo:"))>0)
+  while((opt=getopt(argc,argv,"cslhgpo:"))>0)
   {
     switch(opt)
     {

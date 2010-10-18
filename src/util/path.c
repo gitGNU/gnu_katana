@@ -62,6 +62,7 @@
 #include <limits.h>
 #include <unistd.h>
 
+//Caller must free returned path memory
 char* joinPaths(char* path1,char* path2)
 {
   if(!path1 && !path2)
@@ -86,7 +87,42 @@ char* joinPaths(char* path1,char* path2)
   return result;
 }
 
+//the caller must free the returned array. The elements of the array
+//will be pointers to substrings in path as in strtok path is
+//overwritten to place NULL bytes at the separators.  The returned
+//array of path components will be NULL-terminated
+char** getPathComponents(char* path)
+{
+  if(!strlen(path))
+  {
+    return NULL;
+  }
+  char** components=NULL;
+  int cnt=0;
+  int len=strlen(path);
+  for(int i=0;i<len;i++)
+  {
+    if('/'==path[i] && (i==0  || path[i-1]!='\\'))
+    {
+      cnt++;
+      components=realloc(components,cnt*sizeof(char**));
+      MALLOC_CHECK(components);
+      components[cnt-1]=path+i+1;
+      path[i]='\0';
+    }
+    else if(i==0)
+    {
+      cnt++;
+      components=realloc(components,cnt*sizeof(char**));
+      MALLOC_CHECK(components);
+      components[cnt-1]=path;
+    }
+  }
+  return components;
+}
+
 //path is made relative to ref
+//caller must free the result
 char* makePathRelativeTo(char* path,char* ref)
 {
   char* path_=absPath(path);
@@ -95,17 +131,57 @@ char* makePathRelativeTo(char* path,char* ref)
   {
     return NULL;
   }
+  if(!strlen(ref))
+  {
+    return strdup(path);
+  }
+  if(!strlen(path))
+  {
+    return strdup(path);
+  }
   if(!strncmp(path_,ref_,strlen(ref_)))
   {
     char* result=strdup(path_+strlen(ref_));
-    free(path_);
-    free(ref_);
     return result;
   }
   else
   {
-    death("Need to implement more compilated forms of makePathRelativeTo. Poke James\n");
-    return NULL;
+    //todo: I think this only works on absolute paths
+    char* tmpPath=strdup(path);
+    char* tmpRef=strdup(ref);
+    char** pathComponents=getPathComponents(tmpPath);
+    char** refComponents=getPathComponents(tmpRef);
+    int sameCnt=0;//number of components the two path have in common
+    for(;!strcmp(pathComponents[sameCnt],refComponents[sameCnt]);sameCnt++)
+    {}
+
+    int upCnt=0;//number of references to preceding directories that are needed
+    for(;refComponents[sameCnt+upCnt];upCnt++)
+    {}
+
+    char* result=zmalloc(strlen(path)+upCnt*3+2);
+    for(int i=0;i<upCnt;i++)
+    {
+      result[i*3]='.';
+      result[i*3+1]='.';
+      result[i*3+2]='/';
+    }
+    int loc=upCnt*3;
+    for(int i=sameCnt;pathComponents[i];i++)
+    {
+      int len=strlen(pathComponents[i]);
+      memcpy(result+loc,pathComponents[i],len);
+      loc+=len;
+      if(pathComponents[i+1])
+      {
+        //this isn't the last one
+        result[loc++]='/';
+      }
+    }
+
+    free(tmpPath);
+    free(tmpRef);
+    return result;
   }
 }
 

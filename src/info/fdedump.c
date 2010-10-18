@@ -119,9 +119,12 @@ void printPatchFDEInfo(ElfInfo* patch)
   }
   readDebugFrameForDump(dbgForFDEDump);
   */
-  printCIEInfo(patch->cie);
+  for(int i=0;i<patch->numCIEs;i++)
+  {
+    printCIEInfo(patch->cies+i);
+  }
   for(int i=0;i<patch->numFdes;i++)
   {
-    printFDEInfo(patch->cie,patch->fdes+i,i+1);//fdes have a 1-based numbering scheme
+    printFDEInfo(patch->fdes[i].cie,patch->fdes+i,i+1);//fdes have a 1-based numbering scheme
   }
 }

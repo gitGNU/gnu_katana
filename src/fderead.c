@@ -132,6 +132,12 @@ RegInstruction* parseFDEInstructions(Dwarf_Debug dbg,unsigned char* bytes,int le
         len -= 2;
         }
         break;
+      case DW_CFA_same_value:
+        result[*numInstrs].type=high;
+        result[*numInstrs].arg1=low;
+        result[*numInstrs].arg1Reg.type=ERT_BASIC;
+        result[*numInstrs].arg1Reg.u.index=low;
+        break;
       case DW_CFA_register:
         result[*numInstrs].arg1Reg=readRegFromLEB128(bytes + 1,&uleblen);
         bytes+=uleblen;
@@ -218,7 +224,6 @@ Map* readDebugFrame(ElfInfo* elf,bool ehInsteadOfDebug)
   Dwarf_Signed fdeElementCount = 0;
   Dwarf_Cie *cieData = NULL;
   Dwarf_Signed cieElementCount = 0;
-  elf->cie=zmalloc(sizeof(CIE));
   
   Map* result=integerMapCreate(100);//todo: remove arbitrary constant 100
   Dwarf_Error err;
@@ -251,39 +256,43 @@ Map* readDebugFrame(ElfInfo* elf,bool ehInsteadOfDebug)
   char* augmenter = "";
   Dwarf_Ptr initInstr = 0;
   Dwarf_Unsigned initInstrLen = 0;
-  //todo: some use in being able to read things with multiple CIE's?
-  //(i.e. executables with more than one compilation unit. Usually we
-  //read from the original .o files one compilation unit at a time,b
-  //ut there might be some use for this
-  assert(1==cieElementCount);
-  //todo: all the casting here is hackish
-  //should respect types more
-  if(DW_DLV_OK!=dwarf_get_cie_info(cieData[0],
-                     &cieLength,
-                     &version,
-                     &augmenter,
-                     &elf->cie->codeAlign,
-                     &elf->cie->dataAlign,
-                     &elf->cie->returnAddrRuleNum,
-                     &initInstr,
-                                   &initInstrLen, &err))
+
+  elf->cies=zmalloc(sizeof(CIE)*cieElementCount);
+  elf->numCIEs=cieElementCount;
+
+  for(int i=0;i<cieElementCount;i++)
   {
-    dwarfErrorHandler(err,NULL);
+    //todo: all the casting here is hackish
+    //should respect types more
+    if(DW_DLV_OK!=dwarf_get_cie_info(cieData[0],
+                                     &cieLength,
+                                     &version,
+                                     &augmenter,
+                                     &elf->cies[i].codeAlign,
+                                     &elf->cies[i].dataAlign,
+                                     &elf->cies[i].returnAddrRuleNum,
+                                     &initInstr,
+                                     &initInstrLen, &err))
+    {
+      dwarfErrorHandler(err,NULL);
+    }
+    //don't care about initial instructions, for patching,
+    //but do if we're reading a debug frame for stack unwinding purposes
+    //so that we can find activation frames
+  
+    elf->cies[i].initialInstructions=
+      parseFDEInstructions(dbg,initInstr,initInstrLen,
+                           elf->cies[i].dataAlign,
+                           elf->cies[i].codeAlign,
+                           &elf->cies[i].numInitialInstructions);
+    elf->cies[i].initialRules=dictCreate(100);//todo: get rid of
+    //arbitrary constant 100
+    evaluateInstructionsToRules(elf->cies[i].initialInstructions,elf->cies[i].numInitialInstructions,
+                                elf->cies[i].initialRules,0,-1);
+  
+    //todo: bizarre bug, it keeps coming out as -1, which is wrong
+    elf->cies[i].codeAlign=1;
   }
-  //don't care about initial instructions, for patching,
-  //but do if we're reading a debug frame for stack unwinding purposes
-  //so that we can find activation frames
-  
-  elf->cie->initialInstructions=parseFDEInstructions(dbg,initInstr,initInstrLen,
-                                                     elf->cie->dataAlign,
-                                                     elf->cie->codeAlign,
-                                                     &elf->cie->numInitialInstructions);
-  elf->cie->initialRules=dictCreate(100);//todo: get rid of arbitrary constant 100
-  evaluateInstructionsToRules(elf->cie->initialInstructions,elf->cie->numInitialInstructions,
-                              elf->cie->initialRules,0,-1);
-  
-  //todo: bizarre bug, it keeps coming out as -1, which is wrong
-  elf->cie->codeAlign=1;
   
   elf->fdes=zmalloc(fdeElementCount*sizeof(FDE));
   elf->numFdes=fdeElementCount;
@@ -297,7 +306,15 @@ Map* readDebugFrame(ElfInfo* elf,bool ehInsteadOfDebug)
     {
       dwarfErrorHandler(err,NULL);
     }
-    elf->fdes[i].instructions=parseFDEInstructions(dbg,instrs,ilen,elf->cie->dataAlign,elf->cie->codeAlign,&elf->fdes[i].numInstructions);
+
+    Dwarf_Cie dcie;
+    dwarf_get_cie_of_fde(dfde,&dcie,&err);
+    Dwarf_Signed cieIndex;
+    dwarf_get_cie_index(dcie,&cieIndex,&err);
+    elf->fdes[i].cie=&elf->cies[cieIndex];
+    CIE* cie=elf->fdes[i].cie;
+    
+    elf->fdes[i].instructions=parseFDEInstructions(dbg,instrs,ilen,cie->dataAlign,cie->codeAlign,&elf->fdes[i].numInstructions);
     Dwarf_Addr lowPC = 0;
     Dwarf_Unsigned addrRange = 0;
     Dwarf_Ptr fdeBytes = NULL;

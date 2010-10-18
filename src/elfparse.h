@@ -108,7 +108,8 @@ typedef struct ElfInfo
   struct FDE* fdes;//for relocatable and executable objects, these
                    //will be sorted by lowpc
   int numFdes;
-  struct CIE* cie;
+  struct CIE* cies;
+  int numCIEs;
   bool dataAllocatedByKatana;//used for memory management
   bool isPO;//is this elf object a patch object?
   #ifdef KATANA_X86_64_ARCH
