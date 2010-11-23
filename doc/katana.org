@@ -200,9 +200,34 @@
 * Patch Object Format
   This section of the document is not yet written. It will provide a description and specification of the PO format used by Katana
 * Patch Generation Process
-  This section of the document is not yet written. It will provide a
-  description of the internal process that Katana uses to generate a
-  patch. Understanding it is not necessary for using Katana.
+  This section of the document is still under construction. When
+  complete, it will provide a description of the internal process that
+  Katana uses to generate a patch. Understanding it is not necessary
+  for using Katana.
+  
+** Configuration
+   Katana reads configuration files from (in order, with later
+   configuration files overriding options found in earlier ones) from
+   =/etc/katana=, =~/.katana=, =~/.config/katana=, and =./.katana=.
+
+** Initializing the patch object
+   Katana sets up a patch object ELF file with the necessary sections,
+   see [[Patch Object Format]]
+** Comparing source trees
+   + Katana compare the old and new source trees, looking at the object (.o)
+     files.
+   + For object files which exist only in the new tree, their contents
+     are added to the patch object being created.
+   + For object files which exist only in the old tree, a warning
+     about their removal is issued and nothing further is done.
+   + For object files which exist in both trees, type diffing and
+     function diffing are performed and the differences are written
+     tot he patch object being created.
+** Type Diffing
+   This section of the document still needs to be written. The general
+   idea is that structures are examined for for added members, moved
+   members, and changed members.
+** Function Diffing
 * Patch Application Process
   This section of the document is not yet written. It will provide a
   description of the internal process that Katana uses to apply a

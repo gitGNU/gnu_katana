@@ -2,7 +2,7 @@
        ========================================================
 
 Author: James Oakley <james.oakley@dartmouth.edu>
-Date: 2010-06-22 19:27:16 PDT
+Date: 2010-11-14 15:47:04 EST
 
 
 
@@ -20,9 +20,14 @@ Table of Contents
     6.2 To Generate a Patch 
     6.3 To Apply a Patch 
     6.4 To View a Patch 
-    6.5 See Also 
+    6.5 Options 
+    6.6 Configuration Files 
+    6.7 See Also 
 7 Patch Object Format 
 8 Patch Generation Process 
+    8.1 Configuration 
+    8.2 Initializing the patch object 
+    8.3 Comparing source trees 
 9 Patch Application Process 
 10 Roadmap 
 11 Credits and Licensing 
@@ -174,11 +179,11 @@ Table of Contents
    /project/v1 contain all of the object files contributing to
    /project/v1/foo. Katana is then invoked as
 
-   `katana -g [-o OUTPUT_FILE] /project/v0 /project/v1 foo'
+   `katana [OPTIONS] -g [-o OUTPUT_FILE] /project/v0 /project/v1 foo'
 
    or more formally
 
-   `katana -g [-o OUTUT_FILE] OLD_OBJECTS_DIR NEW_OBJECTS_DIR EXECUTABLE_NAME'
+   `katana [OPTIONS] -g [-o OUTUT_FILE] OLD_OBJECTS_DIR NEW_OBJECTS_DIR EXECUTABLE_NAME'
 
    If `-o OUTPUT_FILE' is not specified, the output file will be `OLD_OBJECTS_DIR/EXECUTABLE_NAME.po'
 
@@ -188,7 +193,7 @@ Table of Contents
    patched from its current version to a more recent version by the
    Patch Object (PO) file PATCH. Katana is then invoked as
 
-   `katana -p [-s] PATCH PID'
+   `katana [OPTIONS] -p [-s] PATCH PID'
 
    If all goes well, the patcher will run, print out some status
    messages, and leave your program in better state than it found
@@ -203,11 +208,46 @@ Table of Contents
    should know what it will do. This goal is not yet fully realized,
    but it is possible to view some information about a patch with
 
-   `katana -l PATCH'
+   `katana [OPTIONS] -l PATCH'
 
-6.5 See Also 
+6.5 Options 
+============
+   The following options may be passed to katana regardless of whether
+   one is generating, applying, or viewing a patch:
+   + -c CONFIG
+     where CONFIG is the name of a configuration file to load
+
+6.6 Configuration Files 
+========================
+   Katana loads configuration files as follows. Configuration files
+   loaded later in the sequence may overwrite settings from files
+   earlier in the sequence.
+   + /etc/katana
+   + ~/.katana
+   + ~/.config/katana
+   + ./katana
+   + any file specified with -c
+
+   Configuration files are written in JSON. The JSON requirement that
+   strings be quoted is relaxed (i.e. anything is assumed to be a
+   string unless it can be interpreted otherwise). The following
+   properties are recognized:
+   + maxWaitForPatching <INTEGER>
+     This value specifies the maximum number of seconds to wait for
+     the target to enter a safe state.
+   + flags <OBJECT>
+     The value of flags should be an object which may contain the
+     following properties, all of which should be bool-valued:
+     + checkPtraceWrites
+       Whenever something is written into the target memory, read the
+       value back out and verify that it was written correctly. This
+       has a performance penalty, but does provide some more robust
+       error checking, although it should not be necessary.
+
+6.7 See Also 
 =============
-   the katana manpage (once it's written, which it is not yet)
+   the katana manpage (although the information in this document is
+   considerably more extensive than in the manpage)
 
 7 Patch Object Format 
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -215,9 +255,36 @@ Table of Contents
 
 8 Patch Generation Process 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  This section of the document is not yet written. It will provide a
-  description of the internal process that Katana uses to generate a
-  patch. Understanding it is not necessary for using Katana.
+  This section of the document is still under construction. When
+  complete, it will provide a description of the internal process that
+  Katana uses to generate a patch. Understanding it is not necessary
+  for using Katana.
+  
+
+8.1 Configuration 
+==================
+   Katana reads configuration files from (in order, with later
+   configuration files overriding options found in earlier ones) from
+   `/etc/katana', `~/.katana', `~/.config/katana', and `./.katana'.
+
+8.2 Initializing the patch object 
+==================================
+   Katana sets up a patch object ELF file with the necessary sections,
+   see [Patch Object Format]
+
+   [Patch Object Format]: sec-7
+
+8.3 Comparing source trees 
+===========================
+   + Katana compare the old and new source trees, looking at the object (.o)
+     files.
+   + For object files which exist only in the new tree, their contents
+     are added to the patch object being created.
+   + For object files which exist only in the old tree, a warning
+     about their removal is issued and nothing further is done.
+   + For object files which exist in both trees, type diffing and
+     function diffing are performed and the differences are written
+     tot he patch object being created.
 
 9 Patch Application Process 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
