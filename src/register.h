@@ -92,6 +92,9 @@ typedef struct
   } u;
 } PoReg;
 
+PoReg* copyPoReg(PoReg* old);
+
+
 PoReg readRegFromLEB128(byte* leb,usint* bytesRead);
 
 //the returned string should be freed
@@ -148,4 +151,9 @@ typedef enum
 //flags determines this behaviour (should be OR'd E_REG_RESOLVE_FLAGS
 int resolveRegisterValue(PoReg* reg,SpecialRegsState* state,byte** result,int flags);
 
+char* getArchRegNameFromDwarfRegNum(int num);
+
+PoRegRule* duplicatePoRegRule(PoRegRule* rule);
+
+PoReg* duplicatePoReg(PoReg* old);
 #endif

@@ -70,7 +70,10 @@ typedef struct CIE
 {
   RegInstruction* initialInstructions;
   int numInitialInstructions;
-  Dictionary* initialRules;
+  Dictionary* initialRules; //dictionary mapping the stringified
+                            //version of a register to the rule (of
+                            //type PoRegRule) for setting that
+                            //register
   Dwarf_Signed dataAlign;
   Dwarf_Unsigned codeAlign;
   Dwarf_Half returnAddrRuleNum;

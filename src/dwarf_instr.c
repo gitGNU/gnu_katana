@@ -178,7 +178,7 @@ void printInstruction(RegInstruction inst)
     {
       signed long int tmp;
       memcpy(&tmp,&inst.arg2,sizeof(inst.arg2));
-      printf("DW_CFA_offset_ r%i %zi\n",inst.arg1,tmp);
+      printf("DW_CFA_offset r%i %zi\n",inst.arg1,tmp);
     }
     break;
   case DW_CFA_register:
@@ -259,10 +259,16 @@ void printInstruction(RegInstruction inst)
   case DW_CFA_def_cfa_offset:
     printf("DW_CFA_def_cfa_offset %i\n",inst.arg1);
     break;
+  case DW_CFA_remember_state:
+    printf("DW_CFA_remember_state\n");
+    break;
+  case DW_CFA_restore_state:
+    printf("DW_CFA_restore_state\n");
+    break;
   case DW_CFA_nop:
     printf("DW_CFA_nop\n");
     break;
   default:
-    death("unsupported instruction");
+    death("unsupported DWARF instruction 0x%x",inst.type);
   }
 }

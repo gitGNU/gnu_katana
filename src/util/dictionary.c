@@ -108,6 +108,7 @@ DNODE* dictNodeDuplicate(DNODE* n,void* (*dataCP)(void*))
   return new;
 }
 
+//If dataCP is NULL then values will simply be copied over as pointers
 Dictionary* dictDuplicate(Dictionary* dict,void* (*dataCP)(void*))
 {
   Dictionary* new=dictCreate(dict->numBuckets);

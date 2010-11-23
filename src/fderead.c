@@ -193,6 +193,10 @@ RegInstruction* parseFDEInstructions(Dwarf_Debug dbg,unsigned char* bytes,int le
         bytes+=uleblen;
         len-=uleblen;
         break;
+      case DW_CFA_remember_state:
+      case DW_CFA_restore_state:
+        //don't need to store any arguments, this instruction doesn't take any
+        break;
       case DW_CFA_nop:
         (*numInstrs)--;//since not actually using up an instruction here
         break;
@@ -288,8 +292,9 @@ Map* readDebugFrame(ElfInfo* elf,bool ehInsteadOfDebug)
                            &elf->cies[i].numInitialInstructions);
     elf->cies[i].initialRules=dictCreate(100);//todo: get rid of
     //arbitrary constant 100
-    evaluateInstructionsToRules(elf->cies[i].initialInstructions,elf->cies[i].numInitialInstructions,
-                                elf->cies[i].initialRules,0,-1);
+    evaluateInstructionsToRules(elf->cies[i].initialInstructions,
+                                elf->cies[i].numInitialInstructions,
+                                elf->cies[i].initialRules,0,-1,NULL);
   
     //todo: bizarre bug, it keeps coming out as -1, which is wrong
     elf->cies[i].codeAlign=1;
@@ -314,7 +319,7 @@ Map* readDebugFrame(ElfInfo* elf,bool ehInsteadOfDebug)
     dwarf_get_cie_index(dcie,&cieIndex,&err);
     elf->fdes[i].cie=&elf->cies[cieIndex];
     CIE* cie=elf->fdes[i].cie;
-    
+    logprintf(ELL_INFO_V2,ELS_DWARF_FRAME,"Reading instructions in FDE #%i\n",i);
     elf->fdes[i].instructions=parseFDEInstructions(dbg,instrs,ilen,cie->dataAlign,cie->codeAlign,&elf->fdes[i].numInstructions);
     Dwarf_Addr lowPC = 0;
     Dwarf_Unsigned addrRange = 0;

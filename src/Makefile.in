@@ -59,7 +59,8 @@ am__objects_2 = katana-hotpatch.$(OBJEXT) katana-target.$(OBJEXT) \
 am__objects_3 = katana-dictionary.$(OBJEXT) katana-hash.$(OBJEXT) \
 	katana-util.$(OBJEXT) katana-map.$(OBJEXT) \
 	katana-list.$(OBJEXT) katana-logging.$(OBJEXT) \
-	katana-path.$(OBJEXT) katana-refcounted.$(OBJEXT)
+	katana-path.$(OBJEXT) katana-refcounted.$(OBJEXT) \
+	katana-stack.$(OBJEXT)
 am__objects_4 = katana-fdedump.$(OBJEXT) katana-dwinfo_dump.$(OBJEXT) \
 	katana-unsafe_funcs_dump.$(OBJEXT)
 am_katana_OBJECTS = katana-katana.$(OBJEXT) \
@@ -190,8 +191,8 @@ PATCHER_SRC = patcher/hotpatch.c patcher/target.c patcher/patchapply.c patcher/v
 PATCHER_H = patcher/hotpatch.h patcher/target.h patcher/patchapply.h patcher/versioning.h patcher/linkmap.h patcher/safety.h patcher/pmap.h
 PATCHWRITE_SRC = patchwrite/patchwrite.c patchwrite/codediff.c patchwrite/typediff.c patchwrite/elfwriter.c patchwrite/sourcetree.c patchwrite/write_to_dwarf.c patchwrite/elfcmp.c
 PATCHWRITE_H = patchwrite/patchwrite.h patchwrite/codediff.h patchwrite/typediff.h patchwrite/elfwriter.h patchwrite/sourcetree.h patchwrite/write_to_dwarf.h patchwrite/elfcmp.h
-UTIL_SRC = util/dictionary.c util/hash.c util/util.c util/map.c util/list.c util/logging.c util/path.c util/refcounted.c
-UTIL_H = util/dictionary.h util/hash.h util/util.h util/map.h util/list.h util/logging.h util/path.h util/refcounted.h
+UTIL_SRC = util/dictionary.c util/hash.c util/util.c util/map.c util/list.c util/logging.c util/path.c util/refcounted.c util/stack.c
+UTIL_H = util/dictionary.h util/hash.h util/util.h util/map.h util/list.h util/logging.h util/path.h util/refcounted.h util/stack.h
 INFO_SRC = info/fdedump.c info/dwinfo_dump.c  info/unsafe_funcs_dump.c
 INFO_H = info/fdedump.h info/dwinfo_dump.h  info/unsafe_funcs_dump.h
 H_FILES = dwarftypes.h elfparse.h types.h dwarf_instr.h register.h relocation.h symbol.h fderead.h dwarfvm.h config.h arch.h constants.h leg.h $(PATCHER_H) $(PATCHWRITE_H) $(UTIL_H) $(INFO_H)
@@ -307,6 +308,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-relocation.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-safety.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-sourcetree.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-stack.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-symbol.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-target.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-typediff.Po@am__quote@
@@ -805,6 +807,20 @@ katana-refcounted.obj: util/refcounted.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='util/refcounted.c' object='katana-refcounted.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-refcounted.obj `if test -f 'util/refcounted.c'; then $(CYGPATH_W) 'util/refcounted.c'; else $(CYGPATH_W) '$(srcdir)/util/refcounted.c'; fi`
+
+katana-stack.o: util/stack.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-stack.o -MD -MP -MF $(DEPDIR)/katana-stack.Tpo -c -o katana-stack.o `test -f 'util/stack.c' || echo '$(srcdir)/'`util/stack.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-stack.Tpo $(DEPDIR)/katana-stack.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='util/stack.c' object='katana-stack.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-stack.o `test -f 'util/stack.c' || echo '$(srcdir)/'`util/stack.c
+
+katana-stack.obj: util/stack.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-stack.obj -MD -MP -MF $(DEPDIR)/katana-stack.Tpo -c -o katana-stack.obj `if test -f 'util/stack.c'; then $(CYGPATH_W) 'util/stack.c'; else $(CYGPATH_W) '$(srcdir)/util/stack.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-stack.Tpo $(DEPDIR)/katana-stack.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='util/stack.c' object='katana-stack.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-stack.obj `if test -f 'util/stack.c'; then $(CYGPATH_W) 'util/stack.c'; else $(CYGPATH_W) '$(srcdir)/util/stack.c'; fi`
 
 katana-fdedump.o: info/fdedump.c
 @am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-fdedump.o -MD -MP -MF $(DEPDIR)/katana-fdedump.Tpo -c -o katana-fdedump.o `test -f 'info/fdedump.c' || echo '$(srcdir)/'`info/fdedump.c

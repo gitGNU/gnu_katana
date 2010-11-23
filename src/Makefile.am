@@ -12,8 +12,8 @@ PATCHER_SRC=patcher/hotpatch.c patcher/target.c patcher/patchapply.c patcher/ver
 PATCHER_H=patcher/hotpatch.h patcher/target.h patcher/patchapply.h patcher/versioning.h patcher/linkmap.h patcher/safety.h patcher/pmap.h
 PATCHWRITE_SRC=patchwrite/patchwrite.c patchwrite/codediff.c patchwrite/typediff.c patchwrite/elfwriter.c patchwrite/sourcetree.c patchwrite/write_to_dwarf.c patchwrite/elfcmp.c
 PATCHWRITE_H=patchwrite/patchwrite.h patchwrite/codediff.h patchwrite/typediff.h patchwrite/elfwriter.h patchwrite/sourcetree.h patchwrite/write_to_dwarf.h patchwrite/elfcmp.h
-UTIL_SRC=util/dictionary.c util/hash.c util/util.c util/map.c util/list.c util/logging.c util/path.c util/refcounted.c
-UTIL_H=util/dictionary.h util/hash.h util/util.h util/map.h util/list.h util/logging.h util/path.h util/refcounted.h
+UTIL_SRC=util/dictionary.c util/hash.c util/util.c util/map.c util/list.c util/logging.c util/path.c util/refcounted.c util/stack.c
+UTIL_H=util/dictionary.h util/hash.h util/util.h util/map.h util/list.h util/logging.h util/path.h util/refcounted.h util/stack.h
 INFO_SRC=info/fdedump.c info/dwinfo_dump.c  info/unsafe_funcs_dump.c
 INFO_H=info/fdedump.h info/dwinfo_dump.h  info/unsafe_funcs_dump.h
 

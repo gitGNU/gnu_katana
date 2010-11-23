@@ -1,5 +1,5 @@
 /*
-  File: logging.h
+  File: logging.c
   Author: James Oakley
   Copyright (C): 2010 Dartmouth College
   License: Katana is free software: you may redistribute it and/or
@@ -120,7 +120,7 @@ void loggingDefaults()
   sourceEnables[ELS_MISC]=ELL_WARN;
   sourceEnables[ELS_CODEDIFF]=ELL_WARN;
   sourceEnables[ELS_TYPEDIFF]=ELL_WARN;
-  sourceEnables[ELS_DWARF_FRAME]=ELL_WARN;
+  sourceEnables[ELS_DWARF_FRAME]=ELL_INFO_V2;
   sourceEnables[ELS_HOTPATCH]=ELL_INFO_V2;
   sourceEnables[ELS_SOURCETREE]=ELL_WARN;
   sourceEnables[ELS_SYMBOL]=ELL_WARN;

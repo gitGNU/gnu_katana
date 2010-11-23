@@ -82,7 +82,7 @@ void printCIEInfo(CIE* cie)
 
 void printFDEInfo(CIE* cie,FDE* fde,int num)
 {
-  printf("--------FDE #%i-----\n",num);
+  printf("--------FDE #%i (at offset 0x%x----\n",num,fde->offset);
   //printf("\tfunction guess:%s\n",get_fde_proc_name(dbg,fde->lowpc));
   printf("\tlowpc: 0x%x\n",fde->lowpc);
   printf("\thighpc:0x%x\n",fde->highpc);
@@ -93,20 +93,26 @@ void printFDEInfo(CIE* cie,FDE* fde,int num)
     printInstruction(fde->instructions[i]);
   }
   printf("    The table would be as follows\n");
+  Dictionary* rulesDict=dictDuplicate(cie->initialRules,(DictDataCopy)duplicatePoRegRule);
+  //use this to keep track of which instructions we've read so far so
+  //we don't read the same ones over and over
+  int numInstrsReadSoFar=0;
+
   //todo: figure out what we're actually using highpc for.
   //at one point I had highpc replaced by 1 in the below check but I'm
   //not sure what the purpose of that was
   for(int i=fde->lowpc;i<fde->highpc || 0==i;i++)
   {
-    Dictionary* rulesDict=dictDuplicate(cie->initialRules,NULL);
-    int stopLocation=evaluateInstructionsToRules(fde->instructions,fde->numInstructions,rulesDict,fde->lowpc,i);
-    if(stopLocation != i)
-    {
+    int instrsRead=0;
+    int stopLocation=evaluateInstructionsToRules(fde->instructions+numInstrsReadSoFar,fde->numInstructions,rulesDict,fde->lowpc,i,&instrsRead);
+    numInstrsReadSoFar+=instrsRead;
+    if(stopLocation != i) 
+    { 
+      //dictDelete(rulesDict,NULL);
       continue;//Don't need to print this because will be dup
     }
-    printf("    ----Register Rules at text address 0x%x(%x)------\n",i,stopLocation);
+    printf("    ----Register Rules at text address 0x%x------\n",i);
     printRules(rulesDict,"      ");
-    dictDelete(rulesDict,NULL);
   }
 }
 

@@ -70,6 +70,12 @@
 #define REG_8(regs_struct) (regs_struct).r8
 #define REG_9(regs_struct) (regs_struct).r9
 #define REG_10(regs_struct) (regs_struct).r10
+#define REG_11(regs_struct) (regs_struct).r10
+#define REG_12(regs_struct) (regs_struct).r10
+#define REG_13(regs_struct) (regs_struct).r10
+#define REG_14(regs_struct) (regs_struct).r10
+#define REG_15(regs_struct) (regs_struct).r10
+#define NUM_REGS 15
 #define ElfXX_Sym Elf64_Sym
 #define ElfXX_Rel Elf64_Rel
 #define ElfXX_Rela Elf64_Rela
@@ -98,6 +104,7 @@
 #define REG_BP(regs_struct) (regs_struct).ebp
 #define REG_SI(regs_struct) (regs_struct).esi
 #define REG_DI(regs_struct) (regs_struct).edi
+#define NUM_REGS 8
 #define ElfXX_Sym Elf32_Sym
 #define ElfXX_Rel Elf32_Rel
 #define ElfXX_Rela Elf32_Rela

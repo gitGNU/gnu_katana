@@ -64,12 +64,19 @@
 #include "symbol.h"
 #include "util/map.h"
 #include "patcher/hotpatch.h"
+#include "util/stack.h"
 
 //returns a list of PatchData objects
 List* generatePatchesFromFDEAndState(FDE* fde,SpecialRegsState* state,ElfInfo* patch,ElfInfo* patchedBin);
 
 //keys are old addresses of data objects (variables). Values are the new addresses
 Map* dataMoved=NULL;
+
+//this is the stack of saved register states used by the
+//DW_CFA_remember_state and DW_CFA_restore_state instructions
+static Stack* stateStack;
+//unfortunately because the way we currently evaluate
+//static Map* rememberedStatesByLocation;
 
 //evaluates the given instructions and stores them in the output rules
 //dictionary.The initial condition of regarray IS taken into account.
@@ -79,39 +86,92 @@ Map* dataMoved=NULL;
 //considered to start at 0) if stopLocation is negative, it is ignored
 //if stopLocation is negative, it is ignored (evaluation continues to
 //the end of the instructions) returns the location stopped at (will
-//be the lowest location that a change was actually made)
-int evaluateInstructionsToRules(RegInstruction* instrs,int numInstrs,Dictionary* rules,int startLocation, int stopLocation)
+//be the lowest location that a change was actually made).
+//outInstrsCnt, if non-NULL, is used to store the number of instructions read
+int evaluateInstructionsToRules(RegInstruction* instrs,int numInstrs,Dictionary* rules,int startLocation, int stopLocation,int* outInstrsCnt)
 {
   PoRegRule* rule=NULL;
   int loc=startLocation;
   for(int i=0;i<numInstrs;i++)
   {
     RegInstruction inst=instrs[i];
-    if(inst.type==DW_CFA_set_loc)
+
+    //deal first with the location-advancing instructions and other
+    //instructions (remember/restore state) that don't do the ordinary
+    //register manipulation
+    switch(inst.type)
     {
+    case DW_CFA_set_loc:
       if(stopLocation >= 0 && inst.arg1>stopLocation)
       {
         return loc;
       }
       loc=inst.arg1;
       continue;
-    }
-    else if(inst.type==DW_CFA_advance_loc ||
-       inst.type==DW_CFA_advance_loc1 ||
-       inst.type==DW_CFA_advance_loc2)
-    {
+    case DW_CFA_advance_loc:
+    case DW_CFA_advance_loc1:
+    case DW_CFA_advance_loc2:
       if(stopLocation >=0 && loc+inst.arg1>stopLocation)
       {
         return loc;
       }
       loc+=inst.arg1;
       continue;
+    case DW_CFA_remember_state:
+      {
+        //Note that the storage used for remember and restore state is
+        //global.  no attempt is made to verify that a
+        //DW_CFA_restore_state is used in a sensible manner. It will
+        //restore whatever was last pushed onto the stack when Katana is
+        //running. It is assumed that the DWARF file will be constructed
+        //in a sensible manner. Otherwise the generated rules may make
+        //little sense.
+        fprintf(stderr,"copying rules\n");
+        Dictionary* rulesCopy=dictDuplicate(rules,(DictDataCopy)duplicatePoRegRule);
+        if(!stateStack)
+        {
+          stateStack=stackCreate();
+        }
+        stackPush(stateStack,rulesCopy);
+        continue;
+      }
+      break;
+    case DW_CFA_restore_state:
+      {
+        if(!stateStack)
+        {
+          death("Attempt to use DW_CFA_restore_state without using DW_CFA_remember_state\n");
+        }
+        fprintf(stderr,"popping saved rules\n");
+        Dictionary* savedRules=stackPop(stateStack);
+        if(!savedRules)
+        {
+          death("Attempt to use DW_CFA_restore_state without using DW_CFA_remember_state\n");
+        }
+        char** keys=dictKeys(savedRules);
+        for(int i=0;keys[i];i++)
+        {
+          char* key=keys[i];
+          PoRegRule* currentRule=dictGet(rules,key);
+          PoRegRule* savedRule=dictGet(savedRules,key);
+          assert(savedRule);
+          if(currentRule)
+          {
+            memcpy(currentRule,savedRule,sizeof(PoRegRule));
+          }
+          else
+          {
+            currentRule=duplicatePoRegRule(savedRule);
+            dictInsert(rules,key,currentRule);
+          }
+        }
+        dictDelete(savedRules,free);
+        continue;
+      }
     }
 
-/*     if(ERT_NONE==inst.arg1Reg.type) */
-/*     { */
-/*       death("cannot evaluate register with type ERT_NONE\n"); */
-/*     } */
+    
+    
     PoReg reg;
     char* str=NULL;
     if(DW_CFA_def_cfa==inst.type ||
@@ -417,7 +477,7 @@ List* generatePatchesFromFDEAndState(FDE* fde,SpecialRegsState* state,ElfInfo* p
   //we build up rules for each register from the DW_CFA instructions
   Dictionary* rulesDict=dictCreate(100);//todo: get rid of arbitrary constant 100
   //todo: versioning?
-  evaluateInstructionsToRules(fde->instructions,fde->numInstructions,rulesDict,fde->lowpc,fde->highpc);
+  evaluateInstructionsToRules(fde->instructions,fde->numInstructions,rulesDict,fde->lowpc,fde->highpc,NULL);
   PoRegRule** rules=(PoRegRule**)dictValues(rulesDict);
   //we gather all of the the patch data together first before actually poking the target
   //because everything is supposed to be applied in parallel, as a table, and

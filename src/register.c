@@ -108,6 +108,73 @@ PoReg readRegFromLEB128(byte* leb,usint* bytesRead)
   return result;
 }
 
+
+char* getX86RegNameFromDwarfRegNum(int num)
+{
+  switch(num)
+  {
+  case 0:
+    return "eax";
+  case 1:
+    return "ecx";
+  case 2:
+    return "edx";
+  case 3:
+    return "ebx";
+  case 4:
+    return "esp";
+  case 5:
+    return "ebp";
+  case 6:
+    return "esi";
+  case 7:
+    return "edi";
+  case 8:
+    return "eip";
+  default:
+    fprintf(stderr,"unknown register number %i, cannot get reg name\n",num);
+    death(NULL);
+  }
+  return "error";
+}
+
+char* getX86_64RegNameFromDwarfRegNum(int num)
+{
+  switch(num)
+  {
+  case 0:
+    return "rax";
+  case 1:
+    return "rdx";
+  case 2:
+    return "rcx";
+  case 3:
+    return "rbx";
+  case 4:
+    return "rsi";
+  case 5:
+    return "rdi";
+  case 6:
+    return "rbp";
+  case 7:
+    return "rsp";
+  default:
+    return NULL;
+  }
+}
+
+char* getArchRegNameFromDwarfRegNum(int num)
+{
+  #ifdef KATANA_X86_ARCH
+  return getX86RegNameFromDwarfRegNum(num);
+  #elif defined(KATANA_X86_64_ARCH)
+  return getX86_64RegNameFromDwarfRegNum(num);
+  #else
+  #error "Unsupported architecture"
+  #endif
+}
+
+
 //the returned string should be freed
 char* strForReg(PoReg reg)
 {
@@ -137,7 +204,17 @@ char* strForReg(PoReg reg)
     snprintf(buf,128,"{CFA}");
     break;
   case ERT_BASIC:
-    snprintf(buf,128,"r%i",reg.u.index);
+    {
+      char* regName=getArchRegNameFromDwarfRegNum(reg.u.index);
+      if(regName)
+      {
+        snprintf(buf,128,"r%i/%s",reg.u.index,regName);
+      }
+      else
+      {
+        snprintf(buf,128,"r%i",reg.u.index);
+      }
+    }
     break;
   default:
     death("unsupported register type\n");
@@ -235,13 +312,27 @@ void printRule(PoRegRule rule,int regnum)
     printf("%s = Undefined\n",regStr);
     break;
   case ERRT_OFFSET:
-    printf("%s = cfa + %i\n",regStr,rule.offset);
+    printf("%s = %i(cfa)\n",regStr,rule.offset);
     break;
   case ERRT_REGISTER:
     printf("%s = %s\n",regStr,strForReg(rule.regRH));
     break;
   case ERRT_CFA:
-    printf("cfa = %s + %i\n",strForReg(rule.regRH),rule.offset);
+    {
+      char* str;
+      if(rule.regRH.type!=ERT_NONE)
+      {
+        str=strForReg(rule.regRH);
+      }
+      else
+      {
+        //this should only ever be hit in some very special debugging
+        //circumstances when there is no cfa. It should never be hit
+        //in normal operation.
+        str="<NONE>";
+      }
+      printf("cfa = %i(%s)\n",rule.offset,str);
+    }
     break;
   case ERRT_RECURSE_FIXUP:
     printf("%s = recurse fixup with FDE#%lu based at %s\n",regStr,(unsigned long)rule.index,strForReg(rule.regRH));
@@ -265,4 +356,19 @@ void printRules(Dictionary* rulesDict,char* tabstr)
       printRule(*rules[i],i);
     }
   }
+}
+
+PoRegRule* duplicatePoRegRule(PoRegRule* rule)
+{
+  PoRegRule* new=zmalloc(sizeof(PoRegRule));
+  memcpy(new,rule,sizeof(PoRegRule));
+  return new;
+}
+
+PoReg* duplicatePoReg(PoReg* old)
+{
+  PoReg* new=malloc(sizeof(PoReg));
+  MALLOC_CHECK(new);
+  memcpy(new,old,sizeof(PoReg));
+  return new;
 }

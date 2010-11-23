@@ -87,10 +87,12 @@ typedef struct _DICTIONARY {
 
 typedef struct _DICTIONARY DICTIONARY;
 typedef struct _DICTIONARY Dictionary;
+typedef void* (*DictDataCopy)(void*);
 
 //! create an empty dictionary
 Dictionary* dictCreate(int nBuckets);
 
+//If dataCP is NULL then values will simply be copied over as pointers
 Dictionary* dictDuplicate(Dictionary* dict,void* (*dataCP)(void*));
 
 //! clean up a dictionary that's no longer needed
