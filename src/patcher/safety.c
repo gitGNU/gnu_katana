@@ -110,9 +110,13 @@ char* getFunctionNameAtPC(ElfInfo* elf,addr_t pc)
   return getString(elf,sym.st_name);
 }
 
+//this function and the one below it are coded badly. This can be done
+//more efficiently
+
 //conversion between dwarf register numbers and x86 registers
 void setRegValueFromDwarfRegNum(struct user_regs_struct* regs,int num,long int newValue)
 {
+  #ifdef KATANA_X86_ARCH
   switch(num)
   {
   case 0:
@@ -143,14 +147,75 @@ void setRegValueFromDwarfRegNum(struct user_regs_struct* regs,int num,long int n
     REG_IP(*regs)=newValue;
     break;
   default:
+    //If this is hit, probably more need to be implemented
     fprintf(stderr,"unknown register number %i, cannot set reg val\n",num);
     death(NULL);
   }
+  #elif defined(KATANA_X86_64_ARCH)
+  switch(num)
+  {
+  case 0:
+    REG_AX(*regs)=newValue;
+    break;
+  case 1:
+    REG_DX(*regs)=newValue;
+    break;
+  case 2:
+    REG_CX(*regs)=newValue;
+    break;
+  case 3:
+    REG_BX(*regs)=newValue;
+    break;
+  case 4:
+    REG_SI(*regs)=newValue;
+    break;
+  case 5:
+    REG_DI(*regs)=newValue;
+    break;
+  case 6:
+    REG_BP(*regs)=newValue;
+    break;
+  case 7:
+    REG_SP(*regs)=newValue;
+    break;
+  case 8:
+    REG_8(*regs)=newValue;
+    break;
+  case 9:
+    REG_9(*regs)=newValue;
+    break;
+  case 10:
+    REG_10(*regs)=newValue;
+    break;
+  case 11:
+    REG_10(*regs)=newValue;
+    break;
+  case 12:
+    REG_10(*regs)=newValue;
+    break;
+  case 13:
+    REG_10(*regs)=newValue;
+    break;
+  case 14:
+    REG_10(*regs)=newValue;
+    break;
+  case 15:
+    REG_10(*regs)=newValue;
+    break;;
+  default:
+    //If this is hit, probably more need to be implemented
+    fprintf(stderr,"unknown register number %i, cannot set reg val\n",num);
+    death(NULL);
+  }
+  #else
+  #error "Unsupported architecture"
+  #endif
 }
 
 //conversion between dwarf register numbers and x86 registers
 long int getRegValueFromDwarfRegNum(struct user_regs_struct regs,int num)
 {
+  #ifdef KATANA_X86_ARCH
   switch(num)
   {
   case 0:
@@ -172,43 +237,61 @@ long int getRegValueFromDwarfRegNum(struct user_regs_struct regs,int num)
   case 8:
     return REG_IP(regs);
   default:
+    //If this is hit, probably more need to be implemented
     fprintf(stderr,"unknown register number %i, cannot get reg val\n",num);
     death(NULL);
   }
+  #elif defined(KATANA_X86_64_ARCH)
+  switch(num)
+  {
+  case 0:
+    return REG_AX(regs);
+  case 1:
+    return REG_DX(regs);
+  case 2:
+    return REG_CX(regs);
+  case 3:
+    return REG_BX(regs);
+  case 4:
+    return REG_SI(regs);
+  case 5:
+    return REG_DI(regs);
+  case 6:
+    return REG_BP(regs);
+  case 7:
+    return REG_SP(regs);
+  case 8:
+    return REG_8(regs);
+  case 9:
+    return REG_9(regs);
+  case 10:
+    return REG_10(regs);
+  case 11:
+    return REG_11(regs);
+  case 12:
+    return REG_12(regs);
+  case 13:
+    return REG_13(regs);
+  case 14:
+    return REG_14(regs);
+  case 15:
+    return REG_15(regs);
+  default:
+    //If this is hit, probably more need to be implemented
+    fprintf(stderr,"unknown register number %i, cannot get reg val\n",num);
+    death(NULL);
+  }
+  #else
+  #error "Unsupported architecture"
+  #endif
   return -1;
 }
 
-char* getX86RegNameFromDwarfRegNum(int num)
-{
-   switch(num)
-  {
-  case 0:
-    return "eax";
-  case 1:
-    return "ecx";
-  case 2:
-    return "edx";
-  case 3:
-    return "ebx";
-  case 4:
-    return "esp";
-  case 5:
-    return "ebp";
-  case 6:
-    return "esi";
-  case 7:
-    return "edi";
-  case 8:
-    return "eip";
-  default:
-    fprintf(stderr,"unknown register number %i, cannot get reg name\n",num);
-    death(NULL);
-  }
-  return "error";
-}
 
-#define NUM_X86_REGS 8
 
+//actually set the registers in memory as we walk up the stack
+//this function is not actually used at present, as we use libunwind.
+//since this is not actually used, it may not work
 struct user_regs_struct restoreRegsFromRegisterRules(struct user_regs_struct currentRegs,
                                                      Dictionary* rulesDict)
 {
@@ -225,7 +308,7 @@ struct user_regs_struct restoreRegsFromRegisterRules(struct user_regs_struct cur
   assert(ERT_BASIC==cfaRule->regRH.type);
   uint cfaAddr=getRegValueFromDwarfRegNum(currentRegs,cfaRule->regRH.u.index)+
     cfaRule->offset;
-  for(int i=0;i<=NUM_X86_REGS;i++)
+  for(int i=0;i<=NUM_REGS;i++)
   {
     //printf("restoring reg %i\n",i);
     char buf[32];
@@ -233,7 +316,8 @@ struct user_regs_struct restoreRegsFromRegisterRules(struct user_regs_struct cur
     PoRegRule* rule=dictGet(rulesDict,buf);
     if(!rule)
     {
-      if(!strcmp("esp",getX86RegNameFromDwarfRegNum(i)))
+      char* regName=getArchRegNameFromDwarfRegNum(i);
+      if(!strcmp("esp",regName) && !strcmp("rsp",regName))
       {
         //no rule to restore the stack pointer, assume it's the same as the cfa
         REG_SP(regs)=cfaAddr;

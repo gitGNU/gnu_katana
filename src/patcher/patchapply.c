@@ -841,8 +841,6 @@ void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch,int flags)
   getShdrByERS(targetBin,ERS_GOTPLT,&shdr);
   amount+=shdr.sh_size;
 
-
-
   #ifdef KATANA_X86_64_ARCH
   addr_t desiredAddress=0;
 
@@ -859,9 +857,6 @@ void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch,int flags)
     desiredAddress-=misalignment;
   }
   #endif
-
-  
-
 
   #ifdef KATANA_X86_64_ARCH
   addr_t receivedAddres=reserveFreeSpaceInTarget(amount,desiredAddress);

@@ -69,6 +69,8 @@ int cmpRelocs(void* a,void* b)
   return relocA->r_offset-relocB->r_offset;
 }
 
+//compare program text modulo relocations which refer to the same
+//symbol, symbol of changed type, or changed offset on symbol
 bool areSubprogramsIdentical(SubprogramInfo* patcheeFunc,SubprogramInfo* patchedFunc,
                              ElfInfo* oldBinary,ElfInfo* newBinary)
 {
