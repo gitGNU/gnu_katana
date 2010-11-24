@@ -64,10 +64,6 @@
 #include "util/logging.h"
 #include "dwarfvm.h"
 
-
-
-
-
 //the returned memory should be freed
 RegInstruction* parseFDEInstructions(Dwarf_Debug dbg,unsigned char* bytes,int len,
                                      int dataAlign,int codeAlign,int* numInstrs)
@@ -281,6 +277,8 @@ Map* readDebugFrame(ElfInfo* elf,bool ehInsteadOfDebug)
     {
       dwarfErrorHandler(err,NULL);
     }
+    elf->cies[i].augmentation=strdup(augmenter);//todo: free this memory later
+    
     //don't care about initial instructions, for patching,
     //but do if we're reading a debug frame for stack unwinding purposes
     //so that we can find activation frames

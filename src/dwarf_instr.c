@@ -58,6 +58,7 @@
 #include <math.h>
 #include <dwarf.h>
 #include "util/logging.h"
+#include "leb.h"
 
 
 
@@ -92,6 +93,7 @@ void addInstruction(DwarfInstructions* instrs,DwarfInstruction* instr)
     addBytes(instrs,bytes,1+instr->arg2NumBytes);
     break;
     //take care of all instructions taking one operand which is LEB128 or DW_FORM_block
+  case DW_CFA_restore_extended:
   case DW_CFA_def_cfa_register:
   case DW_CFA_def_cfa_offset:
   case DW_CFA_def_cfa_offset_sf:
@@ -120,7 +122,6 @@ void addInstruction(DwarfInstructions* instrs,DwarfInstruction* instr)
     addBytes(instrs,bytes,1+instr->arg1NumBytes+instr->arg2NumBytes);
     free(bytes);
     break;
-
   //we can take care of all instructions taking three operands all of which
   //are either LEB128 or DW_FORM_block
   case DW_CFA_KATANA_fixups:
@@ -135,19 +136,76 @@ void addInstruction(DwarfInstructions* instrs,DwarfInstruction* instr)
     free(bytes);
     break;
     
-    
-    //location has no meaning (yet anyway) in patches
+  //location has no meaning (yet anyway) in patches. We do support more
+  //general purpose dwarf manipulation though, so we'll support these
+  //instructions for those purposes.
   case DW_CFA_set_loc:
+    bytes=zmalloc(1+instr->arg1NumBytes);
+    assert(instr->arg1NumBytes==sizeof(addr_t));
+    bytes[0]=instr->opcode;
+    memcpy(bytes+1,instr->arg1Bytes,instr->arg1NumBytes);
+    addBytes(instrs,bytes,1+instr->arg1NumBytes);
+    free(bytes);
+    break;
   case DW_CFA_advance_loc:
+    bytes=zmalloc(1);
+    if(instr->arg1 > 0xc0)
+    {
+      //more than the low-order 6 bits are used
+      death("Location will not fit into encoding for DW_CFA_advance_loc\n");
+    }
+    bytes[0]=instr->opcode | instr->arg1;
+    addBytes(instrs,bytes,1);
+    free(bytes);
+    break;
   case DW_CFA_advance_loc1:
+    bytes=zmalloc(2);
+    if(instr->arg1 > 0xFF)
+    {
+      death("Location will not fit into encoding for DW_CFA_advance_loc\n");
+    }
+    bytes[0]=instr->opcode;
+    memcpy(bytes+1,&instr->arg1,1);
+    addBytes(instrs,bytes,2);
+    free(bytes);
+    break;
   case DW_CFA_advance_loc2:
+    bytes=zmalloc(3);
+    if(instr->arg1 > 0xFFFF)
+    {
+      death("Location will not fit into encoding for DW_CFA_advance_loc\n");
+    }
+    bytes[0]=instr->opcode;
+    memcpy(bytes+1,&instr->arg1,2);
+    addBytes(instrs,bytes,3);
+    free(bytes);
+    break;
   case DW_CFA_advance_loc4:
-    //restore has no meaning in patches
+    bytes=zmalloc(5);
+    if(instr->arg1 > 0xFFFFFFFF)
+    {
+      death("Location will not fit into encoding for DW_CFA_advance_loc\n");
+    }
+    bytes[0]=instr->opcode;
+    memcpy(bytes+1,&instr->arg1,4);
+    addBytes(instrs,bytes,5);
+    free(bytes);
+    break;
   case DW_CFA_restore:
-  case DW_CFA_restore_extended:
-    //remember and restore state have no meaning
+    bytes=zmalloc(1);
+    bytes[0]=DW_CFA_offset | instr->arg1;
+    memcpy(bytes+1,instr->arg2Bytes,instr->arg2NumBytes);
+    addBytes(instrs,bytes,1);
+    free(bytes);
+    break;
   case DW_CFA_remember_state:
   case DW_CFA_restore_state:
+    bytes=zmalloc(1);
+    bytes[0]=instr->opcode;
+    addBytes(instrs,bytes,1);
+    free(bytes);
+    break;
+    break;
   default:
     {
       char buf[32];
@@ -163,29 +221,29 @@ void printInstruction(RegInstruction inst)
   switch(inst.type)
   {
   case DW_CFA_set_loc:
-    printf("DW_CFA_set_loc %i\n",inst.arg1);
+    printf("DW_CFA_set_loc %zi\n",inst.arg1);
     break;
   case DW_CFA_advance_loc:
-    printf("DW_CFA_advance_loc %i\n",inst.arg1);
+    printf("DW_CFA_advance_loc %zi\n",inst.arg1);
     break;
   case DW_CFA_advance_loc1:
-    printf("DW_CFA_advance_loc_1 %i\n",inst.arg1);
+    printf("DW_CFA_advance_loc_1 %zi\n",inst.arg1);
     break;
   case DW_CFA_advance_loc2:
-    printf("DW_CFA_advance_loc_2 %i\n",inst.arg1);
+    printf("DW_CFA_advance_loc_2 %zi\n",inst.arg1);
     break;
   case DW_CFA_offset:
     {
       signed long int tmp;
       memcpy(&tmp,&inst.arg2,sizeof(inst.arg2));
-      printf("DW_CFA_offset r%i %zi\n",inst.arg1,tmp);
+      printf("DW_CFA_offset r%zi %zi\n",inst.arg1,tmp);
     }
     break;
   case DW_CFA_register:
     printf("DW_CFA_register ");
     if(ERT_NONE==inst.arg1Reg.type)
     {
-      printf("r%i ",inst.arg1);
+      printf("r%zi ",inst.arg1);
     }
     else
     {
@@ -211,7 +269,7 @@ void printInstruction(RegInstruction inst)
     }
     if(ERT_NONE==inst.arg1Reg.type)
     {
-      printf("r%i ",inst.arg1);
+      printf("r%zi ",inst.arg1);
     }
     else
     {
@@ -235,7 +293,7 @@ void printInstruction(RegInstruction inst)
     printf("DW_CFA_def_cfa ");
     if(ERT_NONE==inst.arg1Reg.type)
     {
-      printf("r%i ",inst.arg1);
+      printf("r%zi ",inst.arg1);
     }
     else
     {
@@ -248,7 +306,7 @@ void printInstruction(RegInstruction inst)
     printf("DW_CFA_def_cfa_register ");
     if(ERT_NONE==inst.arg1Reg.type)
     {
-      printf("r%i\n",inst.arg1);
+      printf("r%zi\n",inst.arg1);
     }
     else
     {
@@ -257,7 +315,7 @@ void printInstruction(RegInstruction inst)
     }
     break;
   case DW_CFA_def_cfa_offset:
-    printf("DW_CFA_def_cfa_offset %i\n",inst.arg1);
+    printf("DW_CFA_def_cfa_offset %zi\n",inst.arg1);
     break;
   case DW_CFA_remember_state:
     printf("DW_CFA_remember_state\n");
@@ -271,4 +329,80 @@ void printInstruction(RegInstruction inst)
   default:
     death("unsupported DWARF instruction 0x%x",inst.type);
   }
+}
+
+
+DwarfInstruction regInstructionToRawDwarfInstruction(RegInstruction* inst)
+{
+  //this information is encoded following the table in section 7.23 of
+  //the Dwarf v4 standard.
+  DwarfInstruction result;
+  memset(&result,0,sizeof(DwarfInstruction));
+  result.opcode=inst->type;
+  switch(inst->type)
+  {
+  case DW_CFA_set_loc:
+    result.arg1=inst->arg1;
+    break;
+  case DW_CFA_advance_loc:
+  case DW_CFA_advance_loc1:
+  case DW_CFA_advance_loc2:
+  case DW_CFA_advance_loc4:
+    //the specifics of the length of the address will be taken care of
+    //in addInstruction later
+    result.arg1=inst->arg1;
+    break;
+  case DW_CFA_offset:
+    //the specifics of encoding the first argument with the operand
+    //will be taken care of in addInstruction later
+    result.arg1Bytes=encodeRegAsLEB128(inst->arg1Reg,false,&result.arg1NumBytes);
+    result.arg2=inst->arg2;
+    break;
+  case DW_CFA_register:
+    result.arg1Bytes=encodeRegAsLEB128(inst->arg1Reg,false,&result.arg1NumBytes);
+    result.arg2Bytes=encodeRegAsLEB128(inst->arg2Reg,false,&result.arg2NumBytes);
+    break;
+  case DW_CFA_offset_extended:
+  case DW_CFA_def_cfa:
+    result.arg1Bytes=encodeRegAsLEB128(inst->arg1Reg,false,&result.arg1NumBytes);
+    result.arg2Bytes=encodeAsLEB128((byte*)&inst->arg2,sizeof(inst->arg2),false,&result.arg2NumBytes);
+    break;
+  case DW_CFA_def_cfa_register:
+  case DW_CFA_restore_extended:
+  case DW_CFA_undefined:
+  case DW_CFA_same_value:
+    result.arg1Bytes=encodeRegAsLEB128(inst->arg1Reg,false,&result.arg1NumBytes);
+    break;
+  case DW_CFA_def_cfa_offset:
+    result.arg1Bytes=encodeAsLEB128((byte*)&inst->arg1,sizeof(inst->arg1),false,&result.arg1NumBytes);
+    break;
+  case DW_CFA_restore:
+    result.arg1=inst->arg2;
+  case DW_CFA_remember_state:
+  case DW_CFA_restore_state:
+  case DW_CFA_nop:
+    //don't need any operands to these
+    break;
+  default:
+    death("unsupported DWARF instruction 0x%x",inst->type);
+  }
+  return result;
+}
+
+//convert the higher-level RegInstruction format into the raw string
+//of binary bytes that is the DwarfInstructions structure
+DwarfInstructions serializeDwarfRegInstructions(RegInstruction* regInstrs,int numRegInstrs)
+{
+  DwarfInstructions result;
+  for(int i=0;i<numRegInstrs;i++)
+  {
+    DwarfInstruction instr=regInstructionToRawDwarfInstruction(regInstrs+i);
+    addInstruction(&result,&instr);
+  }
+  return result;
+}
+
+void destroyRawInstructions(DwarfInstructions instrs)
+{
+  free(instrs.instrs);
 }

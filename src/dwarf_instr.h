@@ -63,7 +63,8 @@
 #include "register.h"
 
 
-
+//the DwarfInstructions and DwarfInstruction structs are used when
+//writing information to DWARF binary data when producing a new ELF file.
 typedef struct
 {
   byte* instrs;
@@ -72,11 +73,11 @@ typedef struct
 } DwarfInstructions;
 
 
-
 typedef struct
 {
   short opcode;
-  byte* arg1Bytes;//LEB128 number or DW_FORM_block
+  byte* arg1Bytes;//LEB128 number, DW_FORM_block, or just straight up
+                  //address or offset depending on opcode
   usint arg1NumBytes;
   byte* arg2Bytes;
   usint arg2NumBytes;
@@ -89,10 +90,16 @@ typedef struct
   //which is valid depends on the opcode
 } DwarfInstruction;
 
+//This struct is used when parsing DWARF binary information into a
+//structure we can deal with. How is it different on a high level from
+//DwarfInstruction? It isn't really, it just has some more information
+//about registers to facilitate evaluating the instruction. Naming
+//conventions should probably be changed to be a little more
+//sane/explanatory.
 typedef struct
 {
   int type;//one of DW_CFA_
-  int arg1;
+  word_t arg1;
   PoReg arg1Reg;//whether used depends on the type
   word_t arg2;//whether used depends on the type
   PoReg arg2Reg;//whether used depends on the type
@@ -104,6 +111,12 @@ typedef struct
 void addInstruction(DwarfInstructions* instrs,DwarfInstruction* instr);
 
 void printInstruction(RegInstruction inst);
+
+void destroyRawInstructions(DwarfInstructions instrs);
+
+//convert the higher-level RegInstruction format into the raw string
+//of binary bytes that is the DwarfInstructions structure
+DwarfInstructions serializeDwarfRegInstructions(RegInstruction* regInstrs,int numRegInstrs);
 
 //some versions of dwarf.h have a misspelling
 #if !DW_CFA_lo_user

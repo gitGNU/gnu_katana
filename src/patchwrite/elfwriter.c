@@ -58,8 +58,6 @@
 #include <fcntl.h>
 #include <util/logging.h>
 
-//Elf_Data* patch_syms_rel_data=NULL;
-//Elf_Data* patch_syms_new_data=NULL;
 Elf_Data* patch_rules_data=NULL;
 Elf_Data* patch_expr_data=NULL;
 Elf_Data* strtab_data=NULL;
@@ -67,10 +65,6 @@ Elf_Data* symtab_data=NULL;
 Elf_Data* text_data=NULL;//for storing new versions of functions
 Elf_Data* rodata_data=NULL;
 Elf_Data* rela_text_data=NULL;
-//Elf_Data* old_symtab_data=NULL;
-
-//Elf_Scn* patch_syms_rel_scn=NULL;
-//Elf_Scn* patch_syms_new_scn=NULL;
 
 Elf_Scn* patch_rules_scn=NULL;
 Elf_Scn* patch_expr_scn=NULL;
@@ -79,6 +73,7 @@ Elf_Scn* symtab_scn=NULL;
 Elf_Scn* text_scn=NULL;//for storing new versions of functions
 Elf_Scn* rodata_scn=NULL;//hold the new rodata from the patch
 Elf_Scn* rela_text_scn=NULL;
+
 //now not writing old symbols b/c
 //better to get the from /proc/PID/exe
 /*Elf_Scn* old_symtab_scn=NULL;//relevant symbols from the symbol table of the old binary
@@ -109,6 +104,15 @@ addr_t addDataToScn(Elf_Data* dataDest,void* data,int size)
   memcpy((byte*)dataDest->d_buf+dataDest->d_size,data,size);
   dataDest->d_size=dataDest->d_size+size;
   return dataDest->d_size-size;
+}
+
+//wipes out the existing information in dataDest and replaces it with data
+void replaceScnData(Elf_Data* dataDest,void* data,int size)
+{
+  dataDest->d_buf=malloc(size);
+  MALLOC_CHECK(dataDest->d_buf);
+  memcpy((byte*)dataDest->d_buf,data,size);
+  dataDest->d_size=dataDest->d_size+size;
 }
 
 //adds an entry to the string table, return its offset

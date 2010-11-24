@@ -58,14 +58,13 @@
 #include "elfparse.h"
 #include "util/map.h"
 #include "dwarf_instr.h"
+
 //returns a Map between the numerical offset of an FDE
 //(accessible via the DW_AT_MIPS_fde attribute of the relevant type)
 //and the FDE structure
 Map* readDebugFrame(ElfInfo* elf,bool ehInsteadOfDebug);
 
 
-//not really using CIE at the moment
-//do we need it?
 typedef struct CIE
 {
   RegInstruction* initialInstructions;
@@ -74,9 +73,14 @@ typedef struct CIE
                             //version of a register to the rule (of
                             //type PoRegRule) for setting that
                             //register
+  //todo: I don't think this memory is currently freed
+  char* augmentation;//augmentation string. Not needed for patching
+                     //but needed for some more general-purpose DWARF
+                     //manipulations
   Dwarf_Signed dataAlign;
   Dwarf_Unsigned codeAlign;
   Dwarf_Half returnAddrRuleNum;
+  int idx;//what index cie this is in a DWARF section
 } CIE;
 
 
@@ -93,7 +97,7 @@ typedef struct FDE
   int highpc;//has no meaning if this FDE describes fixups and was
              //read from a PO
   int offset;//offset from beginning of debug frame
-  int idx;//what index fde this is
+  int idx;//what index fde this is in a DWARF section
 } FDE;
 
 
