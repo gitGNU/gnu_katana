@@ -75,6 +75,7 @@
 #include <unistd.h>
 #include "pmap.h"
 #include "patchapply.h"
+#include "config.h"
 
 ElfInfo* patchedBin=NULL;
 ElfInfo* targetBin=NULL;
@@ -766,7 +767,7 @@ void katanaPLT()
 
 }
 
-void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch,int flags)
+void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch)
 {
   startPtrace(pid);
   targetBin=targetBin_;
@@ -945,6 +946,6 @@ void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch,int flags)
   endELF(patchedBin);
   endELF(patch);
   cleanupDwarfVM();
-  endPtrace(flags & PF_STOP_TARGET);
+  endPtrace(isFlag(EKCF_P_STOP_TARGET));
   printf("hooray! completed application of patch successfully\n");
 }

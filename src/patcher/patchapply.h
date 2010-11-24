@@ -55,11 +55,7 @@
 
 #ifndef patchapply_h
 #define patchapply_h
-typedef enum 
-{
-  PF_STOP_TARGET
-} PATCHAPPLY_FLAGS;
 
-void readAndApplyPatch(int pid,ElfInfo* targetBin,ElfInfo* patch,int flags);
+void readAndApplyPatch(int pid,ElfInfo* targetBin,ElfInfo* patch);
 
 #endif

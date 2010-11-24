@@ -57,23 +57,50 @@
 #define config_h
 #include <stdbool.h>
 
+//convention: EKCF_P refers to a flag that only affects patch application mode
+//            EKCF_G refers to a flag that only affects patch generation mode
+//            EKCF_I refers to a flag that only affects patch info listing mode
 typedef enum
 {
   EKCF_CHECK_PTRACE_WRITES=0,//check writes done into target memory
+  EKCF_P_STOP_TARGET, //stop the target process when finished applying
+                      //the patch. This is only used for debugging
+  EKCF_EH_FRAME,   //instead of listing call frame info from
+                   //.debug_frame, list it from .eh_frame
   EKCF_COUNT
 } E_KATANA_CONFIG_FLAGS;
-
 extern const char* flagNames[];
+
+
+//katana modes of operation
+typedef enum
+{
+  EKM_NONE,
+  EKM_GEN_PATCH,
+  EKM_APPLY_PATCH,
+  EKM_INFO,   //prints out info about a file
+  EKM_TEST_PASSTHROUGH, //reads executable w/ DWARF and writes it back out again
+} E_KATANA_MODE;
 
 
 struct Config
 {
   // The maximum number of seconds to wait for the target to enter a safe state.
   int maxWaitForPatching;
+  E_KATANA_MODE mode;//the mode katana is operating in right now
+  char* outfileName;//the name of the file to write out to. Mostly
+                    //used in PATCHGEN mode
+  char* oldSourceTree;//for patch generation, where the old object files are
+  char* newSourceTree;//for patch generation, where the new object files are
+  char* objectName;//for patch generation, where the executable file
+                   //is for each version relative to the source
+                   //tree. for patch application, the patch file to load
+  int pid;         //for patch application, the process to attach to
+  
 };
 
+//for global access to the configuration
 extern struct Config config;
-
 
 void setDefaultConfig();//called on startup
 bool isFlag(E_KATANA_CONFIG_FLAGS flag);

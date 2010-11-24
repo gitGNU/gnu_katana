@@ -21,5 +21,5 @@ H_FILES=dwarftypes.h elfparse.h types.h dwarf_instr.h register.h relocation.h sy
 
 EXTRA_DIST=$(H_FILES)
 
-katana_SOURCES=katana.c dwarftypes.c   elfparse.c  types.c  dwarf_instr.c register.c relocation.c symbol.c fderead.c dwarfvm.c config.c leb.c $(PATCHWRITE_SRC) $(PATCHER_SRC) $(UTIL_SRC) $(INFO_SRC)
+katana_SOURCES=katana.c dwarftypes.c   elfparse.c  types.c  dwarf_instr.c register.c relocation.c symbol.c fderead.c dwarfvm.c config.c leb.c commandLine.c $(PATCHWRITE_SRC) $(PATCHER_SRC) $(UTIL_SRC) $(INFO_SRC)
 

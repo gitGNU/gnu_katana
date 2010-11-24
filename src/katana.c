@@ -51,16 +51,7 @@
 
   Project: Katana
   Date: January, 2010
-  Description: Preliminary patching program just for patching main_v0.c's structure Foo to have an extra field
-               The first version of this program is going to be very simple. It will perform the following steps
-               1. Load main_v0 with dwarfdump and determine where the variable bar is stored
-               2. Find all references to the variable bar
-               3. Attach to the running process with ptrace
-               4. Make the process execute mmap to allocate space for a new data segment
-               5. Copy over field1 and field2 from Foo bar into the new memory area and zero the added field
-               6. Fixup all locations referring to the old address of bar with the new address and set the offset accordingly (should be able to get information for fixups from the rel.text section)
-  Usage: katana OLD_BINARY NEW_BINARY PID
-         PID is expected to be a pid of a running process build from OLD_BINARY
+  Description:
 */
 #include <errno.h>
 #include <stdio.h>
@@ -78,7 +69,6 @@
 #include "elfparse.h"
 #include <signal.h>
 #include "patchwrite/patchwrite.h"
-int pid;//pid of running process
 ElfInfo* oldBinElfInfo=NULL;
 #ifdef DEBUG
 #include "katana-prelim.h"
@@ -94,18 +84,12 @@ ElfInfo* oldBinElfInfo=NULL;
 #include "util/path.h"
 #include "config.h"
 
+void configureFromCommandLine(int argc,char** argv);
+
 void sigsegReceived(int signum)
 {
   death("katana segfaulting. . .\n");
 }
-
-typedef enum
-{
-  EKM_NONE,
-  EKM_GEN_PATCH,
-  EKM_APPLY_PATCH,
-  EKM_PATCH_INFO
-} E_KATANA_MODE;
 
 int main(int argc,char** argv)
 {
@@ -137,122 +121,40 @@ int main(int argc,char** argv)
   memset(&act,0,sizeof(struct sigaction));
   act.sa_handler=&sigsegReceived;
   sigaction(SIGSEGV,&act,NULL);
-  int opt;
-  E_KATANA_MODE mode=EKM_NONE;
-  char* outfile=NULL;
-  int flags=0;
-  bool ehInsteadOfDebug=false;
   if(elf_version(EV_CURRENT)==EV_NONE)
   {
     death("Failed to init ELF library\n");
   }
-  while((opt=getopt(argc,argv,"cslhgpo:"))>0)
+  configureFromCommandLine(argc,argv);
+  if(EKM_GEN_PATCH==config.mode)
   {
-    switch(opt)
-    {
-    case 'g':
-      if(mode!=EKM_NONE)
-      {
-        death("only one of g,p,l may be specified\n");
-      }
-      mode=EKM_GEN_PATCH;
-      break;
-    case 'p':
-      if(mode!=EKM_NONE)
-      {
-        death("only one of g,p,l may be specified\n");
-      }
-      mode=EKM_APPLY_PATCH;
-      break;
-    case 'o':
-      outfile=optarg;
-      break;
-    case 'l':
-      if(mode!=EKM_NONE)
-      {
-        death("only one of g,p,l may be specified\n");
-      }
-      mode=EKM_PATCH_INFO;
-      break;
-    case 's':
-      if(EKM_NONE==mode)
-      {
-        death("Must specify a mode (-g,-p, or -l) before any other options");
-      }
-      if(EKM_PATCH_INFO==mode)
-      {
-        flags|=PF_STOP_TARGET;
-      }
-      else
-      {
-        death("-s flag has no meaning for this mode\n");
-      }
-      break;
-    case 'c':
-      loadConfigurationFile(optarg);
-      break;
-    case 'h':
-      ehInsteadOfDebug=true;
-      break;
-    }
-  }
-  if(EKM_NONE==mode)
-  {
-    death("One of -g (gen patch) or -p (apply patch) or -l (list info about patch) must be specified\n");
-  }
-  if(EKM_GEN_PATCH==mode)
-  {
-    if(argc-optind<3)
-    {
-      death("Usage to generate patch: katana -g [-o OUT_FILE] OLD_SOURCE_TREE NEW_SOURCE_TREE EXEC");
-    }
-    char* oldSourceTree=argv[optind];
-    char* newSourceTree=argv[optind+1];
-    if(!strcmp(oldSourceTree,newSourceTree))
-    {
-      death("OLD_SOURCE_TREE and NEW_SOURCE_TREE must be different paths\n");
-    }
-    char* execRelName=argv[optind+2];
-    char* oldBinPath=joinPaths(oldSourceTree,execRelName);
-    char* newBinPath=joinPaths(newSourceTree,execRelName);
+    char* oldBinPath=joinPaths(config.oldSourceTree,config.objectName);
+    char* newBinPath=joinPaths(config.newSourceTree,config.objectName);
     
-    if(!outfile)
+    if(!config.outfileName)
     {
-      outfile=zmalloc(strlen(oldBinPath)+5);
-      strcpy(outfile,oldBinPath);
-      strcat(outfile,".po");
+      config.outfileName=zmalloc(strlen(oldBinPath)+5);
+      strcpy(config.outfileName,oldBinPath);
+      strcat(config.outfileName,".po");
     }
     
-    writePatch(oldSourceTree,newSourceTree,oldBinPath,newBinPath,outfile);
+    writePatch(config.oldSourceTree,config.newSourceTree,oldBinPath,newBinPath,config.outfileName);
     free(oldBinPath);
     free(newBinPath);
   }
-  else if(EKM_APPLY_PATCH==mode)
+  else if(EKM_APPLY_PATCH==config.mode)
   {
-    if(argc-optind<2)
-    {
-      death("Usage to apply patch: katana -p [OPTIOJNS] PATCH_FILE PID\nSee the man page for a description of options\n");
-    }
-    char* patchFile=argv[optind];
-    printf("patch file is %s\n",patchFile);
-    pid=atoi(argv[optind+1]);
-    oldBinElfInfo=getElfRepresentingProc(pid);
+    oldBinElfInfo=getElfRepresentingProc(config.pid);
     findELFSections(oldBinElfInfo);
-    ElfInfo* patch=openELFFile(patchFile);
+    ElfInfo* patch=openELFFile(config.objectName);
     findELFSections(patch);
     patch->isPO=true;
-    readAndApplyPatch(pid,oldBinElfInfo,patch,flags);
+    readAndApplyPatch(config.pid,oldBinElfInfo,patch);
   }
-  else if(EKM_PATCH_INFO==mode)
+  else if(EKM_INFO==config.mode)
   {
-    if(argc-optind<1)
-    {
-      death("Usage to list patch info: katana -l PATCH_FILE\n");
-    }
-    char* patchFile=argv[optind];
-    logprintf(ELL_INFO_V3,ELS_MISC,"patch file is %s\n",patchFile);
-    ElfInfo* patch=openELFFile(patchFile);
-    Map* fdeMap=readDebugFrame(patch,ehInsteadOfDebug);
+    ElfInfo* patch=openELFFile(config.objectName);
+    Map* fdeMap=readDebugFrame(patch,isFlag(EKCF_EH_FRAME));
     printf("*********Type and Function Info****************\n");
     printPatchDwarfInfo(patch,fdeMap);
 
