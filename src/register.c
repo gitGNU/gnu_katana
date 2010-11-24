@@ -91,13 +91,14 @@ PoReg readRegFromLEB128(byte* leb,usint* bytesRead)
     break;
   case ERT_EXPR:
     //todo: I forget what I was doing here
-    assert(5==numBytes);//todo: diff for 64bit
+    //todo: this isn't fully supported yet
+    assert(5==numBytes);//todo: diff for 64bit dwarf
     result.size=0;//not used
     memcpy(&result.u.offset,bytes+1,4);
     break;
   case ERT_NEW_SYM_VAL:
   case ERT_OLD_SYM_VAL:
-    assert(5==numBytes);//todo: diff for 64bit
+    assert(5==numBytes);//todo: diff for 64bit dwarf
     result.size=0;//not used
     memcpy(&result.u.offset,bytes+1,4);
     break;
@@ -108,6 +109,33 @@ PoReg readRegFromLEB128(byte* leb,usint* bytesRead)
   return result;
 }
 
+//return value should be freed when caller is finished with it
+byte* encodeRegAsLEB128(PoReg reg,bool signed_,usint* numBytesOut)
+{
+  switch(reg.type)
+  {
+  case ERT_BASIC:
+    return uintToLEB128(reg.u.index,numBytesOut);
+    break;
+  case ERT_CURR_TARG_NEW:
+  case ERT_CURR_TARG_OLD:
+  case ERT_NEW_SYM_VAL:
+  case ERT_OLD_SYM_VAL:
+    //this function is primarily of use for writing out non-patch
+    //DWARF information when using Katana as a general binary
+    //manipulation tool, therefore there is no need to support this
+    //information at present. Some time in the future it may become
+    //valuable
+    death("Patch-specific register types not supported in encodeRegAsLEB128 yet\n");
+    break;
+  case ERT_NONE:
+    death("Attempt to encode a NONE (i.e. unused) register to LEB128\n");
+    break;
+  default:
+    death("Unsupported register type in encodeRegAsLEB128\n");
+  }
+  return NULL;
+}
 
 char* getX86RegNameFromDwarfRegNum(int num)
 {
