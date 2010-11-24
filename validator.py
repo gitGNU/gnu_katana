@@ -29,9 +29,9 @@ parser.add_option("-s", action="store_true", dest="superuser", default=False, he
 
 
 if len(args)<1:
-  print "Wrong number of arguments"
-  print "Usage: "+sys.argv[0]+" DIRECTORY_TO_TEST [EXECUTABLE_NAME]"
-  print "Default executable name is 'test'"
+  print("Wrong number of arguments")
+  print("Usage: "+sys.argv[0]+" DIRECTORY_TO_TEST [EXECUTABLE_NAME]")
+  print("Default executable name is 'test'")
   sys.exit(1)
 
 if options.superuser:
@@ -67,11 +67,11 @@ hotlogf.write("\nStarting patch of "+os.path.join(oldTree,execName)+"\n---------
 hotlogf.flush()
 patchOut=args[0]+".po"
 args=["./katana","-g","-o",patchOut,oldTree,newTree,execName]
-vlogf.write("running:\n "+string.join(args," ")+"\n")
+vlogf.write("running:\n "+" ".join(args)+"\n")
 kproc=subprocess.Popen(args,stdout=hotlogf,stderr=hotlogerrf)
 if 0!=kproc.wait():
   vlogf.write("Validator failed because katana exited with failure while generating patch.\nSee "+klogfname+" and "+klogerrfname+" for more information\n")
-  space=string.join([' ' for x in range(0,27)],'')
+  space=''.join([' ' for x in range(0,27)])
   sys.stdout.write(space)
   cleanup()
   sys.exit(1)
@@ -93,12 +93,12 @@ proc=subprocess.Popen(procCmd,stdout=logf)
 time.sleep(0.5)
 #now start the hotpatcher
 args=["./katana","-p",patchOut,str(proc.pid)]
-vlogf.write("running "+string.join(args," ")+"\n")
+vlogf.write("running "+" ".join(args)+"\n")
 kproc=subprocess.Popen(args,stdout=hotlogf,stderr=hotlogerrf)
 
 if 0!=kproc.wait():
   vlogf.write("Validator failed because katana exited with failure while applying patch.\nSee "+klogfname+" and "+klogerrfname+" for more information\n")
-  space=string.join([' ' for x in range(0,17)],'')
+  space=''.join([' ' for x in range(0,17)])
   sys.stdout.write(space)
   cleanup()
   sys.exit(1)
@@ -114,11 +114,11 @@ if proc.poll():
   logf.close()
   vlogf.write("Validator failed because the target program crashed\n")
   vlogf.close()
-  space=string.join([' ' for x in range(0,5)],'')
+  space=''.join([' ' for x in range(0,5)])
   sys.stdout.write(space)
   sys.exit(1)
 proc.terminate() #kill it
-dots=string.join(['.' for x in range(0,5)],'')
+dots=''.join(['.' for x in range(0,5)])
 sys.stdout.write(dots)
 sys.stdout.flush()
 oldstdout=sys.stdout

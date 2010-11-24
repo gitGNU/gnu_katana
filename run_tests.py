@@ -18,7 +18,7 @@ if os.path.exists("katana_err_log"):
 
 def runTestInDir(dir,execName="test",programArguments=[]):
   msg="running test "+os.path.basename(dir)
-  dots=string.join(['.' for x in range(0,35-len(msg))],'')
+  dots=''.join(['.' for x in range(0,35-len(msg))])
   sys.stdout.write(msg+dots+'|')
   sys.stdout.flush()
   validatorCmd=["python","validator.py"];
@@ -72,8 +72,8 @@ else:
     passTests+=1
   totalTests+=1
 
-print "Passed "+str(passTests)+" out of "+str(totalTests)+" tests"
+print("Passed "+str(passTests)+" out of "+str(totalTests)+" tests")
 if passTests!=totalTests:
-  print "See validator_log for more information"
+  print("See validator_log for more information")
   sys.exit(1)
 

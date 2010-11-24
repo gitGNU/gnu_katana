@@ -61,7 +61,7 @@ def validate(logname):
   def validateSizeof(match):
     if not bazSize[0]:
       bazSize[0]=match.group(1)
-      print "set baz size to " + bazSize[0]
+      print("set baz size to " + bazSize[0])
       if bazSize[0]!="12" and bazSize[0]!="24": #12 or 24 depends on x86 vs x86_64
         sys.stderr.write("Unexpected sizeof(Baz), expected 12 or 24 and got %s\n" % match.group(1));
         return False
