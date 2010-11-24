@@ -126,7 +126,6 @@ int evaluateInstructionsToRules(RegInstruction* instrs,int numInstrs,Dictionary*
         //running. It is assumed that the DWARF file will be constructed
         //in a sensible manner. Otherwise the generated rules may make
         //little sense.
-        fprintf(stderr,"copying rules\n");
         Dictionary* rulesCopy=dictDuplicate(rules,(DictDataCopy)duplicatePoRegRule);
         if(!stateStack)
         {
@@ -142,7 +141,6 @@ int evaluateInstructionsToRules(RegInstruction* instrs,int numInstrs,Dictionary*
         {
           death("Attempt to use DW_CFA_restore_state without using DW_CFA_remember_state\n");
         }
-        fprintf(stderr,"popping saved rules\n");
         Dictionary* savedRules=stackPop(stateStack);
         if(!savedRules)
         {

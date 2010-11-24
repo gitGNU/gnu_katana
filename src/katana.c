@@ -247,7 +247,7 @@ int main(int argc,char** argv)
   {
     if(argc-optind<1)
     {
-      death("Usage to list patch info: katana -l PATCH_FILE");
+      death("Usage to list patch info: katana -l PATCH_FILE\n");
     }
     char* patchFile=argv[optind];
     logprintf(ELL_INFO_V3,ELS_MISC,"patch file is %s\n",patchFile);
@@ -255,9 +255,23 @@ int main(int argc,char** argv)
     Map* fdeMap=readDebugFrame(patch,ehInsteadOfDebug);
     printf("*********Type and Function Info****************\n");
     printPatchDwarfInfo(patch,fdeMap);
-    printf("\n*********Safety Info****************\n");
-    printPatchUnsafeFuncsInfo(patch);
-    printf("\n*********Type Transformation Rules****************\n");
+
+    //while katana is primarily for dealing with patches, it also has
+    //some functionality for displaying general-purpose information
+    //about DWARF and ELF information.
+    if(patch->isPO)
+    {
+      printf("\n*********Safety Info****************\n");
+      printPatchUnsafeFuncsInfo(patch);
+    }
+    if(patch->isPO)
+    {
+      printf("\n*********Type Transformation Rules****************\n");
+    }
+    else
+    {
+      printf("\n*********Call Frame Information****************\n");
+    }
     printPatchFDEInfo(patch);
   }
   else
