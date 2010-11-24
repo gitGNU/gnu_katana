@@ -9,6 +9,7 @@
 #include "types.h"
 #include "leb.h"
 #include <math.h>
+#include "util/logging.h"
 
 //encode bytes (presumably representing a number)
 //as LEB128. The returned pointer should
@@ -86,19 +87,21 @@ byte* encodeAsLEB128(byte* bytes,int numBytes,bool signed_,usint* numBytesOut)
     result[i]=val;
   }
   *numBytesOut=numSeptets;
-  
-  /*  logprintf(ELL_INFO_V4,ELS_MISC,"encoded into LEB as follows:\n");
-      logprintf(ELL_INFO_V4,ELS_MISC,"bytes : {");
-      for(int i=0;i<numBytes;i++)
-      {
-      logprintf(ELL_INFO_V4,ELS_MISC,"%i%s ",(int)bytes[i],i+1<numBytes?",":"");
-      }
-      logprintf(ELL_INFO_V4,ELS_MISC,"}\n become: {");
-      for(int i=0;i<numSeptets;i++)
-      {
-      logprintf(ELL_INFO_V4,ELS_MISC,"%i(%i)%s ",(int)result[i],(int)result[i]&0x7F,i+1<numSeptets?",":"");
-      }
-      logprintf(ELL_INFO_V4,ELS_MISC,"}\n");*/
+
+  #ifdef DEBUG
+  logprintf(ELL_INFO_V4,ELS_LEB,"encoded into LEB as follows:\n");
+  logprintf(ELL_INFO_V4,ELS_LEB,"bytes : {");
+  for(int i=0;i<numBytes;i++)
+  {
+    logprintf(ELL_INFO_V4,ELS_LEB,"%i%s ",(int)bytes[i],i+1<numBytes?",":"");
+  }
+  logprintf(ELL_INFO_V4,ELS_LEB,"}\n become: {");
+  for(int i=0;i<numSeptets;i++)
+  {
+    logprintf(ELL_INFO_V4,ELS_LEB,"%i(%i)%s ",(int)result[i],(int)result[i]&0x7F,i+1<numSeptets?",":"");
+  }
+  logprintf(ELL_INFO_V4,ELS_LEB,"}\n");
+  #endif
   return result;
 }
 
@@ -168,6 +171,25 @@ byte* decodeLEB128(byte* bytes,bool signed_,usint* numBytesOut,usint* numSeptets
   return result;
 }
 
+
+byte* uintToLEB128(usint value,usint* numBytesOut)
+{
+  int bytesNeeded=1;
+  if(value & 0xFF000000)
+  {
+    //we need all four bytes
+    bytesNeeded=4;
+  }
+  else if(value & 0xFFFF0000)
+  {
+    bytesNeeded=3;
+  }
+  else if(value & 0xFFFFFF00)
+  {
+    bytesNeeded=2;
+  }
+  return encodeAsLEB128((byte*)&value,bytesNeeded,false,numBytesOut);
+}
 
 uint leb128ToUInt(byte* bytes,usint* outLEBBytesRead)
 {
