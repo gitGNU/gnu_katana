@@ -7,7 +7,9 @@
      published by the Free Software Foundation, either version 2 of the
      License, or (at your option) any later version.
 
-     This file was not written while under employment by Dartmouth College
+     This file was not written while under employment by Dartmouth
+     College and the attribution requirements on the rest of Katana do
+     not apply to code taken from this file.
   Project:  katana
   Date: October 2010
   Description: abstract stack data type
