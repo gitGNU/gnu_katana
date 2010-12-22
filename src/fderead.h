@@ -64,43 +64,6 @@
 //and the FDE structure
 Map* readDebugFrame(ElfInfo* elf,bool ehInsteadOfDebug);
 
-
-typedef struct CIE
-{
-  RegInstruction* initialInstructions;
-  int numInitialInstructions;
-  Dictionary* initialRules; //dictionary mapping the stringified
-                            //version of a register to the rule (of
-                            //type PoRegRule) for setting that
-                            //register
-  //todo: I don't think this memory is currently freed
-  char* augmentation;//augmentation string. Not needed for patching
-                     //but needed for some more general-purpose DWARF
-                     //manipulations
-  Dwarf_Signed dataAlign;
-  Dwarf_Unsigned codeAlign;
-  Dwarf_Half returnAddrRuleNum;
-  int idx;//what index cie this is in a DWARF section
-} CIE;
-
-
-typedef struct FDE
-{
-  CIE* cie;
-  RegInstruction* instructions;
-  int numInstructions;
-  int memSize;//size of memory area the FDE describes. Used when
-              //fixing up pointers to know how much mem to
-              //allocate. Has no meaning if this FDE wasn't read from
-              //a PO
-  int lowpc;
-  int highpc;//has no meaning if this FDE describes fixups and was
-             //read from a PO
-  int offset;//offset from beginning of debug frame
-  int idx;//what index fde this is in a DWARF section
-} FDE;
-
-
 //the returned memory should be freed
 RegInstruction* parseFDEInstructions(Dwarf_Debug dbg,unsigned char* bytes,int len,
                                      int dataAlign,int codeAlign,int* numInstrs);

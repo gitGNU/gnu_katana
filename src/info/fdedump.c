@@ -74,10 +74,10 @@ void printCIEInfo(CIE* cie)
   for(int i=0;i<cie->numInitialInstructions;i++)
   {
     printf("\t\t");
-    printInstruction(cie->initialInstructions[i]);
+    printInstruction(stdout,cie->initialInstructions[i]);
   }
   printf("\tInitial register rules (computed from instructions)\n");
-  printRules(cie->initialRules,"\t\t");
+  printRules(stdout,cie->initialRules,"\t\t");
 }
 
 void printFDEInfo(CIE* cie,FDE* fde,int num)
@@ -90,7 +90,7 @@ void printFDEInfo(CIE* cie,FDE* fde,int num)
   for(int i=0;i<fde->numInstructions;i++)
   {
     printf("    ");
-    printInstruction(fde->instructions[i]);
+    printInstruction(stdout,fde->instructions[i]);
   }
   printf("    The table would be as follows\n");
   Dictionary* rulesDict=dictDuplicate(cie->initialRules,(DictDataCopy)duplicatePoRegRule);
@@ -112,25 +112,18 @@ void printFDEInfo(CIE* cie,FDE* fde,int num)
       continue;//Don't need to print this because will be dup
     }
     printf("    ----Register Rules at text address 0x%x------\n",i);
-    printRules(rulesDict,"      ");
+    printRules(stdout,rulesDict,"      ");
   }
 }
 
-void printPatchFDEInfo(ElfInfo* patch)
+void printCallFrameInfo(CallFrameInfo* cfi)
 {
-  /*Dwarf_Error err;
-  if(DW_DLV_OK!=dwarf_elf_init(patch->e,DW_DLC_READ,&dwarfErrorHandler,NULL,&dbgForFDEDump,&err))
+  for(int i=0;i<cfi->numCIEs;i++)
   {
-    dwarfErrorHandler(err,NULL);
+    printCIEInfo(cfi->cies+i);
   }
-  readDebugFrameForDump(dbgForFDEDump);
-  */
-  for(int i=0;i<patch->numCIEs;i++)
+  for(int i=0;i<cfi->numFdes;i++)
   {
-    printCIEInfo(patch->cies+i);
-  }
-  for(int i=0;i<patch->numFdes;i++)
-  {
-    printFDEInfo(patch->fdes[i].cie,patch->fdes+i,i+1);//fdes have a 1-based numbering scheme
+    printFDEInfo(cfi->fdes[i].cie,cfi->fdes+i,i+1);//fdes have a 1-based numbering scheme
   }
 }

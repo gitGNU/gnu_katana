@@ -216,115 +216,115 @@ void addInstruction(DwarfInstructions* instrs,DwarfInstruction* instr)
   }
 }
 
-void printInstruction(RegInstruction inst)
+void printInstruction(FILE* file,RegInstruction inst)
 {
   switch(inst.type)
   {
   case DW_CFA_set_loc:
-    printf("DW_CFA_set_loc %zi\n",inst.arg1);
+    fprintf(file,"DW_CFA_set_loc %zi\n",inst.arg1);
     break;
   case DW_CFA_advance_loc:
-    printf("DW_CFA_advance_loc %zi\n",inst.arg1);
+    fprintf(file,"DW_CFA_advance_loc %zi\n",inst.arg1);
     break;
   case DW_CFA_advance_loc1:
-    printf("DW_CFA_advance_loc_1 %zi\n",inst.arg1);
+    fprintf(file,"DW_CFA_advance_loc_1 %zi\n",inst.arg1);
     break;
   case DW_CFA_advance_loc2:
-    printf("DW_CFA_advance_loc_2 %zi\n",inst.arg1);
+    fprintf(file,"DW_CFA_advance_loc_2 %zi\n",inst.arg1);
     break;
   case DW_CFA_offset:
     {
       signed long int tmp;
       memcpy(&tmp,&inst.arg2,sizeof(inst.arg2));
-      printf("DW_CFA_offset r%zi %zi\n",inst.arg1,tmp);
+      fprintf(file,"DW_CFA_offset r%zi %zi\n",inst.arg1,tmp);
     }
     break;
   case DW_CFA_register:
-    printf("DW_CFA_register ");
+    fprintf(file,"DW_CFA_register ");
     if(ERT_NONE==inst.arg1Reg.type)
     {
-      printf("r%zi ",inst.arg1);
+      fprintf(file,"r%zi ",inst.arg1);
     }
     else
     {
-      printReg(inst.arg1Reg,stdout);
-      printf(" ");
+      printReg(inst.arg1Reg,file);
+      fprintf(file," ");
     }
     if(ERT_NONE==inst.arg2Reg.type)
     {
-      printf("r%lu ",(unsigned long)inst.arg2);
+      fprintf(file,"r%lu ",(unsigned long)inst.arg2);
     }
     else
     {
-      printReg(inst.arg2Reg,stdout);
-      printf(" ");
+      printReg(inst.arg2Reg,file);
+      fprintf(file," ");
     }
-    printf("\n");
+    fprintf(file,"\n");
     break;
   case DW_CFA_KATANA_fixups:
-    printf("DW_CFA_KATANA_fixups ");
+    fprintf(file,"DW_CFA_KATANA_fixups ");
   case DW_CFA_KATANA_fixups_pointer:
     {
-      printf("DW_CFA_KATANA_fixups_pointer ");
+      fprintf(file,"DW_CFA_KATANA_fixups_pointer ");
     }
     if(ERT_NONE==inst.arg1Reg.type)
     {
-      printf("r%zi ",inst.arg1);
+      fprintf(file,"r%zi ",inst.arg1);
     }
     else
     {
-      printReg(inst.arg1Reg,stdout);
-      printf(" ");
+      printReg(inst.arg1Reg,file);
+      fprintf(file," ");
     }
     if(ERT_NONE==inst.arg2Reg.type)
     {
-      printf("r%lu ",(unsigned long)inst.arg2);
+      fprintf(file,"r%lu ",(unsigned long)inst.arg2);
     }
     else
     {
-      printReg(inst.arg2Reg,stdout);
-      printf(" ");
+      printReg(inst.arg2Reg,file);
+      fprintf(file," ");
     }
-    printf("fde#%lu ",(unsigned long)inst.arg3);
-    printf("\n");
+    fprintf(file,"fde#%lu ",(unsigned long)inst.arg3);
+    fprintf(file,"\n");
     break;
 
   case DW_CFA_def_cfa:
-    printf("DW_CFA_def_cfa ");
+    fprintf(file,"DW_CFA_def_cfa ");
     if(ERT_NONE==inst.arg1Reg.type)
     {
-      printf("r%zi ",inst.arg1);
+      fprintf(file,"r%zi ",inst.arg1);
     }
     else
     {
-      printReg(inst.arg1Reg,stdout);
-      printf(" ");
+      printReg(inst.arg1Reg,file);
+      fprintf(file," ");
     }
-    printf("%li \n",(long)inst.arg2);
+    fprintf(file,"%li \n",(long)inst.arg2);
     break;
   case DW_CFA_def_cfa_register:
-    printf("DW_CFA_def_cfa_register ");
+    fprintf(file,"DW_CFA_def_cfa_register ");
     if(ERT_NONE==inst.arg1Reg.type)
     {
-      printf("r%zi\n",inst.arg1);
+      fprintf(file,"r%zi\n",inst.arg1);
     }
     else
     {
-      printReg(inst.arg1Reg,stdout);
-      printf("\n");
+      printReg(inst.arg1Reg,file);
+      fprintf(file,"\n");
     }
     break;
   case DW_CFA_def_cfa_offset:
-    printf("DW_CFA_def_cfa_offset %zi\n",inst.arg1);
+    fprintf(file,"DW_CFA_def_cfa_offset %zi\n",inst.arg1);
     break;
   case DW_CFA_remember_state:
-    printf("DW_CFA_remember_state\n");
+    fprintf(file,"DW_CFA_remember_state\n");
     break;
   case DW_CFA_restore_state:
-    printf("DW_CFA_restore_state\n");
+    fprintf(file,"DW_CFA_restore_state\n");
     break;
   case DW_CFA_nop:
-    printf("DW_CFA_nop\n");
+    fprintf(file,"DW_CFA_nop\n");
     break;
   default:
     death("unsupported DWARF instruction 0x%x",inst.type);

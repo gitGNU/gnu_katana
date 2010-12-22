@@ -63,6 +63,8 @@
 #include "util/logging.h"
 #include "fderead.h"
 
+//the ELF file is always opened read-only. If you want to write a copy
+//to disk, call writeOutElf. 
 ElfInfo* openELFFile(char* fname)
 {
   ElfInfo* e=zmalloc(sizeof(ElfInfo));
@@ -89,7 +91,7 @@ void endELF(ElfInfo* e)
 {
   if(e->dataAllocatedByKatana)
   {
-      //since we wrote this elf file we malloc'd all the
+    //since we wrote this elf file we malloc'd all the
     //data sections, and therefore libelf won't free them,
     //so we have to do it ourselves
     for(Elf_Scn* scn=elf_nextscn (e->e,NULL);scn;scn=elf_nextscn(e->e,scn))
@@ -101,17 +103,15 @@ void endELF(ElfInfo* e)
       }
     }
   }
-
-  
   if(e->dwarfInfo)
   {
     freeDwarfInfo(e->dwarfInfo);
   }
-  for(int i=0;i<e->numFdes;i++)
+  for(int i=0;i<e->callFrameInfo.numFdes;i++)
   {
-    free(e->fdes[i].instructions);
+    free(e->callFrameInfo.fdes[i].instructions);
   }
-  free(e->fdes);
+  free(e->callFrameInfo.fdes);
   elf_end(e->e);
   close(e->fd);
   free(e->fname);
@@ -293,12 +293,11 @@ ElfInfo* duplicateElf(ElfInfo* e,char* outfname,bool flushToDisk,bool keepLayout
   return newE;
 }
 
-//legacy function, currently unused as far as I know --james
-void writeOut(ElfInfo* e,char* outfname,bool keepLayout)
+void writeOutElf(ElfInfo* e,char* outfname,bool keepLayout)
 {
   ElfInfo* newE=duplicateElf(e,outfname,true,keepLayout);
-  close(newE->fd);
   elf_end(newE->e);
+  close(newE->fd);
   free(newE);
 }
 

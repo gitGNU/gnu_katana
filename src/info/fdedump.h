@@ -55,7 +55,7 @@
                Katana's special registers and operations
 */
 
-#include "elfparse.h"
 #include "fderead.h"
+#include "callFrameInfo.h"
 void printCIEInfo(CIE* cie);
-void printPatchFDEInfo(ElfInfo* patch);
+void printCallFrameInfo(CallFrameInfo* cfi);

@@ -50,7 +50,7 @@
     http://www.gnu.org/licenses/gpl.html
 
   Project: Katana
-  Date: January, 2010
+  Date: December, 2010
   Description:
 */
 #include <errno.h>
@@ -83,6 +83,8 @@ ElfInfo* oldBinElfInfo=NULL;
 #include "info/unsafe_funcs_dump.h"
 #include "util/path.h"
 #include "config.h"
+#include "rewriter/rewrite.h"
+#include "shell/shell.h"
 
 void configureFromCommandLine(int argc,char** argv);
 
@@ -126,7 +128,11 @@ int main(int argc,char** argv)
     death("Failed to init ELF library\n");
   }
   configureFromCommandLine(argc,argv);
-  if(EKM_GEN_PATCH==config.mode)
+  if(EKM_SHELL==config.mode)
+  {
+    doShell(config.inputFile);
+  }
+  else if(EKM_GEN_PATCH==config.mode)
   {
     char* oldBinPath=joinPaths(config.oldSourceTree,config.objectName);
     char* newBinPath=joinPaths(config.newSourceTree,config.objectName);
@@ -174,7 +180,12 @@ int main(int argc,char** argv)
     {
       printf("\n*********Call Frame Information****************\n");
     }
-    printPatchFDEInfo(patch);
+    printCallFrameInfo(&patch->callFrameInfo);
+  }
+  else if(EKM_TEST_PASSTHROUGH==config.mode)
+  {
+    ElfInfo* object=openELFFile(config.objectName);
+    rewrite(object,config.outfileName);
   }
   else
   {

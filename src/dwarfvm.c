@@ -342,7 +342,7 @@ List* makePatchData(PoRegRule* rule,SpecialRegsState* state,ElfInfo* patch,ElfIn
       memcpy(&tmpState.currAddrOld,rhAddrBytes,sizeof(addr_t));
       free(rhAddrBytes);
       //fde indices seem to be 1-based and we store them zero-based
-      head=generatePatchesFromFDEAndState(&patch->fdes[rule->index-1],&tmpState,patch,patchedBin);
+      head=generatePatchesFromFDEAndState(&patch->callFrameInfo.fdes[rule->index-1],&tmpState,patch,patchedBin);
     }
     break;
   case ERRT_RECURSE_FIXUP_POINTER:
@@ -434,7 +434,7 @@ List* makePatchData(PoRegRule* rule,SpecialRegsState* state,ElfInfo* patch,ElfIn
         //      lacking important information)
         
         //pointedObjectNewLocation=getFreeSpaceInTarget(patch->fdes[rule->index-1].memSize);
-        pointedObjectNewLocation=mallocTarget(patch->fdes[rule->index-1].memSize);
+        pointedObjectNewLocation=mallocTarget(patch->callFrameInfo.fdes[rule->index-1].memSize);
         logprintf(ELL_INFO_V2,ELS_DWARF_FRAME,"No symbol associated with object at address 0x%zx we have to relocate that we have a pointer to. Mallocced new memory at 0x%zx\n",tmpState.currAddrOld,pointedObjectNewLocation);
       }
 
@@ -449,7 +449,7 @@ List* makePatchData(PoRegRule* rule,SpecialRegsState* state,ElfInfo* patch,ElfIn
       memcpy(result->data,&pointedObjectNewLocation,sizeof(addr_t));
       
       //fde indices seem to be 1-based and we store them zero-based
-      head->next=generatePatchesFromFDEAndState(&patch->fdes[rule->index-1],&tmpState,patch,patchedBin);
+      head->next=generatePatchesFromFDEAndState(&patch->callFrameInfo.fdes[rule->index-1],&tmpState,patch,patchedBin);
     }
     break;
   default:

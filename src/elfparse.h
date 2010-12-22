@@ -61,6 +61,7 @@
 #include "types.h"
 #include <elf.h>
 #include "arch.h"
+#include "callFrameInfo.h"
 
 typedef enum
 {
@@ -105,11 +106,7 @@ typedef struct ElfInfo
   int fd;//file descriptor for elf file
   char* fname;//file name associated with descriptor
   DwarfInfo* dwarfInfo;
-  struct FDE* fdes;//for relocatable and executable objects, these
-                   //will be sorted by lowpc
-  int numFdes;
-  struct CIE* cies;
-  int numCIEs;
+  CallFrameInfo callFrameInfo;
   bool dataAllocatedByKatana;//used for memory management
   bool isPO;//is this elf object a patch object?
   #ifdef KATANA_X86_64_ARCH
@@ -122,6 +119,8 @@ typedef struct ElfInfo
 
 
 ElfInfo* openELFFile(char* fname);
+//called when we are finished using the given ELF file
+//this function does nothing more than cleanup and deallocate resources.
 void endELF(ElfInfo* _e);
 void* getTextDataAtAbs(ElfInfo* e,addr_t addr,ELF_STORAGE_TYPE type);
 word_t getTextAtAbs(ElfInfo* e,addr_t addr,ELF_STORAGE_TYPE type);
@@ -137,7 +136,11 @@ void printSymTab(ElfInfo* e);
 //if flushToDisk is false doesn't
 //actually write to disk right now
 ElfInfo* duplicateElf(ElfInfo* e,char* outfname,bool flushToDisk,bool keepLayout);
-void writeOut(ElfInfo* e,char* outfname,bool keepLayout);
+//write out a copy of this ELF object to the given location on disk.
+//if keepLayout is true, don't allow libelf to rearrange the
+//layout. ELF files seem to get screwed up sometimes when libelf is
+//allowed a free reign. I don't quite understand why.
+void writeOutElf(ElfInfo* e,char* outfname,bool keepLayout);
 void findELFSections(ElfInfo* e);
 //returns NULL if the section does not exist
 Elf_Scn* getSectionByName(ElfInfo* e,char* name);

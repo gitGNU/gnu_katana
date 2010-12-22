@@ -329,7 +329,7 @@ int resolveRegisterValue(PoReg* reg,SpecialRegsState* state,byte** result,int fl
   return 0;
 }
 
-void printRule(PoRegRule rule,int regnum)
+void printRule(FILE* file,PoRegRule rule,int regnum)
 {
 
   char* regStr=NULL;
@@ -337,13 +337,13 @@ void printRule(PoRegRule rule,int regnum)
   switch(rule.type)
   {
   case ERRT_UNDEF:
-    printf("%s = Undefined\n",regStr);
+    fprintf(file,"%s = Undefined\n",regStr);
     break;
   case ERRT_OFFSET:
-    printf("%s = %i(cfa)\n",regStr,rule.offset);
+    fprintf(file,"%s = %i(cfa)\n",regStr,rule.offset);
     break;
   case ERRT_REGISTER:
-    printf("%s = %s\n",regStr,strForReg(rule.regRH));
+    fprintf(file,"%s = %s\n",regStr,strForReg(rule.regRH));
     break;
   case ERRT_CFA:
     {
@@ -359,29 +359,29 @@ void printRule(PoRegRule rule,int regnum)
         //in normal operation.
         str="<NONE>";
       }
-      printf("cfa = %i(%s)\n",rule.offset,str);
+      fprintf(file,"cfa = %i(%s)\n",rule.offset,str);
     }
     break;
   case ERRT_RECURSE_FIXUP:
-    printf("%s = recurse fixup with FDE#%lu based at %s\n",regStr,(unsigned long)rule.index,strForReg(rule.regRH));
+    fprintf(file,"%s = recurse fixup with FDE#%lu based at %s\n",regStr,(unsigned long)rule.index,strForReg(rule.regRH));
     break;
   case ERRT_RECURSE_FIXUP_POINTER:
-    printf("%s = recurse fixup pointer with FDE#%lu based at %s\n",regStr,(unsigned long)rule.index,strForReg(rule.regRH));
+    fprintf(file,"%s = recurse fixup pointer with FDE#%lu based at %s\n",regStr,(unsigned long)rule.index,strForReg(rule.regRH));
     break;
   default:
     death("unknown rule type\n");
   }
 }
 
-void printRules(Dictionary* rulesDict,char* tabstr)
+void printRules(FILE* file,Dictionary* rulesDict,char* tabstr)
 {
   PoRegRule** rules=(PoRegRule**)dictValues(rulesDict);
   for(int i=0;rules[i];i++)
   {
     if(rules[i]->type!=ERRT_UNDEF)
     {
-      printf("%s",tabstr);
-      printRule(*rules[i],i);
+      fprintf(file,"%s",tabstr);
+      printRule(file,*rules[i],i);
     }
   }
 }

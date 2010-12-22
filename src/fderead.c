@@ -258,8 +258,8 @@ Map* readDebugFrame(ElfInfo* elf,bool ehInsteadOfDebug)
   Dwarf_Ptr initInstr = 0;
   Dwarf_Unsigned initInstrLen = 0;
 
-  elf->cies=zmalloc(sizeof(CIE)*cieElementCount);
-  elf->numCIEs=cieElementCount;
+  elf->callFrameInfo.cies=zmalloc(sizeof(CIE)*cieElementCount);
+  elf->callFrameInfo.numCIEs=cieElementCount;
 
   for(int i=0;i<cieElementCount;i++)
   {
@@ -269,40 +269,40 @@ Map* readDebugFrame(ElfInfo* elf,bool ehInsteadOfDebug)
                                      &cieLength,
                                      &version,
                                      &augmenter,
-                                     &elf->cies[i].codeAlign,
-                                     &elf->cies[i].dataAlign,
-                                     &elf->cies[i].returnAddrRuleNum,
+                                     &elf->callFrameInfo.cies[i].codeAlign,
+                                     &elf->callFrameInfo.cies[i].dataAlign,
+                                     &elf->callFrameInfo.cies[i].returnAddrRuleNum,
                                      &initInstr,
                                      &initInstrLen, &err))
     {
       dwarfErrorHandler(err,NULL);
     }
-    elf->cies[i].augmentation=strdup(augmenter);//todo: free this memory later
+    elf->callFrameInfo.cies[i].augmentation=strdup(augmenter);//todo: free this memory later
     
     //don't care about initial instructions, for patching,
     //but do if we're reading a debug frame for stack unwinding purposes
     //so that we can find activation frames
   
-    elf->cies[i].initialInstructions=
+    elf->callFrameInfo.cies[i].initialInstructions=
       parseFDEInstructions(dbg,initInstr,initInstrLen,
-                           elf->cies[i].dataAlign,
-                           elf->cies[i].codeAlign,
-                           &elf->cies[i].numInitialInstructions);
-    elf->cies[i].initialRules=dictCreate(100);//todo: get rid of
+                           elf->callFrameInfo.cies[i].dataAlign,
+                           elf->callFrameInfo.cies[i].codeAlign,
+                           &elf->callFrameInfo.cies[i].numInitialInstructions);
+    elf->callFrameInfo.cies[i].initialRules=dictCreate(100);//todo: get rid of
     //arbitrary constant 100
-    evaluateInstructionsToRules(elf->cies[i].initialInstructions,
-                                elf->cies[i].numInitialInstructions,
-                                elf->cies[i].initialRules,0,-1,NULL);
+    evaluateInstructionsToRules(elf->callFrameInfo.cies[i].initialInstructions,
+                                elf->callFrameInfo.cies[i].numInitialInstructions,
+                                elf->callFrameInfo.cies[i].initialRules,0,-1,NULL);
   
     //todo: bizarre bug, it keeps coming out as -1, which is wrong
-    elf->cies[i].codeAlign=1;
+    elf->callFrameInfo.cies[i].codeAlign=1;
   }
   
-  elf->fdes=zmalloc(fdeElementCount*sizeof(FDE));
-  elf->numFdes=fdeElementCount;
+  elf->callFrameInfo.fdes=zmalloc(fdeElementCount*sizeof(FDE));
+  elf->callFrameInfo.numFdes=fdeElementCount;
   for (int i = 0; i < fdeElementCount; i++)
   {
-    elf->fdes[i].idx=i;
+    elf->callFrameInfo.fdes[i].idx=i;
     Dwarf_Fde dfde=fdeData[i];
     Dwarf_Ptr instrs;
     Dwarf_Unsigned ilen;
@@ -315,10 +315,10 @@ Map* readDebugFrame(ElfInfo* elf,bool ehInsteadOfDebug)
     dwarf_get_cie_of_fde(dfde,&dcie,&err);
     Dwarf_Signed cieIndex;
     dwarf_get_cie_index(dcie,&cieIndex,&err);
-    elf->fdes[i].cie=&elf->cies[cieIndex];
-    CIE* cie=elf->fdes[i].cie;
+    elf->callFrameInfo.fdes[i].cie=&elf->callFrameInfo.cies[cieIndex];
+    CIE* cie=elf->callFrameInfo.fdes[i].cie;
     logprintf(ELL_INFO_V2,ELS_DWARF_FRAME,"Reading instructions in FDE #%i\n",i);
-    elf->fdes[i].instructions=parseFDEInstructions(dbg,instrs,ilen,cie->dataAlign,cie->codeAlign,&elf->fdes[i].numInstructions);
+    elf->callFrameInfo.fdes[i].instructions=parseFDEInstructions(dbg,instrs,ilen,cie->dataAlign,cie->codeAlign,&elf->callFrameInfo.fdes[i].numInstructions);
     Dwarf_Addr lowPC = 0;
     Dwarf_Unsigned addrRange = 0;
     Dwarf_Ptr fdeBytes = NULL;
@@ -334,26 +334,26 @@ Map* readDebugFrame(ElfInfo* elf,bool ehInsteadOfDebug)
                         &fdeOffset, &err);
     if(elf->isPO)
     {
-      elf->fdes[i].lowpc=lowPC;
-      elf->fdes[i].highpc=0;//has no meaning if the fde was read from a patch object
-      elf->fdes[i].memSize=addrRange;
+      elf->callFrameInfo.fdes[i].lowpc=lowPC;
+      elf->callFrameInfo.fdes[i].highpc=0;//has no meaning if the fde was read from a patch object
+      elf->callFrameInfo.fdes[i].memSize=addrRange;
     }
     else
     {
-      elf->fdes[i].lowpc=lowPC;
-      elf->fdes[i].highpc=lowPC+addrRange;
-      elf->fdes[i].memSize=0;//has no meaning if the fde wasn't read from a patch object
+      elf->callFrameInfo.fdes[i].lowpc=lowPC;
+      elf->callFrameInfo.fdes[i].highpc=lowPC+addrRange;
+      elf->callFrameInfo.fdes[i].memSize=0;//has no meaning if the fde wasn't read from a patch object
     }
-    elf->fdes[i].offset=fdeOffset;
+    elf->callFrameInfo.fdes[i].offset=fdeOffset;
     int* key=zmalloc(sizeof(int));
-    *key=elf->fdes[i].offset;
-    mapInsert(result,key,elf->fdes+i);
+    *key=elf->callFrameInfo.fdes[i].offset;
+    mapInsert(result,key,elf->callFrameInfo.fdes+i);
     dwarf_dealloc(dbg,dfde,DW_DLA_FDE);
   }
 
   //sort fdes by lowpc unless this is a patch object. This
   //makes determining backtraces easier
-  qsort(elf->fdes,elf->numFdes,sizeof(FDE),fdeCmp);
+  qsort(elf->callFrameInfo.fdes,elf->callFrameInfo.numFdes,sizeof(FDE),fdeCmp);
   
   dwarf_dealloc(dbg,cieData[0],DW_DLA_CIE);
   dwarf_dealloc(dbg,fdeData,DW_DLA_LIST);

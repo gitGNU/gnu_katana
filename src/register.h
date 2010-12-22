@@ -59,7 +59,6 @@
 #include <stdbool.h>
 #include "util/util.h"
 #include "types.h"
-#include "elfparse.h"
 
 typedef enum
 {
@@ -127,14 +126,14 @@ typedef struct
 } PoRegRule;
 
 //rules are of type PoRegRule
-void printRules(Dictionary* rulesDict,char* tabstr);
+void printRules(FILE* file,Dictionary* rulesDict,char* tabstr);
 
 
 typedef struct
 {
   addr_t currAddrOld;//corresponding to CURR_TARG_OLD register
   addr_t currAddrNew;//corresponding to CURR_TARG_NEW register
-  ElfInfo* oldBinaryElf;//needed for looking up symbols
+  struct ElfInfo* oldBinaryElf;//needed for looking up symbols
   addr_t cfaValue;
 } SpecialRegsState;
 

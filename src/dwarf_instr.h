@@ -110,7 +110,7 @@ typedef struct
 //add a new instruction to an array of instructions
 void addInstruction(DwarfInstructions* instrs,DwarfInstruction* instr);
 
-void printInstruction(RegInstruction inst);
+void printInstruction(FILE* file,RegInstruction inst);
 
 void destroyRawInstructions(DwarfInstructions instrs);
 

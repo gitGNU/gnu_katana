@@ -70,30 +70,30 @@
 
 FDE* getFDEForPC(ElfInfo* elf,addr_t pc)
 {
-  assert(elf->fdes);
-  //elf->fdes are sorted by lowpc, so we can do a binary search
+  assert(elf->callFrameInfo.fdes);
+  //elf->callFrameInfo.fdes are sorted by lowpc, so we can do a binary search
   size_t low=0;
-  size_t high=elf->numFdes;
+  size_t high=elf->callFrameInfo.numFdes;
   while(high-low>0)
   {
     size_t middle=low+(size_t)floor((float)(high-low)/2.0f);
-    if(elf->fdes[middle].lowpc > pc)
+    if(elf->callFrameInfo.fdes[middle].lowpc > pc)
     {
       high=middle-1;
     }
-    else if(elf->fdes[middle].highpc < pc)
+    else if(elf->callFrameInfo.fdes[middle].highpc < pc)
     {
       low=middle+1;
     }
     else
     {
       //we've found it!
-      return &elf->fdes[middle];
+      return &elf->callFrameInfo.fdes[middle];
     }
   }
-  if(elf->fdes[low].lowpc <= pc && elf->fdes[low].highpc >= pc)
+  if(elf->callFrameInfo.fdes[low].lowpc <= pc && elf->callFrameInfo.fdes[low].highpc >= pc)
   {
-    return &elf->fdes[low];
+    return &elf->callFrameInfo.fdes[low];
   }
   return NULL;
 }
