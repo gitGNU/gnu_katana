@@ -68,6 +68,9 @@ ElfInfo* startPatchElf(char* fname);
 //data in the section
 addr_t addDataToScn(Elf_Data* dataDest,void* data,int size);
 
+//wipes out the existing information in dataDest and replaces it with data
+void replaceScnData(Elf_Data* dataDest,void* data,int size);
+
 //adds an entry to the string table, return its offset
 int addStrtabEntry(char* str);
 //return index of entry in symbol table
@@ -83,4 +86,7 @@ void endPatchElf();
 int dwarfWriteSectionCallback(char* name,int size,Dwarf_Unsigned type,
                               Dwarf_Unsigned flags,Dwarf_Unsigned link,
                               Dwarf_Unsigned info,int* sectNameIdx,int* error);
+
+//prepare a modified elf object for writing
+void finalizeModifiedElf(ElfInfo* e);
 #endif

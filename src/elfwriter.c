@@ -58,16 +58,12 @@
 #include <fcntl.h>
 #include <util/logging.h>
 
-Elf_Data* patch_rules_data=NULL;
-Elf_Data* patch_expr_data=NULL;
 Elf_Data* strtab_data=NULL;
 Elf_Data* symtab_data=NULL;
 Elf_Data* text_data=NULL;//for storing new versions of functions
 Elf_Data* rodata_data=NULL;
 Elf_Data* rela_text_data=NULL;
 
-Elf_Scn* patch_rules_scn=NULL;
-Elf_Scn* patch_expr_scn=NULL;
 Elf_Scn* strtab_scn=NULL;
 Elf_Scn* symtab_scn=NULL;
 Elf_Scn* text_scn=NULL;//for storing new versions of functions
@@ -356,39 +352,34 @@ ElfInfo* startPatchElf(char* fname)
   return patch;
 }
 
-
-
-void finalizeDataSize(Elf_Scn* scn,Elf_Data* data)
+void finalizeDataSize(ElfInfo* e,Elf_Scn* scn,Elf_Data* data)
 {
   ElfXX_Shdr* shdr=elfxx_getshdr(scn);
   shdr->sh_size=data->d_size;
-  logprintf(ELL_INFO_V3,ELS_ELFWRITE,"finalizing data size to %i for section with name %s(%i)\n",shdr->sh_size,getScnHdrString(patch,shdr->sh_name),shdr->sh_name);
+  logprintf(ELL_INFO_V3,ELS_ELFWRITE,"finalizing data size to %i for section with name %s(%i)\n",shdr->sh_size,getScnHdrString(e,shdr->sh_name),shdr->sh_name);
 }
 
-void finalizeDataSizes()
+
+
+void finalizeDataSizes(ElfInfo* e)
 {
-  finalizeDataSize(strtab_scn,strtab_data);
 
-  //ordinary symtab
-  finalizeDataSize(symtab_scn,symtab_data);
-  //now not using old symtab b/c better to get old symbols from
-  // /proc/PID/exe
-  /*
-  //symtab from old binary
+  for(Elf_Scn* scn=elf_nextscn(e->e,NULL);scn;scn=elf_nextscn(e->e,scn))
+  {
+    Elf_Data* data=elf_getdata(scn,NULL);
+    finalizeDataSize(e,scn,data);
+  }
+}
 
-  shdr=elfxx_getshdr(old_symtab_scn);
-  shdr->sh_size=old_symtab_data->d_size;
-  */
-
-  finalizeDataSize(text_scn,text_data);
-  finalizeDataSize(rela_text_scn,rela_text_data);
-  finalizeDataSize(rodata_scn,rodata_data);
+//prepare a modified elf object for writing
+void finalizeModifiedElf(ElfInfo* e)
+{
+  finalizeDataSizes(e);
 }
 
 void endPatchElf()
 {
-
-  finalizeDataSizes();
+  finalizeModifiedElf(patch);
   
       //don't actually have to reindex symbols because everything is set up with a zero address
 
@@ -426,8 +417,8 @@ void endPatchElf()
   }  
   
   endELF(patch);
-  patch_rules_data=patch_expr_data=strtab_data=text_data=rodata_data=rela_text_data=NULL;
-  patch_rules_scn=patch_expr_scn=strtab_scn=text_scn=rodata_scn=rela_text_scn=NULL;
+  strtab_data=text_data=rodata_data=rela_text_data=NULL;
+  strtab_scn=text_scn=rodata_scn=rela_text_scn=NULL;
 }
 
 int reindexSectionForPatch(ElfInfo* e,int scnIdx)
