@@ -215,6 +215,11 @@ char* getDirectoryOfPath(char* path)
 //The returned string should be freed
 char* absPath(char* path)
 {
+  if(path[0]=='\0')
+  {
+    //realpath doesn't seem to do well with empty strings
+    return "";
+  }
   char* result=realpath(path,NULL);
   if(!result)
   {
