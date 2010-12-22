@@ -19,6 +19,9 @@ BUILDING
 ./configure
 make
 
+Note that flex and bison (as well as gcc, of course) are required to
+build Katana.
+
 make
 ./install libdwarf.so DEST
 

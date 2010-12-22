@@ -568,6 +568,8 @@ ac_subst_vars='am__EXEEXT_FALSE
 am__EXEEXT_TRUE
 LTLIBOBJS
 LIBOBJS
+HAVE_FLEX
+HAVE_BISON
 HAVE_PYTHON
 am__fastdepCXX_FALSE
 am__fastdepCXX_TRUE
@@ -4060,10 +4062,95 @@ $as_echo "no" >&6; }
 fi
 
 
+# Extract the first word of "bison", so it can be a program name with args.
+set dummy bison; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_prog_HAVE_BISON+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  if test -n "$HAVE_BISON"; then
+  ac_cv_prog_HAVE_BISON="$HAVE_BISON" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
+    ac_cv_prog_HAVE_BISON="yes"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  test -z "$ac_cv_prog_HAVE_BISON" && ac_cv_prog_HAVE_BISON="no"
+fi
+fi
+HAVE_BISON=$ac_cv_prog_HAVE_BISON
+if test -n "$HAVE_BISON"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $HAVE_BISON" >&5
+$as_echo "$HAVE_BISON" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+# Extract the first word of "flex", so it can be a program name with args.
+set dummy flex; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_prog_HAVE_FLEX+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  if test -n "$HAVE_FLEX"; then
+  ac_cv_prog_HAVE_FLEX="$HAVE_FLEX" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
+    ac_cv_prog_HAVE_FLEX="yes"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  test -z "$ac_cv_prog_HAVE_FLEX" && ac_cv_prog_HAVE_FLEX="no"
+fi
+fi
+HAVE_FLEX=$ac_cv_prog_HAVE_FLEX
+if test -n "$HAVE_FLEX"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $HAVE_FLEX" >&5
+$as_echo "$HAVE_FLEX" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
 
 if test x$HAVE_PYTHON != xyes; then
    { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: \"No python on this system. Unit tests will not work\"" >&5
 $as_echo "$as_me: WARNING: \"No python on this system. Unit tests will not work\"" >&2;}
+fi
+
+#todo: if don't have flex and bison, build everything except the shell
+if test x$HAVE_BISON != xyes; then
+   as_fn_error $? "\"No bison on this system, needed for katana shell\"" "$LINENO" 5
+fi
+
+if test x$HAVE_FLEX != xyes; then
+   as_fn_error $? "\"No flex on this system, needed for katana shell\"" "$LINENO" 5
 fi
 
 cat >confcache <<\_ACEOF

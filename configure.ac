@@ -59,9 +59,20 @@ case $host_cpu in
 esac
 
 AC_CHECK_PROG(HAVE_PYTHON,python,yes,[no])
+AC_CHECK_PROG(HAVE_BISON,bison,yes,[no])
+AC_CHECK_PROG(HAVE_FLEX,flex,yes,[no])
 
 if test x$HAVE_PYTHON != xyes; then
    AC_MSG_WARN(["No python on this system. Unit tests will not work"])
+fi
+
+#todo: if don't have flex and bison, build everything except the shell
+if test x$HAVE_BISON != xyes; then
+   AC_MSG_ERROR(["No bison on this system, needed for katana shell"])
+fi
+
+if test x$HAVE_FLEX != xyes; then
+   AC_MSG_ERROR(["No flex on this system, needed for katana shell"])
 fi
 
 AC_OUTPUT
