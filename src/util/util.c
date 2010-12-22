@@ -97,3 +97,12 @@ uint64_t signExtend32To64(uint32_t val)
   }
   return result;
 }
+
+//Note: reseeksfile to the beginning
+int getFileLength(FILE* f)
+{
+  fseek(f,0,SEEK_END);
+  int flen=ftell(f);
+  fseek(f,0,SEEK_SET);
+  return flen;
+}

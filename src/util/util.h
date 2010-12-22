@@ -90,4 +90,8 @@ bool strEndsWith(char* str,char* suffix);
 
 uint64_t signExtend32To64(uint32_t val);
 
+//Note: reseeksfile to the beginning
+int getFileLength(FILE* f);
+
+
 #endif
