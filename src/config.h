@@ -80,6 +80,7 @@ typedef enum
   EKM_APPLY_PATCH,
   EKM_INFO,   //prints out info about a file
   EKM_TEST_PASSTHROUGH, //reads executable w/ DWARF and writes it back out again
+  EKM_SHELL,
 } E_KATANA_MODE;
 
 
@@ -88,6 +89,7 @@ struct Config
   // The maximum number of seconds to wait for the target to enter a safe state.
   int maxWaitForPatching;
   E_KATANA_MODE mode;//the mode katana is operating in right now
+  char* inputFile;//input filename when in SHELL mode
   char* outfileName;//the name of the file to write out to. Mostly
                     //used in PATCHGEN mode
   char* oldSourceTree;//for patch generation, where the old object files are

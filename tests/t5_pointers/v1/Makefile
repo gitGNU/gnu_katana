@@ -75,6 +75,9 @@ CC = gcc
 CCDEPMODE = depmode=gcc3
 CFLAGS = 
 CPPFLAGS = 
+CXX = g++
+CXXDEPMODE = depmode=gcc3
+CXXFLAGS = 
 CYGPATH_W = echo
 DEFS = -DHAVE_CONFIG_H
 DEPDIR = .deps
@@ -112,6 +115,7 @@ abs_srcdir = /home/james/school/katana/tests/t5_pointers/v1
 abs_top_builddir = /home/james/school/katana
 abs_top_srcdir = /home/james/school/katana
 ac_ct_CC = gcc
+ac_ct_CXX = g++
 am__include = include
 am__leading_dot = .
 am__quote = 

@@ -61,7 +61,7 @@
 void configureFromCommandLine(int argc,char** argv)
 {
   int opt;
-  while((opt=getopt(argc,argv,"hcsldHgpo:"))>0)
+  while((opt=getopt(argc,argv,"hcslrHgpo:"))>0)
   {
     switch(opt)
     {
@@ -109,7 +109,7 @@ void configureFromCommandLine(int argc,char** argv)
     case 'H':
       setFlag(EKCF_EH_FRAME,true);
       break;
-    case 'd':
+    case 'r':
       //this is a debug option at the moment. It is not intended to be
       //used generally. It's functionality may change from time to
       //time. At the moment it is a new major mode of operation which
@@ -124,12 +124,16 @@ void configureFromCommandLine(int argc,char** argv)
       exit(0);
     }
   }
+
   if(EKM_NONE==config.mode)
   {
-    death("One of -g (gen patch) or -p (apply patch) or -l (list info about patch) must be specified\n");
+    config.mode=EKM_SHELL;
+    if(argc-optind>0)
+    {
+      config.inputFile=argv[optind];
+    }
   }
-
-  if(EKM_GEN_PATCH==config.mode)
+  else if(EKM_GEN_PATCH==config.mode)
   {
     if(argc-optind<3)
     {
@@ -162,7 +166,13 @@ void configureFromCommandLine(int argc,char** argv)
     }
     config.objectName=argv[optind];
     logprintf(ELL_INFO_V3,ELS_MISC,"patch file is %s\n",config.objectName);
-
-    
+  }
+  else if(EKM_TEST_PASSTHROUGH==config.mode)
+  {
+    if(argc-optind<1)
+    {
+      death("Usage to rewrite binary: katana -r ELF_FILE\n");
+    }
+    config.objectName=argv[optind];
   }
 }

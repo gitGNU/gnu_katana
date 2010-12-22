@@ -49,9 +49,8 @@ CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
 am__objects_1 = katana-patchwrite.$(OBJEXT) katana-codediff.$(OBJEXT) \
-	katana-typediff.$(OBJEXT) katana-elfwriter.$(OBJEXT) \
-	katana-sourcetree.$(OBJEXT) katana-write_to_dwarf.$(OBJEXT) \
-	katana-elfcmp.$(OBJEXT)
+	katana-typediff.$(OBJEXT) katana-sourcetree.$(OBJEXT) \
+	katana-write_to_dwarf.$(OBJEXT) katana-elfcmp.$(OBJEXT)
 am__objects_2 = katana-hotpatch.$(OBJEXT) katana-target.$(OBJEXT) \
 	katana-patchapply.$(OBJEXT) katana-versioning.$(OBJEXT) \
 	katana-linkmap.$(OBJEXT) katana-safety.$(OBJEXT) \
@@ -63,6 +62,15 @@ am__objects_3 = katana-dictionary.$(OBJEXT) katana-hash.$(OBJEXT) \
 	katana-stack.$(OBJEXT)
 am__objects_4 = katana-fdedump.$(OBJEXT) katana-dwinfo_dump.$(OBJEXT) \
 	katana-unsafe_funcs_dump.$(OBJEXT)
+am__objects_5 = katana-rewrite.$(OBJEXT)
+am__objects_6 = katana-command.$(OBJEXT) katana-loadCommand.$(OBJEXT) \
+	katana-saveCommand.$(OBJEXT) katana-replaceCommand.$(OBJEXT) \
+	katana-dwarfscriptCommand.$(OBJEXT) \
+	katana-shellCommand.$(OBJEXT)
+am__objects_7 = katana-elfVariableData.$(OBJEXT)
+am__objects_8 = katana-shell.$(OBJEXT) katana-shell.yy.$(OBJEXT) \
+	katana-shell.tab.$(OBJEXT) katana-param.$(OBJEXT) \
+	katana-variable.$(OBJEXT) $(am__objects_6) $(am__objects_7)
 am_katana_OBJECTS = katana-katana.$(OBJEXT) \
 	katana-dwarftypes.$(OBJEXT) katana-elfparse.$(OBJEXT) \
 	katana-types.$(OBJEXT) katana-dwarf_instr.$(OBJEXT) \
@@ -70,11 +78,12 @@ am_katana_OBJECTS = katana-katana.$(OBJEXT) \
 	katana-symbol.$(OBJEXT) katana-fderead.$(OBJEXT) \
 	katana-dwarfvm.$(OBJEXT) katana-config.$(OBJEXT) \
 	katana-leb.$(OBJEXT) katana-commandLine.$(OBJEXT) \
-	$(am__objects_1) $(am__objects_2) $(am__objects_3) \
-	$(am__objects_4)
+	katana-elfwriter.$(OBJEXT) $(am__objects_1) $(am__objects_2) \
+	$(am__objects_3) $(am__objects_4) $(am__objects_5) \
+	$(am__objects_8)
 katana_OBJECTS = $(am_katana_OBJECTS)
 katana_DEPENDENCIES =
-katana_LINK = $(CCLD) $(katana_CFLAGS) $(CFLAGS) $(katana_LDFLAGS) \
+katana_LINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) $(katana_LDFLAGS) \
 	$(LDFLAGS) -o $@
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
@@ -84,6 +93,11 @@ COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 CCLD = $(CC)
 LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
+CXXCOMPILE = $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+	$(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS)
+CXXLD = $(CXX)
+CXXLINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) $(LDFLAGS) \
+	-o $@
 SOURCES = $(katana_SOURCES)
 DIST_SOURCES = $(katana_SOURCES)
 ETAGS = etags
@@ -99,6 +113,9 @@ CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
 CPPFLAGS = @CPPFLAGS@
+CXX = @CXX@
+CXXDEPMODE = @CXXDEPMODE@
+CXXFLAGS = @CXXFLAGS@
 CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
@@ -136,6 +153,7 @@ abs_srcdir = @abs_srcdir@
 abs_top_builddir = @abs_top_builddir@
 abs_top_srcdir = @abs_top_srcdir@
 ac_ct_CC = @ac_ct_CC@
+ac_ct_CXX = @ac_ct_CXX@
 am__include = @am__include@
 am__leading_dot = @am__leading_dot@
 am__quote = @am__quote@
@@ -185,24 +203,36 @@ target_vendor = @target_vendor@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-katana_CFLAGS = -I ../include -g -Wall -Werror -Wno-error=pointer-sign -std=c99 -D_POSIX_SOURCE -D_BSD_SOURCE -D_XOPEN_SOURCE -D_GNU_SOURCE  -I /usr/local/include/libdwarf -I /usr/include/libdwarf -Doff64_t=__off64_t -DDEBUG
+INCLUDEFLAGS = -I ../include -I /usr/local/include/libdwarf -I /usr/include/libdwarf
+DEFINEFLAGS = -D_POSIX_SOURCE -D_BSD_SOURCE -D_XOPEN_SOURCE -D_GNU_SOURCE -DDEBUG -Doff64_t=__off64_t 
+katana_CFLAGS = $(INCLUDEFLAGS) -g -Wall -Werror -Wno-error=pointer-sign -std=c99 $(DEFINEFLAGS)
+katana_CPPFLAGS = $(INCLUDEFLAGS) -g -Wall -Werror -Wno-error=pointer-sign  $(DEFINEFLAGS)
 katana_LDFLAGS = -L /usr/local/lib -L ../external/
-katana_LDADD = -ldwarf -lelf -lm -lunwind-generic -lunwind-ptrace
+katana_LDADD = -ldwarf -lelf -lm -lunwind-generic -lunwind-ptrace -lreadline
 PATCHER_SRC = patcher/hotpatch.c patcher/target.c patcher/patchapply.c patcher/versioning.c patcher/linkmap.c patcher/safety.c patcher/pmap.c
 PATCHER_H = patcher/hotpatch.h patcher/target.h patcher/patchapply.h patcher/versioning.h patcher/linkmap.h patcher/safety.h patcher/pmap.h
-PATCHWRITE_SRC = patchwrite/patchwrite.c patchwrite/codediff.c patchwrite/typediff.c patchwrite/elfwriter.c patchwrite/sourcetree.c patchwrite/write_to_dwarf.c patchwrite/elfcmp.c
-PATCHWRITE_H = patchwrite/patchwrite.h patchwrite/codediff.h patchwrite/typediff.h patchwrite/elfwriter.h patchwrite/sourcetree.h patchwrite/write_to_dwarf.h patchwrite/elfcmp.h
+PATCHWRITE_SRC = patchwrite/patchwrite.c patchwrite/codediff.c patchwrite/typediff.c  patchwrite/sourcetree.c patchwrite/write_to_dwarf.c patchwrite/elfcmp.c
+PATCHWRITE_H = patchwrite/patchwrite.h patchwrite/codediff.h patchwrite/typediff.h patchwrite/sourcetree.h patchwrite/write_to_dwarf.h patchwrite/elfcmp.h
 UTIL_SRC = util/dictionary.c util/hash.c util/util.c util/map.c util/list.c util/logging.c util/path.c util/refcounted.c util/stack.c
 UTIL_H = util/dictionary.h util/hash.h util/util.h util/map.h util/list.h util/logging.h util/path.h util/refcounted.h util/stack.h
+SHELL_VARIABLE_SRC = shell/variableTypes/elfVariableData.cpp
+SHELL_VARIABLE_H = shell/variableTypes/elfVariableData.h
+SHELL_COMMANDS_SRC = shell/commands/command.cpp shell/commands/loadCommand.cpp shell/commands/saveCommand.cpp shell/commands/replaceCommand.cpp shell/commands/dwarfscriptCommand.cpp shell/commands/shellCommand.cpp
+SHELL_COMMANDS_H = shell/commands/command.h shell/commands/loadCommand.h shell/commands/saveCommand.h shell/commands/replaceCommand.h shell/commands/dwarfscriptCommand.h shell/commands/shellCommand.h
+SHELL_SRC = shell/shell.cpp  shell/shell.yy.cpp shell/shell.tab.cpp shell/param.cpp shell/variable.cpp $(SHELL_COMMANDS_SRC) $(SHELL_VARIABLE_SRC)
+SHELL_H = shell/shell.h shell/parse_helper.h shell/shell.tab.h shell/param.h shell/variable.h  $(SHELL_COMMANDS_SRC) $(SHELL_VARIABLE_H)
 INFO_SRC = info/fdedump.c info/dwinfo_dump.c  info/unsafe_funcs_dump.c
 INFO_H = info/fdedump.h info/dwinfo_dump.h  info/unsafe_funcs_dump.h
-H_FILES = dwarftypes.h elfparse.h types.h dwarf_instr.h register.h relocation.h symbol.h fderead.h dwarfvm.h config.h arch.h constants.h leg.h $(PATCHER_H) $(PATCHWRITE_H) $(UTIL_H) $(INFO_H)
+REWRITER_SRC = rewriter/rewrite.c
+REWRITER_H = rewriter/rewrite.h
+H_FILES = dwarftypes.h elfparse.h types.h dwarf_instr.h register.h relocation.h symbol.h fderead.h dwarfvm.h config.h arch.h constants.h leb.h callFrameInfo.h elfwriter.h $(PATCHER_H) $(PATCHWRITE_H) $(UTIL_H) $(INFO_H) $(REWRITER_H) $(SHELL_H)
 EXTRA_DIST = $(H_FILES)
-katana_SOURCES = katana.c dwarftypes.c   elfparse.c  types.c  dwarf_instr.c register.c relocation.c symbol.c fderead.c dwarfvm.c config.c leb.c commandLine.c $(PATCHWRITE_SRC) $(PATCHER_SRC) $(UTIL_SRC) $(INFO_SRC)
+katana_SOURCES = katana.c dwarftypes.c   elfparse.c  types.c  dwarf_instr.c register.c relocation.c symbol.c fderead.c dwarfvm.c config.c leb.c commandLine.c  elfwriter.c $(PATCHWRITE_SRC) $(PATCHER_SRC) $(UTIL_SRC) $(INFO_SRC) $(REWRITER_SRC) $(SHELL_SRC)
+BFLAGS = -d -v -o shell/shell.tab.cpp
 all: all-am
 
 .SUFFIXES:
-.SUFFIXES: .c .o .obj
+.SUFFIXES: .c .cpp .o .obj
 $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
 	@for dep in $?; do \
 	  case '$(am__configure_deps)' in \
@@ -281,13 +311,16 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-codediff.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-command.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-commandLine.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-config.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-dictionary.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-dwarf_instr.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-dwarfscriptCommand.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-dwarftypes.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-dwarfvm.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-dwinfo_dump.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-elfVariableData.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-elfcmp.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-elfparse.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-elfwriter.Po@am__quote@
@@ -299,8 +332,10 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-leb.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-linkmap.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-list.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-loadCommand.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-logging.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-map.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-param.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-patchapply.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-patchwrite.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-path.Po@am__quote@
@@ -308,7 +343,14 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-refcounted.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-register.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-relocation.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-replaceCommand.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-rewrite.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-safety.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-saveCommand.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-shell.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-shell.tab.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-shell.yy.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-shellCommand.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-sourcetree.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-stack.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-symbol.Po@am__quote@
@@ -317,6 +359,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-types.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-unsafe_funcs_dump.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-util.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-variable.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-versioning.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-write_to_dwarf.Po@am__quote@
 
@@ -335,550 +378,746 @@ distclean-compile:
 @am__fastdepCC_FALSE@	$(COMPILE) -c `$(CYGPATH_W) '$<'`
 
 katana-katana.o: katana.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-katana.o -MD -MP -MF $(DEPDIR)/katana-katana.Tpo -c -o katana-katana.o `test -f 'katana.c' || echo '$(srcdir)/'`katana.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-katana.o -MD -MP -MF $(DEPDIR)/katana-katana.Tpo -c -o katana-katana.o `test -f 'katana.c' || echo '$(srcdir)/'`katana.c
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-katana.Tpo $(DEPDIR)/katana-katana.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='katana.c' object='katana-katana.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-katana.o `test -f 'katana.c' || echo '$(srcdir)/'`katana.c
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-katana.o `test -f 'katana.c' || echo '$(srcdir)/'`katana.c
 
 katana-katana.obj: katana.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-katana.obj -MD -MP -MF $(DEPDIR)/katana-katana.Tpo -c -o katana-katana.obj `if test -f 'katana.c'; then $(CYGPATH_W) 'katana.c'; else $(CYGPATH_W) '$(srcdir)/katana.c'; fi`
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-katana.obj -MD -MP -MF $(DEPDIR)/katana-katana.Tpo -c -o katana-katana.obj `if test -f 'katana.c'; then $(CYGPATH_W) 'katana.c'; else $(CYGPATH_W) '$(srcdir)/katana.c'; fi`
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-katana.Tpo $(DEPDIR)/katana-katana.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='katana.c' object='katana-katana.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-katana.obj `if test -f 'katana.c'; then $(CYGPATH_W) 'katana.c'; else $(CYGPATH_W) '$(srcdir)/katana.c'; fi`
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-katana.obj `if test -f 'katana.c'; then $(CYGPATH_W) 'katana.c'; else $(CYGPATH_W) '$(srcdir)/katana.c'; fi`
 
 katana-dwarftypes.o: dwarftypes.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-dwarftypes.o -MD -MP -MF $(DEPDIR)/katana-dwarftypes.Tpo -c -o katana-dwarftypes.o `test -f 'dwarftypes.c' || echo '$(srcdir)/'`dwarftypes.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-dwarftypes.o -MD -MP -MF $(DEPDIR)/katana-dwarftypes.Tpo -c -o katana-dwarftypes.o `test -f 'dwarftypes.c' || echo '$(srcdir)/'`dwarftypes.c
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-dwarftypes.Tpo $(DEPDIR)/katana-dwarftypes.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='dwarftypes.c' object='katana-dwarftypes.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-dwarftypes.o `test -f 'dwarftypes.c' || echo '$(srcdir)/'`dwarftypes.c
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-dwarftypes.o `test -f 'dwarftypes.c' || echo '$(srcdir)/'`dwarftypes.c
 
 katana-dwarftypes.obj: dwarftypes.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-dwarftypes.obj -MD -MP -MF $(DEPDIR)/katana-dwarftypes.Tpo -c -o katana-dwarftypes.obj `if test -f 'dwarftypes.c'; then $(CYGPATH_W) 'dwarftypes.c'; else $(CYGPATH_W) '$(srcdir)/dwarftypes.c'; fi`
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-dwarftypes.obj -MD -MP -MF $(DEPDIR)/katana-dwarftypes.Tpo -c -o katana-dwarftypes.obj `if test -f 'dwarftypes.c'; then $(CYGPATH_W) 'dwarftypes.c'; else $(CYGPATH_W) '$(srcdir)/dwarftypes.c'; fi`
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-dwarftypes.Tpo $(DEPDIR)/katana-dwarftypes.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='dwarftypes.c' object='katana-dwarftypes.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-dwarftypes.obj `if test -f 'dwarftypes.c'; then $(CYGPATH_W) 'dwarftypes.c'; else $(CYGPATH_W) '$(srcdir)/dwarftypes.c'; fi`
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-dwarftypes.obj `if test -f 'dwarftypes.c'; then $(CYGPATH_W) 'dwarftypes.c'; else $(CYGPATH_W) '$(srcdir)/dwarftypes.c'; fi`
 
 katana-elfparse.o: elfparse.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-elfparse.o -MD -MP -MF $(DEPDIR)/katana-elfparse.Tpo -c -o katana-elfparse.o `test -f 'elfparse.c' || echo '$(srcdir)/'`elfparse.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-elfparse.o -MD -MP -MF $(DEPDIR)/katana-elfparse.Tpo -c -o katana-elfparse.o `test -f 'elfparse.c' || echo '$(srcdir)/'`elfparse.c
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-elfparse.Tpo $(DEPDIR)/katana-elfparse.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='elfparse.c' object='katana-elfparse.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-elfparse.o `test -f 'elfparse.c' || echo '$(srcdir)/'`elfparse.c
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-elfparse.o `test -f 'elfparse.c' || echo '$(srcdir)/'`elfparse.c
 
 katana-elfparse.obj: elfparse.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-elfparse.obj -MD -MP -MF $(DEPDIR)/katana-elfparse.Tpo -c -o katana-elfparse.obj `if test -f 'elfparse.c'; then $(CYGPATH_W) 'elfparse.c'; else $(CYGPATH_W) '$(srcdir)/elfparse.c'; fi`
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-elfparse.obj -MD -MP -MF $(DEPDIR)/katana-elfparse.Tpo -c -o katana-elfparse.obj `if test -f 'elfparse.c'; then $(CYGPATH_W) 'elfparse.c'; else $(CYGPATH_W) '$(srcdir)/elfparse.c'; fi`
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-elfparse.Tpo $(DEPDIR)/katana-elfparse.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='elfparse.c' object='katana-elfparse.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-elfparse.obj `if test -f 'elfparse.c'; then $(CYGPATH_W) 'elfparse.c'; else $(CYGPATH_W) '$(srcdir)/elfparse.c'; fi`
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-elfparse.obj `if test -f 'elfparse.c'; then $(CYGPATH_W) 'elfparse.c'; else $(CYGPATH_W) '$(srcdir)/elfparse.c'; fi`
 
 katana-types.o: types.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-types.o -MD -MP -MF $(DEPDIR)/katana-types.Tpo -c -o katana-types.o `test -f 'types.c' || echo '$(srcdir)/'`types.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-types.o -MD -MP -MF $(DEPDIR)/katana-types.Tpo -c -o katana-types.o `test -f 'types.c' || echo '$(srcdir)/'`types.c
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-types.Tpo $(DEPDIR)/katana-types.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='types.c' object='katana-types.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-types.o `test -f 'types.c' || echo '$(srcdir)/'`types.c
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-types.o `test -f 'types.c' || echo '$(srcdir)/'`types.c
 
 katana-types.obj: types.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-types.obj -MD -MP -MF $(DEPDIR)/katana-types.Tpo -c -o katana-types.obj `if test -f 'types.c'; then $(CYGPATH_W) 'types.c'; else $(CYGPATH_W) '$(srcdir)/types.c'; fi`
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-types.obj -MD -MP -MF $(DEPDIR)/katana-types.Tpo -c -o katana-types.obj `if test -f 'types.c'; then $(CYGPATH_W) 'types.c'; else $(CYGPATH_W) '$(srcdir)/types.c'; fi`
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-types.Tpo $(DEPDIR)/katana-types.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='types.c' object='katana-types.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-types.obj `if test -f 'types.c'; then $(CYGPATH_W) 'types.c'; else $(CYGPATH_W) '$(srcdir)/types.c'; fi`
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-types.obj `if test -f 'types.c'; then $(CYGPATH_W) 'types.c'; else $(CYGPATH_W) '$(srcdir)/types.c'; fi`
 
 katana-dwarf_instr.o: dwarf_instr.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-dwarf_instr.o -MD -MP -MF $(DEPDIR)/katana-dwarf_instr.Tpo -c -o katana-dwarf_instr.o `test -f 'dwarf_instr.c' || echo '$(srcdir)/'`dwarf_instr.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-dwarf_instr.o -MD -MP -MF $(DEPDIR)/katana-dwarf_instr.Tpo -c -o katana-dwarf_instr.o `test -f 'dwarf_instr.c' || echo '$(srcdir)/'`dwarf_instr.c
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-dwarf_instr.Tpo $(DEPDIR)/katana-dwarf_instr.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='dwarf_instr.c' object='katana-dwarf_instr.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-dwarf_instr.o `test -f 'dwarf_instr.c' || echo '$(srcdir)/'`dwarf_instr.c
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-dwarf_instr.o `test -f 'dwarf_instr.c' || echo '$(srcdir)/'`dwarf_instr.c
 
 katana-dwarf_instr.obj: dwarf_instr.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-dwarf_instr.obj -MD -MP -MF $(DEPDIR)/katana-dwarf_instr.Tpo -c -o katana-dwarf_instr.obj `if test -f 'dwarf_instr.c'; then $(CYGPATH_W) 'dwarf_instr.c'; else $(CYGPATH_W) '$(srcdir)/dwarf_instr.c'; fi`
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-dwarf_instr.obj -MD -MP -MF $(DEPDIR)/katana-dwarf_instr.Tpo -c -o katana-dwarf_instr.obj `if test -f 'dwarf_instr.c'; then $(CYGPATH_W) 'dwarf_instr.c'; else $(CYGPATH_W) '$(srcdir)/dwarf_instr.c'; fi`
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-dwarf_instr.Tpo $(DEPDIR)/katana-dwarf_instr.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='dwarf_instr.c' object='katana-dwarf_instr.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-dwarf_instr.obj `if test -f 'dwarf_instr.c'; then $(CYGPATH_W) 'dwarf_instr.c'; else $(CYGPATH_W) '$(srcdir)/dwarf_instr.c'; fi`
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-dwarf_instr.obj `if test -f 'dwarf_instr.c'; then $(CYGPATH_W) 'dwarf_instr.c'; else $(CYGPATH_W) '$(srcdir)/dwarf_instr.c'; fi`
 
 katana-register.o: register.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-register.o -MD -MP -MF $(DEPDIR)/katana-register.Tpo -c -o katana-register.o `test -f 'register.c' || echo '$(srcdir)/'`register.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-register.o -MD -MP -MF $(DEPDIR)/katana-register.Tpo -c -o katana-register.o `test -f 'register.c' || echo '$(srcdir)/'`register.c
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-register.Tpo $(DEPDIR)/katana-register.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='register.c' object='katana-register.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-register.o `test -f 'register.c' || echo '$(srcdir)/'`register.c
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-register.o `test -f 'register.c' || echo '$(srcdir)/'`register.c
 
 katana-register.obj: register.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-register.obj -MD -MP -MF $(DEPDIR)/katana-register.Tpo -c -o katana-register.obj `if test -f 'register.c'; then $(CYGPATH_W) 'register.c'; else $(CYGPATH_W) '$(srcdir)/register.c'; fi`
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-register.obj -MD -MP -MF $(DEPDIR)/katana-register.Tpo -c -o katana-register.obj `if test -f 'register.c'; then $(CYGPATH_W) 'register.c'; else $(CYGPATH_W) '$(srcdir)/register.c'; fi`
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-register.Tpo $(DEPDIR)/katana-register.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='register.c' object='katana-register.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-register.obj `if test -f 'register.c'; then $(CYGPATH_W) 'register.c'; else $(CYGPATH_W) '$(srcdir)/register.c'; fi`
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-register.obj `if test -f 'register.c'; then $(CYGPATH_W) 'register.c'; else $(CYGPATH_W) '$(srcdir)/register.c'; fi`
 
 katana-relocation.o: relocation.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-relocation.o -MD -MP -MF $(DEPDIR)/katana-relocation.Tpo -c -o katana-relocation.o `test -f 'relocation.c' || echo '$(srcdir)/'`relocation.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-relocation.o -MD -MP -MF $(DEPDIR)/katana-relocation.Tpo -c -o katana-relocation.o `test -f 'relocation.c' || echo '$(srcdir)/'`relocation.c
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-relocation.Tpo $(DEPDIR)/katana-relocation.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='relocation.c' object='katana-relocation.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-relocation.o `test -f 'relocation.c' || echo '$(srcdir)/'`relocation.c
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-relocation.o `test -f 'relocation.c' || echo '$(srcdir)/'`relocation.c
 
 katana-relocation.obj: relocation.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-relocation.obj -MD -MP -MF $(DEPDIR)/katana-relocation.Tpo -c -o katana-relocation.obj `if test -f 'relocation.c'; then $(CYGPATH_W) 'relocation.c'; else $(CYGPATH_W) '$(srcdir)/relocation.c'; fi`
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-relocation.obj -MD -MP -MF $(DEPDIR)/katana-relocation.Tpo -c -o katana-relocation.obj `if test -f 'relocation.c'; then $(CYGPATH_W) 'relocation.c'; else $(CYGPATH_W) '$(srcdir)/relocation.c'; fi`
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-relocation.Tpo $(DEPDIR)/katana-relocation.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='relocation.c' object='katana-relocation.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-relocation.obj `if test -f 'relocation.c'; then $(CYGPATH_W) 'relocation.c'; else $(CYGPATH_W) '$(srcdir)/relocation.c'; fi`
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-relocation.obj `if test -f 'relocation.c'; then $(CYGPATH_W) 'relocation.c'; else $(CYGPATH_W) '$(srcdir)/relocation.c'; fi`
 
 katana-symbol.o: symbol.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-symbol.o -MD -MP -MF $(DEPDIR)/katana-symbol.Tpo -c -o katana-symbol.o `test -f 'symbol.c' || echo '$(srcdir)/'`symbol.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-symbol.o -MD -MP -MF $(DEPDIR)/katana-symbol.Tpo -c -o katana-symbol.o `test -f 'symbol.c' || echo '$(srcdir)/'`symbol.c
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-symbol.Tpo $(DEPDIR)/katana-symbol.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='symbol.c' object='katana-symbol.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-symbol.o `test -f 'symbol.c' || echo '$(srcdir)/'`symbol.c
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-symbol.o `test -f 'symbol.c' || echo '$(srcdir)/'`symbol.c
 
 katana-symbol.obj: symbol.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-symbol.obj -MD -MP -MF $(DEPDIR)/katana-symbol.Tpo -c -o katana-symbol.obj `if test -f 'symbol.c'; then $(CYGPATH_W) 'symbol.c'; else $(CYGPATH_W) '$(srcdir)/symbol.c'; fi`
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-symbol.obj -MD -MP -MF $(DEPDIR)/katana-symbol.Tpo -c -o katana-symbol.obj `if test -f 'symbol.c'; then $(CYGPATH_W) 'symbol.c'; else $(CYGPATH_W) '$(srcdir)/symbol.c'; fi`
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-symbol.Tpo $(DEPDIR)/katana-symbol.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='symbol.c' object='katana-symbol.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-symbol.obj `if test -f 'symbol.c'; then $(CYGPATH_W) 'symbol.c'; else $(CYGPATH_W) '$(srcdir)/symbol.c'; fi`
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-symbol.obj `if test -f 'symbol.c'; then $(CYGPATH_W) 'symbol.c'; else $(CYGPATH_W) '$(srcdir)/symbol.c'; fi`
 
 katana-fderead.o: fderead.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-fderead.o -MD -MP -MF $(DEPDIR)/katana-fderead.Tpo -c -o katana-fderead.o `test -f 'fderead.c' || echo '$(srcdir)/'`fderead.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-fderead.o -MD -MP -MF $(DEPDIR)/katana-fderead.Tpo -c -o katana-fderead.o `test -f 'fderead.c' || echo '$(srcdir)/'`fderead.c
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-fderead.Tpo $(DEPDIR)/katana-fderead.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='fderead.c' object='katana-fderead.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-fderead.o `test -f 'fderead.c' || echo '$(srcdir)/'`fderead.c
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-fderead.o `test -f 'fderead.c' || echo '$(srcdir)/'`fderead.c
 
 katana-fderead.obj: fderead.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-fderead.obj -MD -MP -MF $(DEPDIR)/katana-fderead.Tpo -c -o katana-fderead.obj `if test -f 'fderead.c'; then $(CYGPATH_W) 'fderead.c'; else $(CYGPATH_W) '$(srcdir)/fderead.c'; fi`
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-fderead.obj -MD -MP -MF $(DEPDIR)/katana-fderead.Tpo -c -o katana-fderead.obj `if test -f 'fderead.c'; then $(CYGPATH_W) 'fderead.c'; else $(CYGPATH_W) '$(srcdir)/fderead.c'; fi`
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-fderead.Tpo $(DEPDIR)/katana-fderead.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='fderead.c' object='katana-fderead.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-fderead.obj `if test -f 'fderead.c'; then $(CYGPATH_W) 'fderead.c'; else $(CYGPATH_W) '$(srcdir)/fderead.c'; fi`
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-fderead.obj `if test -f 'fderead.c'; then $(CYGPATH_W) 'fderead.c'; else $(CYGPATH_W) '$(srcdir)/fderead.c'; fi`
 
 katana-dwarfvm.o: dwarfvm.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-dwarfvm.o -MD -MP -MF $(DEPDIR)/katana-dwarfvm.Tpo -c -o katana-dwarfvm.o `test -f 'dwarfvm.c' || echo '$(srcdir)/'`dwarfvm.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-dwarfvm.o -MD -MP -MF $(DEPDIR)/katana-dwarfvm.Tpo -c -o katana-dwarfvm.o `test -f 'dwarfvm.c' || echo '$(srcdir)/'`dwarfvm.c
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-dwarfvm.Tpo $(DEPDIR)/katana-dwarfvm.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='dwarfvm.c' object='katana-dwarfvm.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-dwarfvm.o `test -f 'dwarfvm.c' || echo '$(srcdir)/'`dwarfvm.c
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-dwarfvm.o `test -f 'dwarfvm.c' || echo '$(srcdir)/'`dwarfvm.c
 
 katana-dwarfvm.obj: dwarfvm.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-dwarfvm.obj -MD -MP -MF $(DEPDIR)/katana-dwarfvm.Tpo -c -o katana-dwarfvm.obj `if test -f 'dwarfvm.c'; then $(CYGPATH_W) 'dwarfvm.c'; else $(CYGPATH_W) '$(srcdir)/dwarfvm.c'; fi`
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-dwarfvm.obj -MD -MP -MF $(DEPDIR)/katana-dwarfvm.Tpo -c -o katana-dwarfvm.obj `if test -f 'dwarfvm.c'; then $(CYGPATH_W) 'dwarfvm.c'; else $(CYGPATH_W) '$(srcdir)/dwarfvm.c'; fi`
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-dwarfvm.Tpo $(DEPDIR)/katana-dwarfvm.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='dwarfvm.c' object='katana-dwarfvm.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-dwarfvm.obj `if test -f 'dwarfvm.c'; then $(CYGPATH_W) 'dwarfvm.c'; else $(CYGPATH_W) '$(srcdir)/dwarfvm.c'; fi`
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-dwarfvm.obj `if test -f 'dwarfvm.c'; then $(CYGPATH_W) 'dwarfvm.c'; else $(CYGPATH_W) '$(srcdir)/dwarfvm.c'; fi`
 
 katana-config.o: config.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-config.o -MD -MP -MF $(DEPDIR)/katana-config.Tpo -c -o katana-config.o `test -f 'config.c' || echo '$(srcdir)/'`config.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-config.o -MD -MP -MF $(DEPDIR)/katana-config.Tpo -c -o katana-config.o `test -f 'config.c' || echo '$(srcdir)/'`config.c
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-config.Tpo $(DEPDIR)/katana-config.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='config.c' object='katana-config.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-config.o `test -f 'config.c' || echo '$(srcdir)/'`config.c
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-config.o `test -f 'config.c' || echo '$(srcdir)/'`config.c
 
 katana-config.obj: config.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-config.obj -MD -MP -MF $(DEPDIR)/katana-config.Tpo -c -o katana-config.obj `if test -f 'config.c'; then $(CYGPATH_W) 'config.c'; else $(CYGPATH_W) '$(srcdir)/config.c'; fi`
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-config.obj -MD -MP -MF $(DEPDIR)/katana-config.Tpo -c -o katana-config.obj `if test -f 'config.c'; then $(CYGPATH_W) 'config.c'; else $(CYGPATH_W) '$(srcdir)/config.c'; fi`
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-config.Tpo $(DEPDIR)/katana-config.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='config.c' object='katana-config.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-config.obj `if test -f 'config.c'; then $(CYGPATH_W) 'config.c'; else $(CYGPATH_W) '$(srcdir)/config.c'; fi`
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-config.obj `if test -f 'config.c'; then $(CYGPATH_W) 'config.c'; else $(CYGPATH_W) '$(srcdir)/config.c'; fi`
 
 katana-leb.o: leb.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-leb.o -MD -MP -MF $(DEPDIR)/katana-leb.Tpo -c -o katana-leb.o `test -f 'leb.c' || echo '$(srcdir)/'`leb.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-leb.o -MD -MP -MF $(DEPDIR)/katana-leb.Tpo -c -o katana-leb.o `test -f 'leb.c' || echo '$(srcdir)/'`leb.c
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-leb.Tpo $(DEPDIR)/katana-leb.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='leb.c' object='katana-leb.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-leb.o `test -f 'leb.c' || echo '$(srcdir)/'`leb.c
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-leb.o `test -f 'leb.c' || echo '$(srcdir)/'`leb.c
 
 katana-leb.obj: leb.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-leb.obj -MD -MP -MF $(DEPDIR)/katana-leb.Tpo -c -o katana-leb.obj `if test -f 'leb.c'; then $(CYGPATH_W) 'leb.c'; else $(CYGPATH_W) '$(srcdir)/leb.c'; fi`
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-leb.obj -MD -MP -MF $(DEPDIR)/katana-leb.Tpo -c -o katana-leb.obj `if test -f 'leb.c'; then $(CYGPATH_W) 'leb.c'; else $(CYGPATH_W) '$(srcdir)/leb.c'; fi`
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-leb.Tpo $(DEPDIR)/katana-leb.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='leb.c' object='katana-leb.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-leb.obj `if test -f 'leb.c'; then $(CYGPATH_W) 'leb.c'; else $(CYGPATH_W) '$(srcdir)/leb.c'; fi`
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-leb.obj `if test -f 'leb.c'; then $(CYGPATH_W) 'leb.c'; else $(CYGPATH_W) '$(srcdir)/leb.c'; fi`
 
 katana-commandLine.o: commandLine.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-commandLine.o -MD -MP -MF $(DEPDIR)/katana-commandLine.Tpo -c -o katana-commandLine.o `test -f 'commandLine.c' || echo '$(srcdir)/'`commandLine.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-commandLine.o -MD -MP -MF $(DEPDIR)/katana-commandLine.Tpo -c -o katana-commandLine.o `test -f 'commandLine.c' || echo '$(srcdir)/'`commandLine.c
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-commandLine.Tpo $(DEPDIR)/katana-commandLine.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='commandLine.c' object='katana-commandLine.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-commandLine.o `test -f 'commandLine.c' || echo '$(srcdir)/'`commandLine.c
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-commandLine.o `test -f 'commandLine.c' || echo '$(srcdir)/'`commandLine.c
 
 katana-commandLine.obj: commandLine.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-commandLine.obj -MD -MP -MF $(DEPDIR)/katana-commandLine.Tpo -c -o katana-commandLine.obj `if test -f 'commandLine.c'; then $(CYGPATH_W) 'commandLine.c'; else $(CYGPATH_W) '$(srcdir)/commandLine.c'; fi`
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-commandLine.obj -MD -MP -MF $(DEPDIR)/katana-commandLine.Tpo -c -o katana-commandLine.obj `if test -f 'commandLine.c'; then $(CYGPATH_W) 'commandLine.c'; else $(CYGPATH_W) '$(srcdir)/commandLine.c'; fi`
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-commandLine.Tpo $(DEPDIR)/katana-commandLine.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='commandLine.c' object='katana-commandLine.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-commandLine.obj `if test -f 'commandLine.c'; then $(CYGPATH_W) 'commandLine.c'; else $(CYGPATH_W) '$(srcdir)/commandLine.c'; fi`
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-commandLine.obj `if test -f 'commandLine.c'; then $(CYGPATH_W) 'commandLine.c'; else $(CYGPATH_W) '$(srcdir)/commandLine.c'; fi`
+
+katana-elfwriter.o: elfwriter.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-elfwriter.o -MD -MP -MF $(DEPDIR)/katana-elfwriter.Tpo -c -o katana-elfwriter.o `test -f 'elfwriter.c' || echo '$(srcdir)/'`elfwriter.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-elfwriter.Tpo $(DEPDIR)/katana-elfwriter.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='elfwriter.c' object='katana-elfwriter.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-elfwriter.o `test -f 'elfwriter.c' || echo '$(srcdir)/'`elfwriter.c
+
+katana-elfwriter.obj: elfwriter.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-elfwriter.obj -MD -MP -MF $(DEPDIR)/katana-elfwriter.Tpo -c -o katana-elfwriter.obj `if test -f 'elfwriter.c'; then $(CYGPATH_W) 'elfwriter.c'; else $(CYGPATH_W) '$(srcdir)/elfwriter.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-elfwriter.Tpo $(DEPDIR)/katana-elfwriter.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='elfwriter.c' object='katana-elfwriter.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-elfwriter.obj `if test -f 'elfwriter.c'; then $(CYGPATH_W) 'elfwriter.c'; else $(CYGPATH_W) '$(srcdir)/elfwriter.c'; fi`
 
 katana-patchwrite.o: patchwrite/patchwrite.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-patchwrite.o -MD -MP -MF $(DEPDIR)/katana-patchwrite.Tpo -c -o katana-patchwrite.o `test -f 'patchwrite/patchwrite.c' || echo '$(srcdir)/'`patchwrite/patchwrite.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-patchwrite.o -MD -MP -MF $(DEPDIR)/katana-patchwrite.Tpo -c -o katana-patchwrite.o `test -f 'patchwrite/patchwrite.c' || echo '$(srcdir)/'`patchwrite/patchwrite.c
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-patchwrite.Tpo $(DEPDIR)/katana-patchwrite.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='patchwrite/patchwrite.c' object='katana-patchwrite.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-patchwrite.o `test -f 'patchwrite/patchwrite.c' || echo '$(srcdir)/'`patchwrite/patchwrite.c
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-patchwrite.o `test -f 'patchwrite/patchwrite.c' || echo '$(srcdir)/'`patchwrite/patchwrite.c
 
 katana-patchwrite.obj: patchwrite/patchwrite.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-patchwrite.obj -MD -MP -MF $(DEPDIR)/katana-patchwrite.Tpo -c -o katana-patchwrite.obj `if test -f 'patchwrite/patchwrite.c'; then $(CYGPATH_W) 'patchwrite/patchwrite.c'; else $(CYGPATH_W) '$(srcdir)/patchwrite/patchwrite.c'; fi`
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-patchwrite.obj -MD -MP -MF $(DEPDIR)/katana-patchwrite.Tpo -c -o katana-patchwrite.obj `if test -f 'patchwrite/patchwrite.c'; then $(CYGPATH_W) 'patchwrite/patchwrite.c'; else $(CYGPATH_W) '$(srcdir)/patchwrite/patchwrite.c'; fi`
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-patchwrite.Tpo $(DEPDIR)/katana-patchwrite.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='patchwrite/patchwrite.c' object='katana-patchwrite.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-patchwrite.obj `if test -f 'patchwrite/patchwrite.c'; then $(CYGPATH_W) 'patchwrite/patchwrite.c'; else $(CYGPATH_W) '$(srcdir)/patchwrite/patchwrite.c'; fi`
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-patchwrite.obj `if test -f 'patchwrite/patchwrite.c'; then $(CYGPATH_W) 'patchwrite/patchwrite.c'; else $(CYGPATH_W) '$(srcdir)/patchwrite/patchwrite.c'; fi`
 
 katana-codediff.o: patchwrite/codediff.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-codediff.o -MD -MP -MF $(DEPDIR)/katana-codediff.Tpo -c -o katana-codediff.o `test -f 'patchwrite/codediff.c' || echo '$(srcdir)/'`patchwrite/codediff.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-codediff.o -MD -MP -MF $(DEPDIR)/katana-codediff.Tpo -c -o katana-codediff.o `test -f 'patchwrite/codediff.c' || echo '$(srcdir)/'`patchwrite/codediff.c
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-codediff.Tpo $(DEPDIR)/katana-codediff.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='patchwrite/codediff.c' object='katana-codediff.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-codediff.o `test -f 'patchwrite/codediff.c' || echo '$(srcdir)/'`patchwrite/codediff.c
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-codediff.o `test -f 'patchwrite/codediff.c' || echo '$(srcdir)/'`patchwrite/codediff.c
 
 katana-codediff.obj: patchwrite/codediff.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-codediff.obj -MD -MP -MF $(DEPDIR)/katana-codediff.Tpo -c -o katana-codediff.obj `if test -f 'patchwrite/codediff.c'; then $(CYGPATH_W) 'patchwrite/codediff.c'; else $(CYGPATH_W) '$(srcdir)/patchwrite/codediff.c'; fi`
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-codediff.obj -MD -MP -MF $(DEPDIR)/katana-codediff.Tpo -c -o katana-codediff.obj `if test -f 'patchwrite/codediff.c'; then $(CYGPATH_W) 'patchwrite/codediff.c'; else $(CYGPATH_W) '$(srcdir)/patchwrite/codediff.c'; fi`
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-codediff.Tpo $(DEPDIR)/katana-codediff.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='patchwrite/codediff.c' object='katana-codediff.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-codediff.obj `if test -f 'patchwrite/codediff.c'; then $(CYGPATH_W) 'patchwrite/codediff.c'; else $(CYGPATH_W) '$(srcdir)/patchwrite/codediff.c'; fi`
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-codediff.obj `if test -f 'patchwrite/codediff.c'; then $(CYGPATH_W) 'patchwrite/codediff.c'; else $(CYGPATH_W) '$(srcdir)/patchwrite/codediff.c'; fi`
 
 katana-typediff.o: patchwrite/typediff.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-typediff.o -MD -MP -MF $(DEPDIR)/katana-typediff.Tpo -c -o katana-typediff.o `test -f 'patchwrite/typediff.c' || echo '$(srcdir)/'`patchwrite/typediff.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-typediff.o -MD -MP -MF $(DEPDIR)/katana-typediff.Tpo -c -o katana-typediff.o `test -f 'patchwrite/typediff.c' || echo '$(srcdir)/'`patchwrite/typediff.c
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-typediff.Tpo $(DEPDIR)/katana-typediff.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='patchwrite/typediff.c' object='katana-typediff.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-typediff.o `test -f 'patchwrite/typediff.c' || echo '$(srcdir)/'`patchwrite/typediff.c
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-typediff.o `test -f 'patchwrite/typediff.c' || echo '$(srcdir)/'`patchwrite/typediff.c
 
 katana-typediff.obj: patchwrite/typediff.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-typediff.obj -MD -MP -MF $(DEPDIR)/katana-typediff.Tpo -c -o katana-typediff.obj `if test -f 'patchwrite/typediff.c'; then $(CYGPATH_W) 'patchwrite/typediff.c'; else $(CYGPATH_W) '$(srcdir)/patchwrite/typediff.c'; fi`
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-typediff.obj -MD -MP -MF $(DEPDIR)/katana-typediff.Tpo -c -o katana-typediff.obj `if test -f 'patchwrite/typediff.c'; then $(CYGPATH_W) 'patchwrite/typediff.c'; else $(CYGPATH_W) '$(srcdir)/patchwrite/typediff.c'; fi`
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-typediff.Tpo $(DEPDIR)/katana-typediff.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='patchwrite/typediff.c' object='katana-typediff.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-typediff.obj `if test -f 'patchwrite/typediff.c'; then $(CYGPATH_W) 'patchwrite/typediff.c'; else $(CYGPATH_W) '$(srcdir)/patchwrite/typediff.c'; fi`
-
-katana-elfwriter.o: patchwrite/elfwriter.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-elfwriter.o -MD -MP -MF $(DEPDIR)/katana-elfwriter.Tpo -c -o katana-elfwriter.o `test -f 'patchwrite/elfwriter.c' || echo '$(srcdir)/'`patchwrite/elfwriter.c
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-elfwriter.Tpo $(DEPDIR)/katana-elfwriter.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='patchwrite/elfwriter.c' object='katana-elfwriter.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-elfwriter.o `test -f 'patchwrite/elfwriter.c' || echo '$(srcdir)/'`patchwrite/elfwriter.c
-
-katana-elfwriter.obj: patchwrite/elfwriter.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-elfwriter.obj -MD -MP -MF $(DEPDIR)/katana-elfwriter.Tpo -c -o katana-elfwriter.obj `if test -f 'patchwrite/elfwriter.c'; then $(CYGPATH_W) 'patchwrite/elfwriter.c'; else $(CYGPATH_W) '$(srcdir)/patchwrite/elfwriter.c'; fi`
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-elfwriter.Tpo $(DEPDIR)/katana-elfwriter.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='patchwrite/elfwriter.c' object='katana-elfwriter.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-elfwriter.obj `if test -f 'patchwrite/elfwriter.c'; then $(CYGPATH_W) 'patchwrite/elfwriter.c'; else $(CYGPATH_W) '$(srcdir)/patchwrite/elfwriter.c'; fi`
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-typediff.obj `if test -f 'patchwrite/typediff.c'; then $(CYGPATH_W) 'patchwrite/typediff.c'; else $(CYGPATH_W) '$(srcdir)/patchwrite/typediff.c'; fi`
 
 katana-sourcetree.o: patchwrite/sourcetree.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-sourcetree.o -MD -MP -MF $(DEPDIR)/katana-sourcetree.Tpo -c -o katana-sourcetree.o `test -f 'patchwrite/sourcetree.c' || echo '$(srcdir)/'`patchwrite/sourcetree.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-sourcetree.o -MD -MP -MF $(DEPDIR)/katana-sourcetree.Tpo -c -o katana-sourcetree.o `test -f 'patchwrite/sourcetree.c' || echo '$(srcdir)/'`patchwrite/sourcetree.c
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-sourcetree.Tpo $(DEPDIR)/katana-sourcetree.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='patchwrite/sourcetree.c' object='katana-sourcetree.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-sourcetree.o `test -f 'patchwrite/sourcetree.c' || echo '$(srcdir)/'`patchwrite/sourcetree.c
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-sourcetree.o `test -f 'patchwrite/sourcetree.c' || echo '$(srcdir)/'`patchwrite/sourcetree.c
 
 katana-sourcetree.obj: patchwrite/sourcetree.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-sourcetree.obj -MD -MP -MF $(DEPDIR)/katana-sourcetree.Tpo -c -o katana-sourcetree.obj `if test -f 'patchwrite/sourcetree.c'; then $(CYGPATH_W) 'patchwrite/sourcetree.c'; else $(CYGPATH_W) '$(srcdir)/patchwrite/sourcetree.c'; fi`
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-sourcetree.obj -MD -MP -MF $(DEPDIR)/katana-sourcetree.Tpo -c -o katana-sourcetree.obj `if test -f 'patchwrite/sourcetree.c'; then $(CYGPATH_W) 'patchwrite/sourcetree.c'; else $(CYGPATH_W) '$(srcdir)/patchwrite/sourcetree.c'; fi`
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-sourcetree.Tpo $(DEPDIR)/katana-sourcetree.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='patchwrite/sourcetree.c' object='katana-sourcetree.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-sourcetree.obj `if test -f 'patchwrite/sourcetree.c'; then $(CYGPATH_W) 'patchwrite/sourcetree.c'; else $(CYGPATH_W) '$(srcdir)/patchwrite/sourcetree.c'; fi`
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-sourcetree.obj `if test -f 'patchwrite/sourcetree.c'; then $(CYGPATH_W) 'patchwrite/sourcetree.c'; else $(CYGPATH_W) '$(srcdir)/patchwrite/sourcetree.c'; fi`
 
 katana-write_to_dwarf.o: patchwrite/write_to_dwarf.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-write_to_dwarf.o -MD -MP -MF $(DEPDIR)/katana-write_to_dwarf.Tpo -c -o katana-write_to_dwarf.o `test -f 'patchwrite/write_to_dwarf.c' || echo '$(srcdir)/'`patchwrite/write_to_dwarf.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-write_to_dwarf.o -MD -MP -MF $(DEPDIR)/katana-write_to_dwarf.Tpo -c -o katana-write_to_dwarf.o `test -f 'patchwrite/write_to_dwarf.c' || echo '$(srcdir)/'`patchwrite/write_to_dwarf.c
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-write_to_dwarf.Tpo $(DEPDIR)/katana-write_to_dwarf.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='patchwrite/write_to_dwarf.c' object='katana-write_to_dwarf.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-write_to_dwarf.o `test -f 'patchwrite/write_to_dwarf.c' || echo '$(srcdir)/'`patchwrite/write_to_dwarf.c
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-write_to_dwarf.o `test -f 'patchwrite/write_to_dwarf.c' || echo '$(srcdir)/'`patchwrite/write_to_dwarf.c
 
 katana-write_to_dwarf.obj: patchwrite/write_to_dwarf.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-write_to_dwarf.obj -MD -MP -MF $(DEPDIR)/katana-write_to_dwarf.Tpo -c -o katana-write_to_dwarf.obj `if test -f 'patchwrite/write_to_dwarf.c'; then $(CYGPATH_W) 'patchwrite/write_to_dwarf.c'; else $(CYGPATH_W) '$(srcdir)/patchwrite/write_to_dwarf.c'; fi`
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-write_to_dwarf.obj -MD -MP -MF $(DEPDIR)/katana-write_to_dwarf.Tpo -c -o katana-write_to_dwarf.obj `if test -f 'patchwrite/write_to_dwarf.c'; then $(CYGPATH_W) 'patchwrite/write_to_dwarf.c'; else $(CYGPATH_W) '$(srcdir)/patchwrite/write_to_dwarf.c'; fi`
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-write_to_dwarf.Tpo $(DEPDIR)/katana-write_to_dwarf.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='patchwrite/write_to_dwarf.c' object='katana-write_to_dwarf.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-write_to_dwarf.obj `if test -f 'patchwrite/write_to_dwarf.c'; then $(CYGPATH_W) 'patchwrite/write_to_dwarf.c'; else $(CYGPATH_W) '$(srcdir)/patchwrite/write_to_dwarf.c'; fi`
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-write_to_dwarf.obj `if test -f 'patchwrite/write_to_dwarf.c'; then $(CYGPATH_W) 'patchwrite/write_to_dwarf.c'; else $(CYGPATH_W) '$(srcdir)/patchwrite/write_to_dwarf.c'; fi`
 
 katana-elfcmp.o: patchwrite/elfcmp.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-elfcmp.o -MD -MP -MF $(DEPDIR)/katana-elfcmp.Tpo -c -o katana-elfcmp.o `test -f 'patchwrite/elfcmp.c' || echo '$(srcdir)/'`patchwrite/elfcmp.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-elfcmp.o -MD -MP -MF $(DEPDIR)/katana-elfcmp.Tpo -c -o katana-elfcmp.o `test -f 'patchwrite/elfcmp.c' || echo '$(srcdir)/'`patchwrite/elfcmp.c
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-elfcmp.Tpo $(DEPDIR)/katana-elfcmp.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='patchwrite/elfcmp.c' object='katana-elfcmp.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-elfcmp.o `test -f 'patchwrite/elfcmp.c' || echo '$(srcdir)/'`patchwrite/elfcmp.c
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-elfcmp.o `test -f 'patchwrite/elfcmp.c' || echo '$(srcdir)/'`patchwrite/elfcmp.c
 
 katana-elfcmp.obj: patchwrite/elfcmp.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-elfcmp.obj -MD -MP -MF $(DEPDIR)/katana-elfcmp.Tpo -c -o katana-elfcmp.obj `if test -f 'patchwrite/elfcmp.c'; then $(CYGPATH_W) 'patchwrite/elfcmp.c'; else $(CYGPATH_W) '$(srcdir)/patchwrite/elfcmp.c'; fi`
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-elfcmp.obj -MD -MP -MF $(DEPDIR)/katana-elfcmp.Tpo -c -o katana-elfcmp.obj `if test -f 'patchwrite/elfcmp.c'; then $(CYGPATH_W) 'patchwrite/elfcmp.c'; else $(CYGPATH_W) '$(srcdir)/patchwrite/elfcmp.c'; fi`
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-elfcmp.Tpo $(DEPDIR)/katana-elfcmp.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='patchwrite/elfcmp.c' object='katana-elfcmp.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-elfcmp.obj `if test -f 'patchwrite/elfcmp.c'; then $(CYGPATH_W) 'patchwrite/elfcmp.c'; else $(CYGPATH_W) '$(srcdir)/patchwrite/elfcmp.c'; fi`
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-elfcmp.obj `if test -f 'patchwrite/elfcmp.c'; then $(CYGPATH_W) 'patchwrite/elfcmp.c'; else $(CYGPATH_W) '$(srcdir)/patchwrite/elfcmp.c'; fi`
 
 katana-hotpatch.o: patcher/hotpatch.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-hotpatch.o -MD -MP -MF $(DEPDIR)/katana-hotpatch.Tpo -c -o katana-hotpatch.o `test -f 'patcher/hotpatch.c' || echo '$(srcdir)/'`patcher/hotpatch.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-hotpatch.o -MD -MP -MF $(DEPDIR)/katana-hotpatch.Tpo -c -o katana-hotpatch.o `test -f 'patcher/hotpatch.c' || echo '$(srcdir)/'`patcher/hotpatch.c
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-hotpatch.Tpo $(DEPDIR)/katana-hotpatch.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='patcher/hotpatch.c' object='katana-hotpatch.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-hotpatch.o `test -f 'patcher/hotpatch.c' || echo '$(srcdir)/'`patcher/hotpatch.c
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-hotpatch.o `test -f 'patcher/hotpatch.c' || echo '$(srcdir)/'`patcher/hotpatch.c
 
 katana-hotpatch.obj: patcher/hotpatch.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-hotpatch.obj -MD -MP -MF $(DEPDIR)/katana-hotpatch.Tpo -c -o katana-hotpatch.obj `if test -f 'patcher/hotpatch.c'; then $(CYGPATH_W) 'patcher/hotpatch.c'; else $(CYGPATH_W) '$(srcdir)/patcher/hotpatch.c'; fi`
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-hotpatch.obj -MD -MP -MF $(DEPDIR)/katana-hotpatch.Tpo -c -o katana-hotpatch.obj `if test -f 'patcher/hotpatch.c'; then $(CYGPATH_W) 'patcher/hotpatch.c'; else $(CYGPATH_W) '$(srcdir)/patcher/hotpatch.c'; fi`
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-hotpatch.Tpo $(DEPDIR)/katana-hotpatch.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='patcher/hotpatch.c' object='katana-hotpatch.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-hotpatch.obj `if test -f 'patcher/hotpatch.c'; then $(CYGPATH_W) 'patcher/hotpatch.c'; else $(CYGPATH_W) '$(srcdir)/patcher/hotpatch.c'; fi`
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-hotpatch.obj `if test -f 'patcher/hotpatch.c'; then $(CYGPATH_W) 'patcher/hotpatch.c'; else $(CYGPATH_W) '$(srcdir)/patcher/hotpatch.c'; fi`
 
 katana-target.o: patcher/target.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-target.o -MD -MP -MF $(DEPDIR)/katana-target.Tpo -c -o katana-target.o `test -f 'patcher/target.c' || echo '$(srcdir)/'`patcher/target.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-target.o -MD -MP -MF $(DEPDIR)/katana-target.Tpo -c -o katana-target.o `test -f 'patcher/target.c' || echo '$(srcdir)/'`patcher/target.c
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-target.Tpo $(DEPDIR)/katana-target.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='patcher/target.c' object='katana-target.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-target.o `test -f 'patcher/target.c' || echo '$(srcdir)/'`patcher/target.c
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-target.o `test -f 'patcher/target.c' || echo '$(srcdir)/'`patcher/target.c
 
 katana-target.obj: patcher/target.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-target.obj -MD -MP -MF $(DEPDIR)/katana-target.Tpo -c -o katana-target.obj `if test -f 'patcher/target.c'; then $(CYGPATH_W) 'patcher/target.c'; else $(CYGPATH_W) '$(srcdir)/patcher/target.c'; fi`
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-target.obj -MD -MP -MF $(DEPDIR)/katana-target.Tpo -c -o katana-target.obj `if test -f 'patcher/target.c'; then $(CYGPATH_W) 'patcher/target.c'; else $(CYGPATH_W) '$(srcdir)/patcher/target.c'; fi`
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-target.Tpo $(DEPDIR)/katana-target.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='patcher/target.c' object='katana-target.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-target.obj `if test -f 'patcher/target.c'; then $(CYGPATH_W) 'patcher/target.c'; else $(CYGPATH_W) '$(srcdir)/patcher/target.c'; fi`
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-target.obj `if test -f 'patcher/target.c'; then $(CYGPATH_W) 'patcher/target.c'; else $(CYGPATH_W) '$(srcdir)/patcher/target.c'; fi`
 
 katana-patchapply.o: patcher/patchapply.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-patchapply.o -MD -MP -MF $(DEPDIR)/katana-patchapply.Tpo -c -o katana-patchapply.o `test -f 'patcher/patchapply.c' || echo '$(srcdir)/'`patcher/patchapply.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-patchapply.o -MD -MP -MF $(DEPDIR)/katana-patchapply.Tpo -c -o katana-patchapply.o `test -f 'patcher/patchapply.c' || echo '$(srcdir)/'`patcher/patchapply.c
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-patchapply.Tpo $(DEPDIR)/katana-patchapply.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='patcher/patchapply.c' object='katana-patchapply.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-patchapply.o `test -f 'patcher/patchapply.c' || echo '$(srcdir)/'`patcher/patchapply.c
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-patchapply.o `test -f 'patcher/patchapply.c' || echo '$(srcdir)/'`patcher/patchapply.c
 
 katana-patchapply.obj: patcher/patchapply.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-patchapply.obj -MD -MP -MF $(DEPDIR)/katana-patchapply.Tpo -c -o katana-patchapply.obj `if test -f 'patcher/patchapply.c'; then $(CYGPATH_W) 'patcher/patchapply.c'; else $(CYGPATH_W) '$(srcdir)/patcher/patchapply.c'; fi`
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-patchapply.obj -MD -MP -MF $(DEPDIR)/katana-patchapply.Tpo -c -o katana-patchapply.obj `if test -f 'patcher/patchapply.c'; then $(CYGPATH_W) 'patcher/patchapply.c'; else $(CYGPATH_W) '$(srcdir)/patcher/patchapply.c'; fi`
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-patchapply.Tpo $(DEPDIR)/katana-patchapply.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='patcher/patchapply.c' object='katana-patchapply.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-patchapply.obj `if test -f 'patcher/patchapply.c'; then $(CYGPATH_W) 'patcher/patchapply.c'; else $(CYGPATH_W) '$(srcdir)/patcher/patchapply.c'; fi`
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-patchapply.obj `if test -f 'patcher/patchapply.c'; then $(CYGPATH_W) 'patcher/patchapply.c'; else $(CYGPATH_W) '$(srcdir)/patcher/patchapply.c'; fi`
 
 katana-versioning.o: patcher/versioning.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-versioning.o -MD -MP -MF $(DEPDIR)/katana-versioning.Tpo -c -o katana-versioning.o `test -f 'patcher/versioning.c' || echo '$(srcdir)/'`patcher/versioning.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-versioning.o -MD -MP -MF $(DEPDIR)/katana-versioning.Tpo -c -o katana-versioning.o `test -f 'patcher/versioning.c' || echo '$(srcdir)/'`patcher/versioning.c
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-versioning.Tpo $(DEPDIR)/katana-versioning.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='patcher/versioning.c' object='katana-versioning.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-versioning.o `test -f 'patcher/versioning.c' || echo '$(srcdir)/'`patcher/versioning.c
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-versioning.o `test -f 'patcher/versioning.c' || echo '$(srcdir)/'`patcher/versioning.c
 
 katana-versioning.obj: patcher/versioning.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-versioning.obj -MD -MP -MF $(DEPDIR)/katana-versioning.Tpo -c -o katana-versioning.obj `if test -f 'patcher/versioning.c'; then $(CYGPATH_W) 'patcher/versioning.c'; else $(CYGPATH_W) '$(srcdir)/patcher/versioning.c'; fi`
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-versioning.obj -MD -MP -MF $(DEPDIR)/katana-versioning.Tpo -c -o katana-versioning.obj `if test -f 'patcher/versioning.c'; then $(CYGPATH_W) 'patcher/versioning.c'; else $(CYGPATH_W) '$(srcdir)/patcher/versioning.c'; fi`
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-versioning.Tpo $(DEPDIR)/katana-versioning.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='patcher/versioning.c' object='katana-versioning.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-versioning.obj `if test -f 'patcher/versioning.c'; then $(CYGPATH_W) 'patcher/versioning.c'; else $(CYGPATH_W) '$(srcdir)/patcher/versioning.c'; fi`
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-versioning.obj `if test -f 'patcher/versioning.c'; then $(CYGPATH_W) 'patcher/versioning.c'; else $(CYGPATH_W) '$(srcdir)/patcher/versioning.c'; fi`
 
 katana-linkmap.o: patcher/linkmap.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-linkmap.o -MD -MP -MF $(DEPDIR)/katana-linkmap.Tpo -c -o katana-linkmap.o `test -f 'patcher/linkmap.c' || echo '$(srcdir)/'`patcher/linkmap.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-linkmap.o -MD -MP -MF $(DEPDIR)/katana-linkmap.Tpo -c -o katana-linkmap.o `test -f 'patcher/linkmap.c' || echo '$(srcdir)/'`patcher/linkmap.c
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-linkmap.Tpo $(DEPDIR)/katana-linkmap.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='patcher/linkmap.c' object='katana-linkmap.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-linkmap.o `test -f 'patcher/linkmap.c' || echo '$(srcdir)/'`patcher/linkmap.c
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-linkmap.o `test -f 'patcher/linkmap.c' || echo '$(srcdir)/'`patcher/linkmap.c
 
 katana-linkmap.obj: patcher/linkmap.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-linkmap.obj -MD -MP -MF $(DEPDIR)/katana-linkmap.Tpo -c -o katana-linkmap.obj `if test -f 'patcher/linkmap.c'; then $(CYGPATH_W) 'patcher/linkmap.c'; else $(CYGPATH_W) '$(srcdir)/patcher/linkmap.c'; fi`
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-linkmap.obj -MD -MP -MF $(DEPDIR)/katana-linkmap.Tpo -c -o katana-linkmap.obj `if test -f 'patcher/linkmap.c'; then $(CYGPATH_W) 'patcher/linkmap.c'; else $(CYGPATH_W) '$(srcdir)/patcher/linkmap.c'; fi`
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-linkmap.Tpo $(DEPDIR)/katana-linkmap.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='patcher/linkmap.c' object='katana-linkmap.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-linkmap.obj `if test -f 'patcher/linkmap.c'; then $(CYGPATH_W) 'patcher/linkmap.c'; else $(CYGPATH_W) '$(srcdir)/patcher/linkmap.c'; fi`
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-linkmap.obj `if test -f 'patcher/linkmap.c'; then $(CYGPATH_W) 'patcher/linkmap.c'; else $(CYGPATH_W) '$(srcdir)/patcher/linkmap.c'; fi`
 
 katana-safety.o: patcher/safety.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-safety.o -MD -MP -MF $(DEPDIR)/katana-safety.Tpo -c -o katana-safety.o `test -f 'patcher/safety.c' || echo '$(srcdir)/'`patcher/safety.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-safety.o -MD -MP -MF $(DEPDIR)/katana-safety.Tpo -c -o katana-safety.o `test -f 'patcher/safety.c' || echo '$(srcdir)/'`patcher/safety.c
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-safety.Tpo $(DEPDIR)/katana-safety.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='patcher/safety.c' object='katana-safety.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-safety.o `test -f 'patcher/safety.c' || echo '$(srcdir)/'`patcher/safety.c
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-safety.o `test -f 'patcher/safety.c' || echo '$(srcdir)/'`patcher/safety.c
 
 katana-safety.obj: patcher/safety.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-safety.obj -MD -MP -MF $(DEPDIR)/katana-safety.Tpo -c -o katana-safety.obj `if test -f 'patcher/safety.c'; then $(CYGPATH_W) 'patcher/safety.c'; else $(CYGPATH_W) '$(srcdir)/patcher/safety.c'; fi`
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-safety.obj -MD -MP -MF $(DEPDIR)/katana-safety.Tpo -c -o katana-safety.obj `if test -f 'patcher/safety.c'; then $(CYGPATH_W) 'patcher/safety.c'; else $(CYGPATH_W) '$(srcdir)/patcher/safety.c'; fi`
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-safety.Tpo $(DEPDIR)/katana-safety.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='patcher/safety.c' object='katana-safety.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-safety.obj `if test -f 'patcher/safety.c'; then $(CYGPATH_W) 'patcher/safety.c'; else $(CYGPATH_W) '$(srcdir)/patcher/safety.c'; fi`
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-safety.obj `if test -f 'patcher/safety.c'; then $(CYGPATH_W) 'patcher/safety.c'; else $(CYGPATH_W) '$(srcdir)/patcher/safety.c'; fi`
 
 katana-pmap.o: patcher/pmap.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-pmap.o -MD -MP -MF $(DEPDIR)/katana-pmap.Tpo -c -o katana-pmap.o `test -f 'patcher/pmap.c' || echo '$(srcdir)/'`patcher/pmap.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-pmap.o -MD -MP -MF $(DEPDIR)/katana-pmap.Tpo -c -o katana-pmap.o `test -f 'patcher/pmap.c' || echo '$(srcdir)/'`patcher/pmap.c
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-pmap.Tpo $(DEPDIR)/katana-pmap.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='patcher/pmap.c' object='katana-pmap.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-pmap.o `test -f 'patcher/pmap.c' || echo '$(srcdir)/'`patcher/pmap.c
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-pmap.o `test -f 'patcher/pmap.c' || echo '$(srcdir)/'`patcher/pmap.c
 
 katana-pmap.obj: patcher/pmap.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-pmap.obj -MD -MP -MF $(DEPDIR)/katana-pmap.Tpo -c -o katana-pmap.obj `if test -f 'patcher/pmap.c'; then $(CYGPATH_W) 'patcher/pmap.c'; else $(CYGPATH_W) '$(srcdir)/patcher/pmap.c'; fi`
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-pmap.obj -MD -MP -MF $(DEPDIR)/katana-pmap.Tpo -c -o katana-pmap.obj `if test -f 'patcher/pmap.c'; then $(CYGPATH_W) 'patcher/pmap.c'; else $(CYGPATH_W) '$(srcdir)/patcher/pmap.c'; fi`
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-pmap.Tpo $(DEPDIR)/katana-pmap.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='patcher/pmap.c' object='katana-pmap.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-pmap.obj `if test -f 'patcher/pmap.c'; then $(CYGPATH_W) 'patcher/pmap.c'; else $(CYGPATH_W) '$(srcdir)/patcher/pmap.c'; fi`
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-pmap.obj `if test -f 'patcher/pmap.c'; then $(CYGPATH_W) 'patcher/pmap.c'; else $(CYGPATH_W) '$(srcdir)/patcher/pmap.c'; fi`
 
 katana-dictionary.o: util/dictionary.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-dictionary.o -MD -MP -MF $(DEPDIR)/katana-dictionary.Tpo -c -o katana-dictionary.o `test -f 'util/dictionary.c' || echo '$(srcdir)/'`util/dictionary.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-dictionary.o -MD -MP -MF $(DEPDIR)/katana-dictionary.Tpo -c -o katana-dictionary.o `test -f 'util/dictionary.c' || echo '$(srcdir)/'`util/dictionary.c
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-dictionary.Tpo $(DEPDIR)/katana-dictionary.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='util/dictionary.c' object='katana-dictionary.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-dictionary.o `test -f 'util/dictionary.c' || echo '$(srcdir)/'`util/dictionary.c
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-dictionary.o `test -f 'util/dictionary.c' || echo '$(srcdir)/'`util/dictionary.c
 
 katana-dictionary.obj: util/dictionary.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-dictionary.obj -MD -MP -MF $(DEPDIR)/katana-dictionary.Tpo -c -o katana-dictionary.obj `if test -f 'util/dictionary.c'; then $(CYGPATH_W) 'util/dictionary.c'; else $(CYGPATH_W) '$(srcdir)/util/dictionary.c'; fi`
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-dictionary.obj -MD -MP -MF $(DEPDIR)/katana-dictionary.Tpo -c -o katana-dictionary.obj `if test -f 'util/dictionary.c'; then $(CYGPATH_W) 'util/dictionary.c'; else $(CYGPATH_W) '$(srcdir)/util/dictionary.c'; fi`
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-dictionary.Tpo $(DEPDIR)/katana-dictionary.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='util/dictionary.c' object='katana-dictionary.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-dictionary.obj `if test -f 'util/dictionary.c'; then $(CYGPATH_W) 'util/dictionary.c'; else $(CYGPATH_W) '$(srcdir)/util/dictionary.c'; fi`
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-dictionary.obj `if test -f 'util/dictionary.c'; then $(CYGPATH_W) 'util/dictionary.c'; else $(CYGPATH_W) '$(srcdir)/util/dictionary.c'; fi`
 
 katana-hash.o: util/hash.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-hash.o -MD -MP -MF $(DEPDIR)/katana-hash.Tpo -c -o katana-hash.o `test -f 'util/hash.c' || echo '$(srcdir)/'`util/hash.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-hash.o -MD -MP -MF $(DEPDIR)/katana-hash.Tpo -c -o katana-hash.o `test -f 'util/hash.c' || echo '$(srcdir)/'`util/hash.c
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-hash.Tpo $(DEPDIR)/katana-hash.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='util/hash.c' object='katana-hash.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-hash.o `test -f 'util/hash.c' || echo '$(srcdir)/'`util/hash.c
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-hash.o `test -f 'util/hash.c' || echo '$(srcdir)/'`util/hash.c
 
 katana-hash.obj: util/hash.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-hash.obj -MD -MP -MF $(DEPDIR)/katana-hash.Tpo -c -o katana-hash.obj `if test -f 'util/hash.c'; then $(CYGPATH_W) 'util/hash.c'; else $(CYGPATH_W) '$(srcdir)/util/hash.c'; fi`
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-hash.obj -MD -MP -MF $(DEPDIR)/katana-hash.Tpo -c -o katana-hash.obj `if test -f 'util/hash.c'; then $(CYGPATH_W) 'util/hash.c'; else $(CYGPATH_W) '$(srcdir)/util/hash.c'; fi`
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-hash.Tpo $(DEPDIR)/katana-hash.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='util/hash.c' object='katana-hash.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-hash.obj `if test -f 'util/hash.c'; then $(CYGPATH_W) 'util/hash.c'; else $(CYGPATH_W) '$(srcdir)/util/hash.c'; fi`
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-hash.obj `if test -f 'util/hash.c'; then $(CYGPATH_W) 'util/hash.c'; else $(CYGPATH_W) '$(srcdir)/util/hash.c'; fi`
 
 katana-util.o: util/util.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-util.o -MD -MP -MF $(DEPDIR)/katana-util.Tpo -c -o katana-util.o `test -f 'util/util.c' || echo '$(srcdir)/'`util/util.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-util.o -MD -MP -MF $(DEPDIR)/katana-util.Tpo -c -o katana-util.o `test -f 'util/util.c' || echo '$(srcdir)/'`util/util.c
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-util.Tpo $(DEPDIR)/katana-util.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='util/util.c' object='katana-util.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-util.o `test -f 'util/util.c' || echo '$(srcdir)/'`util/util.c
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-util.o `test -f 'util/util.c' || echo '$(srcdir)/'`util/util.c
 
 katana-util.obj: util/util.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-util.obj -MD -MP -MF $(DEPDIR)/katana-util.Tpo -c -o katana-util.obj `if test -f 'util/util.c'; then $(CYGPATH_W) 'util/util.c'; else $(CYGPATH_W) '$(srcdir)/util/util.c'; fi`
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-util.obj -MD -MP -MF $(DEPDIR)/katana-util.Tpo -c -o katana-util.obj `if test -f 'util/util.c'; then $(CYGPATH_W) 'util/util.c'; else $(CYGPATH_W) '$(srcdir)/util/util.c'; fi`
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-util.Tpo $(DEPDIR)/katana-util.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='util/util.c' object='katana-util.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-util.obj `if test -f 'util/util.c'; then $(CYGPATH_W) 'util/util.c'; else $(CYGPATH_W) '$(srcdir)/util/util.c'; fi`
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-util.obj `if test -f 'util/util.c'; then $(CYGPATH_W) 'util/util.c'; else $(CYGPATH_W) '$(srcdir)/util/util.c'; fi`
 
 katana-map.o: util/map.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-map.o -MD -MP -MF $(DEPDIR)/katana-map.Tpo -c -o katana-map.o `test -f 'util/map.c' || echo '$(srcdir)/'`util/map.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-map.o -MD -MP -MF $(DEPDIR)/katana-map.Tpo -c -o katana-map.o `test -f 'util/map.c' || echo '$(srcdir)/'`util/map.c
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-map.Tpo $(DEPDIR)/katana-map.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='util/map.c' object='katana-map.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-map.o `test -f 'util/map.c' || echo '$(srcdir)/'`util/map.c
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-map.o `test -f 'util/map.c' || echo '$(srcdir)/'`util/map.c
 
 katana-map.obj: util/map.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-map.obj -MD -MP -MF $(DEPDIR)/katana-map.Tpo -c -o katana-map.obj `if test -f 'util/map.c'; then $(CYGPATH_W) 'util/map.c'; else $(CYGPATH_W) '$(srcdir)/util/map.c'; fi`
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-map.obj -MD -MP -MF $(DEPDIR)/katana-map.Tpo -c -o katana-map.obj `if test -f 'util/map.c'; then $(CYGPATH_W) 'util/map.c'; else $(CYGPATH_W) '$(srcdir)/util/map.c'; fi`
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-map.Tpo $(DEPDIR)/katana-map.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='util/map.c' object='katana-map.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-map.obj `if test -f 'util/map.c'; then $(CYGPATH_W) 'util/map.c'; else $(CYGPATH_W) '$(srcdir)/util/map.c'; fi`
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-map.obj `if test -f 'util/map.c'; then $(CYGPATH_W) 'util/map.c'; else $(CYGPATH_W) '$(srcdir)/util/map.c'; fi`
 
 katana-list.o: util/list.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-list.o -MD -MP -MF $(DEPDIR)/katana-list.Tpo -c -o katana-list.o `test -f 'util/list.c' || echo '$(srcdir)/'`util/list.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-list.o -MD -MP -MF $(DEPDIR)/katana-list.Tpo -c -o katana-list.o `test -f 'util/list.c' || echo '$(srcdir)/'`util/list.c
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-list.Tpo $(DEPDIR)/katana-list.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='util/list.c' object='katana-list.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-list.o `test -f 'util/list.c' || echo '$(srcdir)/'`util/list.c
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-list.o `test -f 'util/list.c' || echo '$(srcdir)/'`util/list.c
 
 katana-list.obj: util/list.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-list.obj -MD -MP -MF $(DEPDIR)/katana-list.Tpo -c -o katana-list.obj `if test -f 'util/list.c'; then $(CYGPATH_W) 'util/list.c'; else $(CYGPATH_W) '$(srcdir)/util/list.c'; fi`
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-list.obj -MD -MP -MF $(DEPDIR)/katana-list.Tpo -c -o katana-list.obj `if test -f 'util/list.c'; then $(CYGPATH_W) 'util/list.c'; else $(CYGPATH_W) '$(srcdir)/util/list.c'; fi`
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-list.Tpo $(DEPDIR)/katana-list.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='util/list.c' object='katana-list.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-list.obj `if test -f 'util/list.c'; then $(CYGPATH_W) 'util/list.c'; else $(CYGPATH_W) '$(srcdir)/util/list.c'; fi`
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-list.obj `if test -f 'util/list.c'; then $(CYGPATH_W) 'util/list.c'; else $(CYGPATH_W) '$(srcdir)/util/list.c'; fi`
 
 katana-logging.o: util/logging.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-logging.o -MD -MP -MF $(DEPDIR)/katana-logging.Tpo -c -o katana-logging.o `test -f 'util/logging.c' || echo '$(srcdir)/'`util/logging.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-logging.o -MD -MP -MF $(DEPDIR)/katana-logging.Tpo -c -o katana-logging.o `test -f 'util/logging.c' || echo '$(srcdir)/'`util/logging.c
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-logging.Tpo $(DEPDIR)/katana-logging.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='util/logging.c' object='katana-logging.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-logging.o `test -f 'util/logging.c' || echo '$(srcdir)/'`util/logging.c
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-logging.o `test -f 'util/logging.c' || echo '$(srcdir)/'`util/logging.c
 
 katana-logging.obj: util/logging.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-logging.obj -MD -MP -MF $(DEPDIR)/katana-logging.Tpo -c -o katana-logging.obj `if test -f 'util/logging.c'; then $(CYGPATH_W) 'util/logging.c'; else $(CYGPATH_W) '$(srcdir)/util/logging.c'; fi`
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-logging.obj -MD -MP -MF $(DEPDIR)/katana-logging.Tpo -c -o katana-logging.obj `if test -f 'util/logging.c'; then $(CYGPATH_W) 'util/logging.c'; else $(CYGPATH_W) '$(srcdir)/util/logging.c'; fi`
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-logging.Tpo $(DEPDIR)/katana-logging.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='util/logging.c' object='katana-logging.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-logging.obj `if test -f 'util/logging.c'; then $(CYGPATH_W) 'util/logging.c'; else $(CYGPATH_W) '$(srcdir)/util/logging.c'; fi`
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-logging.obj `if test -f 'util/logging.c'; then $(CYGPATH_W) 'util/logging.c'; else $(CYGPATH_W) '$(srcdir)/util/logging.c'; fi`
 
 katana-path.o: util/path.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-path.o -MD -MP -MF $(DEPDIR)/katana-path.Tpo -c -o katana-path.o `test -f 'util/path.c' || echo '$(srcdir)/'`util/path.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-path.o -MD -MP -MF $(DEPDIR)/katana-path.Tpo -c -o katana-path.o `test -f 'util/path.c' || echo '$(srcdir)/'`util/path.c
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-path.Tpo $(DEPDIR)/katana-path.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='util/path.c' object='katana-path.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-path.o `test -f 'util/path.c' || echo '$(srcdir)/'`util/path.c
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-path.o `test -f 'util/path.c' || echo '$(srcdir)/'`util/path.c
 
 katana-path.obj: util/path.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-path.obj -MD -MP -MF $(DEPDIR)/katana-path.Tpo -c -o katana-path.obj `if test -f 'util/path.c'; then $(CYGPATH_W) 'util/path.c'; else $(CYGPATH_W) '$(srcdir)/util/path.c'; fi`
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-path.obj -MD -MP -MF $(DEPDIR)/katana-path.Tpo -c -o katana-path.obj `if test -f 'util/path.c'; then $(CYGPATH_W) 'util/path.c'; else $(CYGPATH_W) '$(srcdir)/util/path.c'; fi`
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-path.Tpo $(DEPDIR)/katana-path.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='util/path.c' object='katana-path.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-path.obj `if test -f 'util/path.c'; then $(CYGPATH_W) 'util/path.c'; else $(CYGPATH_W) '$(srcdir)/util/path.c'; fi`
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-path.obj `if test -f 'util/path.c'; then $(CYGPATH_W) 'util/path.c'; else $(CYGPATH_W) '$(srcdir)/util/path.c'; fi`
 
 katana-refcounted.o: util/refcounted.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-refcounted.o -MD -MP -MF $(DEPDIR)/katana-refcounted.Tpo -c -o katana-refcounted.o `test -f 'util/refcounted.c' || echo '$(srcdir)/'`util/refcounted.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-refcounted.o -MD -MP -MF $(DEPDIR)/katana-refcounted.Tpo -c -o katana-refcounted.o `test -f 'util/refcounted.c' || echo '$(srcdir)/'`util/refcounted.c
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-refcounted.Tpo $(DEPDIR)/katana-refcounted.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='util/refcounted.c' object='katana-refcounted.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-refcounted.o `test -f 'util/refcounted.c' || echo '$(srcdir)/'`util/refcounted.c
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-refcounted.o `test -f 'util/refcounted.c' || echo '$(srcdir)/'`util/refcounted.c
 
 katana-refcounted.obj: util/refcounted.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-refcounted.obj -MD -MP -MF $(DEPDIR)/katana-refcounted.Tpo -c -o katana-refcounted.obj `if test -f 'util/refcounted.c'; then $(CYGPATH_W) 'util/refcounted.c'; else $(CYGPATH_W) '$(srcdir)/util/refcounted.c'; fi`
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-refcounted.obj -MD -MP -MF $(DEPDIR)/katana-refcounted.Tpo -c -o katana-refcounted.obj `if test -f 'util/refcounted.c'; then $(CYGPATH_W) 'util/refcounted.c'; else $(CYGPATH_W) '$(srcdir)/util/refcounted.c'; fi`
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-refcounted.Tpo $(DEPDIR)/katana-refcounted.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='util/refcounted.c' object='katana-refcounted.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-refcounted.obj `if test -f 'util/refcounted.c'; then $(CYGPATH_W) 'util/refcounted.c'; else $(CYGPATH_W) '$(srcdir)/util/refcounted.c'; fi`
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-refcounted.obj `if test -f 'util/refcounted.c'; then $(CYGPATH_W) 'util/refcounted.c'; else $(CYGPATH_W) '$(srcdir)/util/refcounted.c'; fi`
 
 katana-stack.o: util/stack.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-stack.o -MD -MP -MF $(DEPDIR)/katana-stack.Tpo -c -o katana-stack.o `test -f 'util/stack.c' || echo '$(srcdir)/'`util/stack.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-stack.o -MD -MP -MF $(DEPDIR)/katana-stack.Tpo -c -o katana-stack.o `test -f 'util/stack.c' || echo '$(srcdir)/'`util/stack.c
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-stack.Tpo $(DEPDIR)/katana-stack.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='util/stack.c' object='katana-stack.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-stack.o `test -f 'util/stack.c' || echo '$(srcdir)/'`util/stack.c
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-stack.o `test -f 'util/stack.c' || echo '$(srcdir)/'`util/stack.c
 
 katana-stack.obj: util/stack.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-stack.obj -MD -MP -MF $(DEPDIR)/katana-stack.Tpo -c -o katana-stack.obj `if test -f 'util/stack.c'; then $(CYGPATH_W) 'util/stack.c'; else $(CYGPATH_W) '$(srcdir)/util/stack.c'; fi`
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-stack.obj -MD -MP -MF $(DEPDIR)/katana-stack.Tpo -c -o katana-stack.obj `if test -f 'util/stack.c'; then $(CYGPATH_W) 'util/stack.c'; else $(CYGPATH_W) '$(srcdir)/util/stack.c'; fi`
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-stack.Tpo $(DEPDIR)/katana-stack.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='util/stack.c' object='katana-stack.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-stack.obj `if test -f 'util/stack.c'; then $(CYGPATH_W) 'util/stack.c'; else $(CYGPATH_W) '$(srcdir)/util/stack.c'; fi`
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-stack.obj `if test -f 'util/stack.c'; then $(CYGPATH_W) 'util/stack.c'; else $(CYGPATH_W) '$(srcdir)/util/stack.c'; fi`
 
 katana-fdedump.o: info/fdedump.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-fdedump.o -MD -MP -MF $(DEPDIR)/katana-fdedump.Tpo -c -o katana-fdedump.o `test -f 'info/fdedump.c' || echo '$(srcdir)/'`info/fdedump.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-fdedump.o -MD -MP -MF $(DEPDIR)/katana-fdedump.Tpo -c -o katana-fdedump.o `test -f 'info/fdedump.c' || echo '$(srcdir)/'`info/fdedump.c
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-fdedump.Tpo $(DEPDIR)/katana-fdedump.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='info/fdedump.c' object='katana-fdedump.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-fdedump.o `test -f 'info/fdedump.c' || echo '$(srcdir)/'`info/fdedump.c
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-fdedump.o `test -f 'info/fdedump.c' || echo '$(srcdir)/'`info/fdedump.c
 
 katana-fdedump.obj: info/fdedump.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-fdedump.obj -MD -MP -MF $(DEPDIR)/katana-fdedump.Tpo -c -o katana-fdedump.obj `if test -f 'info/fdedump.c'; then $(CYGPATH_W) 'info/fdedump.c'; else $(CYGPATH_W) '$(srcdir)/info/fdedump.c'; fi`
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-fdedump.obj -MD -MP -MF $(DEPDIR)/katana-fdedump.Tpo -c -o katana-fdedump.obj `if test -f 'info/fdedump.c'; then $(CYGPATH_W) 'info/fdedump.c'; else $(CYGPATH_W) '$(srcdir)/info/fdedump.c'; fi`
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-fdedump.Tpo $(DEPDIR)/katana-fdedump.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='info/fdedump.c' object='katana-fdedump.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-fdedump.obj `if test -f 'info/fdedump.c'; then $(CYGPATH_W) 'info/fdedump.c'; else $(CYGPATH_W) '$(srcdir)/info/fdedump.c'; fi`
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-fdedump.obj `if test -f 'info/fdedump.c'; then $(CYGPATH_W) 'info/fdedump.c'; else $(CYGPATH_W) '$(srcdir)/info/fdedump.c'; fi`
 
 katana-dwinfo_dump.o: info/dwinfo_dump.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-dwinfo_dump.o -MD -MP -MF $(DEPDIR)/katana-dwinfo_dump.Tpo -c -o katana-dwinfo_dump.o `test -f 'info/dwinfo_dump.c' || echo '$(srcdir)/'`info/dwinfo_dump.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-dwinfo_dump.o -MD -MP -MF $(DEPDIR)/katana-dwinfo_dump.Tpo -c -o katana-dwinfo_dump.o `test -f 'info/dwinfo_dump.c' || echo '$(srcdir)/'`info/dwinfo_dump.c
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-dwinfo_dump.Tpo $(DEPDIR)/katana-dwinfo_dump.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='info/dwinfo_dump.c' object='katana-dwinfo_dump.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-dwinfo_dump.o `test -f 'info/dwinfo_dump.c' || echo '$(srcdir)/'`info/dwinfo_dump.c
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-dwinfo_dump.o `test -f 'info/dwinfo_dump.c' || echo '$(srcdir)/'`info/dwinfo_dump.c
 
 katana-dwinfo_dump.obj: info/dwinfo_dump.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-dwinfo_dump.obj -MD -MP -MF $(DEPDIR)/katana-dwinfo_dump.Tpo -c -o katana-dwinfo_dump.obj `if test -f 'info/dwinfo_dump.c'; then $(CYGPATH_W) 'info/dwinfo_dump.c'; else $(CYGPATH_W) '$(srcdir)/info/dwinfo_dump.c'; fi`
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-dwinfo_dump.obj -MD -MP -MF $(DEPDIR)/katana-dwinfo_dump.Tpo -c -o katana-dwinfo_dump.obj `if test -f 'info/dwinfo_dump.c'; then $(CYGPATH_W) 'info/dwinfo_dump.c'; else $(CYGPATH_W) '$(srcdir)/info/dwinfo_dump.c'; fi`
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-dwinfo_dump.Tpo $(DEPDIR)/katana-dwinfo_dump.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='info/dwinfo_dump.c' object='katana-dwinfo_dump.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-dwinfo_dump.obj `if test -f 'info/dwinfo_dump.c'; then $(CYGPATH_W) 'info/dwinfo_dump.c'; else $(CYGPATH_W) '$(srcdir)/info/dwinfo_dump.c'; fi`
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-dwinfo_dump.obj `if test -f 'info/dwinfo_dump.c'; then $(CYGPATH_W) 'info/dwinfo_dump.c'; else $(CYGPATH_W) '$(srcdir)/info/dwinfo_dump.c'; fi`
 
 katana-unsafe_funcs_dump.o: info/unsafe_funcs_dump.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-unsafe_funcs_dump.o -MD -MP -MF $(DEPDIR)/katana-unsafe_funcs_dump.Tpo -c -o katana-unsafe_funcs_dump.o `test -f 'info/unsafe_funcs_dump.c' || echo '$(srcdir)/'`info/unsafe_funcs_dump.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-unsafe_funcs_dump.o -MD -MP -MF $(DEPDIR)/katana-unsafe_funcs_dump.Tpo -c -o katana-unsafe_funcs_dump.o `test -f 'info/unsafe_funcs_dump.c' || echo '$(srcdir)/'`info/unsafe_funcs_dump.c
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-unsafe_funcs_dump.Tpo $(DEPDIR)/katana-unsafe_funcs_dump.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='info/unsafe_funcs_dump.c' object='katana-unsafe_funcs_dump.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-unsafe_funcs_dump.o `test -f 'info/unsafe_funcs_dump.c' || echo '$(srcdir)/'`info/unsafe_funcs_dump.c
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-unsafe_funcs_dump.o `test -f 'info/unsafe_funcs_dump.c' || echo '$(srcdir)/'`info/unsafe_funcs_dump.c
 
 katana-unsafe_funcs_dump.obj: info/unsafe_funcs_dump.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-unsafe_funcs_dump.obj -MD -MP -MF $(DEPDIR)/katana-unsafe_funcs_dump.Tpo -c -o katana-unsafe_funcs_dump.obj `if test -f 'info/unsafe_funcs_dump.c'; then $(CYGPATH_W) 'info/unsafe_funcs_dump.c'; else $(CYGPATH_W) '$(srcdir)/info/unsafe_funcs_dump.c'; fi`
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-unsafe_funcs_dump.obj -MD -MP -MF $(DEPDIR)/katana-unsafe_funcs_dump.Tpo -c -o katana-unsafe_funcs_dump.obj `if test -f 'info/unsafe_funcs_dump.c'; then $(CYGPATH_W) 'info/unsafe_funcs_dump.c'; else $(CYGPATH_W) '$(srcdir)/info/unsafe_funcs_dump.c'; fi`
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-unsafe_funcs_dump.Tpo $(DEPDIR)/katana-unsafe_funcs_dump.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='info/unsafe_funcs_dump.c' object='katana-unsafe_funcs_dump.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-unsafe_funcs_dump.obj `if test -f 'info/unsafe_funcs_dump.c'; then $(CYGPATH_W) 'info/unsafe_funcs_dump.c'; else $(CYGPATH_W) '$(srcdir)/info/unsafe_funcs_dump.c'; fi`
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-unsafe_funcs_dump.obj `if test -f 'info/unsafe_funcs_dump.c'; then $(CYGPATH_W) 'info/unsafe_funcs_dump.c'; else $(CYGPATH_W) '$(srcdir)/info/unsafe_funcs_dump.c'; fi`
+
+katana-rewrite.o: rewriter/rewrite.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-rewrite.o -MD -MP -MF $(DEPDIR)/katana-rewrite.Tpo -c -o katana-rewrite.o `test -f 'rewriter/rewrite.c' || echo '$(srcdir)/'`rewriter/rewrite.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-rewrite.Tpo $(DEPDIR)/katana-rewrite.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='rewriter/rewrite.c' object='katana-rewrite.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-rewrite.o `test -f 'rewriter/rewrite.c' || echo '$(srcdir)/'`rewriter/rewrite.c
+
+katana-rewrite.obj: rewriter/rewrite.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-rewrite.obj -MD -MP -MF $(DEPDIR)/katana-rewrite.Tpo -c -o katana-rewrite.obj `if test -f 'rewriter/rewrite.c'; then $(CYGPATH_W) 'rewriter/rewrite.c'; else $(CYGPATH_W) '$(srcdir)/rewriter/rewrite.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-rewrite.Tpo $(DEPDIR)/katana-rewrite.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='rewriter/rewrite.c' object='katana-rewrite.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-rewrite.obj `if test -f 'rewriter/rewrite.c'; then $(CYGPATH_W) 'rewriter/rewrite.c'; else $(CYGPATH_W) '$(srcdir)/rewriter/rewrite.c'; fi`
+
+.cpp.o:
+@am__fastdepCXX_TRUE@	$(CXXCOMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXXCOMPILE) -c -o $@ $<
+
+.cpp.obj:
+@am__fastdepCXX_TRUE@	$(CXXCOMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ `$(CYGPATH_W) '$<'`
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXXCOMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
+
+katana-shell.o: shell/shell.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT katana-shell.o -MD -MP -MF $(DEPDIR)/katana-shell.Tpo -c -o katana-shell.o `test -f 'shell/shell.cpp' || echo '$(srcdir)/'`shell/shell.cpp
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/katana-shell.Tpo $(DEPDIR)/katana-shell.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='shell/shell.cpp' object='katana-shell.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o katana-shell.o `test -f 'shell/shell.cpp' || echo '$(srcdir)/'`shell/shell.cpp
+
+katana-shell.obj: shell/shell.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT katana-shell.obj -MD -MP -MF $(DEPDIR)/katana-shell.Tpo -c -o katana-shell.obj `if test -f 'shell/shell.cpp'; then $(CYGPATH_W) 'shell/shell.cpp'; else $(CYGPATH_W) '$(srcdir)/shell/shell.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/katana-shell.Tpo $(DEPDIR)/katana-shell.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='shell/shell.cpp' object='katana-shell.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o katana-shell.obj `if test -f 'shell/shell.cpp'; then $(CYGPATH_W) 'shell/shell.cpp'; else $(CYGPATH_W) '$(srcdir)/shell/shell.cpp'; fi`
+
+katana-shell.yy.o: shell/shell.yy.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT katana-shell.yy.o -MD -MP -MF $(DEPDIR)/katana-shell.yy.Tpo -c -o katana-shell.yy.o `test -f 'shell/shell.yy.cpp' || echo '$(srcdir)/'`shell/shell.yy.cpp
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/katana-shell.yy.Tpo $(DEPDIR)/katana-shell.yy.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='shell/shell.yy.cpp' object='katana-shell.yy.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o katana-shell.yy.o `test -f 'shell/shell.yy.cpp' || echo '$(srcdir)/'`shell/shell.yy.cpp
+
+katana-shell.yy.obj: shell/shell.yy.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT katana-shell.yy.obj -MD -MP -MF $(DEPDIR)/katana-shell.yy.Tpo -c -o katana-shell.yy.obj `if test -f 'shell/shell.yy.cpp'; then $(CYGPATH_W) 'shell/shell.yy.cpp'; else $(CYGPATH_W) '$(srcdir)/shell/shell.yy.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/katana-shell.yy.Tpo $(DEPDIR)/katana-shell.yy.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='shell/shell.yy.cpp' object='katana-shell.yy.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o katana-shell.yy.obj `if test -f 'shell/shell.yy.cpp'; then $(CYGPATH_W) 'shell/shell.yy.cpp'; else $(CYGPATH_W) '$(srcdir)/shell/shell.yy.cpp'; fi`
+
+katana-shell.tab.o: shell/shell.tab.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT katana-shell.tab.o -MD -MP -MF $(DEPDIR)/katana-shell.tab.Tpo -c -o katana-shell.tab.o `test -f 'shell/shell.tab.cpp' || echo '$(srcdir)/'`shell/shell.tab.cpp
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/katana-shell.tab.Tpo $(DEPDIR)/katana-shell.tab.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='shell/shell.tab.cpp' object='katana-shell.tab.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o katana-shell.tab.o `test -f 'shell/shell.tab.cpp' || echo '$(srcdir)/'`shell/shell.tab.cpp
+
+katana-shell.tab.obj: shell/shell.tab.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT katana-shell.tab.obj -MD -MP -MF $(DEPDIR)/katana-shell.tab.Tpo -c -o katana-shell.tab.obj `if test -f 'shell/shell.tab.cpp'; then $(CYGPATH_W) 'shell/shell.tab.cpp'; else $(CYGPATH_W) '$(srcdir)/shell/shell.tab.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/katana-shell.tab.Tpo $(DEPDIR)/katana-shell.tab.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='shell/shell.tab.cpp' object='katana-shell.tab.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o katana-shell.tab.obj `if test -f 'shell/shell.tab.cpp'; then $(CYGPATH_W) 'shell/shell.tab.cpp'; else $(CYGPATH_W) '$(srcdir)/shell/shell.tab.cpp'; fi`
+
+katana-param.o: shell/param.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT katana-param.o -MD -MP -MF $(DEPDIR)/katana-param.Tpo -c -o katana-param.o `test -f 'shell/param.cpp' || echo '$(srcdir)/'`shell/param.cpp
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/katana-param.Tpo $(DEPDIR)/katana-param.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='shell/param.cpp' object='katana-param.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o katana-param.o `test -f 'shell/param.cpp' || echo '$(srcdir)/'`shell/param.cpp
+
+katana-param.obj: shell/param.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT katana-param.obj -MD -MP -MF $(DEPDIR)/katana-param.Tpo -c -o katana-param.obj `if test -f 'shell/param.cpp'; then $(CYGPATH_W) 'shell/param.cpp'; else $(CYGPATH_W) '$(srcdir)/shell/param.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/katana-param.Tpo $(DEPDIR)/katana-param.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='shell/param.cpp' object='katana-param.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o katana-param.obj `if test -f 'shell/param.cpp'; then $(CYGPATH_W) 'shell/param.cpp'; else $(CYGPATH_W) '$(srcdir)/shell/param.cpp'; fi`
+
+katana-variable.o: shell/variable.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT katana-variable.o -MD -MP -MF $(DEPDIR)/katana-variable.Tpo -c -o katana-variable.o `test -f 'shell/variable.cpp' || echo '$(srcdir)/'`shell/variable.cpp
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/katana-variable.Tpo $(DEPDIR)/katana-variable.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='shell/variable.cpp' object='katana-variable.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o katana-variable.o `test -f 'shell/variable.cpp' || echo '$(srcdir)/'`shell/variable.cpp
+
+katana-variable.obj: shell/variable.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT katana-variable.obj -MD -MP -MF $(DEPDIR)/katana-variable.Tpo -c -o katana-variable.obj `if test -f 'shell/variable.cpp'; then $(CYGPATH_W) 'shell/variable.cpp'; else $(CYGPATH_W) '$(srcdir)/shell/variable.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/katana-variable.Tpo $(DEPDIR)/katana-variable.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='shell/variable.cpp' object='katana-variable.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o katana-variable.obj `if test -f 'shell/variable.cpp'; then $(CYGPATH_W) 'shell/variable.cpp'; else $(CYGPATH_W) '$(srcdir)/shell/variable.cpp'; fi`
+
+katana-command.o: shell/commands/command.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT katana-command.o -MD -MP -MF $(DEPDIR)/katana-command.Tpo -c -o katana-command.o `test -f 'shell/commands/command.cpp' || echo '$(srcdir)/'`shell/commands/command.cpp
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/katana-command.Tpo $(DEPDIR)/katana-command.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='shell/commands/command.cpp' object='katana-command.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o katana-command.o `test -f 'shell/commands/command.cpp' || echo '$(srcdir)/'`shell/commands/command.cpp
+
+katana-command.obj: shell/commands/command.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT katana-command.obj -MD -MP -MF $(DEPDIR)/katana-command.Tpo -c -o katana-command.obj `if test -f 'shell/commands/command.cpp'; then $(CYGPATH_W) 'shell/commands/command.cpp'; else $(CYGPATH_W) '$(srcdir)/shell/commands/command.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/katana-command.Tpo $(DEPDIR)/katana-command.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='shell/commands/command.cpp' object='katana-command.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o katana-command.obj `if test -f 'shell/commands/command.cpp'; then $(CYGPATH_W) 'shell/commands/command.cpp'; else $(CYGPATH_W) '$(srcdir)/shell/commands/command.cpp'; fi`
+
+katana-loadCommand.o: shell/commands/loadCommand.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT katana-loadCommand.o -MD -MP -MF $(DEPDIR)/katana-loadCommand.Tpo -c -o katana-loadCommand.o `test -f 'shell/commands/loadCommand.cpp' || echo '$(srcdir)/'`shell/commands/loadCommand.cpp
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/katana-loadCommand.Tpo $(DEPDIR)/katana-loadCommand.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='shell/commands/loadCommand.cpp' object='katana-loadCommand.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o katana-loadCommand.o `test -f 'shell/commands/loadCommand.cpp' || echo '$(srcdir)/'`shell/commands/loadCommand.cpp
+
+katana-loadCommand.obj: shell/commands/loadCommand.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT katana-loadCommand.obj -MD -MP -MF $(DEPDIR)/katana-loadCommand.Tpo -c -o katana-loadCommand.obj `if test -f 'shell/commands/loadCommand.cpp'; then $(CYGPATH_W) 'shell/commands/loadCommand.cpp'; else $(CYGPATH_W) '$(srcdir)/shell/commands/loadCommand.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/katana-loadCommand.Tpo $(DEPDIR)/katana-loadCommand.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='shell/commands/loadCommand.cpp' object='katana-loadCommand.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o katana-loadCommand.obj `if test -f 'shell/commands/loadCommand.cpp'; then $(CYGPATH_W) 'shell/commands/loadCommand.cpp'; else $(CYGPATH_W) '$(srcdir)/shell/commands/loadCommand.cpp'; fi`
+
+katana-saveCommand.o: shell/commands/saveCommand.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT katana-saveCommand.o -MD -MP -MF $(DEPDIR)/katana-saveCommand.Tpo -c -o katana-saveCommand.o `test -f 'shell/commands/saveCommand.cpp' || echo '$(srcdir)/'`shell/commands/saveCommand.cpp
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/katana-saveCommand.Tpo $(DEPDIR)/katana-saveCommand.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='shell/commands/saveCommand.cpp' object='katana-saveCommand.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o katana-saveCommand.o `test -f 'shell/commands/saveCommand.cpp' || echo '$(srcdir)/'`shell/commands/saveCommand.cpp
+
+katana-saveCommand.obj: shell/commands/saveCommand.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT katana-saveCommand.obj -MD -MP -MF $(DEPDIR)/katana-saveCommand.Tpo -c -o katana-saveCommand.obj `if test -f 'shell/commands/saveCommand.cpp'; then $(CYGPATH_W) 'shell/commands/saveCommand.cpp'; else $(CYGPATH_W) '$(srcdir)/shell/commands/saveCommand.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/katana-saveCommand.Tpo $(DEPDIR)/katana-saveCommand.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='shell/commands/saveCommand.cpp' object='katana-saveCommand.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o katana-saveCommand.obj `if test -f 'shell/commands/saveCommand.cpp'; then $(CYGPATH_W) 'shell/commands/saveCommand.cpp'; else $(CYGPATH_W) '$(srcdir)/shell/commands/saveCommand.cpp'; fi`
+
+katana-replaceCommand.o: shell/commands/replaceCommand.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT katana-replaceCommand.o -MD -MP -MF $(DEPDIR)/katana-replaceCommand.Tpo -c -o katana-replaceCommand.o `test -f 'shell/commands/replaceCommand.cpp' || echo '$(srcdir)/'`shell/commands/replaceCommand.cpp
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/katana-replaceCommand.Tpo $(DEPDIR)/katana-replaceCommand.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='shell/commands/replaceCommand.cpp' object='katana-replaceCommand.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o katana-replaceCommand.o `test -f 'shell/commands/replaceCommand.cpp' || echo '$(srcdir)/'`shell/commands/replaceCommand.cpp
+
+katana-replaceCommand.obj: shell/commands/replaceCommand.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT katana-replaceCommand.obj -MD -MP -MF $(DEPDIR)/katana-replaceCommand.Tpo -c -o katana-replaceCommand.obj `if test -f 'shell/commands/replaceCommand.cpp'; then $(CYGPATH_W) 'shell/commands/replaceCommand.cpp'; else $(CYGPATH_W) '$(srcdir)/shell/commands/replaceCommand.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/katana-replaceCommand.Tpo $(DEPDIR)/katana-replaceCommand.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='shell/commands/replaceCommand.cpp' object='katana-replaceCommand.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o katana-replaceCommand.obj `if test -f 'shell/commands/replaceCommand.cpp'; then $(CYGPATH_W) 'shell/commands/replaceCommand.cpp'; else $(CYGPATH_W) '$(srcdir)/shell/commands/replaceCommand.cpp'; fi`
+
+katana-dwarfscriptCommand.o: shell/commands/dwarfscriptCommand.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT katana-dwarfscriptCommand.o -MD -MP -MF $(DEPDIR)/katana-dwarfscriptCommand.Tpo -c -o katana-dwarfscriptCommand.o `test -f 'shell/commands/dwarfscriptCommand.cpp' || echo '$(srcdir)/'`shell/commands/dwarfscriptCommand.cpp
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/katana-dwarfscriptCommand.Tpo $(DEPDIR)/katana-dwarfscriptCommand.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='shell/commands/dwarfscriptCommand.cpp' object='katana-dwarfscriptCommand.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o katana-dwarfscriptCommand.o `test -f 'shell/commands/dwarfscriptCommand.cpp' || echo '$(srcdir)/'`shell/commands/dwarfscriptCommand.cpp
+
+katana-dwarfscriptCommand.obj: shell/commands/dwarfscriptCommand.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT katana-dwarfscriptCommand.obj -MD -MP -MF $(DEPDIR)/katana-dwarfscriptCommand.Tpo -c -o katana-dwarfscriptCommand.obj `if test -f 'shell/commands/dwarfscriptCommand.cpp'; then $(CYGPATH_W) 'shell/commands/dwarfscriptCommand.cpp'; else $(CYGPATH_W) '$(srcdir)/shell/commands/dwarfscriptCommand.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/katana-dwarfscriptCommand.Tpo $(DEPDIR)/katana-dwarfscriptCommand.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='shell/commands/dwarfscriptCommand.cpp' object='katana-dwarfscriptCommand.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o katana-dwarfscriptCommand.obj `if test -f 'shell/commands/dwarfscriptCommand.cpp'; then $(CYGPATH_W) 'shell/commands/dwarfscriptCommand.cpp'; else $(CYGPATH_W) '$(srcdir)/shell/commands/dwarfscriptCommand.cpp'; fi`
+
+katana-shellCommand.o: shell/commands/shellCommand.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT katana-shellCommand.o -MD -MP -MF $(DEPDIR)/katana-shellCommand.Tpo -c -o katana-shellCommand.o `test -f 'shell/commands/shellCommand.cpp' || echo '$(srcdir)/'`shell/commands/shellCommand.cpp
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/katana-shellCommand.Tpo $(DEPDIR)/katana-shellCommand.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='shell/commands/shellCommand.cpp' object='katana-shellCommand.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o katana-shellCommand.o `test -f 'shell/commands/shellCommand.cpp' || echo '$(srcdir)/'`shell/commands/shellCommand.cpp
+
+katana-shellCommand.obj: shell/commands/shellCommand.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT katana-shellCommand.obj -MD -MP -MF $(DEPDIR)/katana-shellCommand.Tpo -c -o katana-shellCommand.obj `if test -f 'shell/commands/shellCommand.cpp'; then $(CYGPATH_W) 'shell/commands/shellCommand.cpp'; else $(CYGPATH_W) '$(srcdir)/shell/commands/shellCommand.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/katana-shellCommand.Tpo $(DEPDIR)/katana-shellCommand.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='shell/commands/shellCommand.cpp' object='katana-shellCommand.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o katana-shellCommand.obj `if test -f 'shell/commands/shellCommand.cpp'; then $(CYGPATH_W) 'shell/commands/shellCommand.cpp'; else $(CYGPATH_W) '$(srcdir)/shell/commands/shellCommand.cpp'; fi`
+
+katana-elfVariableData.o: shell/variableTypes/elfVariableData.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT katana-elfVariableData.o -MD -MP -MF $(DEPDIR)/katana-elfVariableData.Tpo -c -o katana-elfVariableData.o `test -f 'shell/variableTypes/elfVariableData.cpp' || echo '$(srcdir)/'`shell/variableTypes/elfVariableData.cpp
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/katana-elfVariableData.Tpo $(DEPDIR)/katana-elfVariableData.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='shell/variableTypes/elfVariableData.cpp' object='katana-elfVariableData.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o katana-elfVariableData.o `test -f 'shell/variableTypes/elfVariableData.cpp' || echo '$(srcdir)/'`shell/variableTypes/elfVariableData.cpp
+
+katana-elfVariableData.obj: shell/variableTypes/elfVariableData.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT katana-elfVariableData.obj -MD -MP -MF $(DEPDIR)/katana-elfVariableData.Tpo -c -o katana-elfVariableData.obj `if test -f 'shell/variableTypes/elfVariableData.cpp'; then $(CYGPATH_W) 'shell/variableTypes/elfVariableData.cpp'; else $(CYGPATH_W) '$(srcdir)/shell/variableTypes/elfVariableData.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/katana-elfVariableData.Tpo $(DEPDIR)/katana-elfVariableData.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='shell/variableTypes/elfVariableData.cpp' object='katana-elfVariableData.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o katana-elfVariableData.obj `if test -f 'shell/variableTypes/elfVariableData.cpp'; then $(CYGPATH_W) 'shell/variableTypes/elfVariableData.cpp'; else $(CYGPATH_W) '$(srcdir)/shell/variableTypes/elfVariableData.cpp'; fi`
 
 ID: $(HEADERS) $(SOURCES) $(LISP) $(TAGS_FILES)
 	list='$(SOURCES) $(HEADERS) $(LISP) $(TAGS_FILES)'; \
@@ -1078,6 +1317,12 @@ uninstall-am: uninstall-binPROGRAMS
 	mostlyclean-generic pdf pdf-am ps ps-am tags uninstall \
 	uninstall-am uninstall-binPROGRAMS
 
+
+shell/shell.tab.cpp : shell/shell.y
+	bison $(BFLAGS) shell/shell.y
+
+shell/shell.yy.cpp : shell/shell.l
+	flex -o shell/shell.yy.c shell/shell.l
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

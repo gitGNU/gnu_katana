@@ -91,10 +91,11 @@ typedef enum
   ELS_DWARFWRITE,
   ELS_CONFIG,
   ELS_LEB,
+  ELS_SHELL,
   ELS_CNT
 } E_LOG_SOURCE;//describes what subsystem the message came from
 
-int logprintf(E_LOG_LEVEL lvl,E_LOG_SOURCE src,char* fmt,...);
+int logprintf(E_LOG_LEVEL lvl,E_LOG_SOURCE src,const char* fmt,...);
 
 //all messages at this level or more important than this level (see the ordering in
 //E_LOG_LEVEL definition) will be logged. Others will be dropped

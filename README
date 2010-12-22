@@ -12,6 +12,8 @@ libdwarf
   http://reality.sgiweb.org/davea/dwarf.html. 
 libunwind
   http://www.nongnu.org/libunwind/
+libreadline
+  http://www.gnu.org/software/readline/
 
 BUILDING
 ./configure
