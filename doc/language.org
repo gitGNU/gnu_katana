@@ -1,0 +1,98 @@
+
+This document details brainstorming for the katana scripting language
+
+* Overview
+  The scripting language allows programs to be written to transform
+  ELF files. This is similar to elfsh. Unlike elfsh, there is a much
+  greater emphasis on DWARF, which is really the purpose of writing a
+  new tool (aside from the fact that this tool already does
+  patching). If you just want normal static modification of binaries,
+  elfsh is a more complete and polished tool.
+
+* Language Elements
+  The language is very simple. Most lines consist of a command followed
+  by parameters. These commands can return values and thus assignment
+  is possible. All variable names are prefixed with $. Variables do
+  not need to be declared but they must be assigned before they are
+  used. 
+* Commands
+  Quick quide
+  | Command         | Arguments               | Description                                |
+  |-----------------+-------------------------+--------------------------------------------|
+  | load            | filename                | Load an ELF file. Return the ELF object    |
+  | save            | ELF,filename            | writes the given ELF object to disk        |
+  | print           | specier,ELF,[outfile]   | print various things about an elf object   |
+  | dwarfscript     | compile,input,[outfile] | operates on dwarfscript.                   |
+  | replace section | ELF,section,input       | replaces the given data section in the ELF |
+  |                 |                         |                                            |
+  |                 |                         |                                            |
+  |                 |                         |                                            |
+
+** load
+** save
+** dwarfscript
+   Usage 'dwarscript COMMAND PARAMETERS'
+   Where PARAMETERS depend on COMMAND. The possible COMMAND choices
+   are as follows
+*** compile
+    Usage 'dwarfscript compile input [outfile]'
+    input should be a file or variable resolving to a textual
+    representation of a dwarfscript file. This input is resolved into
+    an ELF section. If outfile is specified, the binary data in this
+    section is written into outfile
+*** emit
+    Usage 'dwarfscript emit ("eh_frame"|"debug_frame") ELF [outfile]'
+    Creates dwarfscript (writing it to [outfile] if specified) for
+    either the eh or debug_frame section of the given ELF object
+** replace
+* Reserved Words
+  + load
+  + save
+  + translate
+  + dwarfscript
+  + data
+  + replace
+  + section
+  + compile
+  + emit
+
+* Dwarfscript
+  Dwarfscript is a language for describing the contents of .eh_frame
+  or .debug_frame. It has the following types of statements
+** begin statements
+   syntax: begin SECTION
+   where SECTION is one of the following
+   + FDE
+   + CIE
+   + INSTRUCTIONS
+   
+   This is used to begin a new section describing a CIE or
+   FDE. INSTRUCTIONS sections reside within CIE or FDE sections
+** end statements
+   syntax: end SECTION
+   The analog of begin. Each begin statement must be matched by a
+   corresponding end
+** property statements
+   syntax: KEY : VALUE
+   (where the spaces on either side of the colon are optional)
+   
+   All statements inside FDE and CIE sections other than INSTRUCTIONS
+   sections are property statements. These statements are used to
+   describe the CIE or FDE.
+*** CIE properties
+**** index
+**** data_align
+**** code_align
+**** return_addr_rule
+**** augmentation
+*** FDE properties
+**** index
+**** lowpc
+**** highpc
+**** offset
+** instruction statements
+   These are statements describing dwarf instructions. They begin with
+   a dwarf opcode and are followed by parameters. There is no complete
+   treatment of them given here at this time but most can be inferred
+   from reading the DWARF standard. At a later date they will be fully
+   documented here
