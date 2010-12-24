@@ -57,15 +57,24 @@
 extern "C"
 {
 #include "fderead.h"
+#include "shell/dwarfscript/dwarfscript.yy.h"
+  
+extern int yydwdebug;
+extern FILE *yydwin;
+extern int yydwparse();
+extern CallFrameInfo* parsedCallFrameInfo;
 }
 
 //constructor for compile operation
 DwarfscriptCommand::DwarfscriptCommand(DwarfscriptOperation op,ShellParam* input,ShellParam* outfile)
   :op(op),inputP(input),outfileP(outfile)
 {
-  inputP->grab();
-  outfileP->grab();
   assert(op==DWOP_COMPILE);
+  inputP->grab();
+  if(outfileP)
+  {
+    outfileP->grab();
+  }
 }
 //constructor for emit operation
 DwarfscriptCommand::DwarfscriptCommand(DwarfscriptOperation op,ShellParam* sectionName,ShellParam* elfObject,ShellParam* outfile)
@@ -104,12 +113,12 @@ void DwarfscriptCommand::printCIEInfo(FILE* file,CIE* cie)
   fprintf(file,"index: %i\n",cie->idx);
   fprintf(file,"data_align: %li\n",(long int)cie->dataAlign);
   fprintf(file,"code_align: %li\n",(long int)cie->dataAlign);
-  fprintf(file,"return_addr_rule: %li\n",(long int)cie->dataAlign);
-  fprintf(file,"augmentation: %s\n",cie->augmentation);
+  fprintf(file,"return_addr_rule: %li\n",(long int)cie->returnAddrRuleNum);
+  fprintf(file,"augmentation: \"%s\"\n",cie->augmentation);
   fprintf(file,"begin INSTRUCTIONS\n");
   for(int i=0;i<cie->numInitialInstructions;i++)
   {
-    printInstruction(file,cie->initialInstructions[i]);
+    printInstruction(file,cie->initialInstructions[i],DWIPF_NO_REG_NAMES);
   }
   fprintf(file,"end INSTRUCTIONS\n");
   fprintf(file,"end CIE\n");
@@ -119,18 +128,18 @@ void DwarfscriptCommand::printFDEInfo(FILE* file,FDE* fde)
 {
   fprintf(file,"begin FDE\n");
   fprintf(file,"index: %i\n",fde->idx);
-  fprintf(file,"lowpc: 0x%x\n",fde->lowpc);
-  fprintf(file,"highpc: 0x%x\n",fde->highpc);
-  fprintf(file,"offset: 0x%x\n",fde->offset);
+  fprintf(file,"initial_location: 0x%x\n",fde->lowpc);
+  fprintf(file,"address_range: 0x%x\n",fde->highpc-fde->lowpc);
   fprintf(file,"begin INSTRUCTIONS\n");
   for(int i=0;i<fde->numInstructions;i++)
   {
-    printInstruction(file,fde->instructions[i]);
+    printInstruction(file,fde->instructions[i],DWIPF_NO_REG_NAMES);
   }
   fprintf(file,"end INSTRUCTIONS\n");
   fprintf(file,"end FDE\n");
 
 }
+
 
 void DwarfscriptCommand::emitDwarfscript()
 {
@@ -178,7 +187,7 @@ void DwarfscriptCommand::emitDwarfscript()
   {
     this->printCIEInfo(file,cfi->cies+i);
   }
-  for(int i=0;i<cfi->numFdes;i++)
+  for(int i=0;i<cfi->numFDEs;i++)
   {
     this->printFDEInfo(file,cfi->fdes+i);
   }
@@ -186,6 +195,33 @@ void DwarfscriptCommand::emitDwarfscript()
   logprintf(ELL_INFO_V2,ELS_SHELL,"Wrote dwarfscript to %s\n",outfileName);
   
 }
+
+void DwarfscriptCommand::compileDwarfscript()
+{
+  char* infileName=inputP->getString();
+  if(!infileName)
+  {
+    logprintf(ELL_WARN,ELS_SHELL,"Cannot compile dwarfscript because infile name parameter was not a string\n");
+    return;
+  }
+  FILE* infile=fopen(infileName,"r");
+  if(!infile)
+  {
+    logprintf(ELL_WARN,ELS_SHELL,"Cannot open file %s for reading dwarfscript from\n",infileName);
+    return;
+  }
+  //yydwdebug=1;
+  yydwin=infile;
+  memset(parsedCallFrameInfo,0,sizeof(CallFrameInfo));
+  bool parseSuccess = (0==yydwparse());
+  if(!parseSuccess)
+  {
+    logprintf(ELL_WARN,ELS_SHELL,"Unable to parse dwarfscript input\n");
+    return;
+  }
+  
+}
+
 
 void DwarfscriptCommand::execute()
 {
@@ -195,7 +231,7 @@ void DwarfscriptCommand::execute()
     this->emitDwarfscript();
     break;
   case DWOP_COMPILE:
-    logprintf(ELL_WARN,ELS_SHELL,"Compile operation not handled yet\n");
+    this->compileDwarfscript();
     break;
   default:
     logprintf(ELL_WARN,ELS_SHELL,"Unhandled dwarfscript operation\n");

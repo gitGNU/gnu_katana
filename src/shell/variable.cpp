@@ -60,6 +60,7 @@
 ShellVariable::ShellVariable(char* name)
 {
   this->name=strdup(name);
+  this->data=NULL;
 }
 
 ShellVariable::~ShellVariable()

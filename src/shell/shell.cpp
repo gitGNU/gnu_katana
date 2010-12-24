@@ -123,6 +123,7 @@ char* rlgets(char* prompt,bool isInputTty)
 void doShell(char* inputFilename)
 {
   shellVariables=dictCreate(100);//todo: sensible number not arbitrary number 100
+  //yydebug=1;
   if(!inputFilename)
   {
     //in interactive or pipe mode, reading from stdin
@@ -132,7 +133,6 @@ void doShell(char* inputFilename)
     while((line=rlgets(prompt,isInputTty)))
     {
       yy_scan_string(line);
-      //yydebug=1;
       bool parseSuccess = (0==yyparse());
       if(!parseSuccess)
       {
@@ -159,7 +159,6 @@ void doShell(char* inputFilename)
       return;
     }
     yyin=file;
-    //yydebug=1;
     bool parseSuccess = (0==yyparse());
     if(!parseSuccess)
     {

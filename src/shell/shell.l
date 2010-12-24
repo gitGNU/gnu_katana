@@ -24,7 +24,7 @@ extern char* savedString;
 
 }
 
-VARIABLE         \$[_a-zA-Z][_a-zA-Z0-9]*
+VARIABLE         \$[_a-zA-Z0-9]+
 INT       [0-9]+
 FLOAT     ([0-9]*\.[0-9]+)|([0-9]+\.[0-9]*)
 D_QUOTE_STRING  [\"][^\"\n][\"]
@@ -88,13 +88,6 @@ S_QUOTE_STRING  [\'][^\'\n][\']
 . return T_INVALID_TOKEN;
 %%
 
-typedef struct
-{
-  const char* keyword;
-  const int token;
-} KeywordInfo;
-
-#define NUM_C48_KEYWORDS 18
 
 static char* textAccumulator=NULL;
 static bool textAccumulating=false;

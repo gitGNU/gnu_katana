@@ -1,5 +1,5 @@
 /*
-  File: dwarfscriptCommand.h
+  File: shell/dwarfscript/parse_helper.h
   Author: James Oakley
   Copyright (C): 2010 Dartmouth College
   License: Katana is free software: you may redistribute it and/or
@@ -50,43 +50,23 @@
     
   Project:  Katana
   Date: December 2010
-  Description: Command class for the katana shell
+  Description: Data structures for parsing
 */
 
-#ifndef dwarfscript_command_h
-#define dwarfscript_command_h
+#ifndef parse_helper_h
+#define parse_helper_h
 
-#include "command.h"
+#include "dwarf_instr.h"
 
-typedef enum
+typedef struct
 {
-  DWOP_COMPILE=1,
-  DWOP_EMIT,
-} DwarfscriptOperation;
-
-class DwarfscriptCommand : public ShellCommand
-{
-public:
-  //constructor for compile operation
-  DwarfscriptCommand(DwarfscriptOperation op,ShellParam* input,ShellParam* outfile);
-  //constructor for emit operation
-  DwarfscriptCommand(DwarfscriptOperation op,ShellParam* sectionName,ShellParam* elfObject,ShellParam* outfile);
-  ~DwarfscriptCommand();
-  virtual void execute();
-protected:
-  void emitDwarfscript();
-  void compileDwarfscript();
-  void printCIEInfo(FILE* file,CIE* cie);
-  void printFDEInfo(FILE* file,FDE* fde);
-  DwarfscriptOperation op;
-  ShellParam* inputP;
-  ShellParam* sectionNameP;
-  ShellParam* elfObjectP;
-  ShellParam* outfileP;
-  
-};
+  //union of all the things that can be encountered in a parse
+  union
+  {
+    int intval;//used for enums as well as integers
+    char* stringval;
+    RegInstruction regInstr;
+  } u;
+} ParseNode;
 
 #endif
-// Local Variables:
-// mode: c++
-// End:

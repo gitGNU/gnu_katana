@@ -23,8 +23,10 @@ SHELL_VARIABLE_SRC=shell/variableTypes/elfVariableData.cpp
 SHELL_VARIABLE_H=shell/variableTypes/elfVariableData.h
 SHELL_COMMANDS_SRC=shell/commands/command.cpp shell/commands/loadCommand.cpp shell/commands/saveCommand.cpp shell/commands/replaceCommand.cpp shell/commands/dwarfscriptCommand.cpp shell/commands/shellCommand.cpp
 SHELL_COMMANDS_H=shell/commands/command.h shell/commands/loadCommand.h shell/commands/saveCommand.h shell/commands/replaceCommand.h shell/commands/dwarfscriptCommand.h shell/commands/shellCommand.h
-SHELL_SRC=shell/shell.cpp  shell/shell.yy.cpp shell/shell.tab.cpp shell/param.cpp shell/variable.cpp $(SHELL_COMMANDS_SRC) $(SHELL_VARIABLE_SRC)
-SHELL_H=shell/shell.h shell/parse_helper.h shell/shell.tab.h shell/param.h shell/variable.h  $(SHELL_COMMANDS_SRC) $(SHELL_VARIABLE_H)
+DWARFSCRIPT_SRC=shell/dwarfscript/dwarfscript.yy.c shell/dwarfscript/dwarfscript.tab.c
+DWARFSCRIPT_H=shell/dwarfscript/dwarfscript.tab.h
+SHELL_SRC=shell/shell.cpp  shell/shell.yy.cpp shell/shell.tab.cpp shell/param.cpp shell/variable.cpp $(SHELL_COMMANDS_SRC) $(SHELL_VARIABLE_SRC) $(DWARFSCRIPT_SRC)
+SHELL_H=shell/shell.h shell/parse_helper.h shell/shell.tab.h shell/param.h shell/variable.h  $(SHELL_COMMANDS_SRC) $(SHELL_VARIABLE_H) $(DWARFSCRIPT_H)
 INFO_SRC=info/fdedump.c info/dwinfo_dump.c  info/unsafe_funcs_dump.c
 INFO_H=info/fdedump.h info/dwinfo_dump.h  info/unsafe_funcs_dump.h
 REWRITER_SRC=rewriter/rewrite.c
@@ -36,10 +38,24 @@ EXTRA_DIST=$(H_FILES)
 
 katana_SOURCES=katana.c dwarftypes.c   elfparse.c  types.c  dwarf_instr.c register.c relocation.c symbol.c fderead.c dwarfvm.c config.c leb.c commandLine.c  elfwriter.c $(PATCHWRITE_SRC) $(PATCHER_SRC) $(UTIL_SRC) $(INFO_SRC) $(REWRITER_SRC) $(SHELL_SRC)
 
-BFLAGS=-d -v -o shell/shell.tab.cpp
+BFLAGS=-d -v
 
 shell/shell.tab.cpp : shell/shell.y
-	bison $(BFLAGS) shell/shell.y
+	bison $(BFLAGS) -o shell/shell.tab.cpp $<
 
-shell/shell.yy.cpp : shell/shell.l
-	flex -o shell/shell.yy.c shell/shell.l
+
+
+shell/shell.tab.hpp : shell/shell.y
+	bison $(BFLAGS) -o shell/shell.tab.cpp $<
+
+shell/dwarfscript/dwarfscript.tab.c : shell/dwarfscript/dwarfscript.y
+	bison $(BFLAGS) -o shell/dwarfscript/dwarfscript.tab.c $<
+
+shell/dwarfscript/dwarfscript.tab.h : shell/dwarfscript/dwarfscript.y
+	bison $(BFLAGS) -o shell/dwarfscript/dwarfscript.tab.c $<
+
+%.yy.cpp : %.l
+	flex $<
+
+shell/dwarfscript/dwarfscript.yy.c : shell/dwarfscript/dwarfscript.l shell/dwarfscript/dwarfscript.tab.h
+	flex shell/dwarfscript/dwarfscript.l

@@ -18,7 +18,7 @@ ParseNode rootParseNode;
 #pragma GCC diagnostic ignored "-Wwrite-strings"
 
  
- extern int yylex();
+extern int yylex();
 extern "C"
 {
 #include "util/dictionary.h"
@@ -36,7 +36,6 @@ extern "C"
 %}
 
 //Token definitions
-//note that these MUST be in the same order they are in the lexer
 %token T_LOAD T_SAVE T_TRANSLATE T_REPLACE T_SECTION T_VARIABLE T_STRING_LITERAL
 %token T_DATA T_DWARFSCRIPT T_COMPILE T_EMIT T_SHELL_COMMAND
 %token T_INVALID_TOKEN
@@ -111,7 +110,11 @@ savecmd : T_SAVE param param
   YYERROR;
 }
 
-dwarfscriptcmd : T_DWARFSCRIPT T_COMPILE param param
+dwarfscriptcmd : T_DWARFSCRIPT T_COMPILE param 
+{
+  $$.u.cmd=new DwarfscriptCommand(DWOP_COMPILE,$3.u.param,NULL);
+}
+| T_DWARFSCRIPT T_COMPILE param param
 {
   $$.u.cmd=new DwarfscriptCommand(DWOP_COMPILE,$3.u.param,$4.u.param);
 }
