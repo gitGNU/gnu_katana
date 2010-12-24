@@ -66,7 +66,7 @@ Map* readDebugFrame(ElfInfo* elf,bool ehInsteadOfDebug);
 
 //the returned memory should be freed
 RegInstruction* parseFDEInstructions(Dwarf_Debug dbg,unsigned char* bytes,int len,
-                                     int dataAlign,int codeAlign,int* numInstrs);
+                                     int* numInstrs);
 
 
 

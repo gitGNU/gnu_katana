@@ -107,7 +107,7 @@ void endELF(ElfInfo* e)
   {
     freeDwarfInfo(e->dwarfInfo);
   }
-  for(int i=0;i<e->callFrameInfo.numFdes;i++)
+  for(int i=0;i<e->callFrameInfo.numFDEs;i++)
   {
     free(e->callFrameInfo.fdes[i].instructions);
   }

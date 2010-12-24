@@ -63,7 +63,7 @@ typedef struct CallFrameInfo
 {
   struct FDE* fdes;//for relocatable and executable objects, these
                    //will be sorted by lowpc
-  int numFdes;
+  int numFDEs;
   struct CIE* cies;
   int numCIEs;
 } CallFrameInfo;
@@ -84,6 +84,12 @@ typedef struct CIE
   Dwarf_Unsigned codeAlign;
   Dwarf_Half returnAddrRuleNum;
   int idx;//what index cie this is in a DWARF section
+  int length;//the number of bytes of the CIE on disk
+  Dwarf_Small version;
+  int addressSize;//the size of a target address for this CIE and FDEs that use it
+  int segmentSize;//unused for most systems. Included for
+                  //compatibility with the DWARF specification. Size
+                  //of a segment selector.
 } CIE;
 
 
@@ -101,6 +107,7 @@ typedef struct FDE
              //read from a PO
   int offset;//offset from beginning of debug frame
   int idx;//what index fde this is in a DWARF section
+  int length;//the number of bytes of the FDE on disk
 } FDE;
 
 #endif

@@ -74,7 +74,7 @@ void printCIEInfo(CIE* cie)
   for(int i=0;i<cie->numInitialInstructions;i++)
   {
     printf("\t\t");
-    printInstruction(stdout,cie->initialInstructions[i]);
+    printInstruction(stdout,cie->initialInstructions[i],0);
   }
   printf("\tInitial register rules (computed from instructions)\n");
   printRules(stdout,cie->initialRules,"\t\t");
@@ -90,7 +90,7 @@ void printFDEInfo(CIE* cie,FDE* fde,int num)
   for(int i=0;i<fde->numInstructions;i++)
   {
     printf("    ");
-    printInstruction(stdout,fde->instructions[i]);
+    printInstruction(stdout,fde->instructions[i],0);
   }
   printf("    The table would be as follows\n");
   Dictionary* rulesDict=dictDuplicate(cie->initialRules,(DictDataCopy)duplicatePoRegRule);
@@ -104,7 +104,7 @@ void printFDEInfo(CIE* cie,FDE* fde,int num)
   for(int i=fde->lowpc;i<fde->highpc || 0==i;i++)
   {
     int instrsRead=0;
-    int stopLocation=evaluateInstructionsToRules(fde->instructions+numInstrsReadSoFar,fde->numInstructions,rulesDict,fde->lowpc,i,&instrsRead);
+    int stopLocation=evaluateInstructionsToRules(fde->cie,fde->instructions+numInstrsReadSoFar,fde->numInstructions,rulesDict,fde->lowpc,i,&instrsRead);
     numInstrsReadSoFar+=instrsRead;
     if(stopLocation != i) 
     { 
@@ -122,7 +122,7 @@ void printCallFrameInfo(CallFrameInfo* cfi)
   {
     printCIEInfo(cfi->cies+i);
   }
-  for(int i=0;i<cfi->numFdes;i++)
+  for(int i=0;i<cfi->numFDEs;i++)
   {
     printFDEInfo(cfi->fdes[i].cie,cfi->fdes+i,i+1);//fdes have a 1-based numbering scheme
   }

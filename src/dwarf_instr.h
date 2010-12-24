@@ -99,7 +99,7 @@ typedef struct
 typedef struct
 {
   int type;//one of DW_CFA_
-  word_t arg1;
+  word_t arg1;//whether used depends on the type
   PoReg arg1Reg;//whether used depends on the type
   word_t arg2;//whether used depends on the type
   PoReg arg2Reg;//whether used depends on the type
@@ -110,7 +110,13 @@ typedef struct
 //add a new instruction to an array of instructions
 void addInstruction(DwarfInstructions* instrs,DwarfInstruction* instr);
 
-void printInstruction(FILE* file,RegInstruction inst);
+typedef enum _DwarfInstructionPrintFlags
+{
+  DWIPF_NO_REG_NAMES=1
+} DwarfInstructionPrintFlags;
+
+//printing flags should be OR'd DwarfInstructionPrintFlags
+void printInstruction(FILE* file,RegInstruction inst,int printFlags);
 
 void destroyRawInstructions(DwarfInstructions instrs);
 

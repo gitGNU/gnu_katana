@@ -73,7 +73,7 @@ FDE* getFDEForPC(ElfInfo* elf,addr_t pc)
   assert(elf->callFrameInfo.fdes);
   //elf->callFrameInfo.fdes are sorted by lowpc, so we can do a binary search
   size_t low=0;
-  size_t high=elf->callFrameInfo.numFdes;
+  size_t high=elf->callFrameInfo.numFDEs;
   while(high-low>0)
   {
     size_t middle=low+(size_t)floor((float)(high-low)/2.0f);
@@ -299,7 +299,7 @@ struct user_regs_struct restoreRegsFromRegisterRules(struct user_regs_struct cur
   PoReg cfaReg;
   memset(&cfaReg,0,sizeof(PoReg));
   cfaReg.type=ERT_CFA;
-  PoRegRule* cfaRule=dictGet(rulesDict,strForReg(cfaReg));
+  PoRegRule* cfaRule=dictGet(rulesDict,strForReg(cfaReg,0));
   if(!cfaRule)
   {
     death("no way to compute cfa\n");

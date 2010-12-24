@@ -202,9 +202,9 @@ char* getArchRegNameFromDwarfRegNum(int num)
   #endif
 }
 
-
+//printFlags should be OR'd DwarfInstructionPrintFlag
 //the returned string should be freed
-char* strForReg(PoReg reg)
+char* strForReg(PoReg reg,int printFlags)
 {
   char* buf=zmalloc(128);
   assert(reg.type!=ERT_NONE);
@@ -233,14 +233,21 @@ char* strForReg(PoReg reg)
     break;
   case ERT_BASIC:
     {
-      char* regName=getArchRegNameFromDwarfRegNum(reg.u.index);
-      if(regName)
+      if(printFlags & DWIPF_NO_REG_NAMES)
       {
-        snprintf(buf,128,"r%i/%s",reg.u.index,regName);
+        snprintf(buf,128,"r%i",reg.u.index);
       }
       else
       {
-        snprintf(buf,128,"r%i",reg.u.index);
+        char* regName=getArchRegNameFromDwarfRegNum(reg.u.index);
+        if(regName)
+        {
+          snprintf(buf,128,"r%i/%s",reg.u.index,regName);
+        }
+        else
+        {
+          snprintf(buf,128,"r%i",reg.u.index);
+        }
       }
     }
     break;
@@ -250,9 +257,9 @@ char* strForReg(PoReg reg)
   return buf;
 }
 
-void printReg(PoReg reg,FILE* f)
+void printReg(FILE* f,PoReg reg,int printFlags)
 {
-  char* str=strForReg(reg);
+  char* str=strForReg(reg,printFlags);
   fprintf(f,"%s",str);
   free(str);
 }
@@ -333,7 +340,7 @@ void printRule(FILE* file,PoRegRule rule,int regnum)
 {
 
   char* regStr=NULL;
-  regStr=strForReg(rule.regLH);
+  regStr=strForReg(rule.regLH,0);
   switch(rule.type)
   {
   case ERRT_UNDEF:
@@ -343,14 +350,14 @@ void printRule(FILE* file,PoRegRule rule,int regnum)
     fprintf(file,"%s = %i(cfa)\n",regStr,rule.offset);
     break;
   case ERRT_REGISTER:
-    fprintf(file,"%s = %s\n",regStr,strForReg(rule.regRH));
+    fprintf(file,"%s = %s\n",regStr,strForReg(rule.regRH,0));
     break;
   case ERRT_CFA:
     {
       char* str;
       if(rule.regRH.type!=ERT_NONE)
       {
-        str=strForReg(rule.regRH);
+        str=strForReg(rule.regRH,0);
       }
       else
       {
@@ -363,10 +370,10 @@ void printRule(FILE* file,PoRegRule rule,int regnum)
     }
     break;
   case ERRT_RECURSE_FIXUP:
-    fprintf(file,"%s = recurse fixup with FDE#%lu based at %s\n",regStr,(unsigned long)rule.index,strForReg(rule.regRH));
+    fprintf(file,"%s = recurse fixup with FDE#%lu based at %s\n",regStr,(unsigned long)rule.index,strForReg(rule.regRH,0));
     break;
   case ERRT_RECURSE_FIXUP_POINTER:
-    fprintf(file,"%s = recurse fixup pointer with FDE#%lu based at %s\n",regStr,(unsigned long)rule.index,strForReg(rule.regRH));
+    fprintf(file,"%s = recurse fixup pointer with FDE#%lu based at %s\n",regStr,(unsigned long)rule.index,strForReg(rule.regRH,0));
     break;
   default:
     death("unknown rule type\n");

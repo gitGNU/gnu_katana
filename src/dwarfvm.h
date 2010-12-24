@@ -63,7 +63,7 @@ void patchDataWithFDE(VarInfo* var,FDE* transformerFDE,ElfInfo* targetBin,ElfInf
 //execution continues until the end of the instructions or until the location is advanced
 //past stopLocation. stopLocation should be relative to the start of the instructions (i.e. the instructions are considered to start at 0)
 //if stopLocation is negative, it is ignored
-int evaluateInstructionsToRules(RegInstruction* instrs,int numInstrs,Dictionary* rules,int startLocation, int stopLocation,int* outInstrsCnt);
+int evaluateInstructionsToRules(CIE* cie,RegInstruction* instrs,int numInstrs,Dictionary* rules,int startLocation, int stopLocation,int* outInstrsCnt);
 
 //stack length given in words
 word_t evaluateDwarfExpression(byte* bytes,int len,word_t* startingStack,int stackLen);

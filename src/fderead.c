@@ -66,7 +66,7 @@
 
 //the returned memory should be freed
 RegInstruction* parseFDEInstructions(Dwarf_Debug dbg,unsigned char* bytes,int len,
-                                     int dataAlign,int codeAlign,int* numInstrs)
+                                     int* numInstrs)
 {
   *numInstrs=0;
   //allocate more mem than we'll actually need
@@ -88,14 +88,14 @@ RegInstruction* parseFDEInstructions(Dwarf_Debug dbg,unsigned char* bytes,int le
     {
     case DW_CFA_advance_loc:
       result[*numInstrs].type=high;
-      result[*numInstrs].arg1=low*codeAlign;
+      result[*numInstrs].arg1=low;
       break;
     case DW_CFA_offset:
       result[*numInstrs].type=high;
       result[*numInstrs].arg1=low;
       result[*numInstrs].arg1Reg.type=ERT_BASIC;
       result[*numInstrs].arg1Reg.u.index=low;
-      result[*numInstrs].arg2=leb128ToUWord(bytes + 1, &uleblen)*dataAlign;
+      result[*numInstrs].arg2=leb128ToUWord(bytes + 1, &uleblen);
       bytes+=uleblen;
       len-=uleblen;
       break;
@@ -117,14 +117,14 @@ RegInstruction* parseFDEInstructions(Dwarf_Debug dbg,unsigned char* bytes,int le
       case DW_CFA_advance_loc1:
         {
         unsigned char delta = (unsigned char) *(bytes + 1);
-        result[*numInstrs].arg1=delta*codeAlign;
+        result[*numInstrs].arg1=delta;
         bytes+=1;
         len -= 1;
         }
       case DW_CFA_advance_loc2:
         {
         unsigned short delta = (unsigned short) *(bytes + 1);
-        result[*numInstrs].arg1=delta*codeAlign;
+        result[*numInstrs].arg1=delta;
         bytes+=2;
         len -= 2;
         }
@@ -253,7 +253,6 @@ Map* readDebugFrame(ElfInfo* elf,bool ehInsteadOfDebug)
 
   //read the CIE
   Dwarf_Unsigned cieLength = 0;
-  Dwarf_Small version = 0;
   char* augmenter = "";
   Dwarf_Ptr initInstr = 0;
   Dwarf_Unsigned initInstrLen = 0;
@@ -263,11 +262,12 @@ Map* readDebugFrame(ElfInfo* elf,bool ehInsteadOfDebug)
 
   for(int i=0;i<cieElementCount;i++)
   {
+    elf->callFrameInfo.cies[i].idx=i;
     //todo: all the casting here is hackish
     //should respect types more
     if(DW_DLV_OK!=dwarf_get_cie_info(cieData[0],
                                      &cieLength,
-                                     &version,
+                                     &elf->callFrameInfo.cies[i].version,
                                      &augmenter,
                                      &elf->callFrameInfo.cies[i].codeAlign,
                                      &elf->callFrameInfo.cies[i].dataAlign,
@@ -285,12 +285,11 @@ Map* readDebugFrame(ElfInfo* elf,bool ehInsteadOfDebug)
   
     elf->callFrameInfo.cies[i].initialInstructions=
       parseFDEInstructions(dbg,initInstr,initInstrLen,
-                           elf->callFrameInfo.cies[i].dataAlign,
-                           elf->callFrameInfo.cies[i].codeAlign,
                            &elf->callFrameInfo.cies[i].numInitialInstructions);
     elf->callFrameInfo.cies[i].initialRules=dictCreate(100);//todo: get rid of
     //arbitrary constant 100
-    evaluateInstructionsToRules(elf->callFrameInfo.cies[i].initialInstructions,
+    evaluateInstructionsToRules(&elf->callFrameInfo.cies[i],
+                                elf->callFrameInfo.cies[i].initialInstructions,
                                 elf->callFrameInfo.cies[i].numInitialInstructions,
                                 elf->callFrameInfo.cies[i].initialRules,0,-1,NULL);
   
@@ -299,7 +298,7 @@ Map* readDebugFrame(ElfInfo* elf,bool ehInsteadOfDebug)
   }
   
   elf->callFrameInfo.fdes=zmalloc(fdeElementCount*sizeof(FDE));
-  elf->callFrameInfo.numFdes=fdeElementCount;
+  elf->callFrameInfo.numFDEs=fdeElementCount;
   for (int i = 0; i < fdeElementCount; i++)
   {
     elf->callFrameInfo.fdes[i].idx=i;
@@ -316,9 +315,8 @@ Map* readDebugFrame(ElfInfo* elf,bool ehInsteadOfDebug)
     Dwarf_Signed cieIndex;
     dwarf_get_cie_index(dcie,&cieIndex,&err);
     elf->callFrameInfo.fdes[i].cie=&elf->callFrameInfo.cies[cieIndex];
-    CIE* cie=elf->callFrameInfo.fdes[i].cie;
     logprintf(ELL_INFO_V2,ELS_DWARF_FRAME,"Reading instructions in FDE #%i\n",i);
-    elf->callFrameInfo.fdes[i].instructions=parseFDEInstructions(dbg,instrs,ilen,cie->dataAlign,cie->codeAlign,&elf->callFrameInfo.fdes[i].numInstructions);
+    elf->callFrameInfo.fdes[i].instructions=parseFDEInstructions(dbg,instrs,ilen,&elf->callFrameInfo.fdes[i].numInstructions);
     Dwarf_Addr lowPC = 0;
     Dwarf_Unsigned addrRange = 0;
     Dwarf_Ptr fdeBytes = NULL;
@@ -353,7 +351,7 @@ Map* readDebugFrame(ElfInfo* elf,bool ehInsteadOfDebug)
 
   //sort fdes by lowpc unless this is a patch object. This
   //makes determining backtraces easier
-  qsort(elf->callFrameInfo.fdes,elf->callFrameInfo.numFdes,sizeof(FDE),fdeCmp);
+  qsort(elf->callFrameInfo.fdes,elf->callFrameInfo.numFDEs,sizeof(FDE),fdeCmp);
   
   dwarf_dealloc(dbg,cieData[0],DW_DLA_CIE);
   dwarf_dealloc(dbg,fdeData,DW_DLA_LIST);

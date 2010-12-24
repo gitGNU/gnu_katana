@@ -99,9 +99,12 @@ PoReg readRegFromLEB128(byte* leb,usint* bytesRead);
 //return value should be freed when caller is finished with it
 byte* encodeRegAsLEB128(PoReg reg,bool signed_,usint* numBytesOut);
 
+//printFlags should be OR'd DwarfInstructionPrintFlag
 //the returned string should be freed
-char* strForReg(PoReg reg);
-void printReg(PoReg reg,FILE* f);
+char* strForReg(PoReg reg,int printFlags);
+
+//printFlags should be OR'd DwarfInstructionPrintFlag
+void printReg(FILE* f,PoReg reg,int printFlags);
 
 
 

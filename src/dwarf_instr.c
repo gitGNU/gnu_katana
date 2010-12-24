@@ -193,7 +193,7 @@ void addInstruction(DwarfInstructions* instrs,DwarfInstruction* instr)
     break;
   case DW_CFA_restore:
     bytes=zmalloc(1);
-    bytes[0]=DW_CFA_offset | instr->arg1;
+    bytes[0]=DW_CFA_restore | instr->arg1;
     memcpy(bytes+1,instr->arg2Bytes,instr->arg2NumBytes);
     addBytes(instrs,bytes,1);
     free(bytes);
@@ -216,7 +216,8 @@ void addInstruction(DwarfInstructions* instrs,DwarfInstruction* instr)
   }
 }
 
-void printInstruction(FILE* file,RegInstruction inst)
+//printing flags should be OR'd DwarfInstructionPrintFlags
+void printInstruction(FILE* file,RegInstruction inst,int printFlags)
 {
   switch(inst.type)
   {
@@ -227,10 +228,10 @@ void printInstruction(FILE* file,RegInstruction inst)
     fprintf(file,"DW_CFA_advance_loc %zi\n",inst.arg1);
     break;
   case DW_CFA_advance_loc1:
-    fprintf(file,"DW_CFA_advance_loc_1 %zi\n",inst.arg1);
+    fprintf(file,"DW_CFA_advance_loc1 %zi\n",inst.arg1);
     break;
   case DW_CFA_advance_loc2:
-    fprintf(file,"DW_CFA_advance_loc_2 %zi\n",inst.arg1);
+    fprintf(file,"DW_CFA_advance_loc2 %zi\n",inst.arg1);
     break;
   case DW_CFA_offset:
     {
@@ -247,7 +248,7 @@ void printInstruction(FILE* file,RegInstruction inst)
     }
     else
     {
-      printReg(inst.arg1Reg,file);
+      printReg(file,inst.arg1Reg,printFlags);
       fprintf(file," ");
     }
     if(ERT_NONE==inst.arg2Reg.type)
@@ -256,7 +257,7 @@ void printInstruction(FILE* file,RegInstruction inst)
     }
     else
     {
-      printReg(inst.arg2Reg,file);
+      printReg(file,inst.arg2Reg,printFlags);
       fprintf(file," ");
     }
     fprintf(file,"\n");
@@ -273,7 +274,7 @@ void printInstruction(FILE* file,RegInstruction inst)
     }
     else
     {
-      printReg(inst.arg1Reg,file);
+      printReg(file,inst.arg1Reg,printFlags);
       fprintf(file," ");
     }
     if(ERT_NONE==inst.arg2Reg.type)
@@ -282,7 +283,7 @@ void printInstruction(FILE* file,RegInstruction inst)
     }
     else
     {
-      printReg(inst.arg2Reg,file);
+      printReg(file,inst.arg2Reg,printFlags);
       fprintf(file," ");
     }
     fprintf(file,"fde#%lu ",(unsigned long)inst.arg3);
@@ -297,7 +298,7 @@ void printInstruction(FILE* file,RegInstruction inst)
     }
     else
     {
-      printReg(inst.arg1Reg,file);
+      printReg(file,inst.arg1Reg,printFlags);
       fprintf(file," ");
     }
     fprintf(file,"%li \n",(long)inst.arg2);
@@ -310,7 +311,7 @@ void printInstruction(FILE* file,RegInstruction inst)
     }
     else
     {
-      printReg(inst.arg1Reg,file);
+      printReg(file,inst.arg1Reg,printFlags);
       fprintf(file,"\n");
     }
     break;

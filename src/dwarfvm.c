@@ -88,7 +88,7 @@ static Stack* stateStack;
 //the end of the instructions) returns the location stopped at (will
 //be the lowest location that a change was actually made).
 //outInstrsCnt, if non-NULL, is used to store the number of instructions read
-int evaluateInstructionsToRules(RegInstruction* instrs,int numInstrs,Dictionary* rules,int startLocation, int stopLocation,int* outInstrsCnt)
+int evaluateInstructionsToRules(CIE* cie,RegInstruction* instrs,int numInstrs,Dictionary* rules,int startLocation, int stopLocation,int* outInstrsCnt)
 {
   PoRegRule* rule=NULL;
   int loc=startLocation;
@@ -115,7 +115,7 @@ int evaluateInstructionsToRules(RegInstruction* instrs,int numInstrs,Dictionary*
       {
         return loc;
       }
-      loc+=inst.arg1;
+      loc+=inst.arg1*cie->codeAlign;
       continue;
     case DW_CFA_remember_state:
       {
@@ -183,7 +183,7 @@ int evaluateInstructionsToRules(RegInstruction* instrs,int numInstrs,Dictionary*
     {
       reg=inst.arg1Reg;
     }
-    str=strForReg(reg);
+    str=strForReg(reg,0);
               
     rule=dictGet(rules,str);
     if(!rule)
@@ -215,7 +215,7 @@ int evaluateInstructionsToRules(RegInstruction* instrs,int numInstrs,Dictionary*
       break;
     case DW_CFA_offset:
       rule->type=ERRT_OFFSET;
-      rule->offset=inst.arg2;
+      rule->offset=inst.arg2*cie->dataAlign;
       break;
     case DW_CFA_register:
       rule->type=ERRT_REGISTER;
@@ -475,7 +475,7 @@ List* generatePatchesFromFDEAndState(FDE* fde,SpecialRegsState* state,ElfInfo* p
   //we build up rules for each register from the DW_CFA instructions
   Dictionary* rulesDict=dictCreate(100);//todo: get rid of arbitrary constant 100
   //todo: versioning?
-  evaluateInstructionsToRules(fde->instructions,fde->numInstructions,rulesDict,fde->lowpc,fde->highpc,NULL);
+  evaluateInstructionsToRules(fde->cie,fde->instructions,fde->numInstructions,rulesDict,fde->lowpc,fde->highpc,NULL);
   PoRegRule** rules=(PoRegRule**)dictValues(rulesDict);
   //we gather all of the the patch data together first before actually poking the target
   //because everything is supposed to be applied in parallel, as a table, and
@@ -487,7 +487,7 @@ List* generatePatchesFromFDEAndState(FDE* fde,SpecialRegsState* state,ElfInfo* p
   PoReg cfaReg;
   memset(&cfaReg,0,sizeof(PoReg));
   cfaReg.type=ERT_CFA;
-  char* str=strForReg(cfaReg);
+  char* str=strForReg(cfaReg,0);
   PoRegRule* cfaRule=dictGet(rulesDict,str);
   free(str);
   if(cfaRule)
