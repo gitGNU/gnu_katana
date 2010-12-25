@@ -65,6 +65,11 @@ typedef struct
   {
     int intval;//used for enums as well as integers
     char* stringval;
+    struct
+    {
+      byte* data;
+      int len;
+    } dataval;
     RegInstruction regInstr;
   } u;
 } ParseNode;

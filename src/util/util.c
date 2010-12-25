@@ -106,3 +106,15 @@ int getFileLength(FILE* f)
   fseek(f,0,SEEK_SET);
   return flen;
 }
+
+//get a hexadecimal string version of binary string
+char* getHexDataString(byte* data,int len)
+{
+  char* buf=malloc(len*2+1);
+  MALLOC_CHECK(buf);
+  for(int i=0;i<len;i++)
+  {
+    sprintf(buf+i*2,"%02x",data[i]);
+  }
+  return buf;
+}

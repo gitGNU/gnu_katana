@@ -93,5 +93,7 @@ uint64_t signExtend32To64(uint32_t val);
 //Note: reseeksfile to the beginning
 int getFileLength(FILE* f);
 
+//get a hexadecimal string version of binary string
+char* getHexDataString(byte* data,int len);
 
 #endif

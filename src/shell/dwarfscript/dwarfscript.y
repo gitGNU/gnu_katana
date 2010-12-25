@@ -18,6 +18,8 @@ char* savedString;
 int savedRegisterNumber;
 int savedInt;
 double savedDouble;
+int savedDataLen;
+byte* savedData; 
 
 int yyerror(char *s);
 void makeBasicRegister1(ParseNode* node,ParseNode* intvalNode);
@@ -32,7 +34,8 @@ void makeBasicRegister2(ParseNode* node,ParseNode* intvalNode);
 %token T_BEGIN T_END
 %token T_INDEX T_DATA_ALIGN T_CODE_ALIGN T_RET_ADDR_RULE T_AUGMENTATION
 %token T_INITIAL_LOCATION T_ADDRESS_RANGE T_OFFSET T_LENGTH T_CIE_INDEX
-%token T_VERSION T_ADDRESS_SIZE T_SEGMENT_SIZE T_STRING_LITERAL
+%token T_VERSION T_ADDRESS_SIZE T_SEGMENT_SIZE T_STRING_LITERAL T_HEXDATA
+%token T_AUGMENTATION_DATA
 %token T_FDE T_CIE T_INSTRUCTIONS
 %token T_POS_INT T_NONNEG_INT T_INT T_FLOAT T_REGISTER T_INVALID_TOKEN
 %token T_DW_CFA_advance_loc T_DW_CFA_offset T_DW_CFA_restore T_DW_CFA_extended
@@ -74,6 +77,12 @@ fde_begin_stmt : T_BEGIN T_FDE
 
 fde_end_stmt : T_END T_FDE
 {
+  //do a sanity check on the FDE
+  if(!currentFDE->cie)
+  {
+    fprintf(stderr,"FDE section must specify the CIE associated with the FDE\n");
+    YYERROR;
+  }
   currentFDE=NULL;
 }
 
@@ -81,8 +90,10 @@ cie_begin_stmt : T_BEGIN T_CIE
 {
   cfi.cies=realloc(cfi.cies,(cfi.numCIEs+1)*sizeof(CIE));
   currentCIE=cfi.cies+cfi.numCIEs;
-  memset(currentCIE,0,sizeof(FDE));
+  memset(currentCIE,0,sizeof(CIE));
   currentCIE->idx=cfi.numCIEs;
+  //set the address size in case it's not specified in the dwarfscript we're parsing
+  currentCIE->addressSize=sizeof(addr_t);
   cfi.numCIEs++;
 }
 
@@ -125,6 +136,7 @@ index_prop {}
 | length_prop {}
 | version_prop {}
 | augmentation_prop {}
+| augmentation_data_prop {}
 | address_size_prop {}
 | segment_size_prop {}
 | data_align_prop {}
@@ -138,6 +150,7 @@ index_prop {}
 | cie_index_prop {}
 | initial_location_prop {}
 | address_range_prop {}
+| augmentation_data_prop {}
 
 index_prop : T_INDEX ':' nonneg_int_lit
 {
@@ -162,15 +175,8 @@ index_prop : T_INDEX ':' nonneg_int_lit
 
 length_prop : T_LENGTH ':' nonneg_int_lit
 {
-  if(currentCIE)
-  {
-    currentCIE->length=$3.u.intval;
-  }
-  else
-  {
-    assert(currentFDE);
-    currentFDE->length=$3.u.intval;
-  }
+  //ignoring length for now, it changes too easily and we just
+  //recompute it when writing the CIE to binary
 }
 
 cie_index_prop : T_CIE_INDEX ':' nonneg_int_lit
@@ -204,7 +210,7 @@ address_range_prop : T_ADDRESS_RANGE ':' nonneg_int_lit
   currentFDE->highpc=currentFDE->lowpc+$3.u.intval;
 }
 
-version_prop : T_VERSION ':' int_lit
+version_prop : T_VERSION ':' nonneg_int_lit
 {
   assert(currentCIE);
   currentCIE->version=$3.u.intval;
@@ -219,6 +225,22 @@ augmentation_prop : T_AUGMENTATION ':' string_lit
   fprintf(stderr,"augmentation must be a string\n");
   YYERROR;
 }
+
+augmentation_data_prop : T_AUGMENTATION_DATA ':' data_lit
+{
+  if(currentCIE)
+  {
+    currentCIE->augmentationData=$3.u.dataval.data;
+    currentCIE->augmentationDataLen=$3.u.dataval.len;
+  }
+  else
+  {
+    assert(currentFDE);
+    currentFDE->augmentationData=$3.u.dataval.data;
+    currentFDE->augmentationDataLen=$3.u.dataval.len;
+  }
+}
+
 address_size_prop : T_ADDRESS_SIZE ':' nonneg_int_lit
 {
   assert(currentCIE);
@@ -272,6 +294,12 @@ nonneg_int_lit : T_NONNEG_INT
 string_lit : T_STRING_LITERAL
 {
   $$.u.stringval=savedString;
+}
+
+data_lit : T_HEXDATA
+{
+  $$.u.dataval.data=savedData;
+  $$.u.dataval.len=savedDataLen;
 }
 
 //OK, here come the DWARF instructions. There are a lot of them
@@ -453,7 +481,7 @@ dw_cfa_def_cfa_register : T_DW_CFA_def_cfa_register register_lit
 }
 dw_cfa_def_cfa_offset : T_DW_CFA_def_cfa_offset nonneg_int_lit
 {
-  $$.u.regInstr.type=DW_CFA_def_cfa_register;
+  $$.u.regInstr.type=DW_CFA_def_cfa_offset;
   $$.u.regInstr.arg1=$2.u.intval;
 }
 dw_cfa_def_cfa_offset_sf : T_DW_CFA_def_cfa_offset_sf  int_lit

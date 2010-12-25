@@ -111,10 +111,17 @@ void DwarfscriptCommand::printCIEInfo(FILE* file,CIE* cie)
   
   fprintf(file,"begin CIE\n");
   fprintf(file,"index: %i\n",cie->idx);
+  fprintf(file,"version: %i\n",cie->version);
   fprintf(file,"data_align: %li\n",(long int)cie->dataAlign);
   fprintf(file,"code_align: %li\n",(long int)cie->dataAlign);
   fprintf(file,"return_addr_rule: %li\n",(long int)cie->returnAddrRuleNum);
   fprintf(file,"augmentation: \"%s\"\n",cie->augmentation);
+  if(cie->augmentationDataLen)
+  {
+    char* str=getHexDataString(cie->augmentationData,cie->augmentationDataLen);
+    fprintf(file,"augmentation_data: hex;%s\n",str);
+    free(str);
+  }
   fprintf(file,"begin INSTRUCTIONS\n");
   for(int i=0;i<cie->numInitialInstructions;i++)
   {
@@ -128,8 +135,15 @@ void DwarfscriptCommand::printFDEInfo(FILE* file,FDE* fde)
 {
   fprintf(file,"begin FDE\n");
   fprintf(file,"index: %i\n",fde->idx);
+  fprintf(file,"cie_index: %i\n",fde->cie->idx);
   fprintf(file,"initial_location: 0x%x\n",fde->lowpc);
   fprintf(file,"address_range: 0x%x\n",fde->highpc-fde->lowpc);
+  if(fde->augmentationDataLen)
+  {
+    char* str=getHexDataString(fde->augmentationData,fde->augmentationDataLen);
+    fprintf(file,"augmentation_data: hex;%s\n",str);
+    free(str);
+  }
   fprintf(file,"begin INSTRUCTIONS\n");
   for(int i=0;i<fde->numInstructions;i++)
   {
@@ -219,7 +233,31 @@ void DwarfscriptCommand::compileDwarfscript()
     logprintf(ELL_WARN,ELS_SHELL,"Unable to parse dwarfscript input\n");
     return;
   }
-  
+
+  int dataLen;
+  void* data=buildCallFrameSectionData(parsedCallFrameInfo,&dataLen);
+  if(outfileP)
+  {
+    char* outfileName=outfileP->getString();
+    if(outfileName)
+    {
+      FILE* outfile=fopen(outfileName,"w");
+      if(outfile)
+      {
+        fwrite(data,dataLen,1,outfile);
+        fclose(outfile);
+        logprintf(ELL_INFO_V2,ELS_SHELL,"Wrote compiled dwarfscript call frame data to  file \"%s\" \n",outfileName);
+      }
+      else
+      {
+        logprintf(ELL_WARN,ELS_SHELL,"Cannot open file %s for writing DWARF call frame data to\n",outfileName);
+      }
+    }
+    else
+    {
+      logprintf(ELL_WARN,ELS_SHELL,"Cannot write compiled dwarfscript out because outfile name parameter was not a string\n");
+    }
+  }
 }
 
 
