@@ -395,6 +395,7 @@ DwarfInstruction regInstructionToRawDwarfInstruction(RegInstruction* inst)
 DwarfInstructions serializeDwarfRegInstructions(RegInstruction* regInstrs,int numRegInstrs)
 {
   DwarfInstructions result;
+  memset(&result,0,sizeof(result));
   for(int i=0;i<numRegInstrs;i++)
   {
     DwarfInstruction instr=regInstructionToRawDwarfInstruction(regInstrs+i);
