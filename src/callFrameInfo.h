@@ -49,8 +49,8 @@
   http://www.gnu.org/licenses/gpl.html
 
   Project: Katana
-  Date: February 2010
-  Description: Data structures dealing with call frame information
+  Date: December 2010
+  Description: Data structures and methods dealing with call frame information
 */
 
 
@@ -84,12 +84,13 @@ typedef struct CIE
   Dwarf_Unsigned codeAlign;
   Dwarf_Half returnAddrRuleNum;
   int idx;//what index cie this is in a DWARF section
-  int length;//the number of bytes of the CIE on disk
   Dwarf_Small version;
   int addressSize;//the size of a target address for this CIE and FDEs that use it
   int segmentSize;//unused for most systems. Included for
                   //compatibility with the DWARF specification. Size
                   //of a segment selector.
+  Dwarf_Unsigned augmentationDataLen;
+  byte* augmentationData;
 } CIE;
 
 
@@ -107,7 +108,14 @@ typedef struct FDE
              //read from a PO
   int offset;//offset from beginning of debug frame
   int idx;//what index fde this is in a DWARF section
-  int length;//the number of bytes of the FDE on disk
+  Dwarf_Unsigned augmentationDataLen;
+  byte* augmentationData;
 } FDE;
+
+//returns a void* to a binary representation of a Dwarf call frame
+//information section (i.e. .debug_frame in the dwarf specification)
+//the length of the returned buffer is written into byteLen.
+//the memory for the buffer should free'd when the caller is finished with it
+void* buildCallFrameSectionData(CallFrameInfo* cfi,int* byteLen);
 
 #endif

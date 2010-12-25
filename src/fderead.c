@@ -253,7 +253,6 @@ Map* readDebugFrame(ElfInfo* elf,bool ehInsteadOfDebug)
 
   //read the CIE
   Dwarf_Unsigned cieLength = 0;
-  char* augmenter = "";
   Dwarf_Ptr initInstr = 0;
   Dwarf_Unsigned initInstrLen = 0;
 
@@ -262,10 +261,12 @@ Map* readDebugFrame(ElfInfo* elf,bool ehInsteadOfDebug)
 
   for(int i=0;i<cieElementCount;i++)
   {
+    char* augmenter = "";
     elf->callFrameInfo.cies[i].idx=i;
+    CIE* cie=&elf->callFrameInfo.cies[i];
     //todo: all the casting here is hackish
     //should respect types more
-    if(DW_DLV_OK!=dwarf_get_cie_info(cieData[0],
+    if(DW_DLV_OK!=dwarf_get_cie_info(cieData[i],
                                      &cieLength,
                                      &elf->callFrameInfo.cies[i].version,
                                      &augmenter,
@@ -278,11 +279,19 @@ Map* readDebugFrame(ElfInfo* elf,bool ehInsteadOfDebug)
       dwarfErrorHandler(err,NULL);
     }
     elf->callFrameInfo.cies[i].augmentation=strdup(augmenter);//todo: free this memory later
+
+    //get the augmentation data
+    Dwarf_Small* augdata;
+    dwarf_get_cie_augmentation_data(cieData[i],
+                                    &augdata,
+                                    &cie->augmentationDataLen,
+                                    &err);
+    cie->augmentationData=zmalloc(cie->augmentationDataLen);
+    memcpy(cie->augmentationData,augdata,cie->augmentationDataLen);
     
     //don't care about initial instructions, for patching,
     //but do if we're reading a debug frame for stack unwinding purposes
     //so that we can find activation frames
-  
     elf->callFrameInfo.cies[i].initialInstructions=
       parseFDEInstructions(dbg,initInstr,initInstrLen,
                            &elf->callFrameInfo.cies[i].numInitialInstructions);
@@ -343,6 +352,16 @@ Map* readDebugFrame(ElfInfo* elf,bool ehInsteadOfDebug)
       elf->callFrameInfo.fdes[i].memSize=0;//has no meaning if the fde wasn't read from a patch object
     }
     elf->callFrameInfo.fdes[i].offset=fdeOffset;
+
+    FDE* fde=&elf->callFrameInfo.fdes[i];
+    Dwarf_Small* augdata;
+    dwarf_get_fde_augmentation_data(dfde,
+                                    &augdata,
+                                    &fde->augmentationDataLen,
+                                    &err);
+    fde->augmentationData=zmalloc(fde->augmentationDataLen);
+    memcpy(fde->augmentationData,augdata,fde->augmentationDataLen);
+    
     int* key=zmalloc(sizeof(int));
     *key=elf->callFrameInfo.fdes[i].offset;
     mapInsert(result,key,elf->callFrameInfo.fdes+i);
