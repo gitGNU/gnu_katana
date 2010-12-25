@@ -80,10 +80,10 @@ am_katana_OBJECTS = katana-katana.$(OBJEXT) \
 	katana-register.$(OBJEXT) katana-relocation.$(OBJEXT) \
 	katana-symbol.$(OBJEXT) katana-fderead.$(OBJEXT) \
 	katana-dwarfvm.$(OBJEXT) katana-config.$(OBJEXT) \
-	katana-leb.$(OBJEXT) katana-commandLine.$(OBJEXT) \
-	katana-elfwriter.$(OBJEXT) $(am__objects_1) $(am__objects_2) \
-	$(am__objects_3) $(am__objects_4) $(am__objects_5) \
-	$(am__objects_9)
+	katana-leb.$(OBJEXT) katana-callFrameInfo.$(OBJEXT) \
+	katana-commandLine.$(OBJEXT) katana-elfwriter.$(OBJEXT) \
+	$(am__objects_1) $(am__objects_2) $(am__objects_3) \
+	$(am__objects_4) $(am__objects_5) $(am__objects_9)
 katana_OBJECTS = $(am_katana_OBJECTS)
 katana_DEPENDENCIES =
 katana_LINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) $(katana_LDFLAGS) \
@@ -234,7 +234,7 @@ REWRITER_SRC = rewriter/rewrite.c
 REWRITER_H = rewriter/rewrite.h
 H_FILES = dwarftypes.h elfparse.h types.h dwarf_instr.h register.h relocation.h symbol.h fderead.h dwarfvm.h config.h arch.h constants.h leb.h callFrameInfo.h elfwriter.h $(PATCHER_H) $(PATCHWRITE_H) $(UTIL_H) $(INFO_H) $(REWRITER_H) $(SHELL_H)
 EXTRA_DIST = $(H_FILES)
-katana_SOURCES = katana.c dwarftypes.c   elfparse.c  types.c  dwarf_instr.c register.c relocation.c symbol.c fderead.c dwarfvm.c config.c leb.c commandLine.c  elfwriter.c $(PATCHWRITE_SRC) $(PATCHER_SRC) $(UTIL_SRC) $(INFO_SRC) $(REWRITER_SRC) $(SHELL_SRC)
+katana_SOURCES = katana.c dwarftypes.c   elfparse.c  types.c  dwarf_instr.c register.c relocation.c symbol.c fderead.c dwarfvm.c config.c leb.c callFrameInfo.c commandLine.c  elfwriter.c $(PATCHWRITE_SRC) $(PATCHER_SRC) $(UTIL_SRC) $(INFO_SRC) $(REWRITER_SRC) $(SHELL_SRC)
 BFLAGS = -d -v
 all: all-am
 
@@ -317,6 +317,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-callFrameInfo.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-codediff.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-command.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-commandLine.Po@am__quote@
@@ -553,6 +554,20 @@ katana-leb.obj: leb.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='leb.c' object='katana-leb.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-leb.obj `if test -f 'leb.c'; then $(CYGPATH_W) 'leb.c'; else $(CYGPATH_W) '$(srcdir)/leb.c'; fi`
+
+katana-callFrameInfo.o: callFrameInfo.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-callFrameInfo.o -MD -MP -MF $(DEPDIR)/katana-callFrameInfo.Tpo -c -o katana-callFrameInfo.o `test -f 'callFrameInfo.c' || echo '$(srcdir)/'`callFrameInfo.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-callFrameInfo.Tpo $(DEPDIR)/katana-callFrameInfo.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='callFrameInfo.c' object='katana-callFrameInfo.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-callFrameInfo.o `test -f 'callFrameInfo.c' || echo '$(srcdir)/'`callFrameInfo.c
+
+katana-callFrameInfo.obj: callFrameInfo.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-callFrameInfo.obj -MD -MP -MF $(DEPDIR)/katana-callFrameInfo.Tpo -c -o katana-callFrameInfo.obj `if test -f 'callFrameInfo.c'; then $(CYGPATH_W) 'callFrameInfo.c'; else $(CYGPATH_W) '$(srcdir)/callFrameInfo.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-callFrameInfo.Tpo $(DEPDIR)/katana-callFrameInfo.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='callFrameInfo.c' object='katana-callFrameInfo.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-callFrameInfo.obj `if test -f 'callFrameInfo.c'; then $(CYGPATH_W) 'callFrameInfo.c'; else $(CYGPATH_W) '$(srcdir)/callFrameInfo.c'; fi`
 
 katana-commandLine.o: commandLine.c
 @am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-commandLine.o -MD -MP -MF $(DEPDIR)/katana-commandLine.Tpo -c -o katana-commandLine.o `test -f 'commandLine.c' || echo '$(srcdir)/'`commandLine.c
