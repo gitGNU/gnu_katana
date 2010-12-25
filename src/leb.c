@@ -191,6 +191,30 @@ byte* uintToLEB128(usint value,usint* numBytesOut)
   return encodeAsLEB128((byte*)&value,bytesNeeded,false,numBytesOut);
 }
 
+byte* intToLEB128(int value,usint* numBytesOut)
+{
+  byte lower7Bits=0x7f;
+  byte signExtensionBits=value<0?0x7f:0x00;
+  byte signExtension6thBit=value<0?0x40:0x00;
+  byte* result=encodeAsLEB128((byte*)&value,4,true,numBytesOut);
+  byte sixthBitMask=0x40;//0b01000000
+  //now we need to chop off all the bytes we don't need
+  for(int i=(*numBytesOut)-1;i>0;i--)
+  {
+    if((result[i]&lower7Bits)==signExtensionBits &&
+       (result[i-1]&sixthBitMask)==signExtension6thBit)
+    {
+      //this byte is all sign extension bits and there's still one
+      //sign extension bit left in the last bit
+      (*numBytesOut)--;
+    }
+  }
+  //since we may have removed bytes make sure the last one has its
+  //continuation bit cleared properly
+  result[(*numBytesOut)-1]&=lower7Bits;
+  return result;
+}
+
 uint leb128ToUInt(byte* bytes,usint* outLEBBytesRead)
 {
   usint resultBytes;

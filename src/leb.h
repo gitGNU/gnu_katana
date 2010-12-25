@@ -20,6 +20,7 @@ uint leb128ToUInt(byte* bytes,usint* outLEBBytesRead);
 
 //return value should be freed when caller is finished with it
 byte* uintToLEB128(usint value,usint* numBytesOut);
+byte* intToLEB128(int value,usint* numBytesOut);
 
 word_t leb128ToUWord(byte* bytes,usint* outLEBBytesRead);
 
