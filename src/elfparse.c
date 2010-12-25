@@ -297,7 +297,7 @@ void writeOutElf(ElfInfo* e,char* outfname,bool keepLayout)
 {
   ElfInfo* newE=duplicateElf(e,outfname,true,keepLayout);
   elf_end(newE->e);
-  close(newE->fd);
+  //close(newE->fd);
   free(newE);
 }
 
