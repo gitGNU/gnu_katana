@@ -35,7 +35,7 @@ void makeBasicRegister2(ParseNode* node,ParseNode* intvalNode);
 %token T_INDEX T_DATA_ALIGN T_CODE_ALIGN T_RET_ADDR_RULE T_AUGMENTATION
 %token T_INITIAL_LOCATION T_ADDRESS_RANGE T_OFFSET T_LENGTH T_CIE_INDEX
 %token T_VERSION T_ADDRESS_SIZE T_SEGMENT_SIZE T_STRING_LITERAL T_HEXDATA
-%token T_AUGMENTATION_DATA
+%token T_AUGMENTATION_DATA T_SECTION_TYPE
 %token T_FDE T_CIE T_INSTRUCTIONS
 %token T_POS_INT T_NONNEG_INT T_INT T_FLOAT T_REGISTER T_INVALID_TOKEN
 %token T_DW_CFA_advance_loc T_DW_CFA_offset T_DW_CFA_restore T_DW_CFA_extended
@@ -49,6 +49,10 @@ void makeBasicRegister2(ParseNode* node,ParseNode* intvalNode);
 %token T_DW_CFA_val_offset_sf T_DW_CFA_val_expression
 
 %%
+
+dwarfscript : section_type_prop section_list
+{}
+| section_list
 
 section_list : section_list fde_section
 {}
@@ -256,7 +260,7 @@ data_align_prop : T_DATA_ALIGN ':' int_lit
   assert(currentCIE);
   currentCIE->dataAlign=$3.u.intval;
 }
-code_align_prop : T_CODE_ALIGN ':' int_lit
+code_align_prop : T_CODE_ALIGN ':' nonneg_int_lit
 {
   assert(currentCIE);
   currentCIE->codeAlign=$3.u.intval;
@@ -270,6 +274,23 @@ return_addr_rule_prop : T_RET_ADDR_RULE ':' nonneg_int_lit
 {
   fprintf(stderr,"return_addr_rule must be a non-negative integer\n");
   YYERROR;
+}
+
+section_type_prop : T_SECTION_TYPE ':' string_lit
+{
+  if(!strcmp($3.u.stringval,".eh_frame") || !strcmp($3.u.stringval,"eh_frame"))
+  {
+    cfi.isEHFrame=true;
+  }
+  else if(!strcmp($3.u.stringval,".debug_frame") || !strcmp($3.u.stringval,"debug_frame"))
+  {
+    cfi.isEHFrame=false;
+  }
+  else
+  {
+    fprintf(stderr,"Unexpected section type for dwarfscript, expected \".eh_frame\" or \".debug_frame\"\n");
+    YYERROR;
+  }
 }
 
 int_lit : T_INT
@@ -301,6 +322,8 @@ data_lit : T_HEXDATA
   $$.u.dataval.data=savedData;
   $$.u.dataval.len=savedDataLen;
 }
+
+
 
 //OK, here come the DWARF instructions. There are a lot of them
 

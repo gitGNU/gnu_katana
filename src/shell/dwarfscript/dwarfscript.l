@@ -113,6 +113,7 @@ REGISTER  r[0-9]+
 "version" return T_VERSION;
 "address_size" return T_ADDRESS_SIZE;
 "segment_size" return T_SEGMENT_SIZE;
+"section_type" return T_SECTION_TYPE;
 
 "FDE"|"fde" return T_FDE;
 "CIE"|"cie" return T_CIE;
@@ -153,7 +154,7 @@ REGISTER  r[0-9]+
 {HEXDATA}   getDataFromHexdata(yytext+4); return T_HEXDATA;
 {FLOAT}   savedDouble=strtod(yydwtext,NULL); return T_FLOAT;
 
-{REGISTER} savedRegisterNumber=atoi(yydwtext); return T_REGISTER;
+{REGISTER} savedRegisterNumber=atoi(yydwtext+1); return T_REGISTER;
 
 <POUND_COMMENT>{
   [\n]      dwLineNumber++;BEGIN(INITIAL);
