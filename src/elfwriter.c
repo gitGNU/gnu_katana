@@ -108,7 +108,8 @@ void replaceScnData(Elf_Data* dataDest,void* data,int size)
   dataDest->d_buf=malloc(size);
   MALLOC_CHECK(dataDest->d_buf);
   memcpy((byte*)dataDest->d_buf,data,size);
-  dataDest->d_size=dataDest->d_size+size;
+  dataDest->d_size=size;
+  elf_flagdata(dataDest,ELF_C_SET,ELF_F_DIRTY);
 }
 
 //adds an entry to the string table, return its offset
