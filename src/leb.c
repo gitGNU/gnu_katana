@@ -17,6 +17,23 @@
 //todo: clean this function up. It is not well-written
 byte* encodeAsLEB128(byte* bytes,int numBytes,bool signed_,usint* numBytesOut)
 {
+  byte* result=encodeAsLEB128NoOptimization(bytes,numBytes,signed_,numBytesOut);
+  if(!signed_)
+  {
+    //clear out zero bytes we don't need
+    while((result[(*numBytesOut)-1]&0x7f) == 0)
+    {
+      (*numBytesOut)-=1;
+    }
+    result[(*numBytesOut)-1]&=0x7f;//clear the MSB of the new last septet
+  }
+  //todo: deal with signed as well;
+  return result;
+}
+
+//like encodeAsLEB128 except doesn't attempt to do any optimization
+byte* encodeAsLEB128NoOptimization(byte* bytes,int numBytes,bool signed_,usint* numBytesOut)
+{
   int numSeptets=ceil((float)numBytes*8.0/7.0);
   byte* result=zmalloc(numSeptets);
   int byteOffset=0;
@@ -87,19 +104,6 @@ byte* encodeAsLEB128(byte* bytes,int numBytes,bool signed_,usint* numBytesOut)
     }
     result[i]=val;
   }
-  //because of our use of ceil above based strictly on the number of
-  //input bytes, sometimes we may find that we added one more septet
-  //than we really needed
-  if(!signed_)
-  {
-    //clear out zero bytes we don't need
-    while((result[numSeptets-1]&0x7f) == 0)
-    {
-      numSeptets-=1;
-    }
-    result[numSeptets-1]&=0x7f;//clear the MSB of the new last septet
-  }
-  //todo: deal with signed as well;
   
   *numBytesOut=numSeptets;
 

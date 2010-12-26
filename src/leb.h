@@ -11,6 +11,8 @@
 
 //return value should be freed when you're finished with it
 byte* encodeAsLEB128(byte* bytes,int numBytes,bool signed_,usint* numBytesOut);
+//like encodeAsLEB128 except doesn't attempt to do any optimization
+byte* encodeAsLEB128NoOptimization(byte* bytes,int numBytes,bool signed_,usint* numBytesOut);
 
 //return value should be freed when you're finished with it
 byte* decodeLEB128(byte* bytes,bool signed_,usint* numBytesOut,usint* numSeptetsRead);

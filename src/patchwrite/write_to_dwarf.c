@@ -307,12 +307,12 @@ void writeTransformationToDwarf(Dwarf_P_Debug dbg,TypeTransform* trans)
     assert(trans->from->length<=trans->to->length);
     memcpy(bytes+1,&trans->to->length,sizeof(int));
     //offset on the register is always 0, doing a complete copy of everything
-    inst.arg1Bytes=encodeAsLEB128(bytes,1+sizeof(int),false,&inst.arg1NumBytes);
+    inst.arg1Bytes=encodeAsLEB128NoOptimization(bytes,1+sizeof(int),false,&inst.arg1NumBytes);
     bytes[0]=ERT_CURR_TARG_OLD;
     //todo: should we just use the from length for everything, since it's the
     //shorter of the two
     memcpy(bytes+1,&trans->from->length,sizeof(int));
-    inst.arg2Bytes=encodeAsLEB128(bytes,1+sizeof(int),false,&inst.arg2NumBytes);
+    inst.arg2Bytes=encodeAsLEB128NoOptimization(bytes,1+sizeof(int),false,&inst.arg2NumBytes);
     addInstruction(&instrs,&inst);
     free(inst.arg1Bytes);
     free(inst.arg2Bytes);
@@ -336,11 +336,11 @@ void writeTransformationToDwarf(Dwarf_P_Debug dbg,TypeTransform* trans)
     int size=sizeof(addr_t);
     memcpy(bytes+1,&size,sizeof(int));
     //offset on the register is always 0
-    inst.arg1Bytes=encodeAsLEB128(bytes,1+sizeof(int),false,&inst.arg1NumBytes);
+    inst.arg1Bytes=encodeAsLEB128NoOptimization(bytes,1+sizeof(int),false,&inst.arg1NumBytes);
     bytes[0]=ERT_CURR_TARG_OLD;
-    inst.arg2Bytes=encodeAsLEB128(bytes,1+sizeof(int),false,&inst.arg2NumBytes);
+    inst.arg2Bytes=encodeAsLEB128NoOptimization(bytes,1+sizeof(int),false,&inst.arg2NumBytes);
     inst.arg3=fdeIdx;//might as well make both valid
-    inst.arg3Bytes=encodeAsLEB128((byte*)&fdeIdx,sizeof(int),false,&inst.arg3NumBytes);
+    inst.arg3Bytes=encodeAsLEB128NoOptimization((byte*)&fdeIdx,sizeof(int),false,&inst.arg3NumBytes);
     addInstruction(&instrs,&inst);
     free(inst.arg1Bytes);
     free(inst.arg2Bytes);
@@ -368,10 +368,10 @@ void writeTransformationToDwarf(Dwarf_P_Debug dbg,TypeTransform* trans)
       //byte instead of 4 most of the time
       logprintf(ELL_INFO_V3,ELS_DWARF_FRAME,"field offset for field %i is %i\n",i,off);
       memcpy(bytes+1+sizeof(int),&off,sizeof(int));
-      inst.arg1Bytes=encodeAsLEB128(bytes,NUM_BYTES,false,&inst.arg1NumBytes);
+      inst.arg1Bytes=encodeAsLEB128NoOptimization(bytes,NUM_BYTES,false,&inst.arg1NumBytes);
       bytes[0]=ERT_CURR_TARG_OLD;
       memcpy(bytes+1+sizeof(int),&trans->from->fieldOffsets[i],sizeof(int));
-      inst.arg2Bytes=encodeAsLEB128(bytes,NUM_BYTES,false,&inst.arg2NumBytes);
+      inst.arg2Bytes=encodeAsLEB128NoOptimization(bytes,NUM_BYTES,false,&inst.arg2NumBytes);
       if(EFTT_RECURSE==transformType)
       {
         logprintf(ELL_INFO_V3,ELS_DWARF_FRAME,"adding recurse field to fde\n");
