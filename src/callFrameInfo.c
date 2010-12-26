@@ -75,7 +75,7 @@ static void addToGrowingBuffer(GrowingBuffer* buf,void* data,int dataLen)
   buf->len+=dataLen;
 }
 
-void buildCIERawData(CIE* cie,GrowingBuffer* buf)
+void buildCIERawData(CIE* cie,GrowingBuffer* buf,bool isEHFrame)
 {
   //todo: support 64-bit DWARF format. Here I am always building 32-bit dwarf format
 
@@ -88,6 +88,7 @@ void buildCIERawData(CIE* cie,GrowingBuffer* buf)
   } __attribute__((__packed__)) header1;
 
   //part2 of the header, after the augmentation string
+  //only present in Dwarf v4
   struct
   {
     byte address_size;
@@ -95,8 +96,8 @@ void buildCIERawData(CIE* cie,GrowingBuffer* buf)
   } __attribute__((__packed__)) header2;
 
   //we'll set the length last as we don't know it yet
-  header1.CIE_id=0xffffffff;//from the DWARF v4 spec
-  header1.version=DWARF_VERSION;
+  header1.CIE_id=isEHFrame?EH_CIE_ID:DEBUG_CIE_ID;
+  header1.version=cie->version;
   assert(cie->addressSize<256);
   assert(cie->segmentSize<256);
   header2.address_size=cie->addressSize;
@@ -106,13 +107,27 @@ void buildCIERawData(CIE* cie,GrowingBuffer* buf)
   usint codeAlignLen,dataAlignLen,returnAddrRegLen;
   byte* codeAlign=uintToLEB128(cie->codeAlign,&codeAlignLen);
   byte* dataAlign=intToLEB128(cie->dataAlign,&dataAlignLen);
-  byte* returnAddrReg=intToLEB128(cie->returnAddrRuleNum,&returnAddrRegLen);
+  byte* returnAddrReg=uintToLEB128(cie->returnAddrRuleNum,&returnAddrRegLen);
+
+  byte* augmentationDataLength;
+  usint augmentationDataLengthLen=0;
+  //from the Linux Standard's Base
+  //http://refspecs.freestandards.org/LSB_3.0.0/LSB-Core-generic/LSB-Core-generic/ehframechpt.html
+  if(isEHFrame && strstr(cie->augmentation,"z"))
+  {
+    augmentationDataLength=uintToLEB128(cie->augmentationDataLen,&augmentationDataLengthLen);
+  }
+  
 
   DwarfInstructions rawInstructions=
     serializeDwarfRegInstructions(cie->initialInstructions,
                                   cie->numInitialInstructions);
 
-  header1.length=sizeof(header1)+strlen(cie->augmentation)+1+sizeof(header2)+codeAlignLen+dataAlignLen+returnAddrRegLen+rawInstructions.numBytes;
+  header1.length=sizeof(header1)-sizeof(header1.length)+strlen(cie->augmentation)+1+codeAlignLen+dataAlignLen+returnAddrRegLen+cie->augmentationDataLen+augmentationDataLengthLen+rawInstructions.numBytes;
+  if(cie->version >= 4)
+  {
+    header1.length+=sizeof(header2);
+  }
   //CIE structures are required to be aligned
   int paddingNeeded=0;
   if(header1.length % cie->addressSize)
@@ -128,10 +143,21 @@ void buildCIERawData(CIE* cie,GrowingBuffer* buf)
   //now we can actually write everythingo out
   addToGrowingBuffer(buf,&header1,sizeof(header1));
   addToGrowingBuffer(buf,cie->augmentation,strlen(cie->augmentation)+1);
-  addToGrowingBuffer(buf,&header2,sizeof(header2));
+  if(cie->version >= 4)
+  {
+    addToGrowingBuffer(buf,&header2,sizeof(header2));
+  }
   addToGrowingBuffer(buf,codeAlign,codeAlignLen);
   addToGrowingBuffer(buf,dataAlign,dataAlignLen);
   addToGrowingBuffer(buf,returnAddrReg,returnAddrRegLen);
+  if(augmentationDataLengthLen)
+  {
+    addToGrowingBuffer(buf,augmentationDataLength,augmentationDataLengthLen);
+  }
+  if(cie->augmentationDataLen)
+  {
+    addToGrowingBuffer(buf,cie->augmentationData,cie->augmentationDataLen);
+  }
   addToGrowingBuffer(buf,rawInstructions.instrs,rawInstructions.numBytes);
   addToGrowingBuffer(buf,padding,paddingNeeded);
   destroyRawInstructions(rawInstructions);
@@ -162,7 +188,7 @@ void buildFDERawData(FDE* fde,uint* cieOffsets,GrowingBuffer* buf)
     serializeDwarfRegInstructions(fde->instructions,
                                   fde->numInstructions);
 
-  header.length=sizeof(header)+rawInstructions.numBytes;
+  header.length=sizeof(header)-sizeof(header.length)+rawInstructions.numBytes;
 
   int paddingNeeded=0;
   byte* padding=NULL;
@@ -194,7 +220,7 @@ void buildFDERawData(FDE* fde,uint* cieOffsets,GrowingBuffer* buf)
 //information section (i.e. .debug_frame in the dwarf specification)
 //the length of the returned buffer is written into byteLen.
 //the memory for the buffer should free'd when the caller is finished with it
-void* buildCallFrameSectionData(CallFrameInfo* cfi,int* byteLen)
+byte* buildCallFrameSectionData(CallFrameInfo* cfi,int* byteLen)
 {
   GrowingBuffer buf;
   //allocate 1k initially as an arbitrary amount. We'll grow it as needed
@@ -205,7 +231,7 @@ void* buildCallFrameSectionData(CallFrameInfo* cfi,int* byteLen)
   for(int i=0;i<cfi->numCIEs;i++)
   {
     cieOffsets[i]=buf.len;
-    buildCIERawData(cfi->cies+i,&buf);
+    buildCIERawData(cfi->cies+i,&buf,cfi->isEHFrame);
   }
   for(int i=0;i<cfi->numFDEs;i++)
   {

@@ -113,7 +113,7 @@ void DwarfscriptCommand::printCIEInfo(FILE* file,CIE* cie)
   fprintf(file,"index: %i\n",cie->idx);
   fprintf(file,"version: %i\n",cie->version);
   fprintf(file,"data_align: %li\n",(long int)cie->dataAlign);
-  fprintf(file,"code_align: %li\n",(long int)cie->dataAlign);
+  fprintf(file,"code_align: %li\n",(long int)cie->codeAlign);
   fprintf(file,"return_addr_rule: %li\n",(long int)cie->returnAddrRuleNum);
   fprintf(file,"augmentation: \"%s\"\n",cie->augmentation);
   if(cie->augmentationDataLen)
@@ -197,6 +197,7 @@ void DwarfscriptCommand::emitDwarfscript()
     return;
   }
   CallFrameInfo* cfi=&elf->callFrameInfo;
+  fprintf(file,"section_type: \"%s\"\n",cfi->isEHFrame?".eh_frame":".debug_frame");
   for(int i=0;i<cfi->numCIEs;i++)
   {
     this->printCIEInfo(file,cfi->cies+i);
@@ -235,7 +236,7 @@ void DwarfscriptCommand::compileDwarfscript()
   }
 
   int dataLen;
-  void* data=buildCallFrameSectionData(parsedCallFrameInfo,&dataLen);
+  byte* data=buildCallFrameSectionData(parsedCallFrameInfo,&dataLen);
   if(outfileP)
   {
     char* outfileName=outfileP->getString();
@@ -257,6 +258,11 @@ void DwarfscriptCommand::compileDwarfscript()
     {
       logprintf(ELL_WARN,ELS_SHELL,"Cannot write compiled dwarfscript out because outfile name parameter was not a string\n");
     }
+  }
+
+  if(this->outputVariable)
+  {
+    this->outputVariable->setValue(data,dataLen);
   }
 }
 

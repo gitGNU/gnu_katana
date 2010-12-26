@@ -78,6 +78,7 @@ void ReplaceCommand::execute()
       int dataLen=0;
       void* newData=newThingP->getRawData(&dataLen);
       replaceScnData(dataForSection,newData,dataLen);
+      logprintf(ELL_INFO_V2,ELS_SHELL,"Replaced section \"%s\"\n",whichSectionName);
       if(newThingP->isCapable(SPC_SECTION_HEADER))
       {
         //the newThing is capable of giving us a new section header as well as new data

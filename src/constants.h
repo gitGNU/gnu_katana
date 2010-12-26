@@ -55,3 +55,6 @@
 
 #define WAIT_FOR_SAFE_PATCHING_USLEEP 10000
 #define DWARF_VERSION 4
+#define DWARF_CIE_VERSION 4
+#define DEBUG_CIE_ID 0xffffffff //the value of CIE_id as defined by the DWARFv4 spec
+#define EH_CIE_ID  0            //GCC uses a different CIE_id in .eh_frame sections

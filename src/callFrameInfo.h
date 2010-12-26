@@ -66,6 +66,7 @@ typedef struct CallFrameInfo
   int numFDEs;
   struct CIE* cies;
   int numCIEs;
+  bool isEHFrame;
 } CallFrameInfo;
 
 typedef struct CIE
@@ -116,6 +117,6 @@ typedef struct FDE
 //information section (i.e. .debug_frame in the dwarf specification)
 //the length of the returned buffer is written into byteLen.
 //the memory for the buffer should free'd when the caller is finished with it
-void* buildCallFrameSectionData(CallFrameInfo* cfi,int* byteLen);
+byte* buildCallFrameSectionData(CallFrameInfo* cfi,int* byteLen);
 
 #endif

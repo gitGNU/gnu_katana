@@ -243,6 +243,7 @@ Map* readDebugFrame(ElfInfo* elf,bool ehInsteadOfDebug)
   }
   else
   {
+    elf->callFrameInfo.isEHFrame=true;
     if(DW_DLV_OK!=dwarf_get_fde_list_eh(dbg, &cieData, &cieElementCount,
                                      &fdeData, &fdeElementCount, &err))
     {
