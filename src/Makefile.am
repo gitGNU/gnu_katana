@@ -53,8 +53,8 @@ shell/dwarfscript/dwarfscript.tab.c : shell/dwarfscript/dwarfscript.y
 shell/dwarfscript/dwarfscript.tab.h : shell/dwarfscript/dwarfscript.y
 	bison $(BFLAGS) -o shell/dwarfscript/dwarfscript.tab.c $<
 
-shell/shell.yy.h : %.l
-	flex $<
+shell/shell.yy.h : shell/shell.l
+	flex shell/shell.l
 
 %.yy.cpp : %.l
 	flex $<
