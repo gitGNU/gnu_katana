@@ -14,6 +14,7 @@
 //encode bytes (presumably representing a number)
 //as LEB128. The returned pointer should
 //be freed when the user is finished with it
+//todo: clean this function up. It is not well-written
 byte* encodeAsLEB128(byte* bytes,int numBytes,bool signed_,usint* numBytesOut)
 {
   int numSeptets=ceil((float)numBytes*8.0/7.0);
@@ -28,9 +29,9 @@ byte* encodeAsLEB128(byte* bytes,int numBytes,bool signed_,usint* numBytesOut)
     int bitsRetrieved=min(7,8-bitOffset);
     int shift=bitOffset;
     int mask=0;
-    for(int i=0;i<bitsRetrieved;i++)
+    for(int j=0;j<bitsRetrieved;j++)
     {
-      mask|=1<<(bitOffset+i);
+      mask|=1<<(bitOffset+j);
     }
     //logprintf(ELL_INFO_V4,ELS_MISC,"mask is %i and shift is %i\n",mask,shift);
     byte val=(mask&bytes[byteOffset])>>shift;
@@ -41,9 +42,9 @@ byte* encodeAsLEB128(byte* bytes,int numBytes,bool signed_,usint* numBytesOut)
       int bitsToGet=7-bitsRetrieved;
       int mask=0;
       //we always get bits first from the LSB of a byte
-      for(int i=0;i<bitsToGet;i++)
+      for(int j=0;j<bitsToGet;j++)
       {
-        mask|=1<<i;
+        mask|=1<<j;
       }
       //logprintf(ELL_INFO_V4,ELS_MISC,"getting %i more bits. previously val was %i\n",bitsToGet,(int)val);
       //logprintf(ELL_INFO_V4,ELS_MISC,"next byte is %i, masking it with %i\n",(int)bytes[byteOffset+1],mask);
@@ -65,11 +66,11 @@ byte* encodeAsLEB128(byte* bytes,int numBytes,bool signed_,usint* numBytesOut)
       if(signed_)
       {
         int signExtendBits=7-(numBytes*8)%7;
-        signExtendBits=7==signExtendBits?0:signExtendBits;
+        signExtendBits=(7==signExtendBits)?0:signExtendBits;
         int mask=0;
         for(int j=0;j<signExtendBits;j++)
         {
-          mask|=1<<(7-j);
+          mask|=1<<(7-j-1);//-1 because the MSB has a special purpose
         }
         if(val&1<<6)
         {
@@ -86,6 +87,20 @@ byte* encodeAsLEB128(byte* bytes,int numBytes,bool signed_,usint* numBytesOut)
     }
     result[i]=val;
   }
+  //because of our use of ceil above based strictly on the number of
+  //input bytes, sometimes we may find that we added one more septet
+  //than we really needed
+  if(!signed_)
+  {
+    //clear out zero bytes we don't need
+    while((result[numSeptets-1]&0x7f) == 0)
+    {
+      numSeptets-=1;
+    }
+    result[numSeptets-1]&=0x7f;//clear the MSB of the new last septet
+  }
+  //todo: deal with signed as well;
+  
   *numBytesOut=numSeptets;
 
   #ifdef DEBUG
@@ -207,6 +222,10 @@ byte* intToLEB128(int value,usint* numBytesOut)
       //this byte is all sign extension bits and there's still one
       //sign extension bit left in the last bit
       (*numBytesOut)--;
+    }
+    else
+    {
+      break;
     }
   }
   //since we may have removed bytes make sure the last one has its
