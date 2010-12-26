@@ -63,14 +63,6 @@ extern "C"
 #include "elfparse.h"
 }
 
-typedef enum
-{
-  SVT_NONE=0,
-  SVT_STRING,//just an ordinary string
-  SVT_ELF,//variable represents an ELF object, i.e. ElfInfo struct
-  SVT_SECTION,
-} ShellVariableType;
-
 //this is a helper class used for storing the actual data associated
 //with the variable. It is subclassed for the different data types
 //most of the actual functionality is handed off to it. The reason
@@ -93,6 +85,7 @@ class ShellVariable : public ShellParam
   ShellVariable(char* name);
   ~ShellVariable();
   void setValue(ElfInfo* e);
+  void setValue(byte* data,int dataLen);
   virtual char* getString();
   virtual ElfInfo* getElfObject();
   virtual void* getRawData(int* byteLenOut);
@@ -105,7 +98,6 @@ class ShellVariable : public ShellParam
   }
  protected:
   char* name;
-  ShellVariableType type;
   ShellVariableData* data;
   
 };

@@ -56,6 +56,7 @@
 
 #include "variable.h"
 #include "variableTypes/elfVariableData.h"
+#include "variableTypes/rawVariableData.h"
 
 ShellVariable::ShellVariable(char* name)
 {
@@ -76,6 +77,15 @@ void ShellVariable::setValue(ElfInfo* e)
     delete this->data;
   }
   this->data=new ShellElfVariableData(e);
+}
+
+void ShellVariable::setValue(byte* data,int dataLen)
+{
+  if(this->data)
+  {
+    delete this->data;
+  }
+  this->data=new ShellRawVariableData(data,dataLen);
 }
 
 char* ShellVariable::getString()

@@ -67,7 +67,8 @@ am__objects_6 = katana-command.$(OBJEXT) katana-loadCommand.$(OBJEXT) \
 	katana-saveCommand.$(OBJEXT) katana-replaceCommand.$(OBJEXT) \
 	katana-dwarfscriptCommand.$(OBJEXT) \
 	katana-shellCommand.$(OBJEXT)
-am__objects_7 = katana-elfVariableData.$(OBJEXT)
+am__objects_7 = katana-elfVariableData.$(OBJEXT) \
+	katana-rawVariableData.$(OBJEXT)
 am__objects_8 = katana-dwarfscript.yy.$(OBJEXT) \
 	katana-dwarfscript.tab.$(OBJEXT)
 am__objects_9 = katana-shell.$(OBJEXT) katana-shell.yy.$(OBJEXT) \
@@ -220,8 +221,8 @@ PATCHWRITE_SRC = patchwrite/patchwrite.c patchwrite/codediff.c patchwrite/typedi
 PATCHWRITE_H = patchwrite/patchwrite.h patchwrite/codediff.h patchwrite/typediff.h patchwrite/sourcetree.h patchwrite/write_to_dwarf.h patchwrite/elfcmp.h
 UTIL_SRC = util/dictionary.c util/hash.c util/util.c util/map.c util/list.c util/logging.c util/path.c util/refcounted.c util/stack.c
 UTIL_H = util/dictionary.h util/hash.h util/util.h util/map.h util/list.h util/logging.h util/path.h util/refcounted.h util/stack.h
-SHELL_VARIABLE_SRC = shell/variableTypes/elfVariableData.cpp
-SHELL_VARIABLE_H = shell/variableTypes/elfVariableData.h
+SHELL_VARIABLE_SRC = shell/variableTypes/elfVariableData.cpp shell/variableTypes/rawVariableData.cpp
+SHELL_VARIABLE_H = shell/variableTypes/elfVariableData.h shell/variableTypes/rawVariableData.h
 SHELL_COMMANDS_SRC = shell/commands/command.cpp shell/commands/loadCommand.cpp shell/commands/saveCommand.cpp shell/commands/replaceCommand.cpp shell/commands/dwarfscriptCommand.cpp shell/commands/shellCommand.cpp
 SHELL_COMMANDS_H = shell/commands/command.h shell/commands/loadCommand.h shell/commands/saveCommand.h shell/commands/replaceCommand.h shell/commands/dwarfscriptCommand.h shell/commands/shellCommand.h
 DWARFSCRIPT_SRC = shell/dwarfscript/dwarfscript.yy.c shell/dwarfscript/dwarfscript.tab.c
@@ -350,6 +351,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-patchwrite.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-path.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-pmap.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-rawVariableData.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-refcounted.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-register.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-relocation.Po@am__quote@
@@ -1170,6 +1172,20 @@ katana-elfVariableData.obj: shell/variableTypes/elfVariableData.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='shell/variableTypes/elfVariableData.cpp' object='katana-elfVariableData.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o katana-elfVariableData.obj `if test -f 'shell/variableTypes/elfVariableData.cpp'; then $(CYGPATH_W) 'shell/variableTypes/elfVariableData.cpp'; else $(CYGPATH_W) '$(srcdir)/shell/variableTypes/elfVariableData.cpp'; fi`
+
+katana-rawVariableData.o: shell/variableTypes/rawVariableData.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT katana-rawVariableData.o -MD -MP -MF $(DEPDIR)/katana-rawVariableData.Tpo -c -o katana-rawVariableData.o `test -f 'shell/variableTypes/rawVariableData.cpp' || echo '$(srcdir)/'`shell/variableTypes/rawVariableData.cpp
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/katana-rawVariableData.Tpo $(DEPDIR)/katana-rawVariableData.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='shell/variableTypes/rawVariableData.cpp' object='katana-rawVariableData.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o katana-rawVariableData.o `test -f 'shell/variableTypes/rawVariableData.cpp' || echo '$(srcdir)/'`shell/variableTypes/rawVariableData.cpp
+
+katana-rawVariableData.obj: shell/variableTypes/rawVariableData.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT katana-rawVariableData.obj -MD -MP -MF $(DEPDIR)/katana-rawVariableData.Tpo -c -o katana-rawVariableData.obj `if test -f 'shell/variableTypes/rawVariableData.cpp'; then $(CYGPATH_W) 'shell/variableTypes/rawVariableData.cpp'; else $(CYGPATH_W) '$(srcdir)/shell/variableTypes/rawVariableData.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/katana-rawVariableData.Tpo $(DEPDIR)/katana-rawVariableData.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='shell/variableTypes/rawVariableData.cpp' object='katana-rawVariableData.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o katana-rawVariableData.obj `if test -f 'shell/variableTypes/rawVariableData.cpp'; then $(CYGPATH_W) 'shell/variableTypes/rawVariableData.cpp'; else $(CYGPATH_W) '$(srcdir)/shell/variableTypes/rawVariableData.cpp'; fi`
 
 ID: $(HEADERS) $(SOURCES) $(LISP) $(TAGS_FILES)
 	list='$(SOURCES) $(HEADERS) $(LISP) $(TAGS_FILES)'; \

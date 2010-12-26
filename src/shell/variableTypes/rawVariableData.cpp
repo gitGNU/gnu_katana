@@ -1,5 +1,5 @@
 /*
-  File: shell/param.h
+  File: shell/variableTypes/rawVariableData.cpp
   Author: James Oakley
   Copyright (C): 2010 Dartmouth College
   License: Katana is free software: you may redistribute it and/or
@@ -50,47 +50,43 @@
     
   Project:  Katana
   Date: December 2010
-  Description: Class representing parameters used as arguments to commands in the Katana shell
+  Description: Variable type in the Katana shell which holds an Section object
 */
 
-#ifndef param_h
-#define param_h
-#include "refCounted.h"
+#include "rawVariableData.h"
 
-extern "C"
+
+ShellRawVariableData::ShellRawVariableData(byte* data,int len)
+  :data(data),len(len),hexString(NULL)
 {
-#include "elfparse.h"
-#include "util/logging.h"
+}
+ShellRawVariableData::~ShellRawVariableData()
+{
+  free(data);
+  free(hexString);
 }
 
-//types of data a shell parameter may be able to return
-typedef enum
+char* ShellRawVariableData::getString()
 {
-  SPC_SECTION_HEADER,
-  SPC_STRING_VALUE,
-  SPC_ELF_VALUE,
-  SPC_RAW_DATA
-} ShellParamCapability;
+  if(this->hexString)
+  {
+    free(this->hexString);
+  }
+  this->hexString=getHexDataString(this->data,this->len);
+  return this->hexString;
+}
 
-//The default shell parameter is just a string
-//ShellVariables are also a type of ShellParameter
-class ShellParam : public RefCountedClass
+void* ShellRawVariableData::getRawData(int* byteLenOut)
 {
-  public:
-  ShellParam();
-  ~ShellParam();
-  ShellParam(char* string);
-  virtual char* getString();
-  virtual ElfInfo* getElfObject();
-  virtual void* getRawData(int* byteLenOut);
-  virtual GElf_Shdr getSectionHeader();
-  virtual bool isCapable(ShellParamCapability cap);
-  private:
-    char* stringValue;
-  
-};
+  *byteLenOut=this->len;
+  return this->data;
+}
 
-#endif
-// Local Variables:
-// mode: c++
-// End:
+bool ShellRawVariableData::isCapable(ShellParamCapability cap)
+{
+  if(SPC_RAW_DATA==cap || SPC_STRING_VALUE==cap)
+  {
+    return true;
+  }
+  return false;
+}

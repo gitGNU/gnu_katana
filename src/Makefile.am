@@ -19,8 +19,8 @@ PATCHWRITE_SRC=patchwrite/patchwrite.c patchwrite/codediff.c patchwrite/typediff
 PATCHWRITE_H=patchwrite/patchwrite.h patchwrite/codediff.h patchwrite/typediff.h patchwrite/sourcetree.h patchwrite/write_to_dwarf.h patchwrite/elfcmp.h
 UTIL_SRC=util/dictionary.c util/hash.c util/util.c util/map.c util/list.c util/logging.c util/path.c util/refcounted.c util/stack.c
 UTIL_H=util/dictionary.h util/hash.h util/util.h util/map.h util/list.h util/logging.h util/path.h util/refcounted.h util/stack.h
-SHELL_VARIABLE_SRC=shell/variableTypes/elfVariableData.cpp
-SHELL_VARIABLE_H=shell/variableTypes/elfVariableData.h
+SHELL_VARIABLE_SRC=shell/variableTypes/elfVariableData.cpp shell/variableTypes/rawVariableData.cpp
+SHELL_VARIABLE_H=shell/variableTypes/elfVariableData.h shell/variableTypes/rawVariableData.h
 SHELL_COMMANDS_SRC=shell/commands/command.cpp shell/commands/loadCommand.cpp shell/commands/saveCommand.cpp shell/commands/replaceCommand.cpp shell/commands/dwarfscriptCommand.cpp shell/commands/shellCommand.cpp
 SHELL_COMMANDS_H=shell/commands/command.h shell/commands/loadCommand.h shell/commands/saveCommand.h shell/commands/replaceCommand.h shell/commands/dwarfscriptCommand.h shell/commands/shellCommand.h
 DWARFSCRIPT_SRC=shell/dwarfscript/dwarfscript.yy.c shell/dwarfscript/dwarfscript.tab.c
@@ -44,7 +44,6 @@ shell/shell.tab.cpp : shell/shell.y
 	bison $(BFLAGS) -o shell/shell.tab.cpp $<
 
 
-
 shell/shell.tab.hpp : shell/shell.y
 	bison $(BFLAGS) -o shell/shell.tab.cpp $<
 
@@ -53,6 +52,9 @@ shell/dwarfscript/dwarfscript.tab.c : shell/dwarfscript/dwarfscript.y
 
 shell/dwarfscript/dwarfscript.tab.h : shell/dwarfscript/dwarfscript.y
 	bison $(BFLAGS) -o shell/dwarfscript/dwarfscript.tab.c $<
+
+shell/shell.yy.h : %.l
+	flex $<
 
 %.yy.cpp : %.l
 	flex $<

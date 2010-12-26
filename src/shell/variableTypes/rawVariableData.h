@@ -1,5 +1,5 @@
 /*
-  File: shell/param.h
+  File: shell/variableTypes/rawVariableData.h
   Author: James Oakley
   Copyright (C): 2010 Dartmouth College
   License: Katana is free software: you may redistribute it and/or
@@ -50,43 +50,29 @@
     
   Project:  Katana
   Date: December 2010
-  Description: Class representing parameters used as arguments to commands in the Katana shell
+  Description: Variable type in the Katana shell which holds an Elf object
 */
 
-#ifndef param_h
-#define param_h
-#include "refCounted.h"
 
-extern "C"
-{
-#include "elfparse.h"
-#include "util/logging.h"
-}
+#ifndef raw_variable_data_h
+#define raw_variable_data_h
 
-//types of data a shell parameter may be able to return
-typedef enum
-{
-  SPC_SECTION_HEADER,
-  SPC_STRING_VALUE,
-  SPC_ELF_VALUE,
-  SPC_RAW_DATA
-} ShellParamCapability;
+#include "shell/variable.h"
 
-//The default shell parameter is just a string
-//ShellVariables are also a type of ShellParameter
-class ShellParam : public RefCountedClass
+class ShellRawVariableData : public ShellVariableData
 {
-  public:
-  ShellParam();
-  ~ShellParam();
-  ShellParam(char* string);
+ public:
+  //data will not be duplicated, it should be a copy that
+  //rawVariableData is free to free() upon its own destruction
+  ShellRawVariableData(byte* data,int len);
+  ~ShellRawVariableData();
   virtual char* getString();
-  virtual ElfInfo* getElfObject();
   virtual void* getRawData(int* byteLenOut);
-  virtual GElf_Shdr getSectionHeader();
   virtual bool isCapable(ShellParamCapability cap);
-  private:
-    char* stringValue;
+ protected:
+  byte* data;
+  int len;
+  char* hexString;
   
 };
 
