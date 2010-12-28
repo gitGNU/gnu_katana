@@ -121,6 +121,7 @@ RegInstruction* parseFDEInstructions(Dwarf_Debug dbg,unsigned char* bytes,int le
         bytes+=1;
         len -= 1;
         }
+        break;
       case DW_CFA_advance_loc2:
         {
         unsigned short delta = (unsigned short) *(bytes + 1);
@@ -233,6 +234,8 @@ Map* readDebugFrame(ElfInfo* elf,bool ehInsteadOfDebug)
   {
     dwarfErrorHandler(err,NULL);
   }
+
+  Elf_Scn* scn=NULL;
   if(!ehInsteadOfDebug)
   {
     if(DW_DLV_OK!=dwarf_get_fde_list(dbg, &cieData, &cieElementCount,
@@ -240,6 +243,7 @@ Map* readDebugFrame(ElfInfo* elf,bool ehInsteadOfDebug)
     {
       dwarfErrorHandler(err,NULL);
     }
+    scn=getSectionByName(elf,".debug_frame");
   }
   else
   {
@@ -249,7 +253,11 @@ Map* readDebugFrame(ElfInfo* elf,bool ehInsteadOfDebug)
     {
       dwarfErrorHandler(err,NULL);
     }
+    scn=getSectionByName(elf,".eh_frame");
   }
+  GElf_Shdr shdr;
+  getShdr(scn,&shdr);
+  elf->callFrameInfo.sectionAddress=shdr.sh_addr;
     
 
   //read the CIE
@@ -289,6 +297,7 @@ Map* readDebugFrame(ElfInfo* elf,bool ehInsteadOfDebug)
                                     &err);
     cie->augmentationData=zmalloc(cie->augmentationDataLen);
     memcpy(cie->augmentationData,augdata,cie->augmentationDataLen);
+    parseAugmentationStringAndData(cie);
     
     //don't care about initial instructions, for patching,
     //but do if we're reading a debug frame for stack unwinding purposes

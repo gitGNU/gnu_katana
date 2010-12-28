@@ -88,6 +88,7 @@ void addInstruction(DwarfInstructions* instrs,DwarfInstruction* instr)
     break;
   case DW_CFA_offset:
     bytes=zmalloc(1+instr->arg2NumBytes);
+    assert(instr->arg1 < 128);
     bytes[0]=DW_CFA_offset | instr->arg1;
     memcpy(bytes+1,instr->arg2Bytes,instr->arg2NumBytes);
     addBytes(instrs,bytes,1+instr->arg2NumBytes);
@@ -162,7 +163,7 @@ void addInstruction(DwarfInstructions* instrs,DwarfInstruction* instr)
     bytes=zmalloc(2);
     if(instr->arg1 > 0xFF)
     {
-      death("Location will not fit into encoding for DW_CFA_advance_loc\n");
+      death("Location will not fit into encoding for DW_CFA_advance_loc1\n");
     }
     bytes[0]=instr->opcode;
     memcpy(bytes+1,&instr->arg1,1);
@@ -356,8 +357,21 @@ DwarfInstruction regInstructionToRawDwarfInstruction(RegInstruction* inst)
   case DW_CFA_offset:
     //the specifics of encoding the first argument with the operand
     //will be taken care of in addInstruction later
+
+    //todo: I don't think this LEB value is actually used, not sure we need it
     result.arg1Bytes=encodeRegAsLEB128(inst->arg1Reg,false,&result.arg1NumBytes);
+    if(inst->arg1Reg.type==ERT_BASIC)
+    {
+      result.arg1=inst->arg1Reg.u.index;
+    }
+    else
+    {
+      death("Cannot use a non-basic register as an operation to DW_CFA_offset\n");
+    }
+    
+    assert(result.arg1NumBytes==1);//since it's being encoded with the operand
     result.arg2=inst->arg2;
+    result.arg2Bytes=intToLEB128(inst->arg2,&result.arg2NumBytes);
     break;
   case DW_CFA_register:
     result.arg1Bytes=encodeRegAsLEB128(inst->arg1Reg,false,&result.arg1NumBytes);

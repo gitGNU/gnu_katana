@@ -67,6 +67,9 @@ typedef struct CallFrameInfo
   struct CIE* cies;
   int numCIEs;
   bool isEHFrame;
+  //needed when encoding eh_frame because of pc-relative pointer encodings
+  //todo: should really support relocations and then don't need to know this now
+  addr_t sectionAddress;
 } CallFrameInfo;
 
 typedef struct CIE
@@ -92,6 +95,15 @@ typedef struct CIE
                   //of a segment selector.
   Dwarf_Unsigned augmentationDataLen;
   byte* augmentationData;
+  //see the Linux Standards Base at
+  //http://refspecs.freestandards.org/LSB_4.0.0/LSB-Core-generic/LSB-Core-generic/ehframechpt.html
+  //for augmentation data information
+  struct
+  {
+    bool augmentationDataPresent;
+    byte fdePointerEncoding;
+    byte fdeLSDAPointerEncoding;
+  } augmentationInfo;
 } CIE;
 
 
@@ -119,4 +131,10 @@ typedef struct FDE
 //the memory for the buffer should free'd when the caller is finished with it
 byte* buildCallFrameSectionData(CallFrameInfo* cfi,int* byteLen);
 
+//reads the CIE's augmentationData and tries to set up
+//the cie->augmentationInfo
+//see the Linux Standards Base at
+//http://refspecs.freestandards.org/LSB_4.0.0/LSB-Core-generic/LSB-Core-generic/ehframechpt.html
+//for augmentation data information
+void parseAugmentationStringAndData(CIE* cie);
 #endif
