@@ -18,10 +18,11 @@
 byte* encodeAsLEB128(byte* bytes,int numBytes,bool signed_,usint* numBytesOut)
 {
   byte* result=encodeAsLEB128NoOptimization(bytes,numBytes,signed_,numBytesOut);
-  if(!signed_)
+  if((!signed_))
   {
     //clear out zero bytes we don't need
-    while((result[(*numBytesOut)-1]&0x7f) == 0)
+    while((*numBytesOut)>1 &&
+          ((result[(*numBytesOut)-1]&0x7f) == 0))
     {
       (*numBytesOut)-=1;
     }
@@ -212,10 +213,14 @@ byte* uintToLEB128(usint value,usint* numBytesOut)
 
 byte* intToLEB128(int value,usint* numBytesOut)
 {
+  if(value > 0)
+  {
+    return uintToLEB128(value,numBytesOut);
+  }
   byte lower7Bits=0x7f;
-  byte signExtensionBits=value<0?0x7f:0x00;
-  byte signExtension6thBit=value<0?0x40:0x00;
-  byte* result=encodeAsLEB128((byte*)&value,4,true,numBytesOut);
+  byte signExtensionBits=0x7f;
+  byte signExtension6thBit=0x40;
+  byte* result=encodeAsLEB128((byte*)&value,sizeof(int),true,numBytesOut);
   byte sixthBitMask=0x40;//0b01000000
   //now we need to chop off all the bytes we don't need
   for(int i=(*numBytesOut)-1;i>0;i--)
