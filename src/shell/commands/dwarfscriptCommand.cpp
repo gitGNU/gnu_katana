@@ -198,6 +198,7 @@ void DwarfscriptCommand::emitDwarfscript()
   }
   CallFrameInfo* cfi=&elf->callFrameInfo;
   fprintf(file,"section_type: \"%s\"\n",cfi->isEHFrame?".eh_frame":".debug_frame");
+  fprintf(file,"section_location: 0x%zx\n",cfi->sectionAddress);
   for(int i=0;i<cfi->numCIEs;i++)
   {
     this->printCIEInfo(file,cfi->cies+i);
