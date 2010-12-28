@@ -35,7 +35,7 @@ void makeBasicRegister2(ParseNode* node,ParseNode* intvalNode);
 %token T_INDEX T_DATA_ALIGN T_CODE_ALIGN T_RET_ADDR_RULE T_AUGMENTATION
 %token T_INITIAL_LOCATION T_ADDRESS_RANGE T_OFFSET T_LENGTH T_CIE_INDEX
 %token T_VERSION T_ADDRESS_SIZE T_SEGMENT_SIZE T_STRING_LITERAL T_HEXDATA
-%token T_AUGMENTATION_DATA T_SECTION_TYPE
+%token T_AUGMENTATION_DATA T_SECTION_TYPE T_SECTION_LOC
 %token T_FDE T_CIE T_INSTRUCTIONS
 %token T_POS_INT T_NONNEG_INT T_INT T_FLOAT T_REGISTER T_INVALID_TOKEN
 %token T_DW_CFA_advance_loc T_DW_CFA_offset T_DW_CFA_restore T_DW_CFA_extended
@@ -50,7 +50,7 @@ void makeBasicRegister2(ParseNode* node,ParseNode* intvalNode);
 
 %%
 
-dwarfscript : section_type_prop section_list
+dwarfscript : top_property_stmt_list section_list
 {}
 | section_list
 
@@ -96,15 +96,32 @@ cie_begin_stmt : T_BEGIN T_CIE
   currentCIE=cfi.cies+cfi.numCIEs;
   memset(currentCIE,0,sizeof(CIE));
   currentCIE->idx=cfi.numCIEs;
-  //set the address size in case it's not specified in the dwarfscript we're parsing
-  currentCIE->addressSize=sizeof(addr_t);
   cfi.numCIEs++;
 }
 
 cie_end_stmt : T_END T_CIE
 {
+  parseAugmentationStringAndData(currentCIE);
+  if(currentCIE->addressSize==0)
+  {
+    if(cfi.isEHFrame)
+    {
+      //todo: this is based on empirical observation. It is not based
+      //on my knowledge of any standard, therefore it is probably
+      //wrong in certain circumstances
+      currentCIE->addressSize=4;
+    }
+    else
+    {
+      currentCIE->addressSize=sizeof(addr_t);
+    }
+  }
   currentCIE=NULL;
 }
+
+top_property_stmt_list : top_property_stmt_list top_property_stmt
+{}
+| /*empty*/ {}
 
 fde_property_stmt_list : fde_property_stmt_list fde_property_stmt
 {}
@@ -135,6 +152,10 @@ instruction_stmt_list : instruction_stmt_list instruction_stmt
 }
 | /*empty*/ {}
 
+top_property_stmt :
+section_type_prop {}
+| section_location_prop {}
+
 cie_property_stmt :
 index_prop {}
 | length_prop {}
@@ -155,6 +176,8 @@ index_prop {}
 | initial_location_prop {}
 | address_range_prop {}
 | augmentation_data_prop {}
+
+
 
 index_prop : T_INDEX ':' nonneg_int_lit
 {
@@ -291,6 +314,11 @@ section_type_prop : T_SECTION_TYPE ':' string_lit
     fprintf(stderr,"Unexpected section type for dwarfscript, expected \".eh_frame\" or \".debug_frame\"\n");
     YYERROR;
   }
+}
+
+section_location_prop : T_SECTION_LOC ':' nonneg_int_lit
+{
+  cfi.sectionAddress=$3.u.intval;
 }
 
 int_lit : T_INT

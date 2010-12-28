@@ -51,8 +51,8 @@
   Project:  Katana
   Date: December 2010
   Description: Variable type in the Katana shell which holds an Elf object
+  
 */
-
 
 %option noyywrap
 %option nounput
@@ -61,8 +61,8 @@
 %option prefix="yydw"
 %x POUND_COMMENT
 %x IN_STRING
-%option header-file="shell/dwarfscript/dwarfscript.yy.h"
-%option outfile="shell/dwarfscript/dwarfscript.yy.c"
+%option header-file="dwarfscript.yy.h"
+%option outfile="dwarfscript.yy.c"
 
 
 %top{
@@ -114,6 +114,7 @@ REGISTER  r[0-9]+
 "address_size" return T_ADDRESS_SIZE;
 "segment_size" return T_SEGMENT_SIZE;
 "section_type" return T_SECTION_TYPE;
+"section_location" return T_SECTION_LOC;
 
 "FDE"|"fde" return T_FDE;
 "CIE"|"cie" return T_CIE;
@@ -186,7 +187,8 @@ void getDataFromHexdata(char* hexdataStr)
   savedData=zmalloc(savedDataLen);
   for(int i=0;i<savedDataLen;i++)
   {
-    int dataByteInt=strtol(hexdataStr+i*2,NULL,16);
+    char byteStr[3]={hexdataStr[i*2],hexdataStr[i*2+1],'\0'};
+    int dataByteInt=strtol(byteStr,NULL,16);
     memcpy(savedData+i,&dataByteInt,1);
   }
 }

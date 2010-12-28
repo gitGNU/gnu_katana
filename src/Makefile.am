@@ -1,5 +1,6 @@
 #File: Makefile.am
 #Author: James Oakley
+SUBDIRS=shell
 bin_PROGRAMS=katana
 
 INCLUDEFLAGS=-I ../include -I /usr/local/include/libdwarf -I /usr/include/libdwarf
@@ -40,24 +41,3 @@ katana_SOURCES=katana.c dwarftypes.c   elfparse.c  types.c  dwarf_instr.c regist
 
 BFLAGS=-d -v
 
-shell/shell.tab.cpp : shell/shell.y
-	bison $(BFLAGS) -o shell/shell.tab.cpp $<
-
-
-shell/shell.tab.hpp : shell/shell.y
-	bison $(BFLAGS) -o shell/shell.tab.cpp $<
-
-shell/dwarfscript/dwarfscript.tab.c : shell/dwarfscript/dwarfscript.y
-	bison $(BFLAGS) -o shell/dwarfscript/dwarfscript.tab.c $<
-
-shell/dwarfscript/dwarfscript.tab.h : shell/dwarfscript/dwarfscript.y
-	bison $(BFLAGS) -o shell/dwarfscript/dwarfscript.tab.c $<
-
-shell/shell.yy.h : shell/shell.l
-	flex shell/shell.l
-
-%.yy.cpp : %.l
-	flex $<
-
-shell/dwarfscript/dwarfscript.yy.c : shell/dwarfscript/dwarfscript.l shell/dwarfscript/dwarfscript.tab.h
-	flex shell/dwarfscript/dwarfscript.l

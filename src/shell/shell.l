@@ -6,8 +6,8 @@
 %x POUND_COMMENT
 %x IN_STRING
 %x IN_SHELL_CMD
-%option header-file="shell/shell.yy.h"
-%option outfile="shell/shell.yy.cpp"
+%option header-file="shell.yy.h"
+%option outfile="shell.yy.cpp"
    
 %top{
 #include <stdlib.h>
