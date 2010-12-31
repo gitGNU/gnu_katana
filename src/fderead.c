@@ -371,6 +371,42 @@ Map* readDebugFrame(ElfInfo* elf,bool ehInsteadOfDebug)
                                     &err);
     fde->augmentationData=zmalloc(fde->augmentationDataLen);
     memcpy(fde->augmentationData,augdata,fde->augmentationDataLen);
+    if(elf->callFrameInfo.isEHFrame && fde->augmentationDataLen)
+    {
+      //find the address of the augmentation data, because we'll need it
+      addr_t augDataOffset=0;
+      int iterationOffset=0;
+      while(true)
+      {
+        byte* ptr=memchr(fdeBytes+iterationOffset,fde->augmentationData[0],fdeBytesLength);
+        if(!ptr)
+        {
+          death("Augmentation data seemingly does not exist when scanning raw data!\n");
+        }
+        bool isMatch=true;
+        for(int j=1;j<fde->augmentationDataLen;j++)
+        {
+          if(fde->augmentationData[j]!=ptr[j])
+          {
+            isMatch=false;
+            break;
+          }
+        }
+        if(isMatch)
+        {
+          augDataOffset=ptr-(byte*)fdeBytes;
+          break;
+        }
+        else
+        {
+          iterationOffset=ptr-(byte*)fdeBytes+1;
+          continue;
+        }
+      }
+      //turn the offset into an address
+      addr_t augDataAddr=elf->callFrameInfo.sectionAddress+augDataOffset;
+      parseFDEAugmentationData(elf->callFrameInfo.fdes+i,augDataAddr);
+    }
     
     int* key=zmalloc(sizeof(int));
     *key=elf->callFrameInfo.fdes[i].offset;
