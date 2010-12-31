@@ -370,6 +370,21 @@ void finalizeDataSizes(ElfInfo* e)
     Elf_Data* data=elf_getdata(scn,NULL);
     finalizeDataSize(e,scn,data);
   }
+  //todo: do a second pass and make all the layouts come out right.
+  ElfXX_Shdr* lastShdr=NULL;
+  for(Elf_Scn* scn=elf_nextscn(e->e,NULL);scn;scn=elf_nextscn(e->e,scn))
+  {
+    ElfXX_Shdr* shdr=elfxx_getshdr(scn);
+    if((shdr->sh_flags & SHF_ALLOC) && lastShdr)
+    {
+      int overlap=(lastShdr->sh_addr+lastShdr->sh_size)-shdr->sh_addr;
+      if(overlap>1)
+      {
+        death("Sections '%s' and '%s' overlap by %i bytes, presumably from the first section expanding. Katana should be capable of resizing appropriately (although with some difficulty when relocations are involved and the binary has not been linked with --emit-relocs) but this feature has not yet been implemented\n",getScnHdrString(e,lastShdr->sh_name),getScnHdrString(e,shdr->sh_name),overlap);
+      }
+    }
+    lastShdr=shdr;
+  }  
 }
 
 //prepare a modified elf object for writing
