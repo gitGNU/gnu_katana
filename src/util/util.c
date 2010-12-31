@@ -65,7 +65,7 @@ void* zmalloc(size_t size)
 }
 
 
-void death(char* reason,...)
+void death(const char* reason,...)
 {
   va_list ap;
   va_start(ap,reason);

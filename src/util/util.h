@@ -69,7 +69,7 @@ typedef unsigned char byte;
 void* zmalloc(size_t size);
 
 
-void death(char* reason,...);
+void death(const char* reason,...);
 
 #define min(x,y)   ((x)>(y))?(y):(x)
 
