@@ -180,7 +180,7 @@ int main(int argc,char** argv)
     {
       printf("\n*********Call Frame Information****************\n");
     }
-    printCallFrameInfo(&patch->callFrameInfo);
+    printCallFrameInfo(stdout,&patch->callFrameInfo,patch);
   }
   else if(EKM_TEST_PASSTHROUGH==config.mode)
   {

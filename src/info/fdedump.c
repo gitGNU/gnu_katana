@@ -64,35 +64,74 @@
 
 Dwarf_Debug dbgForFDEDump;
 
-void printCIEInfo(CIE* cie)
+//The difference between this function and
+//DwarfscriptCommand::printCIEInfo is that this function is geared
+//towards displaying information to a human and the other is geared
+//towards creating commands in a scripting language. While there may
+//be some duplication not strictly necessary, neither function is
+//difficult or complicated.
+void printCIEInfo(FILE* file,CIE* cie)
 {
-  printf("------CIE-----\n");
-  printf("\tdata align: %i\n",(int)cie->dataAlign);
-  printf("\tcode align: %u\n",(unsigned int)cie->codeAlign);
-  printf("\trule for return address: %i\n",cie->returnAddrRuleNum);
-  printf("\tInitial instructions:\n");
+  fprintf(file,"------CIE-----\n");
+  fprintf(file,"\tdata align: %i\n",(int)cie->dataAlign);
+  fprintf(file,"\tcode align: %u\n",(unsigned int)cie->codeAlign);
+  fprintf(file,"\trule for return address: %i\n",cie->returnAddrRuleNum);
+  fprintf(file,"\taugmentation: \"%s\"\n",cie->augmentation);
+  int flags=cie->augmentationInfo.flags;
+  if(flags & CAF_DATA_PRESENT)
+  {
+    if(flags & CAF_FDE_ENC)
+    {
+      fprintf(file,"\tFDE pointer encoding:");
+      printEHPointerEncoding(file,cie->augmentationInfo.fdePointerEncoding);
+      fprintf(file,"\n");
+    }
+    if(flags & CAF_FDE_LSDA)
+    {
+      fprintf(file,"\tFDE LSDA pointer encoding:");
+      printEHPointerEncoding(file,cie->augmentationInfo.fdeLSDAPointerEncoding);
+      fprintf(file,"\n");
+    }
+  }
+  fprintf(file,"\tInitial instructions:\n");
   for(int i=0;i<cie->numInitialInstructions;i++)
   {
-    printf("\t\t");
-    printInstruction(stdout,cie->initialInstructions[i],0);
+    fprintf(file,"\t\t");
+    printInstruction(file,cie->initialInstructions[i],0);
   }
-  printf("\tInitial register rules (computed from instructions)\n");
-  printRules(stdout,cie->initialRules,"\t\t");
+  fprintf(file,"\tInitial register rules (computed from instructions)\n");
+  printRules(file,cie->initialRules,"\t\t");
 }
 
-void printFDEInfo(CIE* cie,FDE* fde,int num)
+//The difference between this function and
+//DwarfscriptCommand::printFDEInfo is that this function is geared
+//towards displaying information to a human and the other is geared
+//towards creating commands in a scripting language. While there may
+//be some duplication not strictly necessary, neither function is
+//difficult or complicated.
+void printFDEInfo(FILE* file,FDE* fde,int num,ElfInfo* elf)
 {
-  printf("--------FDE #%i (at offset 0x%x----\n",num,fde->offset);
-  //printf("\tfunction guess:%s\n",get_fde_proc_name(dbg,fde->lowpc));
-  printf("\tlowpc: 0x%x\n",fde->lowpc);
-  printf("\thighpc:0x%x\n",fde->highpc);
-  printf("  Instructions:\n");
+  CIE* cie=fde->cie;
+  fprintf(file,"--------FDE #%i (at offset 0x%x----\n",num,fde->offset);
+  if(elf && !elf->isPO)
+  {
+    fprintf(file,"\tfunction guess: %s\n",getFunctionNameAtPC(elf,fde->lowpc));
+  }
+  fprintf(file,"\tlowpc: 0x%x\n",fde->lowpc);
+  fprintf(file,"\thighpc:0x%x\n",fde->highpc);
+  int flags=flags=cie->augmentationInfo.flags;
+  if(flags & CAF_FDE_LSDA)
+  {
+    assert(fde->augmentationInfo.filled);
+    fprintf(file,"\tLSDA pointer: 0x%zx\n",fde->augmentationInfo.LSDAPointer);
+  }
+  fprintf(file,"  Instructions:\n");
   for(int i=0;i<fde->numInstructions;i++)
   {
-    printf("    ");
-    printInstruction(stdout,fde->instructions[i],0);
+    fprintf(file,"    ");
+    printInstruction(file,fde->instructions[i],0);
   }
-  printf("    The table would be as follows\n");
+  fprintf(file,"    The table would be as follows\n");
   Dictionary* rulesDict=dictDuplicate(cie->initialRules,(DictDataCopy)duplicatePoRegRule);
   //use this to keep track of which instructions we've read so far so
   //we don't read the same ones over and over
@@ -111,19 +150,20 @@ void printFDEInfo(CIE* cie,FDE* fde,int num)
       //dictDelete(rulesDict,NULL);
       continue;//Don't need to print this because will be dup
     }
-    printf("    ----Register Rules at text address 0x%x------\n",i);
-    printRules(stdout,rulesDict,"      ");
+    fprintf(file,"    ----Register Rules at text address 0x%x------\n",i);
+    printRules(file,rulesDict,"      ");
   }
 }
 
-void printCallFrameInfo(CallFrameInfo* cfi)
+//elf is not required but can provide additional info if it is given
+void printCallFrameInfo(FILE* file,CallFrameInfo* cfi,ElfInfo* elf)
 {
   for(int i=0;i<cfi->numCIEs;i++)
   {
-    printCIEInfo(cfi->cies+i);
+    printCIEInfo(file,cfi->cies+i);
   }
   for(int i=0;i<cfi->numFDEs;i++)
   {
-    printFDEInfo(cfi->fdes[i].cie,cfi->fdes+i,i+1);//fdes have a 1-based numbering scheme
+    printFDEInfo(file,cfi->fdes+i,i+1,elf);//fdes have a 1-based numbering scheme
   }
 }

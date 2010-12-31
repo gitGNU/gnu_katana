@@ -57,5 +57,6 @@
 
 #include "fderead.h"
 #include "callFrameInfo.h"
-void printCIEInfo(CIE* cie);
-void printCallFrameInfo(CallFrameInfo* cfi);
+void printCIEInfo(FILE* file,CIE* cie);
+//elf is not required but can provide additional info if it is given
+void printCallFrameInfo(FILE* file,CallFrameInfo* cfi,ElfInfo* elf);
