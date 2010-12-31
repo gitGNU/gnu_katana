@@ -1,2 +1,4 @@
 /.deps
 /Makefile
+/pullAll.sh
+/pushAll.sh
