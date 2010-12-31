@@ -62,6 +62,8 @@
 #include <unistd.h>
 #include "util/logging.h"
 #include "fderead.h"
+#include "symbol.h"
+#include "util/cxxutil.h"
 
 //the ELF file is always opened read-only. If you want to write a copy
 //to disk, call writeOutElf. 
@@ -443,7 +445,6 @@ void findELFSections(ElfInfo* e)
       assert(!e->sectionIndices[ERS_RELX_PLT]);
       e->sectionIndices[ERS_RELX_PLT]=elf_ndxscn(scn);
     }
-
     else if(!strcmp(".dynsym",name))
     {
       e->sectionIndices[ERS_DYNSYM]=elf_ndxscn(scn);
@@ -463,6 +464,10 @@ void findELFSections(ElfInfo* e)
     else if(!strcmp(".debug_info",name))
     {
       e->sectionIndices[ERS_DEBUG_INFO]=elf_ndxscn(scn);
+    }
+    else if(!strcmp(".eh_frame",name))
+    {
+      e->sectionIndices[ERS_EH_FRAME]=elf_ndxscn(scn);
     }
   }
   //todo: support x86_64 sections ltext, ldata,lrdodata, etc
@@ -540,4 +545,28 @@ bool hasERS(ElfInfo* e,E_RECOGNIZED_SECTION ers)
 {
   assert(e);
   return 0!=e->sectionIndices[ers];
+}
+
+//the returned string should be freed
+char* getFunctionNameAtPC(ElfInfo* elf,addr_t pc)
+{
+  idx_t symIdx=findSymbolContainingAddress(elf,pc,STT_FUNC,SHN_UNDEF);
+  if(STN_UNDEF==symIdx)
+  {
+    return "?";
+  }
+  GElf_Sym sym;
+  getSymbol(elf,symIdx,&sym);
+  char* name=getString(elf,sym.st_name);
+  if(name[0]=='_' && name[1]=='Z')
+  {
+    //the name is a C++ mangled name, or at least it very likely is
+    //(there is of course nothing stopping someone from naming a
+    //function starting with _Z in C).
+    return demangleName(name);
+  }
+  else
+  {
+    return strdup(name);
+  }
 }

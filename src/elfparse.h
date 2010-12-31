@@ -88,6 +88,7 @@ typedef enum
   ERS_DYNAMIC,
   ERS_UNSAFE_FUNCTIONS,
   ERS_DEBUG_INFO,
+  ERS_EH_FRAME,
   ERS_CNT,
   ERS_INVALID
 } E_RECOGNIZED_SECTION;
@@ -156,7 +157,8 @@ char* getScnHdrString(ElfInfo* e,int idx);
 char* getString(ElfInfo* e,int idx);//get a string from the normal string table
 char* getDynString(ElfInfo* e,int idx);//get a string from the dynamic string table
 bool hasERS(ElfInfo* e,E_RECOGNIZED_SECTION ers);
-
+//the returned string should be freed
+char* getFunctionNameAtPC(ElfInfo* elf,addr_t pc);
 
 #define SHT_KATANA_UNSAFE_FUNCTIONS SHT_LOUSER+0x1
 #endif

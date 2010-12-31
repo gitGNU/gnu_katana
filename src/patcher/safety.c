@@ -98,17 +98,6 @@ FDE* getFDEForPC(ElfInfo* elf,addr_t pc)
   return NULL;
 }
 
-char* getFunctionNameAtPC(ElfInfo* elf,addr_t pc)
-{
-  idx_t symIdx=findSymbolContainingAddress(elf,pc,STT_FUNC,SHN_UNDEF);
-  if(STN_UNDEF==symIdx)
-  {
-    return "?";
-  }
-  GElf_Sym sym;
-  getSymbol(elf,symIdx,&sym);
-  return getString(elf,sym.st_name);
-}
 
 //this function and the one below it are coded badly. This can be done
 //more efficiently
