@@ -72,6 +72,14 @@ typedef struct CallFrameInfo
   addr_t sectionAddress;
 } CallFrameInfo;
 
+typedef enum
+{
+  CAF_DATA_PRESENT=1,//set if augmentation data is present
+  CAF_FDE_ENC=2,//set if the fdePointerEncoding member of the
+                        //augmentationInfo struct is valid
+  CAF_FDE_LSDA=4,//fdeLSDAPointerEncoding is valid. The FDE will have an LSDA pointer
+} CIEAugmentFlags;
+
 typedef struct CIE
 {
   RegInstruction* initialInstructions;
@@ -100,7 +108,7 @@ typedef struct CIE
   //for augmentation data information
   struct
   {
-    bool augmentationDataPresent;
+    byte flags;//OR'd CIEAugmentFlags
     byte fdePointerEncoding;
     byte fdeLSDAPointerEncoding;
   } augmentationInfo;
@@ -123,6 +131,12 @@ typedef struct FDE
   int idx;//what index fde this is in a DWARF section
   Dwarf_Unsigned augmentationDataLen;
   byte* augmentationData;
+  struct
+  {
+    //if this is false than all the other fields in this struct are invalid
+    bool filled;
+    addr_t LSDAPointer;
+  } augmentationInfo;
 } FDE;
 
 //returns a void* to a binary representation of a Dwarf call frame
@@ -137,4 +151,7 @@ byte* buildCallFrameSectionData(CallFrameInfo* cfi,int* byteLen);
 //http://refspecs.freestandards.org/LSB_4.0.0/LSB-Core-generic/LSB-Core-generic/ehframechpt.html
 //for augmentation data information
 void parseAugmentationStringAndData(CIE* cie);
+void parseFDEAugmentationData(FDE* fde,addr_t augDataAddress);
+
+void printEHPointerEncoding(FILE* file,byte encoding);
 #endif
