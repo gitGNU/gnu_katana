@@ -35,7 +35,7 @@ This document details brainstorming for the katana scripting language
    Where PARAMETERS depend on COMMAND. The possible COMMAND choices
    are as follows
 *** compile
-    Usage 'dwarfscript compile input [outfile]'
+    Usage 'dwarfscript compile INPUT [OUTFILE]'
     input should be a file or variable resolving to a textual
     representation of a dwarfscript file. This input is resolved into
     an ELF section. If outfile is specified, the binary data in this
@@ -45,6 +45,17 @@ This document details brainstorming for the katana scripting language
     Creates dwarfscript (writing it to [outfile] if specified) for
     either the eh or debug_frame section of the given ELF object
 ** replace
+   Usage 'replace WHAT ELF PARAMETERS'
+   where PARAMETERS depend on COMMAND. The possible choices for WHAT
+   to replace are as follows
+*** section
+    Usage 'replace section ELF SECTION_NAME SECTION_DATA'
+    
+** info
+   Usage 'info WHAT ELF [OUTFILE]'
+   Where the values of WHAT are as follows
+*** eh
+    Prints out information about .eh_frame and .gcc_except_table
 * Reserved Words
   + load
   + save
@@ -79,18 +90,27 @@ This document details brainstorming for the katana scripting language
    All statements inside FDE and CIE sections other than INSTRUCTIONS
    sections are property statements. These statements are used to
    describe the CIE or FDE.
+*** Top-level properties
+**** section_type
+**** section_location
 *** CIE properties
+**** index
 **** length
 **** version
+**** augmentation
+**** augmentation_data
+**** address_size
+**** segment_size
 **** data_align
 **** code_align
 **** return_addr_rule
-**** augmentation
 *** FDE properties
+**** index
 **** length
 **** cie_index
 **** initial_location
 **** address_range
+**** augmentation_data
 ** instruction statements
    These are statements describing dwarf instructions. They begin with
    a dwarf opcode and are followed by parameters. There is no complete
