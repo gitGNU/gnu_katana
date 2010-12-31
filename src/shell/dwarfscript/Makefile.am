@@ -1,3 +1,4 @@
+BFLAGS=-d -v
 dwarfscript.yy.h : dwarfscript.l
 	flex $<
 
