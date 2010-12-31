@@ -1,8 +1,9 @@
 SUBDIRS=dwarfscript
+BFLAGS=-d -v
 shell.yy.h : shell.l
 	flex $<
 
-shell.yy.cpp : shell.l
+shell.yy.cpp : shell.l shell.tab.hpp
 	flex $<
 
 shell.tab.cpp : shell.y

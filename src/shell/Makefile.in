@@ -190,6 +190,7 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 SUBDIRS = dwarfscript
+BFLAGS = -d -v
 all: all-recursive
 
 .SUFFIXES:
@@ -532,7 +533,7 @@ uninstall-am:
 shell.yy.h : shell.l
 	flex $<
 
-shell.yy.cpp : shell.l
+shell.yy.cpp : shell.l shell.tab.hpp
 	flex $<
 
 shell.tab.cpp : shell.y
