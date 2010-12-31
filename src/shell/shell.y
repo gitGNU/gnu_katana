@@ -5,7 +5,8 @@
 #include "commands/replaceCommand.h"
 #include "commands/shellCommand.h"
 #include "commands/dwarfscriptCommand.h"
-#include "parse_helper.h"  
+#include "commands/infoCommand.h"
+#include "parse_helper.h"
 
 
 ParseNode rootParseNode;
@@ -38,6 +39,7 @@ extern "C"
 //Token definitions
 %token T_LOAD T_SAVE T_TRANSLATE T_REPLACE T_SECTION T_VARIABLE T_STRING_LITERAL
 %token T_DATA T_DWARFSCRIPT T_COMPILE T_EMIT T_SHELL_COMMAND
+%token T_INFO T_EXCEPTION_HANDLING
 %token T_INVALID_TOKEN
 
 
@@ -93,6 +95,7 @@ commandline : loadcmd {$$=$1;$$.type=PNT_CMD;}
 | dwarfscriptcmd {$$=$1;$$.type=PNT_CMD;}
 | replacecmd {$$=$1;$$.type=PNT_CMD;}
 | shellcmd {$$=$1;$$.type=PNT_CMD;}
+| infocmd {$$=$1;$$.type=PNT_CMD;}
 
 
 loadcmd : T_LOAD param
@@ -144,6 +147,20 @@ replacecmd : T_REPLACE T_SECTION param param param
 shellcmd : T_SHELL_COMMAND param
 {
   $$.u.cmd=new SystemShellCommand($2.u.param);
+}
+
+infocmd : T_INFO T_EXCEPTION_HANDLING param param
+{
+  $$.u.cmd=new InfoCommand(IOP_EXCEPTION,$3.u.param,$4.u.param);
+}
+| T_INFO T_EXCEPTION_HANDLING param
+{
+  $$.u.cmd=new InfoCommand(IOP_EXCEPTION,$3.u.param);
+}
+| T_INFO error
+{
+  fprintf(stderr,"Unrecognized info usage\n");
+  YYERROR;
 }
 
 param : variable

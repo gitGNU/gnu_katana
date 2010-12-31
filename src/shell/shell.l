@@ -48,6 +48,8 @@ S_QUOTE_STRING  [\'][^\'\n][\']
 "dwarfscript" return T_DWARFSCRIPT;
 "compile" return T_COMPILE;
 "emit" return T_EMIT;
+"info" return T_INFO;
+"eh" return T_EXCEPTION_HANDLING;
 
 {VARIABLE}   savedVarName=strdup(yytext);return T_VARIABLE;
 
