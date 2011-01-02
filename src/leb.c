@@ -125,7 +125,7 @@ byte* encodeAsLEB128NoOptimization(byte* bytes,int numBytes,bool signed_,usint* 
   return result;
 }
 
-
+//the returned memory should be freed
 byte* decodeLEB128(byte* bytes,bool signed_,usint* numBytesOut,usint* numSeptetsRead)
 {
   //do a first pass to determine the number of septets

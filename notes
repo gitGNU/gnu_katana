@@ -1,0 +1,835 @@
+-*- mode:org; -*-
+
+* notes from meeting
+look up what Diablo's patch against gcc was and if it was related to
+relocations in .rodata
+* confusion I have
+** Why can't we just relocate functions when patching them?
+   probably can most of the time according to Sergey
+   we would still need the trampolines to catch function pointers
+   lying around, etc
+** why does gcc use pc-relative relocations for PLT stuff
+   I think it's because for stuff within the same section (like .text)
+   you can relocate the section and not have to relocate anything.
+   Also because the instructions are relative jumps, seem to be
+   easiest sort of jump to do in x86
+** wtf is up with libelf and writing ELF files that can be executed.
+* issues I see
+** exception handling
+   issue mentioned in "A Runtime Code Modification Method for
+   Application Programs" (reference 14 in Katana). Can't patch code that
+   generates exceptions unless patch .eh_frame
+** patching debug data?
+   do we need to do it?
+** existing state
+   can it be used to fix existing problems in state or only patch vulnerabilities? 
+** global initializers
+   Can it be used to change existing values of variables that have
+   already changed from the initial value?
+** rolling back
+   p.8 how can we role back a patch anyway if we insert a jump at the
+   beginning of a function that didn't have one before, presumably
+   overwriting some instruction. Would we store this instruction
+   somewhere?
+** TODO actual code
+   need to get Tenessee Valley code still
+** multithreaded?
+** C type unsafety
+   As the Ginseng paper points out in section 4.2, C has unsafe casts
+   some of these things can violate the type system. How to account
+   for this? Also might store the address of a member of a struct in
+   some variable. If we remap this variable somewhere, we're going to
+   have to detect that we have a variable pointing into memory that
+   we're no longer using. Even worse, we might want to fixup that
+   variable to point to the new section of memory but at a revised
+   offset.
+
+   Perhaps even more worrisome, what about void*? If we have a global
+   variable of type void*, how do we know what type it points to? We
+   don't. It could be different at different times during program
+   execution even. The paragraph above this one describes a case which
+   is somewhat more unlikely. This on the other hand is used all the
+   time. Abstract data types in C are typically implemented using
+   void*, since C has no notion of template/generic/etc. DWARF doesn't
+   help us here. What can we do? We can locate the text locations at
+   which the symbol is used. If the symbol is cast to a certain type
+   and stored in a variable, there will be dwarf info about that
+   variable so we can figure out what type it's turning into and patch
+   it then (this would involve leaving part of the patcher in the
+   running process). If things are just cast to pass to another
+   function or access a member or something, no dwarf type info will
+   show up. This is problematic. Ginseng does not totally solve this
+   problem either, although it is able to do so perhaps to a greater
+   degree because it analyzes the program's source code and therefore
+   has access to all casts, not just those which are assigned to
+   variables. The best we can do as far as I can see is identify
+   references to symbols of type void* and warn the user about
+   them. It would be nice to have a better solution, however. 
+
+   Perhaps even worse, there is no good solution for arrays. Does
+   something like
+             Foo* bar;
+   denote a pointer to a single instance of Foo, or an array of them?
+   Who knows? The malloc/free code knows (since after all free
+   has to know how much to free). Where the block structures are
+   stored is going to be highly system-dependent however, making
+   writing a portable patcher difficult. Is there a better solution?
+** pointer to type only declared
+what to do about cases where there's a global variable of pointer type
+to a struct which has only a declaration. We don't actually know what
+type that pointer is, we can't really patch it   
+** adding new sections to in-memory ELF objects
+   can be done. ERESI seems to do it, but their code is a bit hard to
+   track down precisely where it does what. Note that the only thing
+   in an ELF file which is required to live in a fixed place is the
+   ELF header, so could theoretically move around the PHT and SHT if
+   we needed to make them larger
+** interfacing with memory management
+   when we fix up stuff that was created on the heap, hard to be sure
+   we don't interfere with memory management method. Currently we use
+   malloc, but really have to make sure using the same memory manager
+   as the target program is
+* things to keep in mind
+** some way to check compatibility with target before applying the patch
+** patching static variables
+   p. 9 of "A Runtime Code Modification Method for Application Programs" mentions
+   that this is tricky and is a limitation of their kaho system
+** speeding up the patching
+   what if create an extra thread in the target to handle loading, etc
+   of the new data before actually patching?
+** application speed gets worse as the app runs due to worse spatial locality
+** fix tainted state
+   callbacks at beginning and end of patch? Talked about on p. 5 of
+   the POLUS paper
+** extraneous object code changes
+   as ksplice points out (in section 3.2 of the ksplice paper) it is
+   possible that small changes to the source code produce large
+   object-code changes. due to changes in relative offsets, etc.
+
+   The solution ksplice proposes is to use the gcc options (also
+   provided by the Intel C compiler) -ffunction-sections and
+   -fdata-sections which forces the generation of relocations rather
+   than making assumptions about where things are. We may need to have
+   these relocation entries anyway.
+** generating relocations
+*** e.g. yalnix
+    316k w/ relocs
+    241k w/o relocs
+    This is a 31% increase in size
+** need to patch changes to the data segment that might be string constants, etc, things not named
+** what if we could copy out the image in memory so that we could somehow restart it later
+   in the event that something went wrong. Problem with this is system
+   resources that won't be able to get back like file descriptors, etc
+* references:
+** x86
+*** x86 calling conventions http://unixwiz.net/techtips/win32-callconv-asm.html
+*** x86 instruction set reference http://download.intel.com/design/PentiumII/manuals/24319102.PDF
+*** x86-64 ABI
+    http://www.x86-64.org/documentation/abi.pdf
+** ELF basics
+*** http://developers.sun.com/solaris/articles/elf.html
+*** http://www.linuxjournal.com/node/1060/print
+*** Understanding ELF using readelf and objdump
+    http://www.linuxforums.org/articles/understanding-elf-using-readelf-and-objdump_125.html
+    decent introduction to ELF
+*** ELF format reference  http://www.skyfree.org/linux/references/ELF_Format.pdf
+*** http://www.ibm.com/developerworks/power/library/pa-spec12/
+*** powerpoint on ELF http://www.trunix.org/programlama/os/sp13.ppt
+*** x86-64 ABI
+    http://www.x86-64.org/documentation/abi.pdf
+** ELF hacking
+*** ELFsh/ERESI papers
+*** http://phrack.org/issues.html?issue=61&id=8&mode=txt
+    Paper on ALTPLT technique, ET_REL injection, and more
+*** http://www.phiral.net/phrack/phrack/63/p63-0x09_Embedded_Elf_Debugging.txt
+    Long, useful paper on various binary manipulation
+    techniques. Talks about rewriting ELF files to allow calls to
+    previously unused functions in dynamic libraries. Unfortunately,
+    I'm not sure  this will work at runtime (although I should check to
+    find out how the address of the GOT and PLT tables is being
+    determined. Check out .dynamic). Around DUMP 29 in the article it
+    appears that they might actually be doing this, read in more
+    depth. Also consider the section entitled 
+    "Runtime section injection algorithm in memory". It talks about
+    injecting things at runtime
+
+**** note: use the command flist instead of list to show working files
+*** http://artofhacking.com/files/phrack/phrack61/live/aoh_p61-0x08.htm
+*** elfutils: http://www.blackhat.com/presentations/bh-asia-02/Clowes/elfutils-bh2.tar
+    misc tools for patching into elf files. I think it patches stationary files rather
+    than running ones, but the same techniques could be extrapolated. Therefore, it could
+    be used for example purposes
+*** Phrack on runtime code injec
+tion
+    http://phrack.org/issues.html?issue=59&id=8#article
+*** Linux x86 run-time process manipulation
+    http://www.hick.org/code/skape/papers/needle.txt
+*** Cheating the ELF Subversive Dynamic Linking to Libraries
+    http://althing.cs.dartmouth.edu/local/subversiveld.pdf
+
+    better technique then explained by the same author on
+    http://seclists.org/bugtraq/2002/May/249
+
+    Author of Elfsh says he has better explanation
+** Academic Systems
+*** Practical Dynamic Software Updating for C
+    http://www.cs.umd.edu/~neamtiu/pubs/pldi06neamtiu.pdf
+    fairly in-depth look at hot patching, along with actual metrics
+    of a system they built called Ginseng
+    Disadvantage: seems to require the currently running software to
+    be built supporting it. Handles type transformation in a way that is perhaps not as
+    nice as using the DWARF information. Seems to allocate fixed
+    padding for types to expand, cannot expand beyond that although
+    they discuss some possible techniques for removing this limitation
+
+    Features loop extraction (p. 4) which is pretty nifty
+
+    Like Katana has issues with multithreaded (p. 5)
+
+    Has code available at
+    http://www.cs.umd.edu/projects/PL/dsu/software.shtml
+    Note that there is a pdf manual entitled "Ginseng User's Guide" in
+    the source distribution.
+
+    Note: patches are dynamic libraries which are dlopened into the
+    target process. They then contain the code for patching up the
+    target themselves. This is fairly nice but does not provide easy
+    composition of patches or reasoning about the impact of a patch. 
+*** "A Runtime Code Modification Method for Application Programs"
+    http://ols.fedoraproject.org/OLS/Reprints-2008/yamato-reprint.pdf
+    proposes a system faster than pannus and livepatch. Like pannus
+    relies on a kernel module. Talks about some limitations of
+    hot-patching systems. Their system can't handle shared libraries
+    not already loaded and has some issues with static variables
+*** POLUS http://portal.acm.org/citation.cfm?id=1248820.1248860
+    dates from 2007
+    robus/developed patching system that allows patching tainted state
+    and rolling back updates. Has code available at http://sourceforge.net/projects/polus/files/
+    
+    POLUS and Ginseg both rely on the CIL framework
+    (http://www.eecs.berkeley.edu/~necula/Papers/cil_cc02.pdf). This
+    gives them a disadvantage in that they are tied to C. We could
+    theoretically work on any language that compiles to ELF files with
+    DWARF information. TODO: demonstrate patching an objective C
+    program if possible. KSplice paper discusses other disadvantages
+    of working at the source code level, including difficulty patching
+    inline functions.
+
+** call frame info/DWARF/Exception Handling
+*** libdwarf: http://reality.sgiweb.org/davea/dwarf.html
+*** dwarf standard http://dwarfstd.org/doc/Dwarf3.pdf
+**** Call frame information in section 6.4 (p. 120 in the pdf, marked as p.108)
+**** section 6.4.4 discusses exactly how to practically unwind the stack
+**** example in Appendix D.6 (page 217 in the pdf)
+*** dwarf intro http://dwarfstd.org/Debugging%20using%20DWARF.pdf
+*** A Consumer Library Interface to DWARF 
+    unfortunately oldish, from 2002
+    ftp://ftp.software.ibm.com/software/os390/czos/dwarf/libdwarf2.1.pdf
+    section 5.12 (pdf page 37) talks about stack frames
+*** "C++ Exception Handling"
+    from http://ieeexplore.ieee.org/search/wrapper.jsp?arnumber=895109
+    probably not terribly useful but talks a bit about how exception
+    handling is implemented in C++
+*** x86-64 ABI
+    http://www.x86-64.org/documentation/abi.pdf
+    See section 6.2
+*** email entitled "DWARF debugging intro, with hints re exception handling" from Sergey
+  the text is below. Comment are in bold:
+  The intro:
+
+       http://dwarfstd.org/Debugging%20using%20DWARF.pdf
+
+    Stack unwinding is part of the ABI, so some of it is covered in
+  platform dev manuals. Look for "stack unwinding" here:
+
+          http://www.x86-64.org/documentation/abi.pdf
+          *useful stuff on precisely how x86-64 requires things to be.
+          Talks about special functions the ABI requires to be defined*
+
+    There may be more details in other similar manuals (e.g., HP's or Intel's).
+
+    There seem to be bits of into on the GCC mailing list, but so far
+  I had not found much in any organized form. Some links:
+
+  http://refspecs.freestandards.org/LSB_3.0.0/LSB-Core-generic/LSB-Core-generic/ehframechpt.html
+   *just describes the structure of the .eh_frame section*
+  http://archives.devshed.com/forums/development-94/how-is-the-eh-frame-section-used-2316212.html
+   *mentions source files relevant to eh_frame being bfd/elf-eh-frame.c in 
+   binutils and gcc/dwarf2out.c in gcc*
+  http://gcc.gnu.org/ml/gcc/1997-10/msg00312.html
+   *just mentions that eh_frame contains Dwarf2 unwind info (from 1997)*
+  http://gcc.gnu.org/ml/gcc/1997-10/msg00300.html
+   *follow up to above. Not particularly interesting for our purposes*
+  http://www.mailinglistarchive.com/gcc@gcc.gnu.org/msg29372.html
+   *useful, talks about some more stuff in eh_frame. A later followup
+   talks about LSDA, the Language Specific Data Area*
+  http://readlist.com/lists/gcc.gnu.org/gcc/2/12822.html
+    *doesn't look useful for this project, sounds like a bug in gcc for sparc*
+    *Does mention the file unwind-dw2.c, not sure if it has relevance beyond sparc*
+
+     Terms to watch out for: CFI, stack unwinding, personality routine.
+  I recall there was a long post on the GCC list explaining the
+  details of C++ personality stack unwinding, but I have been unable
+  to locate it since.
+
+
+    Best,
+
+  --Sergey 
+
+*** C++ ABI Exception Handling
+    http://www.codesourcery.com/public/cxx-abi/exceptions.pdf
+    Talks about exception handling in C++
+    the exception routines are discussed in a little more depth at
+    http://www.codesourcery.com/public/cxx-abi/abi-eh.html
+    although the info there may be Itanium specific. See answers from
+    stack overflow references below for more info
+*** stack overflow question on exception handling
+    http://stackoverflow.com/questions/307610/how-do-exceptions-work-behind-the-scenes-in-c
+    One answer gives dissasembly and fairly detailed analysis
+
+    Even better is
+    http://stackoverflow.com/questions/329059/what-is-gxxpersonalityv0-for
+    Gives some info about the personality routine and indicates where
+    in libstd++ the implementation code can be found
+*** exception handling implementation issues http://chasewoerner.org/exh.pdf
+    discusses some of the implementation details of exception handling. Probably not
+    terribly useful but could have a bit of interesting information or
+    two
+*** static binary checking using DWARF and ELF information
+    http://descheck.googlecode.com/files/descheck.pdf 
+    Paper from 2007. Unclear if it was ever published anywhere. Associated
+    with the open source project descheck at
+    http://code.google.com/p/descheck/
+* existing software:
+** livepatch
+   doesn't look very sophisticated. Doesn't make sure target in a safe
+   state. Can only patch integral values or pointers, can't patch
+   changes to other global data.
+   
+** pannus
+*** should look into it more to see exactly what it can do
+*** requires writing out commands file (apparently by hand, I think)
+** ksplice http://www.ksplice.com/doc/ksplice.pdf
+   kernel live patching
+   fairly developed system, one reviewer who rejected Katana suggested looking at it more
+
+   a grep of its source code seems to indicate that it does not use
+   dwarf for type patching, but the paper does not seem to make it
+   clear what it does use. Upon closer reading of the paper, it looks
+   as though it requires manual code writing in the case of modifying
+   "persistent kernel data structures".
+
+   Like us it tries to do patching based on the object files, not the
+   source, and not require programmer annotation of the source the way
+   Ginseng does. A quote from the first page of the paper "Significant
+   programmer involvement in creating a hot update increases both the
+   cost and the risk of the update, which discourages the adoption of
+   hot updates"
+
+** Ginseng
+   http://www.cs.umd.edu/projects/PL/dsu/software.shtml
+   discussino about it above in the references section
+** Polus
+   http://sourceforge.net/projects/polus/files/
+   discussion in references section
+* helpful tools and libraries
+** Radare http://www.radare.org
+   general framework for binary manipulation with an aim towards
+   reverse engineering. Not originally intended to run on a running
+   process, but there seems to be a ptrace io wrapper plugin for it
+   that allows it to do this. Claims some DWARF support, but it's not
+   clear how extensive this is.
+** Diablo http://diablo.elis.ugent.be/
+   Only works on statically linked programs.
+   Requires hastle with changing compiler toolchain.
+   Focuses on link-time optimization.
+   I'm not sure it has a great deal of bearing on the Katana project 
+
+   todo: look at exactly what Diablo requires to be kept in the
+         object files, why it requires 
+** ERESI
+   General ELF rewriting framework. Formerly elfsh. The etrace program
+   (and corresponding libetrace) allow tracing (and I believe
+   modifying) running code from within that code's memory space (thus
+   it is much faster than ptrace, etc). More docs on elfsh than ERESI
+   I think, perhaps read old phrack articles on elfsh to figure our
+   etrace usage
+   
+*** Reading
+   http://s.eresi-project.org/inc/articles/p63-0x09_Embedded_Elf_Debugging.txt
+   indicates that actually getting it into running code is a bit of a
+   PITA. It requires either modifying the binary or setting LD_PRELOAD
+   and restarting the (unmodified) binary. This is not ideal. What we
+   want to do is get it into running code without halting the
+   code. etrace has two advantages over ptrace. It is faster and it
+   may work in places where ptrace is disabled for security
+   reasons. Since we are not hacking anything, we shouldn't need to
+   care about the security restrictions. Faster is nice, however. We
+   could potentially use ptrace to embed etrace in the application and
+   move from there. If ERESI doesn't include support for embedding
+   etrace in currently running code, it might just be easier to write
+   things ourselves.
+
+*** Playing around:
+   I could not get the ERESI etrel_memory test in the
+   testsuite/debugging directory to work. I fear I don't understand
+   the reladd command properly. The included .esh script seems to be
+   somewhat specific to the memory layout of the system it was tested on
+*** notes
+    does not seem to support adding new symbols to in-memory
+    targets. We could potentially do this by rewriting the .dynamic
+    section and setting the elf headers to point to our new
+    .dynamic section. In fact, in patched processes may need to insert
+    a full symtab section, or at least maintain an on-disk image of
+    one somewhere so that we know exactly how the patch was applied previously
+** libelf
+   Tutorial at
+   http://elftoolchain.sourceforge.net/for-review/libelf-by-example-20100112.pdf
+   Sun also has a brief tutorial at http://developers.sun.com/solaris/articles/elf.html
+   
+   LGPL
+* understandings
+** C++ Exception Handling Process
+   A good overview of the process is found at
+   http://www.codesourcery.com/public/cxx-abi/abi-eh.html#base-framework
+   There is also a quite thorough comment in gcc/except.c in the gcc
+   source code although I think this mostly deal with .gcc_unwind_table
+
+   Note that during unwinding, _Unwind_GetGR is used to get general
+   purpose registers (there's a SetGR variant too) and
+   _Unwind_GetIP/_Unwind_SetIP does the same for the instruction
+   pointer (same as PC, right?)
+*** The CIE in .eh_frame defines a pointer to the personality routine
+    It also defines the Language Specific Data Area (LSDA), I should
+    figure out exactly what goes in that. For code compiled by g++,
+    the personality routine is __gxx_personality_v0. This is located
+    in libstdc++. The code can be found in libsupc++/eh_personality.cc
+    in the source code for libstd++.
+*** invocation of C++ throw generates a call to __cxa_throw
+*** __cxa_throw calls _Unwind_RaiseException
+    This function is required to exist by (I believe) the C++ ABI. It
+    is located in libgcc
+*** _Unwind_RaiseException calls the personality routine (__gxx_personality_v0)
+    The personality routine examines the exception handlers to
+    determine which frame holds a handler for the current
+    exception. TODO: I don't yet have a clear understanding of the way
+    this data is stored and accessed. The C++ ABI document on
+    exception handling (in references above) talks about the storage
+    of exception records. Also, I'm not entirely positive
+    whether it's _Unwind_RaiseException or the personality routine
+    that deals with the actual details of traversing down the
+    stack. __gxx_personality_v0 calls __gnu_unwind_frame, but I cannot
+    find where this symbol is actually located. Reading
+    http://www.codesourcery.com/public/cxx-abi/abi-eh.html#base-personality
+    I think it's the _Unwind_RaiseException that handles the stack
+    rather than the personality routine.
+*** Once a handler is found, execution goes to __cxa_begin_catch
+    Note that at this point the original call location of the
+    exception has been wiped off the stack.
+*** After the code in the catch block has executed, it makes a call to __cxa_end_catch
+*** DWARF virtual machine
+    most of the code for the dwarf virtual machine seems to be located
+    in unwind-dw2.h in gcc. If we were going to look for a
+    vulnerability, it is here that'd we'd look
+** DWARF Call Frame information
+*** from meeting
+need to understand dwarf CIEs better, sergey thinks that format might
+already describe the kinds of offsets that we need in order to patch. This
+might be useful in the PO format. Stack frame is similar to a struct
+
+offsets with info on what you expect to find at each.
+
+read more on frame description in unwinding process
+possible that poking of bytes in unwinding process can also go into patching
+*** my understanding
+(from the Dwarf spec)
+DWARF call frame information (stored in .debug_frame) basically
+provides the means to build a large table with a row for each possible
+address of the program counter. Each row contains expressions allowing
+the stack to be unwound to the previous frame by defining columns for
+1. the Call Frame Address (stack pointer at call site in previous
+   frame)
+2. the return address, i.e. the address where execution will resume
+   when the current function returns
+3. the values of all registers in the previous frame at the return
+   address
+The values of these columns are obviously not generally columns. They
+are computed from other registers, etc (computation against the
+stack pointer register allows retrieving values on the
+stack). Dwarf defines an expression language, which includes
+stack-based computation (i.e. a stack similar to RPN calculators,
+ not the stack in use by the executing program).
+
+Interestingly, while all of the columns except for the CFA are
+supposedly defining registers, the register number defined is given by
+a LEB128 number. This allows an arbitrarily large number of
+"registers". Note again that some of these "registers" may be
+specified in terms of calculations involving other "registers". An
+appropriate interpreter of this information could treat register
+numbers instead as memory addresses/offsets from the start of a
+file/etc. If the initial row were taken to be the image of the
+original binary, a following row would define all changes that were
+made to the binary by a patch. Because columns may be specified by
+expressions in terms of other columns, this could theoretically provide a means of
+specifying the transformation of a running program into a patched
+program based on the state  of the running program.
+
+That said, while it's an interesting idea, I'm not sure I really see
+the point (perhaps I'm missing something). As it doesn't actually
+serve the same purpose as the contents of .debug_frame (or .eh_frame)
+and requires reinterpretation of register numbers as addresses, it
+would hardly be able to use existing code written for dealing with
+Dwarf. For example, while the Dwarf standard calls for  LEB128 values
+for the register numbers, libdwarf reads them as shorts, since no
+existing architecture actually has 2^16 registers. So making the patch
+information in patch objects formatted in the manner of DWARF FDEs
+seems to me as though it would just be a hassle (and restrict the
+addition of extra functionality should it be needed). We could certainly use it for
+inspiration yes, but I'm not sure where the gain would be in actually
+using the format. I suppose the only real advantage would be in trying
+to promote a standard patch object format, since Dwarf is already a standard.
+
+** how to determine number of bytes in allocated memory
+*** glibc currently (2.11) uses a chunk before the returned pointer
+    this chunk is 2*SIZE_SZ bytes in size. SIZE_SZ seems to eventually
+    resolve to sizeof(size_t). Therefore, an allocated chunk has two
+    size_t sized values. The seconds one seems to be the size of the
+    chunk. Our patcher could test for this behaviour to make sure a
+    recent glibc or something compatible is being used.
+    
+** howto debug the target in gdb after patching
+   + modify Katana to send SIGSTOP after PTRACE_DETACH instead of SIGCONT
+   + after running katana, start GDB on the process
+  
+   This is not perfect, as PTRACE_DETACH sends SIGCONT, and some time may elapse between
+   that SIGCONT and the SIGSTOP we send. I haven't found a better reliable way to do it though.
+   If we just start GDB on the process that is still be traced by Katana, GDB (at least in
+   some situations) reports that ptrace is not allowed
+* definitions
+** ET_REL
+   ELF file type recognized by linux. Denotes relocatable object
+
+* plans/thoughts
+** basic type-patching process
+   read in the old type definition from DWARF information. Construct
+   for each type a bijection between field name and field offset (from
+   the starting address of any variable of that type). Then do the
+   same for the new type definion. This allows us to construct a
+   map from old offset and new offset (old offset -> field name -> new
+   offset) unless of course the given variable has been eliminated. 
+
+
+
+** using Dwarf call frame info for PO format
+*** needs of the PO format
+**** possible abstraction levels
+     There are various different levels that our operations could be specified at
+*****high level
+****** set this memory location from this other memory location
+      ex, a struct where the order of the fields changes or a function
+      which changes but fits in the same size
+****** relocate the contents of this variable to a new memory location
+      ex, a struct with fields added. Would follow type spec. Note this
+      would also require relocating references to the variable
+****** redefine a function
+      this could just be done with memory operations, including
+      mapping in new memory
+****** add a new function
+****** add a new variable following a type spec
+***** low level
+We don't really want the PO format to operate at this level. Not only
+does it make operations on patch files (composing multiple patch
+files, etc) difficult, it requires that the in-memory target must be
+identical to the binary on disk which we used to generate the
+difference. As the KSplice paper points out, this isn't always going
+to be the case. 
+****** peek target mem
+       Dwarf provides plenty of means to do this
+****** poke target mem
+       Dwarf does not provide good means for doing this. If we view
+       "registers" as mem locations, the CIE/FDE structures provide us
+       with the means to specify every new mem location in the target
+       in terms of an expression. What it does not provide a good means
+       to do is to compute which memory location to assign the value of
+       an expression to
+****** allocate target mem
+       Importantly, later pokes of target mem should be able to refer
+       to an address in terms of a newly allocated address (which
+       cannot be stored in the patch object, as it is not known until
+       runtime). Dwarf does not provide us a good means of doing
+       this. We could theoretically do this with more creative
+       definitions of what a "register" means. Certain register ranges
+       could be defined as NEW_MEM_ID_N + OFFSET (where N is the block of new
+       memory, so we could have one logical block of new memory for
+       each var, etc, that we needed to relocate). For example, the
+       first byte (we're dealing with LEB128, so we can have an
+       arbitrary number of bytes) could have the constant NEW_MEM_ID,
+       indicating that what follows specifies a new memory region. the
+       second byte could be N, specifying the logical new memory region
+       we wish to refer to. The remaining bytes could specify an offset
+       into this memory region. The issue is that we are specifying
+       things in the opposite manner of what we would like. We are
+       saying "this new memory area gets the value of this old memory
+       area" when what we want to say is "this old memory area moves to
+       this new memory area". The way we are saying it makes it harder
+       to compose patches (although at this low level it's hard to
+       compose patches anyway, we need things in terms of symbols).
+***** middle level
+      like low level except refer to things in terms of symbols. For
+      example, we can peek and poke things at offsets from
+      symbols. Because we are doing things relative to symbols, the
+      patch is easier to reason about than in a fully low-level
+      form. If we are doing things in terms of symbols, we must have
+      the means to add symbols to the target. This is just as feasible
+      to do using DWARF although the DWARF expressions to look up
+      symbols are a little ugly. See the section "Dwarf Expressions" later.
+**** Using DWARF
+     The key problem with using the DWARF format is that its expressions
+     are designed to yield a value. They are not designed to perform
+     operations with side effects (setting a value) To make assignments we
+     have a couple options
+***** use call frame tables, interpreting "registers" creatively
+      The issue with this is that there is no mechanism for specifying
+      things sequentially (all assignments are in parallel) and we are
+      not specifying things the way we want, we are specifying what to
+      do to memory to achieve the new version of the exectuable rather
+      than what needs to be done with the old versions of structures. 
+***** coopt the DWARF_OP_call instructions
+      define special call addresses that the VM recognizes and starts
+      executing VM-defined code (still possibly manipulating the stack used by
+      dwarf expressions). This allows the vm to add special functions
+      like "map in new memory" or even "poke data". This makes dwarf
+      expressions no longer a side-effect free language operating only
+      on a stack machine. If we did this we wouldn't even have to use
+      the whole call frame thing at all, as the call frame table's
+      only purpose in our system would be to assign addresses. This is
+      a fairly significant departure from the way dwarf was designed
+      to work, however, since we violate some of the principles of its
+      stack machine.
+***** add in new instructions
+      add in instructions (DWARF_OP_mmap, DWARF_OP_poke, etc) for
+      doing what we need. This has pretty much all the same effects as
+      coopting DWARF_OP_call. It represents a slightly larger change
+      in some ways to the Dwarf instruction language because it adds
+      new instructions but a cleaner change in other ways because it
+      does not change the function of any existing instructions
+*** no really good way to specify "mem location yet to be determined"
+    Need this because don't know where we're going to be able to mmap in things. No
+    good way to indicate the high level operation of "mmap in a
+    block". Might be able to do this with DW_OP_call[24] and
+    friends. Of course, these supposedly have no meaning in the
+    .debug_frame section, however we're not interpreting the call
+    frame information in the normal way. Could also view a new memory
+    block as the CFA and not actually define the CFA. This gets in
+    the way of an algebra of patches, however, because too many
+    unknown quantities get introduced. Could sort of have an algebra
+    on the patches themselves, but wouldn't quite be the same as
+    operating a patch on a running binary that had already been
+    patched. Could store somewhere within the binary info about
+    already applied patches, but this starts to get hackish
+*** register interpretations
+    Generally interpret "registers" as addresses into the
+    binary. Could, however, have some special register values which
+    are defined to mean special things (free page in memory,
+    etc). This starts to seem a little hackish however, we're
+    stretching the dwarf language to do what we want rather than what
+    it was designed for.
+*** Dwarf Expressions
+**** finding the value of a symbol (i.e. address) given it's symtab idx
+     Assuming x86 (32-bit). 64 bit is only slightly different
+
+     *We make the following defininitions of constant values*
+     SYMTAB_START_ADDR stands for the address where the SYMTAB starts in
+                       the target executable. Note that if absolutely necessary
+                       a dwarf expression could be written to read the ELF headers
+                       and determine this
+     SYMTAB_IDX        stands for the index of the symbol we want to retrieve
+     SYM_SIZE          stands for the size of one entry in the symbol table. 
+                       It is equal to sizeof(Elf32_Sym)
+     ST_VALUE_OFF      stands for the offset of the st_value member of an 
+                       Elf32_Sym struct
+     
+     *The dwarf expression would be as follows*
+     DW_OP_addr SYMTAB_START_ADDR        (pushes address of symtab onto the stack)
+     DW_OP_const4u SYMTAB_IDX            (pushes idx into symtab on stack)
+     DW_OP_const4u SYM_SIZE              (pushes size of each symbol on stack)
+     DW_OP_mul                           (pops top two stack entries 
+                                         and pushes their product)
+     DW_OP_plus                          (pops top two stack entries and pushes
+                                         their sum. Now the top of the stack is the 
+                                         address of the symtab entry we want)
+     DW_OP_const4u ST_VALUE_OFF
+     DW_OP_plus                          (now the top of the stack is the address
+                                         in the target image of the st_value we want)
+     DW_OP_deref                         (dereferences address on top of stack and
+                                         and pushes the 4-byte (for 32-bit) result)
+    
+     
+**** finding the value of a symbol given only a strtab index for the name of the symbol
+     Assuming x86 (32-bit). 64 bit is only slightly different. Note also that
+     this expression/procedure is only for proof-of-concept purposes. It may iterate
+     through the entire symbol table, which is undesirable to do on every
+     symbol query.
+     
+     *We make the following definitions of constant values*
+     STRTAB_START_ADDR stands for the address where the .strtab starts in
+                       the target executable. Note that if absolutely necessary
+                       a dwarf expression could be written to read the ELF headers
+                       and determine this.
+     SYMTAB_START_ADDR stands for the address where the .symtab starts in
+                       the target executable. Note that if absolutely necessary
+                       a dwarf expression could be written to read the ELF headers
+                       and determine this
+     SYMTAB_SIZE       stands for the number of entries in the symbol
+                       table. Note that if absolutely necessary a
+                       dwarf expression could be written to read the
+                       ELF headers and determine this
+     STRTAB_IDX        stands for the index of the name of the symbol we want
+                       to retrieve.
+     SYM_SIZE          stands for the size of one entry in the symbol table. 
+                       It is equal to sizeof(Elf32_Sym)
+
+     *The dwarf expressesion would be as follows*
+     DW_OP_const4u 0                   (number of entries we've examined so far)
+     label_loop:                       (labels aren't part of dwarf, but easier to read
+                                        here than byte offsets)
+     DW_OP_dup                         (duplicate value at top of stack)
+     DW_OP_const4u SYM_SIZE
+     DW_OP_mul                         (top of stack is now index in symtab to examine)
+     DW_OP_addr SYMTAB_START_ADDR
+     DW_OP_plus                        (top of stack is now addr of symbol to examine.         
+                                       It happens that st_name is the first 
+                                       entry in Elf32_Sym, so this is the address to 
+                                       dereference to get st_name)
+     DW_OP_deref                       (top of stack is now strtab index of the symbol
+                                        we're examining)
+     DW_OP_const4u STRTAB_IDX
+     DW_OP_eq                          (top of stack is now 0 if this symbol has
+                                        a different name than the one we're looking
+                                        for and 1 if it's the one we want
+     DW_OP_bra label_done              (in actual dwarf code this would be a byte offset
+                                       labels are easier for readability)
+     DW_OP_lit1                        (put the literal 1 on the stack)
+     DW_OP_plus                        (remember we had a duplicate of the number
+                                        of entries we'd examined on the stack?
+                                        Now we increment it)
+     DW_OP_dup
+     DW_OP_const4u SYMTAB_SIZE
+     DW_OP_eq                          (make sure that the index is less than the size)
+     DW_bra label_fail                 (reached end of .symtab without finding it)
+     DW_OP_skip label_loop             (look at the next entry in the symbol table)
+     label_fail:
+     DW_OP_const4u FAILURE_CODE        (push some value that can be used to indicate
+                                        that the symbol wasn't found)
+     label_done:
+     (expression ends here. The top of the stack is the number of symtab entries we've
+     examined so far, so it gives an entry into the symbol table. To actually find the
+     value of that symbol the expression in the above section 
+     "finding the value of a symbol (i.e. address) given it's symtab idx" can be used)
+
+*** end plan
+    keeping in mind the discussion above, I have formulated the
+    following plan. The PO file will consist of the following ELF
+    sections
+    1. .patch_syms_rel  list of symbols which need to have memory
+       allocated for them and be relocated
+    2. .patch_syms_new list of symbols which need to have memory
+       allocated for them and be added to the target's symbol table in
+       some way
+    2. .patch_rules "debug_frame" formatted section using our creative
+       interpretation of the registers (see below) to allow specifying
+       rules. Not actually formatted as debug frame, don't have CIE
+       and FDE info, just instructions
+    3. .patch_expr DWARF expressions. Any uses of the EXPR registers
+       (see below) or of DWARF_OP_call_ref uses byte-offsets into this
+       section.
+    4. .strtab string table (needed for symbol tables)
+    
+    TODO: need to include mechanism for including symbol tables,
+    relocation items, etc that may have been stripped from the
+    executing program. Also, when patching something that's already
+    been patched, we need a way to keep that information in memory
+
+    The key is in the creative interpretation of registers. Since we
+    have LEB128 values to work with, we define the following:
+    The first byte of the "register" identifier determines what type
+    of "register" it is. The following values are allowed.
+    | identifier    | format                             | value                 | Notes              |
+    |---------------+------------------------------------+-----------------------+--------------------|
+    | OLD_SYM_VAL   | the following bytes                | in an expression,     | size of region     |
+    |               | will be an index                   | its value resolves    | addressed is given |
+    |               | into the symbol table in           | to the st_value of    | bysymbol size      |
+    |               | the old version of the             | the symbol            |                    |
+    |               | target                             |                       |                    |
+    |---------------+------------------------------------+-----------------------+--------------------|
+    | NEW_SYM_VAL   | the following bytes                | in an expression,     | size of region     |
+    |               | will be an index                   | its value resolves    | addressed is given |
+    |               | into the symbol table in           | to the st_value of    | by symbol size     |
+    |               | the new version of the             | the symbol            |                    |
+    |               | target.                            |                       |                    |
+    |---------------+------------------------------------+-----------------------+--------------------|
+    | EXPR          | the following bytes                | the value of the      |                    |
+    |               | will be an offset                  | DWARF expression when |                    |
+    |               | into the .patch_expr               | executed              |                    |
+    |               | section                            |                       |                    |
+    |---------------+------------------------------------+-----------------------+--------------------|
+    | CURR_TARG_OLD | the first 4 bytes determine        | the values in memory  |                    |
+    |               | the size of the region addressed.  | of dereferencing      |                    |
+    |               | The following bytes specify an     | the current object +  |                    |
+    |               | offset from the old address of the | offset                |                    |
+    |               | the current object                 |                       |                    |
+    |---------------+------------------------------------+-----------------------+--------------------|
+    | CURR_TARG_NEW | same as CURR_TARG_OLD except       |                       |                    |
+    |               | refers to the the new address of   |                       |                    |
+    |               | the current object                 |                       |                    |
+    
+** patch safety
+*** Ideas (not mutually exclusive):
+**** The user may define safe points in the code at which patching may occur
+**** The user may define critical points in the code at which patching may not occur
+**** The system determines safe points automatically
+     This safety is based on the following things
+*** Implementation Notes
+**** not patching code for functions that have an activation frame on the stack
+     can unwind the stack to see what's on there same as gdb does or
+     my sample unwinder application does
+**** not patching code for functions with local variables of modified types
+     We're putting that info in the PO as a section called .unsafe_functions
+     This section is no more than an array of symbol indices to the symbols
+     of functions which contain unsafe types
+
+* requirements for Katana
+** x86 platform
+** /proc filesystem
+** elfcmp dependency (todo: remove this)
+** compile with debugging information (-g)
+* testing apache
+** changes made to apache so that katana can work on it
+*** debugging info: 
+    built with
+    env CFLAGS=-g ./configure
+* registering on Savannah
+** Technical Description
+   Katana is a hot-patcher (a system for applying a patch to a process
+   while it is running) with a general method similar to the successful
+   KSplice project (http://www.ksplice.com/doc/ksplice.pdf). Unlike
+   KSplice, Katana operates on userland processes rather than on the
+   kernel. Katana, unlike any other known system, utilizes binary
+   debugging information (DWARF) to allow patching of variables as
+   well as functions with minimal user interaction. We attempt to
+   provide a patching method that is as transparent as possible and
+   paves the way for integrating hot-patching with the standard
+   toolchain.
+
+   More information on the details of Katana can be found in the paper at
+   http://www.cs.dartmouth.edu/~sws/pubs/rbls10.pdf.
+
+   Katana is not currently mature. It is in proof-of-concept stage and
+   passes seven tests, but it is not yet ready to patch production software.
+
+** Dependencies
+   Libelf     LGPL http://www.mr511.de/software/english.html
+   Libdwarf   LGPL http://reality.sgiweb.org/davea/dwarf.html
+   Libunwind  X11  http://www.nongnu.org/libunwind
+** 

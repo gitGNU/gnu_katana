@@ -178,7 +178,7 @@ addr_t decodeEHPointer(byte* data,int len,addr_t dataStartAddress,byte encoding)
 {
   int application=encoding & 0xF0;
   int format=encoding & 0xF;
-  addr_t result;
+  addr_t result=0;
   bool resultSigned=false;
   switch(format)
   {

@@ -76,6 +76,7 @@ PoReg readRegFromLEB128(byte* leb,usint* bytesRead)
     result.type=ERT_BASIC;
     assert(numBytes<sizeof(idx_t));
     memcpy(&result.u.index,bytes,numBytes);
+    free(bytes);
     return result;
   }
   result.type=bytes[0];
