@@ -71,6 +71,7 @@ typedef struct
       int len;
     } dataval;
     RegInstruction regInstr;
+    DwarfExprInstr opInstr;
   } u;
 } ParseNode;
 

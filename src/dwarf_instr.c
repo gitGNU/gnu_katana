@@ -422,3 +422,10 @@ void destroyRawInstructions(DwarfInstructions instrs)
 {
   free(instrs.instrs);
 }
+
+void addToDwarfExpression(DwarfExpr* expr,DwarfExprInstr instr)
+{
+  expr->instructions=realloc(expr->instructions,expr->numInstructions+1);
+  expr->instructions[expr->numInstructions]=instr;
+  expr->numInstructions++;
+}

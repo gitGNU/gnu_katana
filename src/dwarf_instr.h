@@ -90,6 +90,24 @@ typedef struct
   //which is valid depends on the opcode
 } DwarfInstruction;
 
+//representation of a single instruction in a DWARf Expression
+typedef struct
+{
+  int type;//one of DW_OP_*
+  word_t arg1;
+  word_t arg2;
+} DwarfExprInstr;
+
+//representation of a DWARf Expression
+typedef struct
+{
+  DwarfExprInstr* instructions;
+  int numInstructions;
+} DwarfExpr;
+
+void addToDwarfExpression(DwarfExpr* expr,DwarfExprInstr instr);
+
+
 //This struct is used when parsing DWARF binary information into a
 //structure we can deal with. How is it different on a high level from
 //DwarfInstruction? It isn't really, it just has some more information
@@ -100,6 +118,7 @@ typedef struct
 {
   int type;//one of DW_CFA_
   word_t arg1;//whether used depends on the type
+  DwarfExpr expr;//only used for DW_CFA_expression and similar
   PoReg arg1Reg;//whether used depends on the type
   word_t arg2;//whether used depends on the type
   PoReg arg2Reg;//whether used depends on the type
