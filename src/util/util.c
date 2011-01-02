@@ -118,3 +118,18 @@ char* getHexDataString(byte* data,int len)
   }
   return buf;
 }
+
+void addToGrowingBuffer(GrowingBuffer* buf,void* data,int dataLen)
+{
+  if(!dataLen)
+  {
+    return;
+  }
+  if(buf->len+dataLen > buf->allocated)
+  {
+    buf->allocated=(buf->len+dataLen)*2;
+    buf->data=realloc(buf->data,buf->allocated);
+  }
+  memcpy(buf->data+buf->len,data,dataLen);
+  buf->len+=dataLen;
+}

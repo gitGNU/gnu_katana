@@ -41,7 +41,7 @@ This document details brainstorming for the katana scripting language
     an ELF section. If outfile is specified, the binary data in this
     section is written into outfile
 *** emit
-    Usage 'dwarfscript emit ("eh_frame"|"debug_frame") ELF [outfile]'
+    Usage 'dwarfscript emit (".eh_frame"|".debug_frame") ELF [outfile]'
     Creates dwarfscript (writing it to [outfile] if specified) for
     either the eh or debug_frame section of the given ELF object
 ** replace

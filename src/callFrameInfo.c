@@ -58,28 +58,6 @@
 #include "leb.h"
 #include "util/logging.h"
 
-typedef struct
-{
-  byte* data;
-  int len;
-  int allocated;
-} GrowingBuffer;
-
-static void addToGrowingBuffer(GrowingBuffer* buf,void* data,int dataLen)
-{
-  if(!dataLen)
-  {
-    return;
-  }
-  if(buf->len+dataLen > buf->allocated)
-  {
-    buf->allocated=(buf->len+dataLen)*2;
-    buf->data=realloc(buf->data,buf->allocated);
-  }
-  memcpy(buf->data+buf->len,data,dataLen);
-  buf->len+=dataLen;
-}
-
 void printEHPointerEncoding(FILE* file,byte encoding)
 {
   static char* applicationTable[16];

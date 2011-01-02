@@ -136,12 +136,20 @@ typedef enum _DwarfInstructionPrintFlags
 
 //printing flags should be OR'd DwarfInstructionPrintFlags
 void printInstruction(FILE* file,RegInstruction inst,int printFlags);
+void printExpr(FILE* file,char* prefix,DwarfExpr expr,int printFlags);
 
 void destroyRawInstructions(DwarfInstructions instrs);
 
 //convert the higher-level RegInstruction format into the raw string
 //of binary bytes that is the DwarfInstructions structure
 DwarfInstructions serializeDwarfRegInstructions(RegInstruction* regInstrs,int numRegInstrs);
+
+//encodes a Dwarf Expression as a LEB-encoded length followed
+//by length bytes of Dwarf expression
+//the returned pointer should be freed
+byte* encodeDwarfExprAsFormBlock(DwarfExpr expr,usint* numBytesOut);
+
+extern char** dwarfExpressionNames;
 
 //some versions of dwarf.h have a misspelling
 #if !DW_CFA_lo_user

@@ -65,6 +65,17 @@
 
 typedef unsigned char byte;
 
+
+typedef struct
+{
+  byte* data;
+  int len;
+  int allocated;
+} GrowingBuffer;
+
+void addToGrowingBuffer(GrowingBuffer* buf,void* data,int dataLen);
+
+
 //malloc, check return value, and zero
 void* zmalloc(size_t size);
 

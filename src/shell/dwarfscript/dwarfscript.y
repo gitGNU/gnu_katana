@@ -88,6 +88,9 @@ instruction_section : T_BEGIN T_INSTRUCTIONS instruction_stmt_list T_END T_INSTR
 }
 
 expression_section : T_BEGIN T_DWARF_EXPR expr_stmt_list T_END T_DWARF_EXPR
+{
+  $$.u.expr=currentExpr;
+}
 
 fde_begin_stmt : T_BEGIN T_FDE
 {
@@ -576,18 +579,18 @@ dw_cfa_def_cfa_offset_sf : T_DW_CFA_def_cfa_offset_sf  int_lit
 }
 dw_cfa_def_cfa_expression : T_DW_CFA_def_cfa_expression expression_section
 {
-  logprintf(ELL_ERR,ELS_DWARFSCRIPT,"DW_CFA_def_cfa_expression not implemented yet\n");
-  YYERROR;
+  $$.u.regInstr.type=DW_CFA_def_cfa_expression;
+  $$.u.regInstr.expr=$2.u.expr;
 }
 dw_cfa_expression : T_DW_CFA_expression expression_section
 {
-  logprintf(ELL_ERR,ELS_DWARFSCRIPT,"DW_CFA_expression not implemented yet\n");
-  YYERROR;
+  $$.u.regInstr.type=DW_CFA_expression;
+  $$.u.regInstr.expr=$2.u.expr;
 }
 dw_cfa_val_expression : T_DW_CFA_val_expression expression_section
 {
-  logprintf(ELL_ERR,ELS_DWARFSCRIPT,"DW_CFA_val_expression not implemented yet\n");
-  YYERROR;
+  $$.u.regInstr.type=DW_CFA_val_expression;
+  $$.u.regInstr.expr=$2.u.expr;
 }
 
 

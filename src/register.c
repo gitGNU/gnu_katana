@@ -1,5 +1,5 @@
 /*
-  File: register.h
+  File: register.c
   Author: James Oakley
   Copyright (C): 2010 Dartmouth College
   License: Katana is free software: you may redistribute it and/or
