@@ -21,7 +21,6 @@ int keywordOrID();
 extern int lineNumber;
 extern char* savedVarName;
 extern char* savedString;
-
 }
 
 VARIABLE         \$[_a-zA-Z0-9]+
@@ -63,8 +62,7 @@ S_QUOTE_STRING  [\'][^\'\n][\']
 }
 
 <IN_SHELL_CMD>{
-  [^\n]*  accumulateText(yytext);
-  [\n]    lineNumber++;savedString=strdup(finishAccumulateText());BEGIN(INITIAL);return T_STRING_LITERAL;
+  [^\n]*  accumulateText(yytext);savedString=strdup(finishAccumulateText());BEGIN(INITIAL);return T_STRING_LITERAL;
  }
 
 <STAR_COMMENT>{
@@ -82,11 +80,23 @@ S_QUOTE_STRING  [\'][^\'\n][\']
 <POUND_COMMENT>{
   [\n]      lineNumber++;BEGIN(INITIAL);
   [^\n]+   // eat comment in chunks
-    }
+}
 
 [ \t]+
 
-\n  lineNumber++;
+\n  lineNumber++; return T_EOL;
+<INITIAL><<EOF>> {
+  static bool returnedEOFAlready=false;
+  if(!returnedEOFAlready)
+  {
+    returnedEOFAlready=true;
+    return T_EOF;
+  }
+  else
+  {
+    yyterminate();
+  }
+ }
 . return T_INVALID_TOKEN;
 %%
 

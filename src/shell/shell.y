@@ -41,7 +41,7 @@ extern "C"
 %token T_DATA T_DWARFSCRIPT T_COMPILE T_EMIT T_SHELL_COMMAND
 %token T_INFO T_EXCEPTION_HANDLING
 %token T_INVALID_TOKEN
-
+%token T_EOL T_EOF
 
 %%
 
@@ -51,7 +51,7 @@ root : line_list
   rootParseNode=$1;
 }
 
-line_list : line_list line
+line_list : line_list line line_terminator
 {
   CommandList* listItem=(CommandList*)zmalloc(sizeof(CommandList));
   listItem->cmd=$2.u.cmd;
@@ -75,14 +75,20 @@ line_list : line_list line
   $$.type=PNT_EMPTY;
 }
 
-line : assignment
+line : assignment 
 {
   $$=$1;
 }
-| commandline
+| commandline 
 {
   $$=$1;
 }
+
+line_terminator : T_EOL {}
+| T_EOF {}
+| line_terminator T_EOL {}
+| line_terminator T_EOF {}
+
 
 assignment : variable '=' commandline
 {

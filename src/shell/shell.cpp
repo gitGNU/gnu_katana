@@ -123,7 +123,7 @@ char* rlgets(char* prompt,bool isInputTty)
 void doShell(char* inputFilename)
 {
   shellVariables=dictCreate(100);//todo: sensible number not arbitrary number 100
-  //yydebug=1;
+  yydebug=1;
   if(!inputFilename)
   {
     //in interactive or pipe mode, reading from stdin
