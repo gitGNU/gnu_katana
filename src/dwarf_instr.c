@@ -425,13 +425,13 @@ DwarfInstruction regInstructionToRawDwarfInstruction(RegInstruction* inst)
 //the returned pointer should be freed
 byte* encodeDwarfExprAsFormBlock(DwarfExpr expr,usint* numBytesOut)
 {
-  GrowingBuffer result;
-  memset(&result,0,sizeof(result));
+  GrowingBuffer blockData;
+  memset(&blockData,0,sizeof(blockData));
   for(int i=0;i<expr.numInstructions;i++)
   {
     DwarfExprInstr* instr=expr.instructions+i;
     //all expression instructions start with a 1-byte opcode
-    addToGrowingBuffer(&result,&instr->type,1);
+    addToGrowingBuffer(&blockData,&instr->type,1);
     switch(instr->type)
     {
       //all of the instructions for which we don't need to do anything else
@@ -506,19 +506,19 @@ byte* encodeDwarfExprAsFormBlock(DwarfExpr expr,usint* numBytesOut)
     case DW_OP_pick:
     case DW_OP_deref_size:
     case DW_OP_xderef_size:
-      addToGrowingBuffer(&result,&instr->arg1,1);
+      addToGrowingBuffer(&blockData,&instr->arg1,1);
       break;
     //handle all the opcodes which take a 2-byte argument
     case DW_OP_const2u:
     case DW_OP_const2s:
     case DW_OP_skip:
     case DW_OP_bra:
-      addToGrowingBuffer(&result,&instr->arg1,2);
+      addToGrowingBuffer(&blockData,&instr->arg1,2);
       break;
     //handle all the opcodes which take a 4-byte argument
     case DW_OP_const4u:
     case DW_OP_const4s:
-      addToGrowingBuffer(&result,&instr->arg1,4);
+      addToGrowingBuffer(&blockData,&instr->arg1,4);
       break;
     //handle all the opcodes which take an 8-byte arugment
     case DW_OP_const8u:
@@ -527,12 +527,12 @@ byte* encodeDwarfExprAsFormBlock(DwarfExpr expr,usint* numBytesOut)
       //get used on 32-bit. We'll add support to katana for it if we
       //need to
       assert(sizeof(instr->arg1)>=8);
-      addToGrowingBuffer(&result,&instr->arg1,8);
+      addToGrowingBuffer(&blockData,&instr->arg1,8);
       break;
     //handle all the opcodes which take a target machine address
     //sized argument
     case DW_OP_addr:
-      addToGrowingBuffer(&result,&instr->arg1,sizeof(addr_t));
+      addToGrowingBuffer(&blockData,&instr->arg1,sizeof(addr_t));
       break;
     //handle all the opcodes which take an unsigned LEB argument
     case DW_OP_constu:
@@ -540,7 +540,7 @@ byte* encodeDwarfExprAsFormBlock(DwarfExpr expr,usint* numBytesOut)
       {
         usint numBytes;
         byte* data=encodeAsLEB128((byte*)&instr->arg1,sizeof(instr->arg1),false,&numBytes);
-        addToGrowingBuffer(&result,data,numBytes);
+        addToGrowingBuffer(&blockData,data,numBytes);
         free(data);
       }
       break;
@@ -582,7 +582,7 @@ byte* encodeDwarfExprAsFormBlock(DwarfExpr expr,usint* numBytesOut)
       {
         usint numBytes;
         byte* data=encodeAsLEB128((byte*)&instr->arg1,sizeof(instr->arg1),true,&numBytes);
-        addToGrowingBuffer(&result,data,numBytes);
+        addToGrowingBuffer(&blockData,data,numBytes);
         free(data);
       }
       break;
@@ -591,10 +591,10 @@ byte* encodeDwarfExprAsFormBlock(DwarfExpr expr,usint* numBytesOut)
       {
         usint numBytes;
         byte* data=encodeAsLEB128((byte*)&instr->arg1,sizeof(instr->arg1),false,&numBytes);
-        addToGrowingBuffer(&result,data,numBytes);
+        addToGrowingBuffer(&blockData,data,numBytes);
         free(data);
         data=encodeAsLEB128((byte*)&instr->arg2,sizeof(instr->arg2),true,&numBytes);
-        addToGrowingBuffer(&result,data,numBytes);
+        addToGrowingBuffer(&blockData,data,numBytes);
         free(data);
       }
       break;
@@ -602,8 +602,17 @@ byte* encodeDwarfExprAsFormBlock(DwarfExpr expr,usint* numBytesOut)
       death("Unsupported DW_OP with code 0x%x\n",instr->type);
     }
   }
-  *numBytesOut=result.len;
-  return result.data;
+  //unfortunately we have to do a bunch of memory copying because we
+  //need to put at the start of the buffer the length of the rest of the buffer
+  usint lengthDataNumBytes;
+  byte* lengthData=uintToLEB128(blockData.len,&lengthDataNumBytes);
+  byte* result=malloc(lengthDataNumBytes+blockData.len);
+  MALLOC_CHECK(result);
+  memcpy(result,lengthData,lengthDataNumBytes);
+  memcpy(result+lengthDataNumBytes,blockData.data,blockData.len);
+  *numBytesOut=lengthDataNumBytes+blockData.len;
+  
+  return result;
 }
 
 //convert the higher-level RegInstruction format into the raw string
