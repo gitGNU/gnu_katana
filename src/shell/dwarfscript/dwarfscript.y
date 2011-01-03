@@ -87,7 +87,12 @@ instruction_section : T_BEGIN T_INSTRUCTIONS instruction_stmt_list T_END T_INSTR
   $$=$3;
 }
 
-expression_section : T_BEGIN T_DWARF_EXPR expr_stmt_list T_END T_DWARF_EXPR
+expr_begin_stmt : T_BEGIN T_DWARF_EXPR
+{
+  memset(&currentExpr,0,sizeof(currentExpr));
+}
+
+expression_section : expr_begin_stmt expr_stmt_list T_END T_DWARF_EXPR
 {
   $$.u.expr=currentExpr;
 }
@@ -179,9 +184,7 @@ expr_stmt_list : expr_stmt_list expr_stmt
   addToDwarfExpression(&currentExpr,$2.u.opInstr);
 }
 | /*empty*/
-{
-  memset(&currentExpr,0,sizeof(currentExpr));
-}
+{}
 
 top_property_stmt :
 section_type_prop {}
@@ -577,20 +580,22 @@ dw_cfa_def_cfa_offset_sf : T_DW_CFA_def_cfa_offset_sf  int_lit
   //think about which one actually makes more sense
   $$.u.regInstr.arg1=$2.u.intval;
 }
-dw_cfa_def_cfa_expression : T_DW_CFA_def_cfa_expression expression_section
+dw_cfa_def_cfa_expression : T_DW_CFA_def_cfa_expression  expression_section
 {
   $$.u.regInstr.type=DW_CFA_def_cfa_expression;
   $$.u.regInstr.expr=$2.u.expr;
 }
-dw_cfa_expression : T_DW_CFA_expression expression_section
+dw_cfa_expression : T_DW_CFA_expression register_lit expression_section
 {
   $$.u.regInstr.type=DW_CFA_expression;
-  $$.u.regInstr.expr=$2.u.expr;
+  makeBasicRegister1(&$$,&$2);
+  $$.u.regInstr.expr=$3.u.expr;
 }
-dw_cfa_val_expression : T_DW_CFA_val_expression expression_section
+dw_cfa_val_expression : T_DW_CFA_val_expression register_lit expression_section
 {
   $$.u.regInstr.type=DW_CFA_val_expression;
-  $$.u.regInstr.expr=$2.u.expr;
+  makeBasicRegister1(&$$,&$2);
+  $$.u.regInstr.expr=$3.u.expr;
 }
 
 

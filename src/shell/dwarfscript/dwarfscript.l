@@ -149,7 +149,7 @@ REGISTER  r[0-9]+
 "DW_CFA_val_expression"     return T_DW_CFA_val_expression;
 
  /*dwarf expression stuff*/
-"DWARF_EXPR" return T_DWARF_EXPR;
+"EXPRESSION" return T_DWARF_EXPR;
 "DW_OP_addr" return T_DW_OP_addr;
 "DW_OP_deref" return T_DW_OP_deref;
 "DW_OP_const1u" return T_DW_OP_const1u;
