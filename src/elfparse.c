@@ -74,16 +74,16 @@ ElfInfo* openELFFile(char* fname)
   e->fd=open(fname,O_RDONLY);
   if(e->fd < 0)
   {
-    char buf[128];
-    snprintf(buf,128,"Failed to open elf file %s (open returned invalid fd)\n",fname);
-    death(buf);
+    logprintf(ELL_WARN,ELS_MISC,"Failed to open elf file %s (open returned invalid fd)\n",fname);
+    return NULL;
+
   }
   e->e=elf_begin(e->fd,ELF_C_READ,NULL);
   if(!e->e)
   {
-    fprintf(stderr,"Failed to open file %s as an ELF file %s\n",fname,elf_errmsg(-1));
+    logprintf(ELL_WARN,ELS_MISC,"Failed to open file %s as an ELF file %s\n",fname,elf_errmsg(-1));
     free(e);
-    death(NULL);
+    return NULL;
   }
   findELFSections(e);
   return e;
@@ -222,10 +222,12 @@ void printSymTab(ElfInfo* e)
 //out to, because of the way elf_begin is set up
 ElfInfo* duplicateElf(ElfInfo* e,char* outfname,bool flushToDisk,bool keepLayout)
 {
-  int outfd = creat(outfname, 0666);
+  int outfd = open(outfname, O_WRONLY|O_CREAT,S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH);
   if (outfd < 0)
   {
-    fprintf(stderr,"cannot open output file '%s'", outfname);
+    logprintf(ELL_WARN,ELS_ELFWRITE,"cannot open output file '%s' for writing\n", outfname);
+    perror("Error code is: ");
+    return NULL;
   }
   //code inspired by ecp in elfutils tests
   Elf *outelf = elf_begin(outfd, ELF_C_WRITE, NULL);
@@ -295,12 +297,18 @@ ElfInfo* duplicateElf(ElfInfo* e,char* outfname,bool flushToDisk,bool keepLayout
   return newE;
 }
 
-void writeOutElf(ElfInfo* e,char* outfname,bool keepLayout)
+//return true on success
+bool writeOutElf(ElfInfo* e,char* outfname,bool keepLayout)
 {
   ElfInfo* newE=duplicateElf(e,outfname,true,keepLayout);
-  elf_end(newE->e);
-  //close(newE->fd);
-  free(newE);
+  if(newE)
+  {
+    elf_end(newE->e);
+    //close(newE->fd);
+    free(newE);
+    return true;
+  }
+  return false;
 }
 
 Elf_Data* getDataByIdx(ElfInfo* e,idx_t idx)

@@ -137,11 +137,13 @@ void printSymTab(ElfInfo* e);
 //if flushToDisk is false doesn't
 //actually write to disk right now
 ElfInfo* duplicateElf(ElfInfo* e,char* outfname,bool flushToDisk,bool keepLayout);
+
 //write out a copy of this ELF object to the given location on disk.
 //if keepLayout is true, don't allow libelf to rearrange the
 //layout. ELF files seem to get screwed up sometimes when libelf is
 //allowed a free reign. I don't quite understand why.
-void writeOutElf(ElfInfo* e,char* outfname,bool keepLayout);
+//return true on success
+bool writeOutElf(ElfInfo* e,char* outfname,bool keepLayout);
 void findELFSections(ElfInfo* e);
 //returns NULL if the section does not exist
 Elf_Scn* getSectionByName(ElfInfo* e,char* name);

@@ -72,6 +72,7 @@ extern int yydebug;
 extern FILE *yyin;
 extern int yyparse();
 extern ParseNode rootParseNode;
+bool returnedEOFAlready;
 
 //dictionary mapping variable names to the ShellVariable objects themselves
 //note that shell.y makes use of this
@@ -122,16 +123,20 @@ char* rlgets(char* prompt,bool isInputTty)
 
 void doShell(char* inputFilename)
 {
+  char historyPath[512];
+  snprintf(historyPath,512,"%s/.katana_history",getenv("HOME"));
   shellVariables=dictCreate(100);//todo: sensible number not arbitrary number 100
   //yydebug=1;
   if(!inputFilename)
   {
     //in interactive or pipe mode, reading from stdin
+    read_history(historyPath);
     char* line;
     char* prompt=(char*)"> ";
     bool isInputTty=isatty(fileno(stdin));
     while((line=rlgets(prompt,isInputTty)))
     {
+      returnedEOFAlready=false;
       yy_scan_string(line);
       bool parseSuccess = (0==yyparse());
       if(!parseSuccess)
@@ -149,6 +154,7 @@ void doShell(char* inputFilename)
         list=next;
       }
     }
+    write_history(historyPath);
   }
   else
   {
@@ -171,7 +177,14 @@ void doShell(char* inputFilename)
     while(list)
     {
       assert(list->cmd);
-      list->cmd->execute();
+      try
+      {
+        list->cmd->execute();
+      }
+      catch(...)
+      {
+        logprintf(ELL_WARN,ELS_SHELL,"Unable to execute command\n");
+      }
       CommandList* next=list->next;
       free(list);
       list=next;

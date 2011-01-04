@@ -71,7 +71,12 @@ void LoadCommand::execute()
   if(this->outputVariable)
   {
     char* filename=this->filename->getString();
-    this->outputVariable->setValue(openELFFile(filename));
+    ElfInfo* elf=openELFFile(filename);
+    if(!elf)
+    {
+      throw "Unable to open ELF file";
+    }
+    this->outputVariable->setValue(elf);
     logprintf(ELL_INFO_V2,ELS_SHELL,"Loaded ELF \"%s\"\n",filename);
   }
   else

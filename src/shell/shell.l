@@ -21,6 +21,7 @@ int keywordOrID();
 extern int lineNumber;
 extern char* savedVarName;
 extern char* savedString;
+extern bool returnedEOFAlready;
 }
 
 VARIABLE         \$[_a-zA-Z0-9]+
@@ -86,7 +87,6 @@ S_QUOTE_STRING  [\'][^\'\n][\']
 
 \n  lineNumber++; return T_EOL;
 <INITIAL><<EOF>> {
-  static bool returnedEOFAlready=false;
   if(!returnedEOFAlready)
   {
     returnedEOFAlready=true;
