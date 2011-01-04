@@ -101,6 +101,10 @@ bool strEndsWith(char* str,char* suffix);
 
 uint64_t signExtend32To64(uint32_t val);
 
+//sign-extends val based on fromWhichByte which should be set to how
+//many bytes of val are filled. Assumes unfilled bytes of val are 0
+size_t sextend(size_t val,int fromWhichByte);
+
 //Note: reseeksfile to the beginning
 int getFileLength(FILE* f);
 

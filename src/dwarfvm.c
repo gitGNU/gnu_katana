@@ -244,11 +244,16 @@ int evaluateInstructionsToRules(CIE* cie,RegInstruction* instrs,int numInstrs,Di
       rule->regRH=inst.arg2Reg;
       rule->index=inst.arg3;
       break;
+    case DW_CFA_expression:
+    case DW_CFA_val_expression:
+      //todo: support this
+      logprintf(ELL_WARN,ELS_VM,"DW_CFA_expression/DW_CFA_val_expression is not supported in the DWARF VM yet. Ignoring this instruction. This means that the register rules will not be accurate.\n");
+      break;
     case DW_CFA_nop:
       //do nothing, nothing changed
       break;
     default:
-      death("unexpected instruction in evaluateInstructions");
+      death("unexpected instruction in dwarfvm evaluateInstructions");
     }
   }
   return loc;

@@ -332,8 +332,13 @@ void printInstruction(FILE* file,RegInstruction inst,int printFlags)
   case DW_CFA_expression:
     fprintf(file,"DW_CFA_expression\n");
     printExpr(file,"\t\t",inst.expr,printFlags);
+    break;
+  case DW_CFA_val_expression:
+    fprintf(file,"DW_CFA_expression\n");
+    printExpr(file,"\t\t",inst.expr,printFlags);
+    break;
   default:
-    death("unsupported DWARF instruction 0x%x",inst.type);
+    death("unsupported DWARF instruction 0x%x in printInstruction",inst.type);
   }
 }
 

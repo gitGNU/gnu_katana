@@ -55,6 +55,7 @@
 
 #include "util.h"
 #include <stdarg.h>
+#include <assert.h>
 
 void* zmalloc(size_t size)
 {
@@ -96,6 +97,23 @@ uint64_t signExtend32To64(uint32_t val)
     memset(((byte*)&result)+4,0xFF,4);
   }
   return result;
+}
+
+//sign-extends val based on fromWhichByte which should be set to how
+//many bytes of val are filled. Assumes unfilled bytes of val are 0.
+size_t sextend(size_t val,int fromWhichByte)
+{
+  if(fromWhichByte==sizeof(val))
+  {
+    return val;
+  }
+  assert(fromWhichByte<sizeof(val));
+  int mask=(1<<(8*fromWhichByte-1));
+  if(val&mask)
+  {
+    memset(((byte*)&val)+fromWhichByte,0xFF,sizeof(val)-fromWhichByte);
+  }
+  return val;
 }
 
 //Note: reseeksfile to the beginning

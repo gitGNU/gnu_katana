@@ -138,4 +138,5 @@ void loggingDefaults()
   sourceEnables[ELS_CONFIG]=ELL_INFO_V4;
   sourceEnables[ELS_SHELL]=ELL_INFO_V4;
   sourceEnables[ELS_DWARFSCRIPT]=ELL_INFO_V4;
+  sourceEnables[ELS_VM]=ELL_INFO_V4;
 }

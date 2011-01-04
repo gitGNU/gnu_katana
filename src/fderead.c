@@ -64,9 +64,225 @@
 #include "util/logging.h"
 #include "dwarfvm.h"
 
+//create a DwarfExpression object from the raw bytes
+DwarfExpr parseDwarfExpression(byte* data,uint len)
+{
+  DwarfExpr result;
+  result.numInstructions=0;
+  //allocate more mem than we'll actually need. We can free some
+  //later.
+  result.instructions=zmalloc(sizeof(DwarfExprInstr)*len);
+  for(;len>0;len--,result.numInstructions++)
+  {
+    DwarfExprInstr* instr=&result.instructions[result.numInstructions];
+    instr->type=data[0];
+    switch(instr->type)
+    {
+      //handle all of the operations which take no operands
+    case DW_OP_lit0:
+    case DW_OP_lit1:
+    case DW_OP_lit2:
+    case DW_OP_lit3:
+    case DW_OP_lit4:
+    case DW_OP_lit5:
+    case DW_OP_lit6:
+    case DW_OP_lit7:
+    case DW_OP_lit8:
+    case DW_OP_lit9:
+    case DW_OP_lit10:
+    case DW_OP_lit11:
+    case DW_OP_lit12:
+    case DW_OP_lit13:
+    case DW_OP_lit14:
+    case DW_OP_lit15:
+    case DW_OP_lit16:
+    case DW_OP_lit17:
+    case DW_OP_lit18:
+    case DW_OP_lit19:
+    case DW_OP_lit20:
+    case DW_OP_lit21:
+    case DW_OP_lit22:
+    case DW_OP_lit23:
+    case DW_OP_lit24:
+    case DW_OP_lit25:
+    case DW_OP_lit26:
+    case DW_OP_lit27:
+    case DW_OP_lit28:
+    case DW_OP_lit29:
+    case DW_OP_lit30:
+    case DW_OP_lit31:
+    case DW_OP_dup:
+    case DW_OP_drop:
+    case DW_OP_over:
+    case DW_OP_swap:
+    case DW_OP_rot:
+    case DW_OP_deref:
+    case DW_OP_xderef:
+    case DW_OP_push_object_address:
+    case DW_OP_form_tls_address:
+    case DW_OP_call_frame_cfa:
+    case DW_OP_abs:
+    case DW_OP_and:
+    case DW_OP_div:
+    case DW_OP_minus:
+    case DW_OP_mod:
+    case DW_OP_mul:
+    case DW_OP_neg:
+    case DW_OP_not:
+    case DW_OP_or:
+    case DW_OP_plus:
+    case DW_OP_shl:
+    case DW_OP_shr:
+    case DW_OP_shra:
+    case DW_OP_xor:
+    case DW_OP_le:
+    case DW_OP_ge:
+    case DW_OP_eq:
+    case DW_OP_lt:
+    case DW_OP_gt:
+    case DW_OP_ne:
+    case DW_OP_nop:
+      //don't need to do anything for these opcodes, they have no
+      //operands
+      break;
+    //handle all the opcodes which take a 1-byte unsigned argument
+    case DW_OP_const1u:
+    case DW_OP_pick:
+    case DW_OP_deref_size:
+    case DW_OP_xderef_size:
+      memcpy(&instr->arg1,data+1,1);
+      data++;
+      len--;
+      break;
+    //handle all the opcodes which take a 1-byte signed argument
+    case DW_OP_const1s:
+      memcpy(&instr->arg1,data+1,1);
+      instr->arg1=sextend(instr->arg1,1);
+      data++;
+      len--;
+      //handle all the opcodes which take a 2-byte unsigned argument
+    case DW_OP_const2u:
+      memcpy(&instr->arg1,data+1,2);
+      data+=2;
+      len-=2;
+      break;
+    //handle all the opcodes which take a 2-byte signed argument
+    case DW_OP_const2s:
+    case DW_OP_skip:
+    case DW_OP_bra:
+      memcpy(&instr->arg1,data+1,2);
+      instr->arg1=sextend(instr->arg1,2);
+      data+=2;
+      len-=2;
+      break;
+      //handle all the opcodes which take a 4-byte argument
+    case DW_OP_const4u:
+      memcpy(&instr->arg1,data+1,4);
+      data+=4;
+      len-=4;
+      break;
+    case DW_OP_const4s:
+      memcpy(&instr->arg1,data+1,4);
+      instr->arg1=sextend(instr->arg1,4);
+      data+=4;
+      len-=4;
+      break;
+      //handle all the opcodes which take an 8-byte arugment
+    case DW_OP_const8u:
+      //this may be an issue if on 32-bit but presumably these don't
+      //get used on 32-bit. We'll add support to katana for it if we
+      //need to
+      assert(sizeof(instr->arg1>=8));
+      memcpy(&instr->arg1,data+1,8);
+      data+=8;
+      len-=8;
+      break;
+    case DW_OP_const8s:
+      assert(sizeof(instr->arg1>=8));
+      memcpy(&instr->arg1,data+1,8);
+      instr->arg1=sextend(instr->arg1,8);
+      data+=8;
+      len-=8;
+      break;
+    //handle all the opcodes which take a target machine address
+    //sized argument
+    case DW_OP_addr:
+      memcpy(&instr->arg1,data+1,sizeof(addr_t));
+      data+=sizeof(addr_t);
+      len-=sizeof(addr_t);
+      break;
+    //handle all the opcodes which take an unsigned LEB argument
+    case DW_OP_constu:
+    case DW_OP_plus_uconst:
+      {
+        usint numBytes;
+        usint numSeptetsRead;
+        byte* number=decodeLEB128(data+1,false,&numBytes,&numSeptetsRead);
+        assert(numBytes<=sizeof(instr->arg1));
+        memcpy(&instr->arg1,number,numBytes);
+        data+=numSeptetsRead;
+        len-=numSeptetsRead;
+        free(number);
+      }
+      break;
+    //handle all the opcodes which take a signed LEB argument
+    case DW_OP_consts:
+    case DW_OP_fbreg:
+    case DW_OP_breg0:
+    case DW_OP_breg1:
+    case DW_OP_breg2:
+    case DW_OP_breg3:
+    case DW_OP_breg4:
+    case DW_OP_breg5:
+    case DW_OP_breg6:
+    case DW_OP_breg7:
+    case DW_OP_breg8:
+    case DW_OP_breg9:
+    case DW_OP_breg10:
+    case DW_OP_breg11:
+    case DW_OP_breg12:
+    case DW_OP_breg13:
+    case DW_OP_breg14:
+    case DW_OP_breg15:
+    case DW_OP_breg16:
+    case DW_OP_breg17:
+    case DW_OP_breg18:
+    case DW_OP_breg19:
+    case DW_OP_breg20:
+    case DW_OP_breg21:
+    case DW_OP_breg22:
+    case DW_OP_breg23:
+    case DW_OP_breg24:
+    case DW_OP_breg25:
+    case DW_OP_breg26:
+    case DW_OP_breg27:
+    case DW_OP_breg28:
+    case DW_OP_breg29:
+    case DW_OP_breg30:
+    case DW_OP_breg31:
+      {
+        usint numBytes;
+        usint numSeptetsRead;
+        byte* number=decodeLEB128(data+1,true,&numBytes,&numSeptetsRead);
+        assert(numBytes<=sizeof(instr->arg1));
+        memcpy(&instr->arg1,number,numBytes);
+        data+=numSeptetsRead;
+        len-=numSeptetsRead;
+        free(number);
+      }
+      break;
+    default:
+      death("Unsupported DW_OP with code 0x%x\n",instr->type);
+    }
+  }
+
+  result.instructions=realloc(result.instructions,sizeof(DwarfExprInstr)*result.numInstructions);
+  return result;
+}
+
 //the returned memory should be freed
-RegInstruction* parseFDEInstructions(Dwarf_Debug dbg,unsigned char* bytes,int len,
-                                     int* numInstrs)
+RegInstruction* parseFDEInstructions(Dwarf_Debug dbg,unsigned char* bytes,
+                                     int len,int* numInstrs)
 {
   *numInstrs=0;
   //allocate more mem than we'll actually need
@@ -193,6 +409,18 @@ RegInstruction* parseFDEInstructions(Dwarf_Debug dbg,unsigned char* bytes,int le
       case DW_CFA_remember_state:
       case DW_CFA_restore_state:
         //don't need to store any arguments, this instruction doesn't take any
+        break;
+      case DW_CFA_expression:
+      case DW_CFA_val_expression:
+        result[*numInstrs].arg1Reg=readRegFromLEB128(bytes + 1,&uleblen);
+        bytes+=uleblen;
+        len-=uleblen;
+        uint exprBytesLen=leb128ToUInt(bytes + 1, &uleblen);
+        bytes+=uleblen;
+        len-=uleblen;
+        result[*numInstrs].expr=parseDwarfExpression(bytes+1,exprBytesLen);
+        bytes+=exprBytesLen;
+        len-=exprBytesLen;
         break;
       case DW_CFA_nop:
         (*numInstrs)--;//since not actually using up an instruction here
