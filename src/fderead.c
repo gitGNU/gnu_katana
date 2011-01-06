@@ -346,6 +346,14 @@ RegInstruction* parseFDEInstructions(Dwarf_Debug dbg,unsigned char* bytes,
         len -= 2;
         }
         break;
+      case DW_CFA_advance_loc4:
+        {
+          uint32 delta = *((uint32*)(bytes + 1));
+          result[*numInstrs].arg1=delta;
+          bytes+=4;
+          len -= 4;
+        }
+        break;
       case DW_CFA_same_value:
         result[*numInstrs].type=high;
         result[*numInstrs].arg1=low;

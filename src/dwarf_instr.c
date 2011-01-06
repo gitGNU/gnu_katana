@@ -235,6 +235,9 @@ void printInstruction(FILE* file,RegInstruction inst,int printFlags)
   case DW_CFA_advance_loc2:
     fprintf(file,"DW_CFA_advance_loc2 %zi\n",inst.arg1);
     break;
+  case DW_CFA_advance_loc4:
+    fprintf(file,"DW_CFA_advance_loc4 %zi\n",inst.arg1);
+    break;
   case DW_CFA_offset:
     {
       signed long int tmp;
@@ -334,7 +337,7 @@ void printInstruction(FILE* file,RegInstruction inst,int printFlags)
     printExpr(file,"\t\t",inst.expr,printFlags);
     break;
   case DW_CFA_val_expression:
-    fprintf(file,"DW_CFA_expression\n");
+    fprintf(file,"DW_CFA_val_expression\n");
     printExpr(file,"\t\t",inst.expr,printFlags);
     break;
   default:
