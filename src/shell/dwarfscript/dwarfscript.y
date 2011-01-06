@@ -35,9 +35,9 @@ void makeBasicRegister2(ParseNode* node,ParseNode* intvalNode);
 //token definitions
 %token T_BEGIN T_END
 %token T_INDEX T_DATA_ALIGN T_CODE_ALIGN T_RET_ADDR_RULE T_AUGMENTATION
-%token T_INITIAL_LOCATION T_ADDRESS_RANGE T_OFFSET T_LENGTH T_CIE_INDEX
+%token T_INITIAL_LOCATION  T_ADDRESS_RANGE T_OFFSET T_LENGTH T_CIE_INDEX
 %token T_VERSION T_ADDRESS_SIZE T_SEGMENT_SIZE T_STRING_LITERAL T_HEXDATA
-%token T_AUGMENTATION_DATA T_SECTION_TYPE T_SECTION_LOC
+%token T_AUGMENTATION_DATA T_SECTION_TYPE T_SECTION_LOC T_EH_HDR_LOC
 %token T_FDE T_CIE T_INSTRUCTIONS
 %token T_POS_INT T_NONNEG_INT T_INT T_FLOAT T_REGISTER T_INVALID_TOKEN
 %token T_DW_CFA_advance_loc T_DW_CFA_offset T_DW_CFA_restore T_DW_CFA_extended
@@ -189,6 +189,7 @@ expr_stmt_list : expr_stmt_list expr_stmt
 top_property_stmt :
 section_type_prop {}
 | section_location_prop {}
+| eh_hdr_location_prop {}
 
 cie_property_stmt :
 index_prop {}
@@ -353,6 +354,11 @@ section_type_prop : T_SECTION_TYPE ':' string_lit
 section_location_prop : T_SECTION_LOC ':' nonneg_int_lit
 {
   cfi.sectionAddress=$3.u.intval;
+}
+
+eh_hdr_location_prop : T_EH_HDR_LOC ':' nonneg_int_lit
+{
+  cfi.ehHdrAddress=$3.u.intval;
 }
 
 int_lit : T_INT

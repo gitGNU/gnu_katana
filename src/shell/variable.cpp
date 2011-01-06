@@ -57,6 +57,8 @@
 #include "variable.h"
 #include "variableTypes/elfVariableData.h"
 #include "variableTypes/rawVariableData.h"
+#include "variableTypes/elfSectionData.h"
+#include "variableTypes/arrayData.h"
 
 ShellVariable::ShellVariable(char* name)
 {
@@ -88,57 +90,90 @@ void ShellVariable::setValue(byte* data,int dataLen)
   this->data=new ShellRawVariableData(data,dataLen);
 }
 
-char* ShellVariable::getString()
+void ShellVariable::setValue(byte* data,int dataLen,SectionHeaderData* header)
 {
-  return this->data->getString();
+  if(this->data)
+  {
+    delete this->data;
+  }
+  this->data=new ShellElfSectionVariableData(data,dataLen,header);
 }
-ElfInfo* ShellVariable::getElfObject()
+
+void ShellVariable::makeArray(ShellVariableData** items,int cnt)
 {
-  return this->data->getElfObject();
+  if(this->data)
+  {
+    delete this->data;
+  }
+  ShellArrayVariableData* array=new ShellArrayVariableData();
+  for(int i=0;i<cnt;i++)
+  {
+    array->appendItem(items[i]);
+  }
+  this->data=array;
 }
-void* ShellVariable::getRawData(int* byteLenOut)
+
+//the returned pointer is valid until the next call to getData
+ParamDataResult* ShellVariable::getData(ShellParamCapability dataType,int idx)
 {
-  return this->data->getRawData(byteLenOut);
+  return this->data->getData(dataType,idx);
 }
-GElf_Shdr ShellVariable::getSectionHeader()
+
+//some types of variables can hold multiple pieces of the same sort
+//of data, for example dwarfscript compile can emit a variable which
+//may contain data for multiple sections
+int ShellVariable::getEntityCount()
 {
-  return this->data->getSectionHeader();
+  return this->data->getEntityCount();
 }
-bool ShellVariable::isCapable(ShellParamCapability cap)
+
+bool ShellVariable::isCapable(ShellParamCapability cap,int idx)
 {
-  return this->data->isCapable(cap);
+  if(!this->data)
+  {
+    logprintf(ELL_WARN,ELS_SHELL,"Attempt to use uninitialized variable %s\n",this->name);
+    throw "Unitialized variable access";
+
+  }
+  return this->data->isCapable(cap,idx);
 }
+
 
 //Now the stuff for the data types.
 //by default all of the get methods are unable to complete
 
-char* ShellVariableData::getString()
+ShellVariableData::ShellVariableData()
+  :result(NULL)
 {
-  logprintf(ELL_WARN,ELS_SHELL,"This type of variable cannot yield a string\n");
+
+}
+
+//the returned pointer is valid until the next call to getData
+ParamDataResult* ShellVariableData::getData(ShellParamCapability dataType,int idx)
+{
+  logprintf(ELL_WARN,ELS_SHELL,"This type of variable cannot yield this type of data\n");
   return NULL;
 }
 
-ElfInfo* ShellVariableData::getElfObject()
-{
-  logprintf(ELL_WARN,ELS_SHELL,"This type of variable cannot yield an ELF object\n");
-  return NULL;
-}
-
-void* ShellVariableData::getRawData(int* byteLenOut)
-{
-  logprintf(ELL_WARN,ELS_SHELL,"This type of variable cannot yield raw data\n");
-  *byteLenOut=0;
-  return NULL;
-}
-
-GElf_Shdr ShellVariableData::getSectionHeader()
-{
-  logprintf(ELL_WARN,ELS_SHELL,"This type of variable cannot yield a section header\n");
-  GElf_Shdr result;
-  memset(&result,0,sizeof(result));
-  return result;
-}
-bool ShellVariableData::isCapable(ShellParamCapability cap)
+bool ShellVariableData::isCapable(ShellParamCapability cap,int idx)
 {
   return false;
+}
+
+//some types of variables can hold multiple pieces of the same sort
+//of data, for example dwarfscript compile can emit a variable which
+//may contain data for multiple sections
+int ShellVariableData::getEntityCount()
+{
+  return 1;
+}
+
+void ShellVariableData::initResult()
+{
+  if(!this->result)
+  {
+    this->result=(ParamDataResult*)zmalloc(sizeof(ParamDataResult));
+    MALLOC_CHECK(this->result);
+  }
+
 }

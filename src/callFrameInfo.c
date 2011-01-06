@@ -125,6 +125,11 @@ addr_t encodeEHPointerFromEncoding(addr_t pointer,byte encoding,
   int application=encoding & 0xF0;
   switch(application)
   {
+  case 0:
+    //no special application encoding needed. This does not seem to be
+    //properly documented in the LSB, but in practice it seems to be
+    //observed.
+    break;
   case DW_EH_PE_pcrel:
     return pointer-pointerLocation;
     break;
@@ -451,6 +456,7 @@ void buildFDERawData(CallFrameInfo* cfi,FDE* fde,uint* cieOffsets,GrowingBuffer*
       encodeEHPointerFromEncoding(fde->lowpc,
                                   fde->cie->augmentationInfo.fdePointerEncoding,
                                   pointerLocation,&initialLocationByteLen);
+    logprintf(ELL_INFO_V3,ELS_DWARF_BUILD,"Transforming pointer %p to %p for FDE\n",fde->lowpc,initialLocation);
   }
   else
   {
@@ -516,11 +522,24 @@ void buildFDERawData(CallFrameInfo* cfi,FDE* fde,uint* cieOffsets,GrowingBuffer*
   destroyRawInstructions(rawInstructions);
 }
 
+typedef struct
+{
+  int32 initialLocation;
+  int32 fdeAddress;
+} EhFrameHdrTableEntry;
+
+int compareEhFrameHdrTableEntries(const void* a_,const void* b_)
+{
+  const EhFrameHdrTableEntry* a=a_;
+  const EhFrameHdrTableEntry* b=b_;
+  return a->initialLocation-b->initialLocation;
+}
+
 //returns a void* to a binary representation of a Dwarf call frame
 //information section (i.e. .debug_frame in the dwarf specification)
 //the length of the returned buffer is written into byteLen.
 //the memory for the buffer should free'd when the caller is finished with it
-byte* buildCallFrameSectionData(CallFrameInfo* cfi,int* byteLen)
+CallFrameSectionData buildCallFrameSectionData(CallFrameInfo* cfi)
 {
   GrowingBuffer buf;
   //allocate 1k initially as an arbitrary amount. We'll grow it as needed
@@ -528,6 +547,7 @@ byte* buildCallFrameSectionData(CallFrameInfo* cfi,int* byteLen)
   buf.len=0;
   buf.data=malloc(buf.allocated);
   uint* cieOffsets=zmalloc(cfi->numCIEs*sizeof(uint));
+  uint* fdeOffsets=zmalloc(cfi->numFDEs*sizeof(uint));
   for(int i=0;i<cfi->numCIEs;i++)
   {
     cieOffsets[i]=buf.len;
@@ -535,8 +555,88 @@ byte* buildCallFrameSectionData(CallFrameInfo* cfi,int* byteLen)
   }
   for(int i=0;i<cfi->numFDEs;i++)
   {
+    fdeOffsets[i]=buf.len;
     buildFDERawData(cfi,cfi->fdes+i,cieOffsets,&buf);
   }
-  *byteLen=buf.len;
-  return buf.data;
+  free(cieOffsets);
+
+  CallFrameSectionData result;
+  result.ehData=buf.data;
+  result.ehDataLen=buf.len;
+  
+  if(cfi->isEHFrame)
+  {
+    //build .eh_frame_hdr
+    //todo: while this has support for all *common* situations on x86
+    //and x86_64, there are situations on x86_64 where it is not
+    //necessarily guaranteed to work (although I do not expect them to
+    //be encountered in practice)
+    GrowingBuffer hdrBuf;//data for .eh_frame_hdr
+    memset(&hdrBuf,0,sizeof(hdrBuf));
+
+    //fields taken from LSB at
+    //http://refspecs.freestandards.org/LSB_4.0.0/LSB-Core-generic/LSB-Core-generic/ehframechpt.html
+    struct
+    {
+      byte version;
+      byte eh_frame_ptr_enc;
+      byte fde_count_enc;
+      byte table_enc;
+      int32 eh_frame_ptr;
+      uint32 eh_fde_count;
+    } __attribute__((__packed__)) hdrHeader;
+
+    assert(sizeof(hdrHeader)==12);
+
+    hdrHeader.version=EH_FRAME_HDR_VERSION;
+    hdrHeader.eh_frame_ptr_enc=DW_EH_PE_sdata4 | DW_EH_PE_pcrel;
+    hdrHeader.fde_count_enc=DW_EH_PE_udata4;
+    hdrHeader.table_enc=DW_EH_PE_sdata4 | DW_EH_PE_datarel;
+    addr_t addressToBeRelativeTo=cfi->ehHdrAddress+4;//4 bytes into it
+    int numBytesOut;
+    hdrHeader.eh_frame_ptr=
+      (int32)encodeEHPointerFromEncoding(cfi->sectionAddress,
+                                         hdrHeader.eh_frame_ptr_enc,
+                                         addressToBeRelativeTo,
+                                         &numBytesOut);
+    assert(numBytesOut==4);
+    hdrHeader.eh_fde_count=
+      (int32)encodeEHPointerFromEncoding(cfi->numFDEs,
+                                         hdrHeader.fde_count_enc,
+                                         0,
+                                         &numBytesOut);
+    assert(numBytesOut==4);
+
+    addToGrowingBuffer(&hdrBuf,&hdrHeader,sizeof(hdrHeader));
+
+    //now it's time to add the actual table entries. The LSB standard
+    //requires that each entry contains two encoded values: the
+    //initial location for an FDE and the address of the FDE. The
+    //table must be sorted by initial location
+    EhFrameHdrTableEntry* table=zmalloc(sizeof(EhFrameHdrTableEntry)*cfi->numFDEs);
+    for(int i=0;i<cfi->numFDEs;i++)
+    {
+      //remember, encoded as data-relative
+      table[i].initialLocation=cfi->fdes[i].lowpc-cfi->ehHdrAddress;
+      table[i].fdeAddress=cfi->sectionAddress+fdeOffsets[i]-cfi->ehHdrAddress;
+    }
+    //sort them
+    qsort(table,cfi->numFDEs,sizeof(EhFrameHdrTableEntry),compareEhFrameHdrTableEntries);
+    //now actually write them to the buffer
+    for(int i=0;i<cfi->numFDEs;i++)
+    {
+      addToGrowingBuffer(&hdrBuf,&table[i].initialLocation,4);
+      addToGrowingBuffer(&hdrBuf,&table[i].fdeAddress,4);
+    }
+    free(table);
+        
+    result.ehHdrData=hdrBuf.data;
+    result.ehHdrDataLen=hdrBuf.len;
+  }
+  else
+  {
+    result.ehHdrData=NULL;
+    result.ehHdrDataLen=0;
+  }
+  return result;
 }

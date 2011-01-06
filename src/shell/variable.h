@@ -63,6 +63,9 @@ extern "C"
 #include "elfparse.h"
 }
 
+
+
+
 //this is a helper class used for storing the actual data associated
 //with the variable. It is subclassed for the different data types
 //most of the actual functionality is handed off to it. The reason
@@ -72,12 +75,19 @@ extern "C"
 class ShellVariableData
 {
 public:
-  virtual char* getString();
-  virtual ElfInfo* getElfObject();
-  virtual void* getRawData(int* byteLenOut);
-  virtual GElf_Shdr getSectionHeader();
-  virtual bool isCapable(ShellParamCapability cap);
+  ShellVariableData();
+  //the returned pointer is valid until the next call to getData
+  virtual ParamDataResult* getData(ShellParamCapability dataType,int idx=0);
+  //some types of variables can hold multiple pieces of the same sort
+  //of data, for example dwarfscript compile can emit a variable which
+  //may contain data for multiple sections
+  virtual int getEntityCount();
+  virtual bool isCapable(ShellParamCapability cap,int idx=0);
+protected:
+  void initResult();
+  ParamDataResult* result;
 };
+
 
 class ShellVariable : public ShellParam
 {
@@ -86,11 +96,17 @@ class ShellVariable : public ShellParam
   ~ShellVariable();
   void setValue(ElfInfo* e);
   void setValue(byte* data,int dataLen);
-  virtual char* getString();
-  virtual ElfInfo* getElfObject();
-  virtual void* getRawData(int* byteLenOut);
-  virtual GElf_Shdr getSectionHeader();
-  virtual bool isCapable(ShellParamCapability cap);
+  void setValue(byte* data,int dataLen,SectionHeaderData* header);
+  void makeArray(ShellVariableData** items,int cnt);
+
+  //the returned pointer is valid until the next call to getData
+  virtual ParamDataResult* getData(ShellParamCapability dataType,int idx=0);
+  //some types of variables can hold multiple pieces of the same sort
+  //of data, for example dwarfscript compile can emit a variable which
+  //may contain data for multiple sections
+  virtual int getEntityCount();
+  //idx indicates whether the given data is supported for the given index
+  virtual bool isCapable(ShellParamCapability cap,int idx=0);
   //for use from within C functions
   static void deleteShellVariable(void* var)
   {

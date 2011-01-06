@@ -58,3 +58,6 @@
 #define DWARF_CIE_VERSION 4
 #define DEBUG_CIE_ID 0xffffffff //the value of CIE_id as defined by the DWARFv4 spec
 #define EH_CIE_ID  0            //GCC uses a different CIE_id in .eh_frame sections
+
+//governed by LSB from  http://refspecs.freestandards.org/LSB_4.0.0/LSB-Core-generic/LSB-Core-generic/ehframechpt.html
+#define EH_FRAME_HDR_VERSION 1

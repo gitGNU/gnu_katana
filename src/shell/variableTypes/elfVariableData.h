@@ -63,8 +63,9 @@ class ShellElfVariableData : public ShellVariableData
 {
  public:
   ShellElfVariableData(ElfInfo* elf);
-  virtual ElfInfo* getElfObject();
-  virtual bool isCapable(ShellParamCapability cap);
+  //the returned pointer is valid until the next call to getData
+  virtual ParamDataResult* getData(ShellParamCapability dataType,int idx=0);
+  virtual bool isCapable(ShellParamCapability cap,int idx=0);
  protected:
   ElfInfo* elf;
   

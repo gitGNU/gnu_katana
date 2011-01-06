@@ -114,7 +114,8 @@ REGISTER  r[0-9]+
 "address_size" return T_ADDRESS_SIZE;
 "segment_size" return T_SEGMENT_SIZE;
 "section_type" return T_SECTION_TYPE;
-"section_location" return T_SECTION_LOC;
+"section_addr" return T_SECTION_LOC;
+"eh_hdr_addr" return T_EH_HDR_LOC;
 
 "FDE"|"fde" return T_FDE;
 "CIE"|"cie" return T_CIE;

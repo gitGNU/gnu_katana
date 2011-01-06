@@ -70,6 +70,7 @@ typedef struct CallFrameInfo
   //needed when encoding eh_frame because of pc-relative pointer encodings
   //todo: should really support relocations and then don't need to know this now
   addr_t sectionAddress;
+  addr_t ehHdrAddress;//address of .eh_frame_hdr
 } CallFrameInfo;
 
 typedef enum
@@ -127,7 +128,10 @@ typedef struct FDE
   int lowpc;
   int highpc;//has no meaning if this FDE describes fixups and was
              //read from a PO
-  int offset;//offset from beginning of debug frame
+  int offset;//offset from beginning of debug frame. Note that this
+             //field is fairly subject to change. For an FDE built
+             //from dwarfscript it may not be set at all. For an FDE
+             //loaded from a binary it will be set. 
   int idx;//what index fde this is in a DWARF section
   Dwarf_Unsigned augmentationDataLen;
   byte* augmentationData;
@@ -139,11 +143,20 @@ typedef struct FDE
   } augmentationInfo;
 } FDE;
 
+//struct for raw data returned from buildCallFrameSectionData
+typedef struct
+{
+  byte* ehData;
+  int ehDataLen;
+  byte* ehHdrData;
+  int ehHdrDataLen;
+} CallFrameSectionData;
+
 //returns a void* to a binary representation of a Dwarf call frame
 //information section (i.e. .debug_frame in the dwarf specification)
 //the length of the returned buffer is written into byteLen.
 //the memory for the buffer should free'd when the caller is finished with it
-byte* buildCallFrameSectionData(CallFrameInfo* cfi,int* byteLen);
+CallFrameSectionData buildCallFrameSectionData(CallFrameInfo* cfi);
 
 //reads the CIE's augmentationData and tries to set up
 //the cie->augmentationInfo

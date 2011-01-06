@@ -1,4 +1,5 @@
 %{
+#define BISON_Y_FILE  
 #include <cstdlib>
 #include "commands/loadCommand.h"
 #include "commands/saveCommand.h"
@@ -6,7 +7,9 @@
 #include "commands/shellCommand.h"
 #include "commands/dwarfscriptCommand.h"
 #include "commands/infoCommand.h"
+#include "arrayAccessParam.h"  
 #include "parse_helper.h"
+  
 
 
 ParseNode rootParseNode;
@@ -31,6 +34,7 @@ extern "C"
   int lineNumber=1;
   char* savedVarName=NULL;
   char* savedString=NULL;
+  int savedInt=0;
 }
 
 
@@ -40,6 +44,7 @@ extern "C"
 %token T_LOAD T_SAVE T_TRANSLATE T_REPLACE T_SECTION T_VARIABLE T_STRING_LITERAL
 %token T_DATA T_DWARFSCRIPT T_COMPILE T_EMIT T_SHELL_COMMAND
 %token T_INFO T_EXCEPTION_HANDLING
+%token T_NONNEG_INT
 %token T_INVALID_TOKEN
 %token T_EOL T_EOF
 
@@ -84,11 +89,12 @@ line : assignment
   $$=$1;
 }
 
-line_terminator : T_EOL {}
-| T_EOF {}
-| line_terminator T_EOL {}
-| line_terminator T_EOF {}
+line_terminator : line_term_token {}
+| line_terminator line_term_token {}
 
+line_term_token : T_EOL {}
+| T_EOF {}
+| ';' {}
 
 assignment : variable '=' commandline
 {
@@ -130,6 +136,11 @@ dwarfscriptcmd : T_DWARFSCRIPT T_COMPILE param
 | T_DWARFSCRIPT T_EMIT param param param
 {
   $$.u.cmd=new DwarfscriptCommand(DWOP_EMIT,$3.u.param,$4.u.param,$5.u.param);
+}
+| T_DWARFSCRIPT T_EMIT error
+{
+  fprintf(stderr,"Usage: dwarfscript emit (\".eh_frame\"|\".debug_frame\") ELF [OUTFILE]\n");
+  YYERROR;
 }
 
 /* translatecmd : T_TRANSLATE translate_fmt translate_fmt param */
@@ -180,6 +191,11 @@ param : variable
   $$.u.param=new ShellParam($1.u.string);
   $$.type=PNT_PARAM;
 }
+| variable '[' nonneg_int_lit ']'
+{
+  $$.u.param=new ShellArrayAccessParam($1.u.var,$3.u.intval);
+  $$.type=PNT_PARAM;
+}
 
 variable : T_VARIABLE
 {
@@ -198,6 +214,10 @@ stringParam : T_STRING_LITERAL
   $$.type=PNT_STR;
 }
 
+nonneg_int_lit : T_NONNEG_INT
+{
+  $$.u.intval=savedInt;
+}
 
 %%
 int yyerror(char *s)
@@ -205,3 +225,4 @@ int yyerror(char *s)
   fprintf(stderr, "%s at line %d\n", s, lineNumber);
   return 0;
 }
+

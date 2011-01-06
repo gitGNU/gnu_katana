@@ -357,7 +357,7 @@ void finalizeDataSize(ElfInfo* e,Elf_Scn* scn,Elf_Data* data)
 {
   ElfXX_Shdr* shdr=elfxx_getshdr(scn);
   shdr->sh_size=data->d_size;
-  logprintf(ELL_INFO_V3,ELS_ELFWRITE,"finalizing data size to %i for section with name %s(%i)\n",shdr->sh_size,getScnHdrString(e,shdr->sh_name),shdr->sh_name);
+  logprintf(ELL_INFO_V3,ELS_ELFWRITE,"finalizing data size to 0x%x for section with name %s(%i)\n",shdr->sh_size,getScnHdrString(e,shdr->sh_name),shdr->sh_name);
 }
 
 

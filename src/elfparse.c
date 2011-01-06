@@ -272,7 +272,6 @@ ElfInfo* duplicateElf(ElfInfo* e,char* outfname,bool flushToDisk,bool keepLayout
     if(SHT_NOBITS!=shdr.sh_type)
     {
       newdata->d_buf=zmalloc(newdata->d_size);
-      //printf("size is %i in scn idx %i\n",data->d_size,elf_ndxscn(scn));
       memcpy(newdata->d_buf,data->d_buf,data->d_size);
     }
   }

@@ -82,7 +82,14 @@ void ReplaceCommand::execute()
       if(newThingP->isCapable(SPC_SECTION_HEADER))
       {
         //the newThing is capable of giving us a new section header as well as new data
-        GElf_Shdr shdr=newThingP->getSectionHeader();
+        GElf_Shdr shdr;
+        memset(&shdr,0,sizeof(shdr));
+        SectionHeaderData* headerData=newThingP->getSectionHeader();
+        //build the shdr
+        shdr.sh_type=headerData->sh_type;
+        //todo: support this
+        death("Building a new section header is not support yet.\n");
+        
         gelf_update_shdr(scn,&shdr);
       }
     }

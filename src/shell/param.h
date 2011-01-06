@@ -69,8 +69,45 @@ typedef enum
   SPC_SECTION_HEADER,
   SPC_STRING_VALUE,
   SPC_ELF_VALUE,
-  SPC_RAW_DATA
+  SPC_RAW_DATA,
+  SPC_VARIABLE_DATA,//for arrays
 } ShellParamCapability;
+
+
+//the data necessary to actually construct an ElfXX_Shdr
+struct SectionHeaderData
+{
+  char name[256];
+  word_t sh_type;
+  word_t sh_flags;
+  word_t sh_addr;
+  word_t sh_offset;
+  word_t sh_size;
+  word_t sh_link;
+  word_t sh_info;
+  word_t sh_addralign;
+  word_t sh_entsize;
+};
+
+class ShellVariableData;
+
+//the result of asking a parameter for data
+struct ParamDataResult
+{
+  union
+  {
+    ElfInfo* elf;
+    char* str;
+    struct
+    {
+      byte* data;
+      int len;
+    } rawData;
+    SectionHeaderData* shdr;
+    ShellVariableData* variableData;
+  } u;
+  ShellParamCapability type;//the type of data stored here
+};
 
 //The default shell parameter is just a string
 //ShellVariables are also a type of ShellParameter
@@ -80,13 +117,18 @@ class ShellParam : public RefCountedClass
   ShellParam();
   ~ShellParam();
   ShellParam(char* string);
-  virtual char* getString();
-  virtual ElfInfo* getElfObject();
-  virtual void* getRawData(int* byteLenOut);
-  virtual GElf_Shdr getSectionHeader();
-  virtual bool isCapable(ShellParamCapability cap);
+  //the returned pointer is valid until the next call to getData
+  virtual ParamDataResult* getData(ShellParamCapability dataType,int idx=0);
+  virtual bool isCapable(ShellParamCapability cap,int idx=0);
+
+  //convenience functions
+  char* getString(int idx=0);
+  ElfInfo* getElfObject(int idx=0);
+  byte* getRawData(int* numBytesOut,int idx=0);
+  SectionHeaderData* getSectionHeader(int idx=0);
   private:
     char* stringValue;
+  ParamDataResult* result;
   
 };
 

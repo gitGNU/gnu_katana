@@ -60,12 +60,26 @@ ShellElfVariableData::ShellElfVariableData(ElfInfo* elf)
 {
 }
 
-ElfInfo* ShellElfVariableData::getElfObject()
+
+//the returned pointer is valid until the next call to getData
+ParamDataResult* ShellElfVariableData::getData(ShellParamCapability dataType,int idx)
 {
-  return this->elf;
+  initResult();
+  switch(dataType)
+  {
+  case SPC_ELF_VALUE:
+    this->result->type=SPC_ELF_VALUE;
+    this->result->u.elf=this->elf;
+    break;
+  default:
+    logprintf(ELL_WARN,ELS_SHELL,"ELF variable asked for data type it cannot supply\n");
+    return NULL;
+  }
+  return result;
 }
 
-bool ShellElfVariableData::isCapable(ShellParamCapability cap)
+
+bool ShellElfVariableData::isCapable(ShellParamCapability cap,int idx)
 {
   if(SPC_ELF_VALUE==cap)
   {

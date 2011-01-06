@@ -67,8 +67,9 @@ class ShellRawVariableData : public ShellVariableData
   ShellRawVariableData(byte* data,int len);
   ~ShellRawVariableData();
   virtual char* getString();
-  virtual void* getRawData(int* byteLenOut);
-  virtual bool isCapable(ShellParamCapability cap);
+  //the returned pointer is valid until the next call to getData
+  virtual ParamDataResult* getData(ShellParamCapability dataType,int idx=0);
+  virtual bool isCapable(ShellParamCapability cap,int idx=0);
  protected:
   byte* data;
   int len;

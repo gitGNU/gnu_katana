@@ -66,6 +66,8 @@ ShellRawVariableData::~ShellRawVariableData()
   free(hexString);
 }
 
+
+
 char* ShellRawVariableData::getString()
 {
   if(this->hexString)
@@ -76,13 +78,33 @@ char* ShellRawVariableData::getString()
   return this->hexString;
 }
 
-void* ShellRawVariableData::getRawData(int* byteLenOut)
+//the returned pointer is valid until the next call to getData
+ParamDataResult* ShellRawVariableData::getData(ShellParamCapability dataType,int idx)
 {
-  *byteLenOut=this->len;
-  return this->data;
+  initResult();
+  switch(dataType)
+  {
+  case SPC_RAW_DATA:
+    this->result->type=SPC_RAW_DATA;
+    this->result->u.rawData.len=this->len;
+    this->result->u.rawData.data=this->data;
+    break;
+  case SPC_STRING_VALUE:
+    {
+      char* str=this->getString();
+      this->result->type=SPC_STRING_VALUE;
+      this->result->u.str=str;
+    }
+    break;
+  default:
+    logprintf(ELL_WARN,ELS_SHELL,"ShellRawVariableData asked for data type it cannot supply\n");
+    return NULL;
+  }
+  return result;
 }
 
-bool ShellRawVariableData::isCapable(ShellParamCapability cap)
+
+bool ShellRawVariableData::isCapable(ShellParamCapability cap,int idx)
 {
   if(SPC_RAW_DATA==cap || SPC_STRING_VALUE==cap)
   {

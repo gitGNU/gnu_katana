@@ -58,55 +58,93 @@
 //The default shell parameter is just a string
 //ShellVariables are also a type of ShellParameter
 ShellParam::ShellParam()
- :stringValue(NULL)
+  :stringValue(NULL),result(NULL)
 {
 }
 
 ShellParam::ShellParam(char* string)
- :stringValue(string)
+  :stringValue(string),result(NULL)
 {
 }
 
 ShellParam::~ShellParam()
 {
-  if(this->stringValue)
+  free(this->stringValue);
+  free(result);
+}
+
+//the returned pointer is valid until the next call to getData
+ParamDataResult* ShellParam::getData(ShellParamCapability dataType,int idx)
+{
+  switch(dataType)
   {
-    free(this->stringValue);
+  case SPC_STRING_VALUE:
+    if(!this->result)
+    {
+      this->result=(ParamDataResult*)zmalloc(sizeof(ParamDataResult));
+      MALLOC_CHECK(this->result);
+    }
+    this->result->type=dataType;
+    this->result->u.str=this->stringValue;
+    return result;
+    break;
+  default:
+    logprintf(ELL_WARN,ELS_SHELL,"Parameter asked for data type it cannot supply\n");
+    return NULL;
   }
 }
 
-
-
-char* ShellParam::getString()
-{
-  return stringValue;
-}
-
-ElfInfo* ShellParam::getElfObject()
-{
-  logprintf(ELL_WARN,ELS_SHELL,"This type of parameter cannot yield an ELF object\n");
-  return NULL;
-}
-
-void* ShellParam::getRawData(int* byteLenOut)
-{
-  logprintf(ELL_WARN,ELS_SHELL,"This type of parameter cannot yield raw data\n");
-  *byteLenOut=0;
-  return NULL;
-}
-
-GElf_Shdr ShellParam::getSectionHeader()
-{
-  logprintf(ELL_WARN,ELS_SHELL,"This type of parameter cannot yield a section header\n");
-  GElf_Shdr result;
-  memset(&result,0,sizeof(result));
-  return result;
-}
-bool ShellParam::isCapable(ShellParamCapability cap)
+bool ShellParam::isCapable(ShellParamCapability cap,int idx)
 {
   if(cap==SPC_STRING_VALUE)
   {
     return true;
   }
   return false;
+}
+
+char* ShellParam::getString(int idx)
+{
+  if(!isCapable(SPC_STRING_VALUE))
+  {
+    logprintf(ELL_WARN,ELS_SHELL,"Attempting to get the string value for a variable that cannot be converted to a string\n");
+    return NULL;
+  }
+  ParamDataResult* result=this->getData(SPC_STRING_VALUE,idx);
+  assert(result && result->type==SPC_STRING_VALUE);
+  return result->u.str;
+}
+ElfInfo* ShellParam::getElfObject(int idx)
+{
+  if(!isCapable(SPC_ELF_VALUE))
+  {
+    logprintf(ELL_WARN,ELS_SHELL,"Attempting to get the ELF value for a variable that cannot be converted to an ELF object\n");
+    return NULL;
+  }
+  ParamDataResult* result=this->getData(SPC_ELF_VALUE,idx);
+  assert(result && result->type==SPC_ELF_VALUE);
+  return result->u.elf;
+}
+
+byte* ShellParam::getRawData(int* numBytesOut,int idx)
+{
+  if(!isCapable(SPC_RAW_DATA))
+  {
+    logprintf(ELL_WARN,ELS_SHELL,"Attempting to get the raw data value for a variable that cannot be converted to raw data\n");
+    return NULL;
+  }
+  ParamDataResult* result=this->getData(SPC_RAW_DATA,idx);
+  *numBytesOut=result->u.rawData.len;
+  return result->u.rawData.data;
+}
+
+SectionHeaderData* ShellParam::getSectionHeader(int idx)
+{
+  if(!isCapable(SPC_SECTION_HEADER))
+  {
+    logprintf(ELL_WARN,ELS_SHELL,"Attempting to get the section header value for a variable that cannot be converted to a section header\n");
+    return NULL;
+  }
+  ParamDataResult* result=this->getData(SPC_SECTION_HEADER,idx);
+  return result->u.shdr;
 }

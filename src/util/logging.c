@@ -130,7 +130,7 @@ void loggingDefaults()
   sourceEnables[ELS_DWARFTYPES]=ELL_WARN;
   sourceEnables[ELS_SAFETY]=ELL_INFO_V4;
   sourceEnables[ELS_PATH]=ELL_CNT;
-  sourceEnables[ELS_ELFWRITE]=ELL_INFO_V2;
+  sourceEnables[ELS_ELFWRITE]=ELL_INFO_V3;
   sourceEnables[ELS_PATCHWRITE]=ELL_WARN;
   sourceEnables[ELS_VERSION]=ELL_WARN;
   sourceEnables[ELS_DWARFWRITE]=ELL_INFO_V4;
@@ -138,5 +138,6 @@ void loggingDefaults()
   sourceEnables[ELS_CONFIG]=ELL_INFO_V4;
   sourceEnables[ELS_SHELL]=ELL_INFO_V4;
   sourceEnables[ELS_DWARFSCRIPT]=ELL_INFO_V4;
+  sourceEnables[ELS_DWARF_BUILD]=ELL_INFO_V4;
   sourceEnables[ELS_VM]=ELL_INFO_V4;
 }

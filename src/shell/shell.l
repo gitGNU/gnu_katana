@@ -21,11 +21,12 @@ int keywordOrID();
 extern int lineNumber;
 extern char* savedVarName;
 extern char* savedString;
+extern int savedInt;
 extern bool returnedEOFAlready;
 }
 
 VARIABLE         \$[_a-zA-Z0-9]+
-INT       [0-9]+
+NONNEG_INT [0-9]+
 FLOAT     ([0-9]*\.[0-9]+)|([0-9]+\.[0-9]*)
 D_QUOTE_STRING  [\"][^\"\n][\"]
 S_QUOTE_STRING  [\'][^\'\n][\']
@@ -50,8 +51,12 @@ S_QUOTE_STRING  [\'][^\'\n][\']
 "emit" return T_EMIT;
 "info" return T_INFO;
 "eh" return T_EXCEPTION_HANDLING;
+";" return ';';
+"\[" return '[';
+"\]" return ']';
 
 {VARIABLE}   savedVarName=strdup(yytext);return T_VARIABLE;
+{NONNEG_INT}   savedInt=atoi(yytext); return T_NONNEG_INT;
 
 
 <IN_STRING>{

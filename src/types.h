@@ -65,6 +65,10 @@
 #include "util/refcounted.h"
 
 typedef unsigned int uint;
+//need to change these if on any machine/compiler on which an int is
+//not 32-bytes
+typedef unsigned int uint32;
+typedef int int32;
 typedef size_t addr_t;
 typedef size_t word_t;
 typedef ssize_t sword_t;

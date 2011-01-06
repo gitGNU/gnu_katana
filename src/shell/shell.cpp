@@ -148,7 +148,22 @@ void doShell(char* inputFilename)
       CommandList* list=rootParseNode.u.listItem;
       while(list)
       {
-        list->cmd->execute();
+        try
+        {
+          list->cmd->execute();
+        }
+        catch(char* str)
+        {
+          logprintf(ELL_WARN,ELS_SHELL,"Unable to execute command, error message is '%s'\n",str);
+        }
+        catch(char const* str)
+        {
+          logprintf(ELL_WARN,ELS_SHELL,"Unable to execute command, error message is '%s'\n",str);
+        }
+        catch(...)
+        {
+          logprintf(ELL_WARN,ELS_SHELL,"Unable to execute command, unknown error message\n");
+        }
         CommandList* next=list->next;
         free(list);
         list=next;
@@ -181,9 +196,17 @@ void doShell(char* inputFilename)
       {
         list->cmd->execute();
       }
+      catch(char* str)
+      {
+        logprintf(ELL_WARN,ELS_SHELL,"Unable to execute command, error message is '%s'\n",str);
+      }
+      catch(char const* str)
+      {
+        logprintf(ELL_WARN,ELS_SHELL,"Unable to execute command, error message is '%s'\n",str);
+      }
       catch(...)
       {
-        logprintf(ELL_WARN,ELS_SHELL,"Unable to execute command\n");
+        logprintf(ELL_WARN,ELS_SHELL,"Unable to execute command, unknown error message\n");
       }
       CommandList* next=list->next;
       free(list);

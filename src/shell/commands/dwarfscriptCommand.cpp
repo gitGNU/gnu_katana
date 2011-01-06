@@ -54,6 +54,7 @@
 */
 
 #include "dwarfscriptCommand.h"
+#include "shell/variableTypes/rawVariableData.h"
 extern "C"
 {
 #include "fderead.h"
@@ -131,8 +132,9 @@ void DwarfscriptCommand::printCIEInfo(FILE* file,CIE* cie)
   fprintf(file,"end CIE\n");
 }
 
-void DwarfscriptCommand::printFDEInfo(FILE* file,FDE* fde)
+void DwarfscriptCommand::printFDEInfo(FILE* file,ElfInfo* elf,FDE* fde)
 {
+  fprintf(file,"#function guess: %s\n",getFunctionNameAtPC(elf,fde->lowpc));
   fprintf(file,"begin FDE\n");
   fprintf(file,"index: %i\n",fde->idx);
   fprintf(file,"cie_index: %i\n",fde->cie->idx);
@@ -205,7 +207,7 @@ void DwarfscriptCommand::emitDwarfscript()
   }
   for(int i=0;i<cfi->numFDEs;i++)
   {
-    this->printFDEInfo(file,cfi->fdes+i);
+    this->printFDEInfo(file,elf,cfi->fdes+i);
   }
   fclose(file);
   logprintf(ELL_INFO_V2,ELS_SHELL,"Wrote dwarfscript to %s\n",outfileName);
@@ -236,8 +238,7 @@ void DwarfscriptCommand::compileDwarfscript()
     return;
   }
 
-  int dataLen;
-  byte* data=buildCallFrameSectionData(parsedCallFrameInfo,&dataLen);
+  CallFrameSectionData data=buildCallFrameSectionData(parsedCallFrameInfo);
   if(outfileP)
   {
     char* outfileName=outfileP->getString();
@@ -246,7 +247,11 @@ void DwarfscriptCommand::compileDwarfscript()
       FILE* outfile=fopen(outfileName,"w");
       if(outfile)
       {
-        fwrite(data,dataLen,1,outfile);
+        if(data.ehHdrData)
+        {
+          fwrite(data.ehHdrData,data.ehHdrDataLen,1,outfile);
+        }
+        fwrite(data.ehData,data.ehDataLen,1,outfile);
         fclose(outfile);
         logprintf(ELL_INFO_V2,ELS_SHELL,"Wrote compiled dwarfscript call frame data to  file \"%s\" \n",outfileName);
       }
@@ -261,9 +266,14 @@ void DwarfscriptCommand::compileDwarfscript()
     }
   }
 
+
   if(this->outputVariable)
   {
-    this->outputVariable->setValue(data,dataLen);
+    //make an array with .eh_frame_hdr and .eh_frame items
+    ShellVariableData** items=(ShellVariableData**)zmalloc(sizeof(ShellVariableData*)*2);
+    items[0]=new ShellRawVariableData(data.ehData,data.ehDataLen);
+    items[1]=new ShellRawVariableData(data.ehHdrData,data.ehHdrDataLen);
+    this->outputVariable->makeArray(items,2);
   }
 }
 
