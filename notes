@@ -291,7 +291,7 @@ tion
     Even better is
     http://stackoverflow.com/questions/329059/what-is-gxxpersonalityv0-for
     Gives some info about the personality routine and indicates where
-    in libstd++ the implementation code can be found
+    in libstdc++ the implementation code can be found
 *** exception handling implementation issues http://chasewoerner.org/exh.pdf
     discusses some of the implementation details of exception handling. Probably not
     terribly useful but could have a bit of interesting information or
@@ -411,19 +411,24 @@ tion
     This function is required to exist by (I believe) the C++ ABI. It
     is located in libgcc
 *** _Unwind_RaiseException calls the personality routine (__gxx_personality_v0)
-    The personality routine examines the exception handlers to
-    determine which frame holds a handler for the current
-    exception. TODO: I don't yet have a clear understanding of the way
-    this data is stored and accessed. The C++ ABI document on
-    exception handling (in references above) talks about the storage
-    of exception records. Also, I'm not entirely positive
-    whether it's _Unwind_RaiseException or the personality routine
-    that deals with the actual details of traversing down the
-    stack. __gxx_personality_v0 calls __gnu_unwind_frame, but I cannot
-    find where this symbol is actually located. Reading
-    http://www.codesourcery.com/public/cxx-abi/abi-eh.html#base-personality
-    I think it's the _Unwind_RaiseException that handles the stack
-    rather than the personality routine.
+**** Where does it live?
+     According to , the personality routine code is in
+     libstdc++/libsupc++/eh_personality.cc in the gcc sources. There
+     is also likely looking code in gcc/unwind-c.c
+**** What it does
+     The personality routine examines the exception handlers to
+     determine which frame holds a handler for the current
+     exception. TODO: I don't yet have a clear understanding of the way
+     this data is stored and accessed. The C++ ABI document on
+     exception handling (in references above) talks about the storage
+     of exception records. Also, I'm not entirely positive
+     whether it's _Unwind_RaiseException or the personality routine
+     that deals with the actual details of traversing down the
+     stack. __gxx_personality_v0 calls __gnu_unwind_frame, but I cannot
+     find where this symbol is actually located. Reading
+     http://www.codesourcery.com/public/cxx-abi/abi-eh.html#base-personality
+     I think it's the _Unwind_RaiseException that handles the stack
+     rather than the personality routine.
 *** Once a handler is found, execution goes to __cxa_begin_catch
     Note that at this point the original call location of the
     exception has been wiped off the stack.

@@ -119,7 +119,34 @@ char* rlgets(char* prompt,bool isInputTty)
   }
 }
 
-
+void doCommandList(CommandList* list)
+{
+  while(list)
+  {
+    try
+    {
+      list->cmd->execute();
+    }
+    catch(char* str)
+    {
+      logprintf(ELL_WARN,ELS_SHELL,"Unable to execute command, error message is '%s'\n",str);
+      break;
+    }
+    catch(char const* str)
+    {
+      logprintf(ELL_WARN,ELS_SHELL,"Unable to execute command, error message is '%s'\n",str);
+      break;
+    }
+    catch(...)
+    {
+      logprintf(ELL_WARN,ELS_SHELL,"Unable to execute command, unknown error message\n");
+      break;
+    }
+    CommandList* next=list->next;
+    free(list);
+    list=next;
+  }
+}
 
 void doShell(char* inputFilename)
 {
@@ -146,28 +173,7 @@ void doShell(char* inputFilename)
       }
       assert(rootParseNode.type==PNT_LIST);
       CommandList* list=rootParseNode.u.listItem;
-      while(list)
-      {
-        try
-        {
-          list->cmd->execute();
-        }
-        catch(char* str)
-        {
-          logprintf(ELL_WARN,ELS_SHELL,"Unable to execute command, error message is '%s'\n",str);
-        }
-        catch(char const* str)
-        {
-          logprintf(ELL_WARN,ELS_SHELL,"Unable to execute command, error message is '%s'\n",str);
-        }
-        catch(...)
-        {
-          logprintf(ELL_WARN,ELS_SHELL,"Unable to execute command, unknown error message\n");
-        }
-        CommandList* next=list->next;
-        free(list);
-        list=next;
-      }
+      doCommandList(list);
     }
     write_history(historyPath);
   }
@@ -189,29 +195,7 @@ void doShell(char* inputFilename)
     fclose(file);
     assert(rootParseNode.type==PNT_LIST);
     CommandList* list=rootParseNode.u.listItem;
-    while(list)
-    {
-      assert(list->cmd);
-      try
-      {
-        list->cmd->execute();
-      }
-      catch(char* str)
-      {
-        logprintf(ELL_WARN,ELS_SHELL,"Unable to execute command, error message is '%s'\n",str);
-      }
-      catch(char const* str)
-      {
-        logprintf(ELL_WARN,ELS_SHELL,"Unable to execute command, error message is '%s'\n",str);
-      }
-      catch(...)
-      {
-        logprintf(ELL_WARN,ELS_SHELL,"Unable to execute command, unknown error message\n");
-      }
-      CommandList* next=list->next;
-      free(list);
-      list=next;
-    }
+    doCommandList(list);
   }
   dictDelete(shellVariables,ShellVariable::deleteShellVariable);
 }

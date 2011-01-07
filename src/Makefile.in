@@ -68,13 +68,14 @@ am__objects_6 = katana-command.$(OBJEXT) katana-loadCommand.$(OBJEXT) \
 	katana-dwarfscriptCommand.$(OBJEXT) \
 	katana-shellCommand.$(OBJEXT) katana-infoCommand.$(OBJEXT)
 am__objects_7 = katana-elfVariableData.$(OBJEXT) \
-	katana-rawVariableData.$(OBJEXT)
+	katana-rawVariableData.$(OBJEXT) katana-arrayData.$(OBJEXT) \
+	katana-elfSectionData.$(OBJEXT)
 am__objects_8 = katana-dwarfscript.yy.$(OBJEXT) \
 	katana-dwarfscript.tab.$(OBJEXT)
 am__objects_9 = katana-shell.$(OBJEXT) katana-shell.yy.$(OBJEXT) \
 	katana-shell.tab.$(OBJEXT) katana-param.$(OBJEXT) \
-	katana-variable.$(OBJEXT) $(am__objects_6) $(am__objects_7) \
-	$(am__objects_8)
+	katana-variable.$(OBJEXT) katana-arrayAccessParam.$(OBJEXT) \
+	$(am__objects_6) $(am__objects_7) $(am__objects_8)
 am_katana_OBJECTS = katana-katana.$(OBJEXT) \
 	katana-dwarftypes.$(OBJEXT) katana-elfparse.$(OBJEXT) \
 	katana-types.$(OBJEXT) katana-dwarf_instr.$(OBJEXT) \
@@ -263,14 +264,14 @@ PATCHWRITE_SRC = patchwrite/patchwrite.c patchwrite/codediff.c patchwrite/typedi
 PATCHWRITE_H = patchwrite/patchwrite.h patchwrite/codediff.h patchwrite/typediff.h patchwrite/sourcetree.h patchwrite/write_to_dwarf.h patchwrite/elfcmp.h
 UTIL_SRC = util/dictionary.c util/hash.c util/util.c util/map.c util/list.c util/logging.c util/path.c util/refcounted.c util/stack.c util/cxxutil.cpp
 UTIL_H = util/dictionary.h util/hash.h util/util.h util/map.h util/list.h util/logging.h util/path.h util/refcounted.h util/stack.h util/cxxutil.h
-SHELL_VARIABLE_SRC = shell/variableTypes/elfVariableData.cpp shell/variableTypes/rawVariableData.cpp
-SHELL_VARIABLE_H = shell/variableTypes/elfVariableData.h shell/variableTypes/rawVariableData.h
-SHELL_COMMANDS_SRC = shell/commands/command.cpp shell/commands/loadCommand.cpp shell/commands/saveCommand.cpp shell/commands/replaceCommand.cpp shell/commands/dwarfscriptCommand.cpp shell/commands/shellCommand.cpp shell/commands/infoCommand.cpp
-SHELL_COMMANDS_H = shell/commands/command.h shell/commands/loadCommand.h shell/commands/saveCommand.h shell/commands/replaceCommand.h shell/commands/dwarfscriptCommand.h shell/commands/shellCommand.h shell/commands/infoCommand.h
+SHELL_VARIABLE_SRC = shell/variableTypes/elfVariableData.cpp shell/variableTypes/rawVariableData.cpp shell/variableTypes/arrayData.cpp shell/variableTypes/elfSectionData.cpp
+SHELL_VARIABLE_H = shell/variableTypes/elfVariableData.h shell/variableTypes/rawVariableData.h shell/variableTypes/arrayData.h shell/variableTypes/elfSectionData.h
+SHELL_COMMANDS_SRC = shell/commands/command.cpp shell/commands/loadCommand.cpp shell/commands/saveCommand.cpp shell/commands/replaceCommand.cpp shell/commands/dwarfscriptCommand.cpp shell/commands/shellCommand.cpp shell/commands/infoCommand.cpp 
+SHELL_COMMANDS_H = shell/commands/command.h shell/commands/loadCommand.h shell/commands/saveCommand.h shell/commands/replaceCommand.h shell/commands/dwarfscriptCommand.h shell/commands/shellCommand.h shell/commands/infoCommand.h 
 DWARFSCRIPT_SRC = shell/dwarfscript/dwarfscript.yy.c shell/dwarfscript/dwarfscript.tab.c
 DWARFSCRIPT_H = shell/dwarfscript/dwarfscript.tab.h
-SHELL_SRC = shell/shell.cpp  shell/shell.yy.cpp shell/shell.tab.cpp shell/param.cpp shell/variable.cpp $(SHELL_COMMANDS_SRC) $(SHELL_VARIABLE_SRC) $(DWARFSCRIPT_SRC)
-SHELL_H = shell/shell.h shell/parse_helper.h shell/shell.tab.h shell/param.h shell/variable.h  $(SHELL_COMMANDS_SRC) $(SHELL_VARIABLE_H) $(DWARFSCRIPT_H)
+SHELL_SRC = shell/shell.cpp  shell/shell.yy.cpp shell/shell.tab.cpp shell/param.cpp shell/variable.cpp shell/arrayAccessParam.cpp $(SHELL_COMMANDS_SRC) $(SHELL_VARIABLE_SRC) $(DWARFSCRIPT_SRC)
+SHELL_H = shell/shell.h shell/parse_helper.h shell/shell.tab.h shell/param.h shell/variable.h  shell/arrayAccessParam.h $(SHELL_COMMANDS_SRC) $(SHELL_VARIABLE_H) $(DWARFSCRIPT_H)
 INFO_SRC = info/fdedump.c info/dwinfo_dump.c  info/unsafe_funcs_dump.c
 INFO_H = info/fdedump.h info/dwinfo_dump.h  info/unsafe_funcs_dump.h
 REWRITER_SRC = rewriter/rewrite.c
@@ -360,6 +361,8 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-arrayAccessParam.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-arrayData.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-callFrameInfo.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-codediff.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-command.Po@am__quote@
@@ -374,6 +377,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-dwarftypes.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-dwarfvm.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-dwinfo_dump.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-elfSectionData.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-elfVariableData.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-elfcmp.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-elfparse.Po@am__quote@
@@ -1133,6 +1137,20 @@ katana-variable.obj: shell/variable.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o katana-variable.obj `if test -f 'shell/variable.cpp'; then $(CYGPATH_W) 'shell/variable.cpp'; else $(CYGPATH_W) '$(srcdir)/shell/variable.cpp'; fi`
 
+katana-arrayAccessParam.o: shell/arrayAccessParam.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT katana-arrayAccessParam.o -MD -MP -MF $(DEPDIR)/katana-arrayAccessParam.Tpo -c -o katana-arrayAccessParam.o `test -f 'shell/arrayAccessParam.cpp' || echo '$(srcdir)/'`shell/arrayAccessParam.cpp
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/katana-arrayAccessParam.Tpo $(DEPDIR)/katana-arrayAccessParam.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='shell/arrayAccessParam.cpp' object='katana-arrayAccessParam.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o katana-arrayAccessParam.o `test -f 'shell/arrayAccessParam.cpp' || echo '$(srcdir)/'`shell/arrayAccessParam.cpp
+
+katana-arrayAccessParam.obj: shell/arrayAccessParam.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT katana-arrayAccessParam.obj -MD -MP -MF $(DEPDIR)/katana-arrayAccessParam.Tpo -c -o katana-arrayAccessParam.obj `if test -f 'shell/arrayAccessParam.cpp'; then $(CYGPATH_W) 'shell/arrayAccessParam.cpp'; else $(CYGPATH_W) '$(srcdir)/shell/arrayAccessParam.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/katana-arrayAccessParam.Tpo $(DEPDIR)/katana-arrayAccessParam.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='shell/arrayAccessParam.cpp' object='katana-arrayAccessParam.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o katana-arrayAccessParam.obj `if test -f 'shell/arrayAccessParam.cpp'; then $(CYGPATH_W) 'shell/arrayAccessParam.cpp'; else $(CYGPATH_W) '$(srcdir)/shell/arrayAccessParam.cpp'; fi`
+
 katana-command.o: shell/commands/command.cpp
 @am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT katana-command.o -MD -MP -MF $(DEPDIR)/katana-command.Tpo -c -o katana-command.o `test -f 'shell/commands/command.cpp' || echo '$(srcdir)/'`shell/commands/command.cpp
 @am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/katana-command.Tpo $(DEPDIR)/katana-command.Po
@@ -1258,6 +1276,34 @@ katana-rawVariableData.obj: shell/variableTypes/rawVariableData.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='shell/variableTypes/rawVariableData.cpp' object='katana-rawVariableData.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o katana-rawVariableData.obj `if test -f 'shell/variableTypes/rawVariableData.cpp'; then $(CYGPATH_W) 'shell/variableTypes/rawVariableData.cpp'; else $(CYGPATH_W) '$(srcdir)/shell/variableTypes/rawVariableData.cpp'; fi`
+
+katana-arrayData.o: shell/variableTypes/arrayData.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT katana-arrayData.o -MD -MP -MF $(DEPDIR)/katana-arrayData.Tpo -c -o katana-arrayData.o `test -f 'shell/variableTypes/arrayData.cpp' || echo '$(srcdir)/'`shell/variableTypes/arrayData.cpp
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/katana-arrayData.Tpo $(DEPDIR)/katana-arrayData.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='shell/variableTypes/arrayData.cpp' object='katana-arrayData.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o katana-arrayData.o `test -f 'shell/variableTypes/arrayData.cpp' || echo '$(srcdir)/'`shell/variableTypes/arrayData.cpp
+
+katana-arrayData.obj: shell/variableTypes/arrayData.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT katana-arrayData.obj -MD -MP -MF $(DEPDIR)/katana-arrayData.Tpo -c -o katana-arrayData.obj `if test -f 'shell/variableTypes/arrayData.cpp'; then $(CYGPATH_W) 'shell/variableTypes/arrayData.cpp'; else $(CYGPATH_W) '$(srcdir)/shell/variableTypes/arrayData.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/katana-arrayData.Tpo $(DEPDIR)/katana-arrayData.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='shell/variableTypes/arrayData.cpp' object='katana-arrayData.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o katana-arrayData.obj `if test -f 'shell/variableTypes/arrayData.cpp'; then $(CYGPATH_W) 'shell/variableTypes/arrayData.cpp'; else $(CYGPATH_W) '$(srcdir)/shell/variableTypes/arrayData.cpp'; fi`
+
+katana-elfSectionData.o: shell/variableTypes/elfSectionData.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT katana-elfSectionData.o -MD -MP -MF $(DEPDIR)/katana-elfSectionData.Tpo -c -o katana-elfSectionData.o `test -f 'shell/variableTypes/elfSectionData.cpp' || echo '$(srcdir)/'`shell/variableTypes/elfSectionData.cpp
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/katana-elfSectionData.Tpo $(DEPDIR)/katana-elfSectionData.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='shell/variableTypes/elfSectionData.cpp' object='katana-elfSectionData.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o katana-elfSectionData.o `test -f 'shell/variableTypes/elfSectionData.cpp' || echo '$(srcdir)/'`shell/variableTypes/elfSectionData.cpp
+
+katana-elfSectionData.obj: shell/variableTypes/elfSectionData.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT katana-elfSectionData.obj -MD -MP -MF $(DEPDIR)/katana-elfSectionData.Tpo -c -o katana-elfSectionData.obj `if test -f 'shell/variableTypes/elfSectionData.cpp'; then $(CYGPATH_W) 'shell/variableTypes/elfSectionData.cpp'; else $(CYGPATH_W) '$(srcdir)/shell/variableTypes/elfSectionData.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/katana-elfSectionData.Tpo $(DEPDIR)/katana-elfSectionData.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='shell/variableTypes/elfSectionData.cpp' object='katana-elfSectionData.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o katana-elfSectionData.obj `if test -f 'shell/variableTypes/elfSectionData.cpp'; then $(CYGPATH_W) 'shell/variableTypes/elfSectionData.cpp'; else $(CYGPATH_W) '$(srcdir)/shell/variableTypes/elfSectionData.cpp'; fi`
 
 # This directory's subdirectories are mostly independent; you can cd
 # into them and run `make' without going through this Makefile.

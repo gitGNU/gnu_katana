@@ -35,11 +35,13 @@ This document details brainstorming for the katana scripting language
    Where PARAMETERS depend on COMMAND. The possible COMMAND choices
    are as follows
 *** compile
-    Usage 'dwarfscript compile INPUT [OUTFILE]'
-    input should be a file or variable resolving to a textual
-    representation of a dwarfscript file. This input is resolved into
-    an ELF section. If outfile is specified, the binary data in this
-    section is written into outfile
+    Usage 'dwarfscript compile INPUT [OUTFILE]' input should be a file
+    or variable resolving to a textual representation of a dwarfscript
+    file. This input is resolved into an ELF section. If outfile is
+    specified, the binary data in this section is written into
+    outfile. The command returns an array with two items, the first
+    being the binary data for the .eh_frame section and the second
+    being the binary data for the .eh_frame_hdr section.
 *** emit
     Usage 'dwarfscript emit (".eh_frame"|".debug_frame") ELF [outfile]'
     Creates dwarfscript (writing it to [outfile] if specified) for

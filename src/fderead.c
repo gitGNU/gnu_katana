@@ -490,6 +490,10 @@ Map* readDebugFrame(ElfInfo* elf,bool ehInsteadOfDebug)
       dwarfErrorHandler(err,NULL);
     }
     scn=getSectionByName(elf,".eh_frame");
+    Elf_Scn* hdrScn=getSectionByName(elf,".eh_frame_hdr");
+    GElf_Shdr shdr;
+    getShdr(hdrScn,&shdr);
+    elf->callFrameInfo.ehHdrAddress=shdr.sh_addr;
   }
   GElf_Shdr shdr;
   getShdr(scn,&shdr);

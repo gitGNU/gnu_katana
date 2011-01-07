@@ -592,6 +592,10 @@ CallFrameSectionData buildCallFrameSectionData(CallFrameInfo* cfi)
     hdrHeader.eh_frame_ptr_enc=DW_EH_PE_sdata4 | DW_EH_PE_pcrel;
     hdrHeader.fde_count_enc=DW_EH_PE_udata4;
     hdrHeader.table_enc=DW_EH_PE_sdata4 | DW_EH_PE_datarel;
+    if(0==cfi->ehHdrAddress)
+    {
+      logprintf(ELL_WARN,ELS_DWARF_BUILD,"The .eh_frame_hdr address appears to be 0. This is almost certainly wrong\n");
+    }
     addr_t addressToBeRelativeTo=cfi->ehHdrAddress+4;//4 bytes into it
     int numBytesOut;
     hdrHeader.eh_frame_ptr=
@@ -600,12 +604,7 @@ CallFrameSectionData buildCallFrameSectionData(CallFrameInfo* cfi)
                                          addressToBeRelativeTo,
                                          &numBytesOut);
     assert(numBytesOut==4);
-    hdrHeader.eh_fde_count=
-      (int32)encodeEHPointerFromEncoding(cfi->numFDEs,
-                                         hdrHeader.fde_count_enc,
-                                         0,
-                                         &numBytesOut);
-    assert(numBytesOut==4);
+    hdrHeader.eh_fde_count=cfi->numFDEs;
 
     addToGrowingBuffer(&hdrBuf,&hdrHeader,sizeof(hdrHeader));
 

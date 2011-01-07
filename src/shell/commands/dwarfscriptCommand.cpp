@@ -200,7 +200,11 @@ void DwarfscriptCommand::emitDwarfscript()
   }
   CallFrameInfo* cfi=&elf->callFrameInfo;
   fprintf(file,"section_type: \"%s\"\n",cfi->isEHFrame?".eh_frame":".debug_frame");
-  fprintf(file,"section_location: 0x%zx\n",cfi->sectionAddress);
+  fprintf(file,"section_addr: 0x%zx\n",cfi->sectionAddress);
+  if(cfi->isEHFrame)
+  {
+    fprintf(file,"eh_hdr_addr: 0x%zx\n",cfi->ehHdrAddress);
+  }
   for(int i=0;i<cfi->numCIEs;i++)
   {
     this->printCIEInfo(file,cfi->cies+i);
@@ -226,6 +230,7 @@ void DwarfscriptCommand::compileDwarfscript()
   if(!infile)
   {
     logprintf(ELL_WARN,ELS_SHELL,"Cannot open file %s for reading dwarfscript from\n",infileName);
+    throw "Unable to compile dwarfscript";
     return;
   }
   //yydwdebug=1;
@@ -235,8 +240,10 @@ void DwarfscriptCommand::compileDwarfscript()
   if(!parseSuccess)
   {
     logprintf(ELL_WARN,ELS_SHELL,"Unable to parse dwarfscript input\n");
+    throw "Unable to compile dwarfscript";
     return;
   }
+  
 
   CallFrameSectionData data=buildCallFrameSectionData(parsedCallFrameInfo);
   if(outfileP)
