@@ -113,11 +113,14 @@ commandline : loadcmd {$$=$1;$$.type=PNT_CMD;}
 loadcmd : T_LOAD param
 {
   $$.u.cmd=new LoadCommand($2.u.param);
+  $2.u.param->drop();
 }
 
 savecmd : T_SAVE param param
 {
   $$.u.cmd=new SaveCommand($2.u.param,$3.u.param);
+  $2.u.param->drop();
+  $3.u.param->drop();
 }
 | T_SAVE error
 {
@@ -159,20 +162,28 @@ dwarfscriptcmd : T_DWARFSCRIPT T_COMPILE param
 replacecmd : T_REPLACE T_SECTION param param param
 {
   $$.u.cmd=new ReplaceCommand(RT_SECTION,$3.u.param,$4.u.param,$5.u.param);
+  $3.u.param->drop();
+  $4.u.param->drop();
+  $5.u.param->drop();
 }
 
 shellcmd : T_SHELL_COMMAND param
 {
   $$.u.cmd=new SystemShellCommand($2.u.param);
+  $2.u.param->drop();
+
 }
 
 infocmd : T_INFO T_EXCEPTION_HANDLING param param
 {
   $$.u.cmd=new InfoCommand(IOP_EXCEPTION,$3.u.param,$4.u.param);
+  $3.u.param->drop();
+  $4.u.param->drop();
 }
 | T_INFO T_EXCEPTION_HANDLING param
 {
   $$.u.cmd=new InfoCommand(IOP_EXCEPTION,$3.u.param);
+  $3.u.param->drop();
 }
 | T_INFO error
 {
@@ -183,6 +194,7 @@ infocmd : T_INFO T_EXCEPTION_HANDLING param param
 param : variable
 {
   $$.u.param=$1.u.var;
+  $$.u.param->grab();
   $$.type=PNT_PARAM;
     
 }

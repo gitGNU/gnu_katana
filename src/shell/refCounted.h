@@ -62,6 +62,9 @@ class RefCountedClass
     :count(1)
   {
   }
+  virtual ~RefCountedClass()
+  {
+  }
   void grab()
   {
     this->count++;

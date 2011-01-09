@@ -56,15 +56,26 @@
 #include "command.h"
 #include <cstdlib>
 
+
+
 ShellCommand::ShellCommand()
  :outputVariable(NULL)
 {
   
 }
 
+ShellCommand::~ShellCommand()
+{
+  if(outputVariable)
+  {
+    outputVariable->drop();
+  }
+}
+
 void ShellCommand::setOutputVariable(ShellVariable* var)
 {
   this->outputVariable=var;
+  var->grab();
 }
 
 

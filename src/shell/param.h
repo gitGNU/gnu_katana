@@ -115,7 +115,7 @@ class ShellParam : public RefCountedClass
 {
   public:
   ShellParam();
-  ~ShellParam();
+  virtual ~ShellParam();
   ShellParam(char* string);
   //the returned pointer is valid until the next call to getData
   virtual ParamDataResult* getData(ShellParamCapability dataType,int idx=0);

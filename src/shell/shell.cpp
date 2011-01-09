@@ -143,6 +143,7 @@ void doCommandList(CommandList* list)
       break;
     }
     CommandList* next=list->next;
+    delete list->cmd;
     free(list);
     list=next;
   }

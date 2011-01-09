@@ -69,6 +69,7 @@ class ShellCommand
 {
 public:
   ShellCommand();
+  virtual ~ShellCommand();
   virtual void execute()=0;
   virtual void setOutputVariable(ShellVariable* var);
 protected:

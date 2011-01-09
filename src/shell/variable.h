@@ -76,6 +76,7 @@ class ShellVariableData
 {
 public:
   ShellVariableData();
+  virtual ~ShellVariableData(){}
   //the returned pointer is valid until the next call to getData
   virtual ParamDataResult* getData(ShellParamCapability dataType,int idx=0);
   //some types of variables can hold multiple pieces of the same sort
@@ -93,7 +94,7 @@ class ShellVariable : public ShellParam
 {
  public:
   ShellVariable(char* name);
-  ~ShellVariable();
+  virtual ~ShellVariable();
   void setValue(ElfInfo* e);
   void setValue(byte* data,int dataLen);
   void setValue(byte* data,int dataLen,SectionHeaderData* header);

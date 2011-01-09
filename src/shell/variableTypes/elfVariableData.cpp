@@ -60,6 +60,13 @@ ShellElfVariableData::ShellElfVariableData(ElfInfo* elf)
 {
 }
 
+ShellElfVariableData::~ShellElfVariableData()
+{
+  if(elf)
+  {
+    endELF(elf);
+  }
+}
 
 //the returned pointer is valid until the next call to getData
 ParamDataResult* ShellElfVariableData::getData(ShellParamCapability dataType,int idx)

@@ -349,6 +349,7 @@ section_type_prop : T_SECTION_TYPE ':' string_lit
     fprintf(stderr,"Unexpected section type for dwarfscript, expected \".eh_frame\" or \".debug_frame\"\n");
     YYERROR;
   }
+  free($3.u.stringval);
 }
 
 section_location_prop : T_SECTION_LOC ':' nonneg_int_lit

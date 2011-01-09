@@ -62,7 +62,7 @@ class SaveCommand : public ShellCommand
 {
 public:
   SaveCommand(ShellParam* elfObject,ShellParam* filename);
-  ~SaveCommand();
+  virtual ~SaveCommand();
   virtual void execute();
 protected:
   ShellParam* elfObjectP;
