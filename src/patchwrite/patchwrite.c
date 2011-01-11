@@ -52,7 +52,7 @@
   Date: January 2010
   Description: Write patch information out to a po (patch object) file
 */
-
+
 #include "types.h"
 #include "dwarftypes.h"
 #include <gelf.h>
@@ -70,6 +70,7 @@
 #include "elfwriter.h"
 #include "sourcetree.h"
 #include "write_to_dwarf.h"
+#include "elfutil.h"
 
 ElfInfo* oldBinary=NULL;
 ElfInfo* newBinary=NULL;

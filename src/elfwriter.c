@@ -1,7 +1,7 @@
 /*
   File: elfwriter.c
   Author: James Oakley
-  Copyright (C): 2010 Dartmouth College
+  Copyright (C): 2011 Dartmouth College
   License: Katana is free software: you may redistribute it and/or
     modify it under the terms of the GNU General Public License as
     published by the Free Software Foundation, either version 2 of the
@@ -49,7 +49,7 @@
     http://www.gnu.org/licenses/gpl.html
 
   Project: Katana
-  Date: February 2010
+  Date: January 2011
   Description: routines for building an elf file for a patch-> Not thread safe
 */
 
@@ -57,6 +57,9 @@
 #include <assert.h>
 #include <fcntl.h>
 #include <util/logging.h>
+#include "constants.h"
+#include "elfutil.h"
+
 
 Elf_Data* strtab_data=NULL;
 Elf_Data* symtab_data=NULL;
@@ -375,12 +378,20 @@ void finalizeDataSizes(ElfInfo* e)
   for(Elf_Scn* scn=elf_nextscn(e->e,NULL);scn;scn=elf_nextscn(e->e,scn))
   {
     ElfXX_Shdr* shdr=elfxx_getshdr(scn);
-    if((shdr->sh_flags & SHF_ALLOC) && lastShdr)
+    if((shdr->sh_flags & SHF_ALLOC) && lastShdr && (lastShdr->sh_flags & SHF_ALLOC))
     {
       int overlap=(lastShdr->sh_addr+lastShdr->sh_size)-shdr->sh_addr;
       if(overlap>1)
       {
-        death("Sections '%s' and '%s' overlap by %i bytes, presumably from the first section expanding. Katana should be capable of resizing appropriately (although with some difficulty when relocations are involved and the binary has not been linked with --emit-relocs) but this feature has not yet been implemented\n",getScnHdrString(e,lastShdr->sh_name),getScnHdrString(e,shdr->sh_name),overlap);
+        death("When loaded into memory, sections '%s' and '%s' overlap by %i bytes, presumably from the first section expanding. Katana should be capable of resizing appropriately (although with some difficulty when relocations are involved and the binary has not been linked with --emit-relocs) but this feature has not yet been implemented\n",getScnHdrString(e,lastShdr->sh_name),getScnHdrString(e,shdr->sh_name),overlap);
+      }
+    }
+    else if(lastShdr)
+    {
+      int overlap=(lastShdr->sh_offset+lastShdr->sh_size)-shdr->sh_offset;
+      if(overlap>1)
+      {
+        death("On disk, sections '%s' and '%s' overlap by %i bytes, presumably from the first section expanding. Katana should be capable of resizing appropriately (although with some difficulty when relocations are involved and the binary has not been linked with --emit-relocs) but this feature has not yet been implemented\n",getScnHdrString(e,lastShdr->sh_name),getScnHdrString(e,shdr->sh_name),overlap);
       }
     }
     lastShdr=shdr;

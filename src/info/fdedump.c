@@ -54,13 +54,13 @@
                specifically geared towards printing out FDEs in Patch Objects with
                Katana's special registers and operations
 */
-
+
 #include <assert.h>
 #include "fderead.h"
 #include "dwarfvm.h"
 #include "dwarf_instr.h"
 #include "dwarftypes.h"
-
+#include "elfutil.h"
 
 Dwarf_Debug dbgForFDEDump;
 

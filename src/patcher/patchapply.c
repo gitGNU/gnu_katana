@@ -52,8 +52,8 @@
   Date: January 2010
   Description: Read patch object files and apply them
 */
-
-#include "elfparse.h"
+
+#include "elfutil.h"
 #include "dwarftypes.h"
 #include "hotpatch.h"
 #include "target.h"

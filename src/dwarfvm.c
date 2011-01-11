@@ -65,6 +65,7 @@
 #include "util/map.h"
 #include "patcher/hotpatch.h"
 #include "util/stack.h"
+#include "elfutil.h"
 
 //returns a list of PatchData objects
 List* generatePatchesFromFDEAndState(FDE* fde,SpecialRegsState* state,ElfInfo* patch,ElfInfo* patchedBin);

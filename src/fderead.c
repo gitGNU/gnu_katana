@@ -63,6 +63,7 @@
 #include <assert.h>
 #include "util/logging.h"
 #include "dwarfvm.h"
+#include "elfutil.h"
 
 //create a DwarfExpression object from the raw bytes
 DwarfExpr parseDwarfExpression(byte* data,uint len)

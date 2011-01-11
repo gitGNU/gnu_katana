@@ -52,7 +52,7 @@
   Date: March 2010
   Description: Determines when it is safe to patch and sets a breakpoint at the next safe point
 */
-
+
 #include "register.h"
 #include "fderead.h"
 #include "dwarfvm.h"
@@ -67,6 +67,7 @@
 #include <sys/wait.h>
 #include "safety.h"
 #include "config.h"
+#include "elfutil.h"
 
 FDE* getFDEForPC(ElfInfo* elf,addr_t pc)
 {

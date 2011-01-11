@@ -61,3 +61,5 @@
 
 //governed by LSB from  http://refspecs.freestandards.org/LSB_4.0.0/LSB-Core-generic/LSB-Core-generic/ehframechpt.html
 #define EH_FRAME_HDR_VERSION 1
+
+#define SHT_KATANA_UNSAFE_FUNCTIONS SHT_LOUSER+0x1

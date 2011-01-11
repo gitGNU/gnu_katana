@@ -52,7 +52,7 @@
   Date: February 2010
   Description: Determine if two functions are identical
 */
-
+
 #include "elfparse.h"
 #include "types.h"
 #include "relocation.h"
@@ -60,7 +60,8 @@
 #include "symbol.h"
 #include "util/logging.h"
 #include <assert.h>
-
+#include "elfutil.h"
+
 //compares two relocations based on r_offset
 int cmpRelocs(void* a,void* b)
 {

@@ -52,13 +52,14 @@
   Date: December 2010
   Description: Command class for the katana shell
 */
-
+
 #include "dwarfscriptCommand.h"
 #include "shell/variableTypes/rawVariableData.h"
 extern "C"
 {
 #include "fderead.h"
 #include "shell/dwarfscript/dwarfscript.yy.h"
+#include "elfutil.h"
   
 extern int yydwdebug;
 extern FILE *yydwin;

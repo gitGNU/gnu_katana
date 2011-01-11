@@ -59,6 +59,7 @@
 #include "util/logging.h"
 #include <string.h>
 #include "patcher/versioning.h"
+#include "elfutil.h"
 
 void getSymbol(ElfInfo* e,int symIdx,GElf_Sym* outSym)
 {

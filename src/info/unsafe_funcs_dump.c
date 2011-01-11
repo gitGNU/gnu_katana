@@ -56,7 +56,7 @@
 
 #include "elfparse.h"
 #include "symbol.h"
-
+#include "elfutil.h"
 void printPatchUnsafeFuncsInfo(ElfInfo* patch)
 {
   if(!patch->sectionIndices[ERS_UNSAFE_FUNCTIONS])

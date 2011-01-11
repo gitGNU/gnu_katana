@@ -33,11 +33,11 @@ INFO_H=info/fdedump.h info/dwinfo_dump.h  info/unsafe_funcs_dump.h
 REWRITER_SRC=rewriter/rewrite.c
 REWRITER_H=rewriter/rewrite.h
 
-H_FILES=dwarftypes.h elfparse.h types.h dwarf_instr.h register.h relocation.h symbol.h fderead.h dwarfvm.h config.h arch.h constants.h leb.h callFrameInfo.h elfwriter.h $(PATCHER_H) $(PATCHWRITE_H) $(UTIL_H) $(INFO_H) $(REWRITER_H) $(SHELL_H)
+H_FILES=dwarftypes.h elfparse.h elfutil.h types.h dwarf_instr.h register.h relocation.h symbol.h fderead.h dwarfvm.h config.h arch.h constants.h leb.h callFrameInfo.h elfwriter.h $(PATCHER_H) $(PATCHWRITE_H) $(UTIL_H) $(INFO_H) $(REWRITER_H) $(SHELL_H)
 
 EXTRA_DIST=$(H_FILES)
 
-katana_SOURCES=katana.c dwarftypes.c   elfparse.c  types.c  dwarf_instr.c register.c relocation.c symbol.c fderead.c dwarfvm.c config.c leb.c callFrameInfo.c commandLine.c  elfwriter.c $(PATCHWRITE_SRC) $(PATCHER_SRC) $(UTIL_SRC) $(INFO_SRC) $(REWRITER_SRC) $(SHELL_SRC)
+katana_SOURCES=katana.c dwarftypes.c   elfparse.c elfutil.c  types.c  dwarf_instr.c register.c relocation.c symbol.c fderead.c dwarfvm.c config.c leb.c callFrameInfo.c commandLine.c  elfwriter.c $(PATCHWRITE_SRC) $(PATCHER_SRC) $(UTIL_SRC) $(INFO_SRC) $(REWRITER_SRC) $(SHELL_SRC)
 
 BFLAGS=-d -v
 

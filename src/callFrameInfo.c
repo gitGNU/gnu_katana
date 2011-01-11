@@ -57,7 +57,7 @@
 #include "constants.h"
 #include "leb.h"
 #include "util/logging.h"
-#include "elfparse.h"
+#include "elfutil.h"
 
 void printEHPointerEncoding(FILE* file,byte encoding)
 {

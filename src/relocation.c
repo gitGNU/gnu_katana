@@ -59,6 +59,7 @@
 #include <assert.h>
 #include "symbol.h"
 #include "util/logging.h"
+#include "elfutil.h"
 
 void applyAllRelocations(ElfInfo* e,ElfInfo* oldElf)
 {

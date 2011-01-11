@@ -63,9 +63,9 @@
  Important Note: the hash table in ELF files has entries of size Elf32_Word
                  regardless of the Elf class of the object
 */
-
+
 #include <link.h>
-#include "elfparse.h"
+#include "elfutil.h"
 #include "target.h"
 #include "util/logging.h"
 

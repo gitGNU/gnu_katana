@@ -1,7 +1,7 @@
 /*
-  File: replaceCommand.cpp
+  File: elfutil.h
   Author: James Oakley
-  Copyright (C): 2010 Dartmouth College
+  Copyright (C): 2011 Dartmouth College
   License: Katana is free software: you may redistribute it and/or
   modify it under the terms of the GNU General Public License as
   published by the Free Software Foundation, either version 2 of the
@@ -42,64 +42,47 @@
   THIRD PARTIES OR A FAILURE OF THE PROGRAM TO OPERATE WITH ANY OTHER
   PROGRAMS), EVEN IF SUCH HOLDER OR OTHER PARTY HAS BEEN ADVISED OF THE
   POSSIBILITY OF SUCH DAMAGES.
-    
+
   The complete text of the license may be found in the file COPYING
   which should have been distributed with this software. The GNU
   General Public License may be obtained at
   http://www.gnu.org/licenses/gpl.html
-    
-  Project:  Katana
-  Date: December 2010
-  Description: Command class for the katana shell
+
+  Project: Katana
+  Date: January 2011
+  Description: Misc. routines for working with elf files
 */
 
-#include "replaceCommand.h"
-extern "C"
-{
-#include "elfutil.h"
-}
+#ifndef elfutil_h
+#define elfutil_h
 
-ReplaceCommand::ReplaceCommand(ReplacementType type,ShellParam* elfObject,ShellParam* which,ShellParam* newThing)
-  :type(type),elfObjectP(elfObject),whichThingP(which),newThingP(newThing)
-{
-}
+#include "elfparse.h"
 
-void ReplaceCommand::execute()
-{
-  ElfInfo* e=this->elfObjectP->getElfObject();
-  switch(this->type)
-  {
-  case RT_SECTION:
-    {
-      char* whichSectionName=whichThingP->getString();
-      Elf_Scn* scn=getSectionByName(e,whichSectionName);
-      if(!scn)
-      {
-        logprintf(ELL_WARN,ELS_SHELL,"Unable to find section '%s' when trying to execute replace section commnad\n",whichSectionName);
-        return;
-      }
-      Elf_Data* dataForSection=elf_getdata(scn,NULL);
-      int dataLen=0;
-      void* newData=newThingP->getRawData(&dataLen);
-      replaceScnData(dataForSection,newData,dataLen);
-      logprintf(ELL_INFO_V2,ELS_SHELL,"Replaced section \"%s\"\n",whichSectionName);
-      if(newThingP->isCapable(SPC_SECTION_HEADER))
-      {
-        //the newThing is capable of giving us a new section header as well as new data
-        GElf_Shdr shdr;
-        memset(&shdr,0,sizeof(shdr));
-        SectionHeaderData* headerData=newThingP->getSectionHeader();
-        //build the shdr
-        shdr.sh_type=headerData->sh_type;
-        //todo: support this
-        death("Building a new section header is not support yet.\n");
-        
-        gelf_update_shdr(scn,&shdr);
-      }
-    }
-    break;
-  default:
-    logprintf(ELL_ERR,ELS_SHELL,"Unhandled replacement type\n");
-  }
+void* getTextDataAtAbs(ElfInfo* e,addr_t addr,ELF_STORAGE_TYPE type);
+word_t getTextAtAbs(ElfInfo* e,addr_t addr,ELF_STORAGE_TYPE type);
+void setTextAtAbs(ElfInfo* e,addr_t addr,word_t value,ELF_STORAGE_TYPE type);
+void setWordAtAbs(Elf_Scn* scn,addr_t addr,word_t value,ELF_STORAGE_TYPE type);
+word_t getWordAtAbs(Elf_Scn* scn,addr_t addr,ELF_STORAGE_TYPE type);
+void* getDataAtAbs(Elf_Scn* scn,addr_t addr,ELF_STORAGE_TYPE type);
+void* getTextDataAtRelOffset(ElfInfo* e,int offset);
+word_t getTextAtRelOffset(ElfInfo* e,int offset);
+void printSymTab(ElfInfo* e);
 
-}
+//returns NULL if the section does not exist
+Elf_Scn* getSectionByName(ElfInfo* e,char* name);
+Elf_Data* getDataByIdx(ElfInfo* e,idx_t idx);
+Elf_Data* getDataByERS(ElfInfo* e,E_RECOGNIZED_SECTION scn);
+Elf_Scn* getSectionByERS(ElfInfo* e,E_RECOGNIZED_SECTION ers);
+void getShdrByERS(ElfInfo* e,E_RECOGNIZED_SECTION ers,GElf_Shdr* shdr);
+void getShdr(Elf_Scn* scn,GElf_Shdr* shdr);
+char* getSectionNameFromIdx(ElfInfo* e,int idx);
+//idx should be the index in the section header string table, not the
+//section index
+char* getScnHdrString(ElfInfo* e,int idx);
+char* getString(ElfInfo* e,int idx);//get a string from the normal string table
+char* getDynString(ElfInfo* e,int idx);//get a string from the dynamic string table
+bool hasERS(ElfInfo* e,E_RECOGNIZED_SECTION ers);
+//the returned string should be freed
+char* getFunctionNameAtPC(ElfInfo* elf,addr_t pc);
+
+#endif

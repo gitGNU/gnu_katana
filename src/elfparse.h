@@ -123,15 +123,7 @@ ElfInfo* openELFFile(char* fname);
 //called when we are finished using the given ELF file
 //this function does nothing more than cleanup and deallocate resources.
 void endELF(ElfInfo* _e);
-void* getTextDataAtAbs(ElfInfo* e,addr_t addr,ELF_STORAGE_TYPE type);
-word_t getTextAtAbs(ElfInfo* e,addr_t addr,ELF_STORAGE_TYPE type);
-void setTextAtAbs(ElfInfo* e,addr_t addr,word_t value,ELF_STORAGE_TYPE type);
-void setWordAtAbs(Elf_Scn* scn,addr_t addr,word_t value,ELF_STORAGE_TYPE type);
-word_t getWordAtAbs(Elf_Scn* scn,addr_t addr,ELF_STORAGE_TYPE type);
-void* getDataAtAbs(Elf_Scn* scn,addr_t addr,ELF_STORAGE_TYPE type);
-void* getTextDataAtRelOffset(ElfInfo* e,int offset);
-word_t getTextAtRelOffset(ElfInfo* e,int offset);
-void printSymTab(ElfInfo* e);
+
 //have to pass the name that the elf file will originally get written
 //out to, because of the way elf_begin is set up
 //if flushToDisk is false doesn't
@@ -145,22 +137,6 @@ ElfInfo* duplicateElf(ElfInfo* e,char* outfname,bool flushToDisk,bool keepLayout
 //return true on success
 bool writeOutElf(ElfInfo* e,char* outfname,bool keepLayout);
 void findELFSections(ElfInfo* e);
-//returns NULL if the section does not exist
-Elf_Scn* getSectionByName(ElfInfo* e,char* name);
-Elf_Data* getDataByIdx(ElfInfo* e,idx_t idx);
-Elf_Data* getDataByERS(ElfInfo* e,E_RECOGNIZED_SECTION scn);
-Elf_Scn* getSectionByERS(ElfInfo* e,E_RECOGNIZED_SECTION ers);
-void getShdrByERS(ElfInfo* e,E_RECOGNIZED_SECTION ers,GElf_Shdr* shdr);
-void getShdr(Elf_Scn* scn,GElf_Shdr* shdr);
-char* getSectionNameFromIdx(ElfInfo* e,int idx);
-//idx should be the index in the section header string table, not the
-//section index
-char* getScnHdrString(ElfInfo* e,int idx);
-char* getString(ElfInfo* e,int idx);//get a string from the normal string table
-char* getDynString(ElfInfo* e,int idx);//get a string from the dynamic string table
-bool hasERS(ElfInfo* e,E_RECOGNIZED_SECTION ers);
-//the returned string should be freed
-char* getFunctionNameAtPC(ElfInfo* elf,addr_t pc);
 
-#define SHT_KATANA_UNSAFE_FUNCTIONS SHT_LOUSER+0x1
+
 #endif
