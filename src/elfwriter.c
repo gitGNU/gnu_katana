@@ -61,18 +61,6 @@
 #include "elfutil.h"
 
 
-Elf_Data* strtab_data=NULL;
-Elf_Data* symtab_data=NULL;
-Elf_Data* text_data=NULL;//for storing new versions of functions
-Elf_Data* rodata_data=NULL;
-Elf_Data* rela_text_data=NULL;
-
-Elf_Scn* strtab_scn=NULL;
-Elf_Scn* symtab_scn=NULL;
-Elf_Scn* text_scn=NULL;//for storing new versions of functions
-Elf_Scn* rodata_scn=NULL;//hold the new rodata from the patch
-Elf_Scn* rela_text_scn=NULL;
-
 //now not writing old symbols b/c
 //better to get the from /proc/PID/exe
 /*Elf_Scn* old_symtab_scn=NULL;//relevant symbols from the symbol table of the old binary
@@ -116,8 +104,9 @@ void replaceScnData(Elf_Data* dataDest,void* data,int size)
 }
 
 //adds an entry to the string table, return its offset
-int addStrtabEntry(char* str)
+int addStrtabEntry(ElfInfo* e,char* str)
 {
+  Elf_Data* strtab_data=getDataByERS(e,ERS_STRTAB);
   int len=strlen(str)+1;
   addDataToScn(strtab_data,str,len);
   elf_flagdata(strtab_data,ELF_C_SET,ELF_F_DIRTY);
@@ -125,23 +114,25 @@ int addStrtabEntry(char* str)
 }
 
 //return index of entry in symbol table
-int addSymtabEntry(Elf_Data* data,ElfXX_Sym* sym)
+int addSymtabEntry(ElfInfo* e,Elf_Data* data,ElfXX_Sym* sym)
 {
+  Elf_Data* symtab_data=getDataByERS(e,ERS_SYMTAB);
   int len=sizeof(ElfXX_Sym);
   addDataToScn(data,sym,len);
   if(data==symtab_data)
   {
-    patch->symTabCount=data->d_off/len;
+    e->symTabCount=data->d_off/len;
   }
   return (data->d_size-len)/len;
 }
 
-void createSections(Elf* outelf)
+void createSections(ElfInfo* e)
 {
-  patch->dataAllocatedByKatana=true;
+  Elf* outelf=e->e;
+  e->dataAllocatedByKatana=true;
   //first create the string table
-  strtab_scn=elf_newscn(outelf);
-  strtab_data=elf_newdata(strtab_scn);
+  Elf_Scn* strtab_scn=elf_newscn(outelf);
+  Elf_Data* strtab_data=elf_newdata(strtab_scn);
   strtab_data->d_align=1;
   strtab_data->d_buf=NULL;
   strtab_data->d_off=0;
@@ -149,6 +140,7 @@ void createSections(Elf* outelf)
   strtab_data->d_version=EV_CURRENT;
   scnInfo[ERS_STRTAB].scn=strtab_scn;
   scnInfo[ERS_STRTAB].data=strtab_data;
+  e->sectionIndices[ERS_STRTAB]=elf_ndxscn(strtab_scn);
   
   ElfXX_Shdr* shdr;
   shdr=elfxx_getshdr(strtab_scn);
@@ -160,9 +152,9 @@ void createSections(Elf* outelf)
 
   
   
-  addStrtabEntry("");//first entry in stringtab null so can have normal unnamed null section
+  addStrtabEntry(e,"");//first entry in stringtab null so can have normal unnamed null section
                      //todo: what is the purpose of this?
-  addStrtabEntry(".strtab");
+  addStrtabEntry(e,".strtab");
 
   //create the data section
   //we use this for holding initializers for new variables or for new fields
@@ -183,12 +175,12 @@ void createSections(Elf* outelf)
                          //that it is in the ELF files I've examined,
                          //but does it have to be?
   shdr->sh_flags=SHF_WRITE;
-  shdr->sh_name=addStrtabEntry(".data.new");
+  shdr->sh_name=addStrtabEntry(e,".data.new");
 
 
   //ordinary symtab
-  symtab_scn=elf_newscn(outelf);
-  symtab_data=elf_newdata(symtab_scn);
+  Elf_Scn* symtab_scn=elf_newscn(outelf);
+  Elf_Data* symtab_data=elf_newdata(symtab_scn);
   symtab_data->d_align=1;
   symtab_data->d_buf=NULL;
   symtab_data->d_off=0;
@@ -196,6 +188,7 @@ void createSections(Elf* outelf)
   symtab_data->d_version=EV_CURRENT;
   scnInfo[ERS_SYMTAB].scn=symtab_scn;
   scnInfo[ERS_SYMTAB].data=symtab_data;
+  e->sectionIndices[ERS_SYMTAB]=elf_ndxscn(symtab_scn);
   
   shdr=elfxx_getshdr(symtab_scn);
   shdr->sh_type=SHT_SYMTAB;
@@ -204,12 +197,12 @@ void createSections(Elf* outelf)
                           //but I don't quite understand it
   shdr->sh_addralign=__WORDSIZE;
   shdr->sh_entsize=sizeof(ElfXX_Sym);
-  shdr->sh_name=addStrtabEntry(".symtab");
+  shdr->sh_name=addStrtabEntry(e,".symtab");
 
   //first symbol in symtab should be all zeros
   ElfXX_Sym sym;
   memset(&sym,0,sizeof(ElfXX_Sym));
-  addSymtabEntry(symtab_data,&sym);
+  addSymtabEntry(e,symtab_data,&sym);
 
    //create the section for holding indices to symbols of unsafe
   //functions that can't have activation frames during patching
@@ -225,11 +218,11 @@ void createSections(Elf* outelf)
   shdr->sh_addralign=1;  //todo: should this be word-aligned? It seems
                          //that it is in the ELF files I've examined,
                          //but does it have to be?
-  shdr->sh_name=addStrtabEntry(".unsafe_functions");
+  shdr->sh_name=addStrtabEntry(e,".unsafe_functions");
 
   //text section for new functions
-  text_scn=elf_newscn(outelf);
-  text_data=elf_newdata(text_scn);
+  Elf_Scn* text_scn=elf_newscn(outelf);
+  Elf_Data* text_data=elf_newdata(text_scn);
   text_data->d_align=1;
   text_data->d_buf=NULL;
                                        //will be allocced as needed
@@ -242,7 +235,7 @@ void createSections(Elf* outelf)
   shdr->sh_link=0;
   shdr->sh_info=0;
   shdr->sh_addralign=1;//normally text is aligned, but we never actually execute from this section
-  shdr->sh_name=addStrtabEntry(".text.new");
+  shdr->sh_name=addStrtabEntry(e,".text.new");
   shdr->sh_addr=0;//going to have to relocate anyway so no point in trying to keep the same address
   shdr->sh_flags=SHF_EXECINSTR;
   scnInfo[ERS_TEXT].scn=text_scn;
@@ -252,8 +245,8 @@ void createSections(Elf* outelf)
   //(note that in many cases these may not actually be "new" ones,
   //but unfortunately because .rodata is so unstructured, it can
   //be difficult to determine what is needed and what is not
-  rodata_scn=elf_newscn(outelf);
-  rodata_data=elf_newdata(rodata_scn);
+  Elf_Scn* rodata_scn=elf_newscn(outelf);
+  Elf_Data* rodata_data=elf_newdata(rodata_scn);
   rodata_data->d_align=1;
   rodata_data->d_buf=NULL;
   rodata_data->d_off=0;
@@ -268,11 +261,11 @@ void createSections(Elf* outelf)
   shdr->sh_info=0;
   shdr->sh_addralign=1;//normally text is aligned, but we never actually execute from this section
   shdr->sh_flags=0;
-  shdr->sh_name=addStrtabEntry(".rodata.new");
+  shdr->sh_name=addStrtabEntry(e,".rodata.new");
 
   //rela.text.new
-  rela_text_scn=elf_newscn(outelf);
-  rela_text_data=elf_newdata(rela_text_scn);
+  Elf_Scn* rela_text_scn=elf_newscn(outelf);
+  Elf_Data* rela_text_data=elf_newdata(rela_text_scn);
   rela_text_data->d_align=1;
   rela_text_data->d_buf=NULL;
   rela_text_data->d_off=0;
@@ -283,7 +276,7 @@ void createSections(Elf* outelf)
   shdr=elfxx_getshdr(rela_text_scn);
   shdr->sh_type=SHT_RELA;
   shdr->sh_addralign=__WORDSIZE;
-  shdr->sh_name=addStrtabEntry(".rela.text.new");
+  shdr->sh_name=addStrtabEntry(e,".rela.text.new");
 
   //write symbols for sections
   sym.st_info=ELFXX_ST_INFO(STB_LOCAL,STT_SECTION);
@@ -293,19 +286,17 @@ void createSections(Elf* outelf)
     {
       sym.st_name=elfxx_getshdr(scnInfo[i].scn)->sh_name;
       sym.st_shndx=elf_ndxscn(scnInfo[i].scn);
-      addSymtabEntry(symtab_data,&sym);
+      addSymtabEntry(e,symtab_data,&sym);
     }
   }
 
 
   //fill in some info about the sections we added
-  patch->sectionIndices[ERS_TEXT]=elf_ndxscn(text_scn);
-  patch->sectionIndices[ERS_SYMTAB]=elf_ndxscn(symtab_scn);
-  patch->sectionIndices[ERS_STRTAB]=elf_ndxscn(strtab_scn);
-  patch->sectionIndices[ERS_RODATA]=elf_ndxscn(rodata_scn);
-  patch->sectionIndices[ERS_RELA_TEXT]=elf_ndxscn(rela_text_scn);
-  patch->sectionIndices[ERS_DATA]=elf_ndxscn(scnInfo[ERS_DATA].scn);
-  patch->sectionIndices[ERS_UNSAFE_FUNCTIONS]=elf_ndxscn(scnInfo[ERS_UNSAFE_FUNCTIONS].scn);
+  e->sectionIndices[ERS_TEXT]=elf_ndxscn(text_scn);
+  e->sectionIndices[ERS_RODATA]=elf_ndxscn(rodata_scn);
+  e->sectionIndices[ERS_RELA_TEXT]=elf_ndxscn(rela_text_scn);
+  e->sectionIndices[ERS_DATA]=elf_ndxscn(scnInfo[ERS_DATA].scn);
+  e->sectionIndices[ERS_UNSAFE_FUNCTIONS]=elf_ndxscn(scnInfo[ERS_UNSAFE_FUNCTIONS].scn);
 }
 
 //must be called before any other routines
@@ -349,8 +340,8 @@ ElfInfo* startPatchElf(char* fname)
   ehdr->e_type=ET_NONE;//not relocatable, or executable, or shared object, or core, etc
   ehdr->e_version=EV_CURRENT;
 
-  createSections(outelf);
-  ehdr->e_shstrndx=elf_ndxscn(strtab_scn);//set strtab in elf header
+  createSections(patch);
+  ehdr->e_shstrndx=elf_ndxscn(getSectionByERS(patch,ERS_STRTAB));//set strtab in elf header
   //todo: perhaps the two string tables should be separate
   patch->strTblIdx=patch->sectionHdrStrTblIdx=ehdr->e_shstrndx;
   return patch;
@@ -441,16 +432,14 @@ void endPatchElf()
   }  
   
   endELF(patch);
-  strtab_data=text_data=rodata_data=rela_text_data=NULL;
-  strtab_scn=text_scn=rodata_scn=rela_text_scn=NULL;
 }
 
-int reindexSectionForPatch(ElfInfo* e,int scnIdx)
+int reindexSectionForPatch(ElfInfo* e,int scnIdx,ElfInfo* patch)
 {
   char* scnName=getSectionNameFromIdx(e,scnIdx);
   if(!strcmp(".rodata",scnName))
   {
-    return elf_ndxscn(rodata_scn);
+    return elf_ndxscn(getSectionByERS(patch,ERS_RODATA));
   }
   else
   {
@@ -471,14 +460,14 @@ int reindexSectionForPatch(ElfInfo* e,int scnIdx)
       patchShdr->sh_link=shdr.sh_link;
       patchShdr->sh_info=shdr.sh_info;
       patchShdr->sh_addralign=shdr.sh_addralign;
-      patchShdr->sh_name=addStrtabEntry(scnName);
+      patchShdr->sh_name=addStrtabEntry(patch,scnName);
       //need to add a symbol for this section
       ElfXX_Sym sym;
       memset(&sym,0,sizeof(ElfXX_Sym));
       sym.st_info=ELFXX_ST_INFO(STB_LOCAL,STT_SECTION);
       sym.st_name=patchShdr->sh_name;
       sym.st_shndx=elf_ndxscn(patchScn);
-      addSymtabEntry(symtab_data,&sym);
+      addSymtabEntry(patch,getDataByERS(patch,ERS_SYMTAB),&sym);
       
     }
     return elf_ndxscn(patchScn);
@@ -524,7 +513,7 @@ int dwarfWriteSectionCallback(char* name,int size,Dwarf_Unsigned type,
   //todo: write this section
   scn=elf_newscn(outelf);
   ElfXX_Shdr* shdr=elfxx_getshdr(scn);
-  shdr->sh_name=addStrtabEntry(name);
+  shdr->sh_name=addStrtabEntry(patch,name);
   shdr->sh_type=type;
   shdr->sh_flags=flags;
   shdr->sh_size=size;
@@ -534,7 +523,7 @@ int dwarfWriteSectionCallback(char* name,int size,Dwarf_Unsigned type,
   if(0==link && SHT_REL==type)
   {
     //make symtab the link
-    shdr->sh_link=elf_ndxscn(symtab_scn);
+    shdr->sh_link=elf_ndxscn(getSectionByERS(patch,ERS_SYMTAB));
   }
   shdr->sh_info=info;
   ElfXX_Sym sym;
@@ -544,7 +533,7 @@ int dwarfWriteSectionCallback(char* name,int size,Dwarf_Unsigned type,
   sym.st_info=ELFXX_ST_INFO(STB_LOCAL,STT_SECTION);
   sym.st_other=0;
   sym.st_shndx=elf_ndxscn(scn);
-  *sectNameIdx=addSymtabEntry(symtab_data,&sym);
+  *sectNameIdx=addSymtabEntry(patch,symtab_data,&sym);
   *error=0;  
   return sym.st_shndx;
 }

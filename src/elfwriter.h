@@ -72,11 +72,11 @@ addr_t addDataToScn(Elf_Data* dataDest,void* data,int size);
 void replaceScnData(Elf_Data* dataDest,void* data,int size);
 
 //adds an entry to the string table, return its offset
-int addStrtabEntry(char* str);
+int addStrtabEntry(ElfInfo* e,char* str);
 //return index of entry in symbol table
-int addSymtabEntry(Elf_Data* data,ElfXX_Sym* sym);
+int addSymtabEntry(ElfInfo* e,Elf_Data* data,ElfXX_Sym* sym);
 
-int reindexSectionForPatch(ElfInfo* e,int scnIdx);
+int reindexSectionForPatch(ElfInfo* e,int scnIdx,ElfInfo* patch);
 
 //must be called at the end of each patch and
 //before a new patch can be started

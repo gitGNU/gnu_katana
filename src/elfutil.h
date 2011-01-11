@@ -70,9 +70,9 @@ void printSymTab(ElfInfo* e);
 
 //returns NULL if the section does not exist
 Elf_Scn* getSectionByName(ElfInfo* e,char* name);
+Elf_Scn* getSectionByERS(ElfInfo* e,E_RECOGNIZED_SECTION ers);
 Elf_Data* getDataByIdx(ElfInfo* e,idx_t idx);
 Elf_Data* getDataByERS(ElfInfo* e,E_RECOGNIZED_SECTION scn);
-Elf_Scn* getSectionByERS(ElfInfo* e,E_RECOGNIZED_SECTION ers);
 void getShdrByERS(ElfInfo* e,E_RECOGNIZED_SECTION ers,GElf_Shdr* shdr);
 void getShdr(Elf_Scn* scn,GElf_Shdr* shdr);
 char* getSectionNameFromIdx(ElfInfo* e,int idx);

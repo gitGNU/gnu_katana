@@ -110,7 +110,7 @@ idx_t addSymbolFromBinaryToPatch(ElfInfo* binary,idx_t symIdx)
   //that this relocation refers to. If we don't already have a corresponding
   //symbol in the patch file, we may have to add this one
   ElfXX_Sym sym;
-  sym.st_name=addStrtabEntry(symname);//todo: this is a waste if we don't end up using this symbol
+  sym.st_name=addStrtabEntry(patch,symname);//todo: this is a waste if we don't end up using this symbol
   sym.st_value=symInNewBin.st_value;
   sym.st_size=symInNewBin.st_size;
   sym.st_info=symInNewBin.st_info;
@@ -118,7 +118,7 @@ idx_t addSymbolFromBinaryToPatch(ElfInfo* binary,idx_t symIdx)
   sym.st_shndx=SHN_UNDEF;        
   if(STT_SECTION==symType)
   {
-    sym.st_shndx=reindexSectionForPatch(newBinary,symInNewBin.st_shndx);
+    sym.st_shndx=reindexSectionForPatch(newBinary,symInNewBin.st_shndx,patch);
   }
   sym.st_info=ELFXX_ST_INFO(ELF64_ST_BIND(symInNewBin.st_info),
                             symType);
@@ -129,7 +129,7 @@ idx_t addSymbolFromBinaryToPatch(ElfInfo* binary,idx_t symIdx)
   int reindex=findSymbol(patch,&gsym,patch,false);
   if(SHN_UNDEF==reindex)
   {
-    reindex=addSymtabEntry(getDataByERS(patch,ERS_SYMTAB),&sym);
+    reindex=addSymtabEntry(patch,getDataByERS(patch,ERS_SYMTAB),&sym);
   }
   return reindex;
 }
@@ -269,10 +269,10 @@ void writeVarToData(VarInfo* var)
   }
   //now we must create a symbol for it as well
   ElfXX_Sym symNew=gelfSymToNativeSym(sym);
-  symNew.st_name=addStrtabEntry(var->name);
+  symNew.st_name=addStrtabEntry(patch,var->name);
   symNew.st_value=addr;//will get relocated later once the data section in the patch has a fixed address
   symNew.st_shndx=elf_ndxscn(getSectionByERS(patch,ERS_DATA));
-  addSymtabEntry(getDataByERS(patch,ERS_SYMTAB),&symNew);
+  addSymtabEntry(patch,getDataByERS(patch,ERS_SYMTAB),&symNew);
 }
 
 //takes a list of var transformations and actually constructs the ELF sections
@@ -508,14 +508,14 @@ addr_t writeFuncToPatchText(SubprogramInfo* func,CompilationUnit* cu,idx_t* outS
   addr_t funcSegmentBase=offset+shdr.sh_addr;//where text for this function is based
   //if -ffunction-sections is used, the function might have its own text section
   ElfXX_Sym sym;
-  sym.st_name=addStrtabEntry(func->name);
+  sym.st_name=addStrtabEntry(patch,func->name);
   sym.st_value=offset;//is it ok that this is section-relative, since
   //we set st_shndx to be the text section?
   sym.st_size=0;
   sym.st_info=ELFXX_ST_INFO(STB_GLOBAL,STT_FUNC);
   sym.st_other=0;
   sym.st_shndx=elf_ndxscn(textScn);
-  *outSymIdx=addSymtabEntry(getDataByERS(patch,ERS_SYMTAB),&sym);
+  *outSymIdx=addSymtabEntry(patch,getDataByERS(patch,ERS_SYMTAB),&sym);
   
 
   Elf_Scn* relocScn=getRelocationSection(cu->elf,func->name);
