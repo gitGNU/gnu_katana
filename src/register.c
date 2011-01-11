@@ -222,11 +222,11 @@ char* strForReg(PoReg reg,int printFlags)
     snprintf(buf,128,"{EXPR,0x%x off",reg.u.offset);
     break;
   case ERT_NEW_SYM_VAL:
-    //todo: find symbol name
+    //todo: might be helpful to find symbol name
     snprintf(buf,128,"{NEW_SYM_VAL,idx %i}",reg.u.index);
     break;
   case ERT_OLD_SYM_VAL:
-    //todo: find symbol name
+    //todo: might be helpful to find symbol name
     snprintf(buf,128,"{OLD_SYM_VAL,idx %i}",reg.u.index);
     break;
   case ERT_CFA:
@@ -265,17 +265,15 @@ void printReg(FILE* f,PoReg reg,int printFlags)
   free(str);
 }
 
-//resolve any register to a value (as distinct from the symbolic form it may be in)
-//this may include resolving symbols in elf files, dereferencing
-//things in memory, etc
-//the result will be written to the result parameter and the number
-//of bytes in the result will be returned;
-//some values behave differently if they're being assigned than evaluated
-//flags determines this behaviour (should be OR'd E_REG_RESOLVE_FLAGS
+//resolve any register to a value (as distinct from the symbolic form
+//it may be in) this may include resolving symbols in elf files,
+//dereferencing things in memory, etc the result will be written to
+//the result parameter and the number of bytes in the result will be
+//returned; some values behave differently if they're being assigned
+//than evaluated flags determines this behaviour (should be OR'd
+//E_REG_RESOLVE_FLAGS
 int resolveRegisterValue(PoReg* reg,SpecialRegsState* state,byte** result,int flags)
 {
-  //todo: error on value of NEW things if not right hand?
-  //perhaps don't even need the rightHand parameter
   addr_t addr=0;
   switch(reg->type)
   {
@@ -293,7 +291,7 @@ int resolveRegisterValue(PoReg* reg,SpecialRegsState* state,byte** result,int fl
     }
     break;
   case ERT_EXPR:
-    //todo: implement these
+    //todo: implement expression registers
     death("expressions not supported yet. Poke the developer\n");
     break;
   case ERT_OLD_SYM_VAL:
@@ -307,11 +305,11 @@ int resolveRegisterValue(PoReg* reg,SpecialRegsState* state,byte** result,int fl
     return sizeof(addr_t);
     break;
   case ERT_NEW_SYM_VAL:
-    //todo: implement these
+    //todo: implement NEW_SYM_VAL
     death("ERT_NEW_SYM_VAL not supported yet. Poke the developer\n");
     break;
   case ERT_CFA:
-    //todo: implement these
+    //todo: implement NEW_SYM_VAL
     death("ERT_CFA not supported yet. Poke the developer\n");
     break;
   default:

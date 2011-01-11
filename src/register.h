@@ -68,6 +68,9 @@ typedef enum
                       //objects that things in this range are PO register types
   ERT_CURR_TARG_NEW,
   ERT_CURR_TARG_OLD,
+  //todo: do expressions need to be a register type? Can they be their
+  //own entity? Since we don't need them (yet) for patching this is a
+  //moot question at the moment
   ERT_EXPR,
   ERT_OLD_SYM_VAL,
   ERT_NEW_SYM_VAL,
