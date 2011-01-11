@@ -64,6 +64,7 @@
 #include <elf.h>
 
 typedef unsigned char byte;
+typedef signed char sbyte;
 
 
 typedef struct

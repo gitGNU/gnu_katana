@@ -25,5 +25,6 @@ byte* uintToLEB128(usint value,usint* numBytesOut);
 byte* intToLEB128(int value,usint* numBytesOut);
 
 word_t leb128ToUWord(byte* bytes,usint* outLEBBytesRead);
+sword_t leb128ToSWord(byte* bytes,usint* outLEBBytesRead);
 
 #endif

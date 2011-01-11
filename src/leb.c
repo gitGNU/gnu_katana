@@ -152,6 +152,7 @@ byte* decodeLEB128(byte* bytes,bool signed_,usint* numBytesOut,usint* numSeptets
     int shift=0==bitOffset?0:8-bitsRetrieved;
     //logprintf(ELL_INFO_V4,ELS_MISC,"mask is %i and val is %i, and shift is %i\n",mask,(int)val,shift);
     result[byteOffset]|=val<<shift;
+    byte currentOffset=byteOffset;
     //logprintf(ELL_INFO_V4,ELS_MISC,"byte so far is %i\n",(int)result[byteOffset]);
     if(bitsRetrieved<7 && byteOffset+1<numBytes)
     {
@@ -164,18 +165,38 @@ byte* decodeLEB128(byte* bytes,bool signed_,usint* numBytesOut,usint* numSeptets
         mask|=1<<(bitsRetrieved+j);
       }
       //logprintf(ELL_INFO_V4,ELS_MISC,"mask for additional bytes is %u\n",(uint)mask);
+      currentOffset=byteOffset+1;
       result[byteOffset+1]=(mask&bytes[i])>>bitsRetrieved;
       //logprintf(ELL_INFO_V4,ELS_MISC,"after getting those bits, next byte is %i\n",result[byteOffset+1]);
     }
+
+
     bitOffset+=7;
     if(bitOffset>=8)
     {
       bitOffset-=8;
       byteOffset++;
     }
+
+    if(i+1>=numSeptets && bitOffset!=0 && signed_)
+    {
+      //we need to do sign extensions, since this is the last iteration
+      if(result[currentOffset] & (1 << (bitOffset-1)))
+      {
+        //it's a negative number
+        for(int i=bitOffset;i<=7;i++)
+        {
+          result[currentOffset] |= (1 << i);
+        }
+      }
+    }
+
   }
   *numBytesOut=numBytes;
-  *numSeptetsRead=numSeptets;
+  if(numSeptetsRead)
+  {
+    *numSeptetsRead=numSeptets;
+  }
   /*logprintf(ELL_INFO_V4,ELS_MISC,"decoded from LEB as follows:\n");
     /logprintf(ELL_INFO_V4,ELS_MISC,"leb bytes : {");
     for(int i=0;i<numSeptets;i++)
@@ -268,6 +289,23 @@ word_t leb128ToUWord(byte* bytes,usint* outLEBBytesRead)
   assert(resultBytes <= sizeof(word_t));
   word_t val=0;
   memcpy(&val,result,resultBytes);
+  free(result);
+  return val;
+}
+
+sword_t leb128ToSWord(byte* bytes,usint* outLEBBytesRead)
+{
+  usint resultBytes;
+  //valgrind gives this as a mem leak, but I can't figure out why,
+  //as I free the result below. . .
+  byte* result=decodeLEB128(bytes,true,&resultBytes,outLEBBytesRead);
+  assert(resultBytes <= sizeof(word_t));
+  sword_t val=0;
+  memcpy(&val,result,resultBytes);
+  if(resultBytes < sizeof(val))
+  {
+    val=sextend(val,resultBytes);
+  }
   free(result);
   return val;
 }
