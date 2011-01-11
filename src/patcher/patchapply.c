@@ -358,7 +358,7 @@ addr_t copyInEntireSection(ElfInfo* patch,char* name,char* newName)
   shdrNew.sh_addr=addr;
   shdrNew.sh_name=addStrtabEntryToExisting(patchedBin,newName,true);
   shdrNew.sh_type=shdr.sh_type;
-  shdrNew.sh_flags=shdr.sh_flags;
+  shdrNew.sh_flags=shdr.sh_flags | SHF_ALLOC;
   shdrNew.sh_size=shdr.sh_size;
   shdrNew.sh_link=0;//todo: should this be set?
   shdrNew.sh_info=0;//todo: should this be set?
@@ -383,10 +383,11 @@ addr_t copyInEntireSection(ElfInfo* patch,char* name,char* newName)
 }
 
 
-//this is a horrible function full of hacks that I've been trying to get
-//working and have been failing it. It should be massively revamped before it's any good
-//basically it attempts to fix the program header so the program can run, but doesn't
-//do so successfully
+//this is a horrible function full of hacks that I've been trying to
+//get working and have been failing it. It should be massively
+//revamped before it's any good basically it attempts to fix the
+//program header so the program can run, but doesn't do so
+//successfully
 void writeOutPatchedBin(bool flushToDisk)
 {
   //todo: this is all not working

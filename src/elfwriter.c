@@ -182,7 +182,7 @@ void createSections(Elf* outelf)
   shdr->sh_addralign=1;  //todo: should this be word-aligned? It seems
                          //that it is in the ELF files I've examined,
                          //but does it have to be?
-  shdr->sh_flags=SHF_ALLOC | SHF_WRITE;
+  shdr->sh_flags=SHF_WRITE;
   shdr->sh_name=addStrtabEntry(".data.new");
 
 
@@ -244,7 +244,7 @@ void createSections(Elf* outelf)
   shdr->sh_addralign=1;//normally text is aligned, but we never actually execute from this section
   shdr->sh_name=addStrtabEntry(".text.new");
   shdr->sh_addr=0;//going to have to relocate anyway so no point in trying to keep the same address
-  shdr->sh_flags=SHF_ALLOC | SHF_EXECINSTR;
+  shdr->sh_flags=SHF_EXECINSTR;
   scnInfo[ERS_TEXT].scn=text_scn;
   scnInfo[ERS_TEXT].data=text_data;
 
@@ -267,7 +267,7 @@ void createSections(Elf* outelf)
   shdr->sh_link=0;
   shdr->sh_info=0;
   shdr->sh_addralign=1;//normally text is aligned, but we never actually execute from this section
-  shdr->sh_flags=SHF_ALLOC;
+  shdr->sh_flags=0;
   shdr->sh_name=addStrtabEntry(".rodata.new");
 
   //rela.text.new
@@ -380,21 +380,18 @@ void finalizeDataSizes(ElfInfo* e)
     ElfXX_Shdr* shdr=elfxx_getshdr(scn);
     if((shdr->sh_flags & SHF_ALLOC) && lastShdr && (lastShdr->sh_flags & SHF_ALLOC))
     {
+      //note that this test is not foolproof, we're assuming that two
+      //overlapping sections are listed one after the other
       int overlap=(lastShdr->sh_addr+lastShdr->sh_size)-shdr->sh_addr;
       if(overlap>1)
       {
-        death("When loaded into memory, sections '%s' and '%s' overlap by %i bytes, presumably from the first section expanding. Katana should be capable of resizing appropriately (although with some difficulty when relocations are involved and the binary has not been linked with --emit-relocs) but this feature has not yet been implemented\n",getScnHdrString(e,lastShdr->sh_name),getScnHdrString(e,shdr->sh_name),overlap);
+        death("When loaded into memory, sections '%s' and '%s' (at addressex 0x%x and 0x%x respectively) in ELF file %s overlap by %i bytes, presumably from the first section expanding. Katana should be capable of resizing appropriately (although with some difficulty when relocations are involved and the binary has not been linked with --emit-relocs) but this feature has not yet been implemented\n",getScnHdrString(e,lastShdr->sh_name),getScnHdrString(e,shdr->sh_name),lastShdr->sh_addr,shdr->sh_addr,e->fname,overlap);
       }
     }
-    else if(lastShdr)
+    if(shdr->sh_flags & SHF_ALLOC)
     {
-      int overlap=(lastShdr->sh_offset+lastShdr->sh_size)-shdr->sh_offset;
-      if(overlap>1)
-      {
-        death("On disk, sections '%s' and '%s' overlap by %i bytes, presumably from the first section expanding. Katana should be capable of resizing appropriately (although with some difficulty when relocations are involved and the binary has not been linked with --emit-relocs) but this feature has not yet been implemented\n",getScnHdrString(e,lastShdr->sh_name),getScnHdrString(e,shdr->sh_name),overlap);
-      }
+      lastShdr=shdr;
     }
-    lastShdr=shdr;
   }  
 }
 
