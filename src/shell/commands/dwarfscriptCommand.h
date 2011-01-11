@@ -78,6 +78,7 @@ protected:
   void compileDwarfscript();
   void printCIEInfo(FILE* file,CIE* cie);
   void printFDEInfo(FILE* file,ElfInfo* elf,FDE* fde);
+  void printExceptTableInfo(FILE* file,ElfInfo* elf,ExceptTable* et);
   DwarfscriptOperation op;
   ShellParam* inputP;
   ShellParam* sectionNameP;

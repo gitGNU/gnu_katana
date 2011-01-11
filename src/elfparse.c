@@ -109,6 +109,7 @@ void endELF(ElfInfo* e)
   {
     freeDwarfInfo(e->dwarfInfo);
   }
+  //todo: this is not correct and leaks, need to a proper destroy function
   for(int i=0;i<e->callFrameInfo.numFDEs;i++)
   {
     free(e->callFrameInfo.fdes[i].instructions);

@@ -494,6 +494,13 @@ Map* readDebugFrame(ElfInfo* elf,bool ehInsteadOfDebug)
     GElf_Shdr shdr;
     getShdr(hdrScn,&shdr);
     elf->callFrameInfo.ehHdrAddress=shdr.sh_addr;
+    Elf_Scn* exceptTableSection=getSectionByName(elf,".gcc_except_table");
+    if(exceptTableSection)
+    {
+      ExceptTable et=parseExceptFrame(exceptTableSection);
+      elf->callFrameInfo.exceptTable=zmalloc(sizeof(ExceptTable));
+      memcpy(elf->callFrameInfo.exceptTable,&et,sizeof(et));
+    }
   }
   GElf_Shdr shdr;
   getShdr(scn,&shdr);

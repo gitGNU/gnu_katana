@@ -57,6 +57,7 @@
 #include "constants.h"
 #include "leb.h"
 #include "util/logging.h"
+#include "elfparse.h"
 
 void printEHPointerEncoding(FILE* file,byte encoding)
 {
@@ -155,41 +156,47 @@ addr_t encodeEHPointerFromEncoding(addr_t pointer,byte encoding,
 //decode an eh_frame pointer from the given data. The data pointer
 //must point to an area of data at least len bytes long. The pointer
 //will not necessarily occupy all of these len bytes.
-//dataStartAddress gives the loaded address (from the ELF object) of the first byte in data
-//this is necessary for pc-relative encoding
-addr_t decodeEHPointer(byte* data,int len,addr_t dataStartAddress,byte encoding)
+//dataStartAddress gives the loaded address (from the ELF object) of
+//the first byte in data this is necessary for pc-relative
+//encoding. bytesRead is the number of bytes actually read
+addr_t decodeEHPointer(byte* data,int len,addr_t dataStartAddress,byte encoding,usint* bytesRead)
 {
   int application=encoding & 0xF0;
   int format=encoding & 0xF;
   addr_t result=0;
   bool resultSigned=false;
+  usint byteSize=0;
   switch(format)
   {
   case DW_EH_PE_absptr:
     memcpy(&result,data,min(len,sizeof(addr_t)));
+    byteSize=sizeof(addr_t);
     break;
   case DW_EH_PE_sdata2:
     resultSigned=true;
   case DW_EH_PE_udata2:
     assert(len>=2);
     memcpy(&result,data,2);
+    byteSize=2;
     break;
   case DW_EH_PE_sdata4:
     resultSigned=true;
   case DW_EH_PE_udata4:
     assert(len>=4);
     memcpy(&result,data,4);
+    byteSize=4;
     break;
   case DW_EH_PE_udata8:
   case DW_EH_PE_sdata8:
     assert(len>=8);
     assert(sizeof(addr_t)>=8);
     memcpy(&result,data,8);
+    byteSize=4;
     break;
   case DW_EH_PE_uleb128:
     {
-      usint numBytes,numSeptets;
-      byte* decodedLEB=decodeLEB128(data,false,&numBytes,&numSeptets);
+      usint numBytes;
+      byte* decodedLEB=decodeLEB128(data,false,&numBytes,&byteSize);
       assert(numBytes<=sizeof(result));
       memcpy(&result,decodedLEB,numBytes);
       free(decodedLEB);
@@ -198,8 +205,8 @@ addr_t decodeEHPointer(byte* data,int len,addr_t dataStartAddress,byte encoding)
   case DW_EH_PE_sleb128:
     {
       resultSigned=true;
-      usint numBytes,numSeptets;
-      byte* decodedLEB=decodeLEB128(data,false,&numBytes,&numSeptets);
+      usint numBytes;
+      byte* decodedLEB=decodeLEB128(data,false,&numBytes,&byteSize);
       assert(numBytes<=sizeof(result));
       memcpy(&result,decodedLEB,numBytes);
       free(decodedLEB);
@@ -210,7 +217,10 @@ addr_t decodeEHPointer(byte* data,int len,addr_t dataStartAddress,byte encoding)
     death("decodeEHPointer not implemented for unknown eh_frame pointer encoding yet\n");
   }
 
-
+  if(bytesRead)
+  {
+    *bytesRead=byteSize;
+  }
   
   switch(application)
   {
@@ -250,7 +260,7 @@ addr_t decodeEHPointer(byte* data,int len,addr_t dataStartAddress,byte encoding)
 //the cie->augmentationInfo
 //see the Linux Standards Base at
 //http://refspecs.freestandards.org/LSB_4.0.0/LSB-Core-generic/LSB-Core-generic/ehframechpt.html
-//for augmentation data information
+//for augmentation data information. Also in the x86_64 ABI
 void parseAugmentationStringAndData(CIE* cie)
 {
   if(!cie->augmentation)
@@ -303,7 +313,7 @@ void parseFDEAugmentationData(FDE* fde,addr_t augDataAddress)
       decodeEHPointer(fde->augmentationData,
                       fde->augmentationDataLen,
                       augDataAddress,
-                      fde->cie->augmentationInfo.fdeLSDAPointerEncoding);
+                      fde->cie->augmentationInfo.fdeLSDAPointerEncoding,NULL);
     
   }
   fde->augmentationInfo.filled=true;
@@ -636,6 +646,245 @@ CallFrameSectionData buildCallFrameSectionData(CallFrameInfo* cfi)
   {
     result.ehHdrData=NULL;
     result.ehHdrDataLen=0;
+  }
+  return result;
+}
+
+//builds an ExceptTable object from the raw ELF section note that the
+//format of this section is not governed by any standard, so there is
+//no means to validate that what we are doing is correct or even that
+//it will work with all binaries emitted by gcc
+ExceptTable parseExceptFrame(Elf_Scn* scn)
+{
+  ExceptTable result;
+  memset(&result,0,sizeof(result));
+  Elf_Data* data=elf_getdata(scn,NULL);
+  byte* bytes=data->d_buf;
+  if(data->d_size == 0)
+  {
+    return result;
+  }
+
+  GElf_Shdr shdr;
+  getShdr(scn,&shdr);
+  addr_t sectionAddress=shdr.sh_addr;
+  
+  word_t offset=0;
+  while(offset < data->d_size)
+  {
+    //increase the number of LSDAs
+    result.numLSDAs++;
+    result.lsdas=realloc(result.lsdas,result.numLSDAs*sizeof(LSDA));
+    LSDA* lsda=&(result.lsdas[result.numLSDAs-1]);
+    memset(lsda,0,sizeof(LSDA));
+    
+    //start by reading the header
+    byte lpStartFormat=bytes[0];
+    bytes++;
+    offset++;
+    usint numBytesOut;
+    if(lpStartFormat!=DW_EH_PE_omit)
+    {
+      lsda->lpStart=decodeEHPointer(bytes,data->d_size-offset,sectionAddress+offset,lpStartFormat,&numBytesOut);
+      bytes+=numBytesOut;
+      offset+=numBytesOut;
+    }
+    byte ttFormat=bytes[0];
+    bytes++;
+    offset++;
+    usint numSeptets;
+    addr_t ttBase=0;
+    byte* ttBaseBytes=decodeLEB128(bytes,false,&numBytesOut,&numSeptets);
+    assert(sizeof(ttBase) >= numBytesOut);
+    memcpy(&ttBase,ttBaseBytes,numBytesOut);
+    free(ttBaseBytes);
+    //remember ttBase is a self-relative offset to the end of the type
+    //table. For our purposes it's helpful if it is instead relative
+    //to the beginning of this section
+    ttBase+=offset;
+    //ttBase seems to be off by one in what gcc emits. I am not
+    //positive whether this is due to it pointing to the last byte of
+    //the table rather than being below the table or if it's because
+    //it's supposed to be relative to the end of ttBaseBytes. If the
+    //later, then this offset is wrong and we will notice a problem
+    //later. As before, there is no standard governing this section
+    ttBase+=1;
+    bytes+=numSeptets;
+    offset+=numSeptets;
+    byte callSiteFormat=bytes[0];
+    bytes++;
+    offset++;
+    word_t callSiteTableSize=decodeEHPointer(bytes,data->d_size-offset,
+                                             sectionAddress+offset,
+                                             callSiteFormat,&numBytesOut);
+    bytes+=numBytesOut;
+    offset+=numBytesOut;
+
+    if(offset>data->d_size)
+    {
+      death("Malformed LSDA in .gcc_except_table, ran out of space while reading the header\n");
+    }
+    
+    //read the call site table
+    CallSiteRecord* callSite=NULL;
+    int i=0;
+    while(i<callSiteTableSize)
+    {
+      //set up the call site we're dealing with right now
+      lsda->numCallSites++;
+      lsda->callSiteTable=realloc(lsda->callSiteTable,lsda->numCallSites*sizeof(CallSiteRecord));
+      callSite=&(lsda->callSiteTable[lsda->numCallSites-1]);
+      callSite->position=decodeEHPointer(bytes+i,data->d_size-offset-i,
+                                         sectionAddress+offset+i,
+                                         callSiteFormat,&numBytesOut);
+      i+=numBytesOut;
+      callSite->length=decodeEHPointer(bytes+i,data->d_size-offset-i,
+                                         sectionAddress+offset+i,
+                                         callSiteFormat,&numBytesOut);
+      i+=numBytesOut;
+      callSite->landingPadPosition=decodeEHPointer(bytes+i,data->d_size-offset-i,
+                                                   sectionAddress+offset+i,
+                                                   callSiteFormat,&numBytesOut);
+      i+=numBytesOut;
+      callSite->firstAction=decodeEHPointer(bytes+i,data->d_size-offset-i,
+                                            sectionAddress+offset+i,
+                                            callSiteFormat,&numBytesOut);
+      i+=numBytesOut;
+      //firstAction is not at all in the form we want. It's one plus a
+      //byte offset into the action table. We want an index into the
+      //action table we'll read. At the moment, however, we have no
+      //way of calculating the index so we'll temporarily store the
+      //wrong value in firstAction.
+      
+      callSite->hasAction=(callSite->firstAction!=0);
+      callSite->firstAction-=1;//since it was biased by one so we
+                               //could tell if it was empty
+
+      if(i>callSiteTableSize)
+      {
+        death("Call site table in .gcc_except_frame was not properly formatted\n");
+      }
+    }
+    bytes+=i;
+    offset+=i;
+    if(offset>data->d_size)
+    {
+      death("Malformed LSDA in .gcc_except_table, ran out of space while reading the call site table\n");
+    }
+    
+    //read the action table and type table. Now here's the icky part:
+    //there is no really easy way to tell where the action table ends
+    //and the type table begins. The way gcc is designed, there's no
+    //need to ever parse this section directly. Access to the action
+    //table is made only based on information in the call site table,
+    //and access to the type table is made only based on information
+    //in the action table. Therefore, the most reasonable way for us
+    //to parse it is probably by following the same logic. Note that
+    //we do not optimize, so we may end up parsing the same entry more
+    //than once. Big deal.
+
+    //Read the action table
+    addr_t highestActionOffset=0;//try to find the end of the action table
+    for(int j=0;j<lsda->numCallSites;j++)
+    {
+      if(!lsda->callSiteTable[j].hasAction)
+      {
+        continue;
+      }
+      addr_t actionOffset=lsda->callSiteTable[j].firstAction;
+
+      idx_t previousActionIdx=-1;
+
+      //follow the action chain for a single call site
+      while(true)
+      {
+        //printf("action offset is 0x%zx\n",actionOffset);
+        idx_t typeIdx=leb128ToUWord(bytes+actionOffset,&numBytesOut);
+        usint numBytesOut2;
+        sword_t nextRecordPtr=leb128ToSWord(bytes+actionOffset+numBytesOut,&numBytesOut2);
+        //printf("nextRecordPtr is %i\n",(int)nextRecordPtr);
+        if(nextRecordPtr != 0)
+        {
+          //add numBytesOut to make it relative to the start of the act
+          nextRecordPtr+=numBytesOut;
+        }
+        highestActionOffset=max(highestActionOffset,actionOffset+numBytesOut+numBytesOut2);
+        //see whether we already read this action record
+        bool foundAction=false;
+        for(int k=0;k<lsda->numActionEntries;k++)
+        {
+          if(lsda->actionTable[k].typeFilterIndex==typeIdx &&
+             lsda->actionTable[k].nextAction==nextRecordPtr)
+          {
+            foundAction=true;
+            break;
+          }
+        }
+        if(foundAction)
+        {
+          continue;
+        }
+        //create a new action record
+        lsda->numActionEntries++;
+        lsda->actionTable=realloc(lsda->actionTable,sizeof(ActionRecord)*lsda->numActionEntries);
+        idx_t actionIdx=lsda->numActionEntries-1;
+        memset(lsda->actionTable+actionIdx,0,sizeof(ActionRecord));
+        lsda->actionTable[actionIdx].typeFilterIndex=typeIdx;
+        //can't set nextAction yet as we don't know the index of the
+        //next one. Can set the one for the last though
+        if(previousActionIdx!=-1)
+        {
+          lsda->actionTable[previousActionIdx].nextAction=actionIdx;
+        }
+        if(nextRecordPtr==0)
+        {
+          //reached the end of this chain
+          break;
+        }
+        actionOffset=(sword_t)actionOffset+nextRecordPtr;
+        previousActionIdx=actionIdx;
+      }//end following the action chain for a specific call stie
+    }
+    bytes+=highestActionOffset;
+    offset+=highestActionOffset;
+    if(offset>data->d_size)
+    {
+      death("Malformed LSDA in .gcc_except_table, ran out of space while reading the action table\n");
+    }
+
+
+    //Read the type table
+    //remember the type table grows from larger offsets to smaller
+    //offsets, i.e. the smallest index is at the end
+    
+    //todo: this won't work if LEB encoding used. If we start
+    //observing gcc emitting LEB values in the type table we'll need
+    //to switch to something else like only going through the type
+    //table entries at offsets given in the action table
+    int ttEntrySize=getPointerSizeFromEHPointerEncoding(ttFormat);
+
+    idx_t ttIdx=0;
+    printf("ttBase is 0x%zx\n",ttBase);
+    printf("ttEntrySize is 0x%x\n",ttEntrySize);
+    printf("offset is 0x%zx\n",offset);
+    for(sword_t ttOffset=ttBase-ttEntrySize-offset;
+        ttOffset >= 0;
+        ttOffset-=ttEntrySize,ttIdx++)
+    {
+      printf("ttOffset is 0x%zx\n",ttOffset);
+      lsda->numTypeEntries++;
+      lsda->typeTable=realloc(lsda->typeTable,sizeof(word_t)*lsda->numTypeEntries);
+      usint numBytesOut;
+      lsda->typeTable[ttIdx]=decodeEHPointer(bytes+ttOffset,ttEntrySize,
+                                             sectionAddress+offset+ttOffset,
+                                             ttFormat,&numBytesOut);
+    }
+    bytes+=ttBase-offset;
+    offset=ttBase;
+    if(offset>data->d_size)
+    {
+      death("Malformed LSDA in .gcc_except_table\n");
+    }
   }
   return result;
 }

@@ -81,6 +81,7 @@ DwarfscriptCommand::DwarfscriptCommand(DwarfscriptOperation op,ShellParam* input
 DwarfscriptCommand::DwarfscriptCommand(DwarfscriptOperation op,ShellParam* sectionName,ShellParam* elfObject,ShellParam* outfile)
   :op(op),sectionNameP(sectionName),elfObjectP(elfObject),outfileP(outfile)
 {
+  inputP=NULL;
   sectionNameP->grab();
   elfObjectP->grab();
   outfileP->grab();
@@ -156,6 +157,48 @@ void DwarfscriptCommand::printFDEInfo(FILE* file,ElfInfo* elf,FDE* fde)
 
 }
 
+void DwarfscriptCommand::printExceptTableInfo(FILE* file,ElfInfo* elf,ExceptTable* et)
+{
+  for(int i=0;i<et->numLSDAs;i++)
+  {
+    LSDA* lsda=et->lsdas+i;
+    fprintf(file,"#LSDA %i\n",i);
+    fprintf(file,"begin LSDA\n");
+    fprintf(file,"lpstart: 0x%zx\n",lsda->lpStart);
+    for(int j=0;j<lsda->numCallSites;j++)
+    {
+      CallSiteRecord* callSite=lsda->callSiteTable+j;
+      fprintf(file,"#call site %i\n",j);
+      fprintf(file,"begin CALL_SITE\n");
+      fprintf(file,"position: 0x%zx\n",callSite->position);
+      fprintf(file,"length: 0x%zx\n",callSite->length);
+      fprintf(file,"landing_pad: 0x%zx\n",callSite->landingPadPosition);
+      fprintf(file,"has_actions: %s\n",callSite->hasAction?"true":"false");
+      if(callSite->hasAction)
+      {
+        fprintf(file,"first_action: %zi\n",callSite->firstAction);
+      }
+      fprintf(file,"end CALL_SITE\n");
+    }
+    for(int j=0;j<lsda->numActionEntries;j++)
+    {
+      fprintf(file,"#action %i\n",j);
+      fprintf(file,"begin ACTION\n");
+      fprintf(file,"type_idx: %zi\n",lsda->actionTable[j].typeFilterIndex);
+      fprintf(file,"next: %zi\n",lsda->actionTable[j].nextAction);
+      fprintf(file,"end ACTION\n");
+    }
+    for(int j=0;j<lsda->numTypeEntries;j++)
+    {
+      fprintf(file,"#type entry %i\n",j);
+      fprintf(file,"begin TYPE\n");
+      fprintf(file,"typeinfo: 0x%zx\n",lsda->typeTable[j]);
+      fprintf(file,"end TYPE\n");
+    }
+    fprintf(file,"end LSDA\n");
+  }
+}
+
 
 void DwarfscriptCommand::emitDwarfscript()
 {
@@ -212,6 +255,10 @@ void DwarfscriptCommand::emitDwarfscript()
   for(int i=0;i<cfi->numFDEs;i++)
   {
     this->printFDEInfo(file,elf,cfi->fdes+i);
+  }
+  if(cfi->exceptTable)
+  {
+    this->printExceptTableInfo(file,elf,cfi->exceptTable);
   }
   fclose(file);
   logprintf(ELL_INFO_V2,ELS_SHELL,"Wrote dwarfscript to %s\n",outfileName);

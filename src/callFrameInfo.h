@@ -49,7 +49,7 @@
   http://www.gnu.org/licenses/gpl.html
 
   Project: Katana
-  Date: December 2010
+  Date: January 2011
   Description: Data structures and methods dealing with call frame information
 */
 
@@ -57,6 +57,7 @@
 #ifndef callFrameInfo_h
 #define callFrameInfo_h
 #include "dwarf_instr.h"
+#include <libelf.h>
 
 
 typedef struct CallFrameInfo
@@ -71,6 +72,9 @@ typedef struct CallFrameInfo
   //todo: should really support relocations and then don't need to know this now
   addr_t sectionAddress;
   addr_t ehHdrAddress;//address of .eh_frame_hdr
+  //exception handling table, info that would be stored in
+  //.gcc_except_frame
+  struct ExceptTable* exceptTable;
 } CallFrameInfo;
 
 typedef enum
@@ -152,6 +156,48 @@ typedef struct
   int ehHdrDataLen;
 } CallFrameSectionData;
 
+//the info contained in a call-site table entry in a LSDA in
+//.gcc_except_frame
+typedef struct
+{
+  addr_t position;
+  word_t length;
+  addr_t landingPadPosition;
+  idx_t firstAction;//index into the action table. Only valid if hasAction is true
+  bool hasAction;
+} CallSiteRecord;
+
+//entry in the action table in an LSDA in .gcc_except_frame
+typedef struct
+{
+  idx_t typeFilterIndex;//index into the typeTable associated with the LSDA
+  idx_t nextAction;//the index into the actionTable associated with
+                   //the LSDA of the next action record in the chain
+                   //of action records to look at.
+} ActionRecord;
+
+
+typedef struct
+{
+  addr_t lpStart;
+  CallSiteRecord* callSiteTable;
+  int numCallSites;//number of CallSiteEntrys in callSiteTable
+  ActionRecord* actionTable;
+  int numActionEntries;
+  //todo: will the type table entries ever be longer than a word? They
+  //don't seem to be in what gcc emits, and this is after all gcc
+  //specific stuff (although LLVM follows it as well)
+  word_t* typeTable;
+  int numTypeEntries;
+} LSDA;
+
+//info that would be stored in .gcc_except_table
+typedef struct ExceptTable
+{
+  LSDA* lsdas;
+  int numLSDAs;
+} ExceptTable;
+
 //returns a void* to a binary representation of a Dwarf call frame
 //information section (i.e. .debug_frame in the dwarf specification)
 //the length of the returned buffer is written into byteLen.
@@ -167,4 +213,8 @@ void parseAugmentationStringAndData(CIE* cie);
 void parseFDEAugmentationData(FDE* fde,addr_t augDataAddress);
 
 void printEHPointerEncoding(FILE* file,byte encoding);
+
+//builds an ExceptTable object from the raw ELF section
+ExceptTable parseExceptFrame(Elf_Scn* scn);
+
 #endif
