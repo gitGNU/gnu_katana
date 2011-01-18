@@ -56,7 +56,7 @@
   from objects of any type to objects of any type
 
 */
-
+
 #ifndef MAP_H
 #define MAP_H
 

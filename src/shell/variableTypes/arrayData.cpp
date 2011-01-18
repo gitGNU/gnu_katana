@@ -29,7 +29,7 @@ ShellArrayVariableData::~ShellArrayVariableData()
 }
 void ShellArrayVariableData::appendItem(ShellVariableData* item)
 {
-  //todo: do we need to reference count these
+  //todo: do we need to reference count these?
   items.push_back(item);
 }
 
