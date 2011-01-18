@@ -145,6 +145,11 @@ dwarfscriptcmd : T_DWARFSCRIPT T_COMPILE param
   fprintf(stderr,"Usage: dwarfscript emit (\".eh_frame\"|\".debug_frame\") ELF [OUTFILE]\n");
   YYERROR;
 }
+| T_DWARFSCRIPT T_COMPILE error
+{
+  fprintf(stderr,"Usage: dwarfscript compile  DWARFSCIRPT_FILENAME [DEBUG_DATA_OUT]\n");
+  YYERROR;
+}
 
 /* translatecmd : T_TRANSLATE translate_fmt translate_fmt param */
 /* { */
