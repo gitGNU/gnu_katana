@@ -52,7 +52,7 @@
   Date: December 2010
   Description: Data structures for parsing
 */
-
+
 #ifndef parse_helper_h
 #define parse_helper_h
 
@@ -64,6 +64,7 @@ typedef struct
   union
   {
     int intval;//used for enums as well as integers
+    bool boolval;
     char* stringval;
     struct
     {

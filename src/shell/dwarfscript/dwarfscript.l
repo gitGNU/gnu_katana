@@ -72,6 +72,7 @@
 #include <stdio.h>
 #include "types.h"   
 #include "shell/dwarfscript/dwarfscript.tab.h"
+#include <dwarf.h>
 extern int dwLineNumber;
 //values saved for the parser
 extern char* savedString;
@@ -116,10 +117,23 @@ REGISTER  r[0-9]+
 "section_type" return T_SECTION_TYPE;
 "section_addr" return T_SECTION_LOC;
 "eh_hdr_addr" return T_EH_HDR_LOC;
+"lpstart" return T_LPSTART;
+"position" return T_POSITION;
+"landing_pad" return T_LANDING_PAD;
+"has_action" return T_HAS_ACTION;
+"first_action" return T_FIRST_ACTION;
+"type_idx" return T_TYPE_IDX;
+"next" return T_NEXT;
+"typeinfo" return T_TYPEINFO;
+"none" return T_NONE;
 
+ /* section names */
 "FDE"|"fde" return T_FDE;
 "CIE"|"cie" return T_CIE;
 "INSTRUCTIONS"|"instructions" return T_INSTRUCTIONS;
+"LSDA"|"lsda" return T_LSDA_;
+"CALL_SITE"|"call_site" return T_CALL_SITE;
+"ACTION"|"action" return T_ACTION;
 
   /*all of the DWARF instructions*/
 "DW_CFA_advance_loc"        return T_DW_CFA_advance_loc;
@@ -213,12 +227,34 @@ REGISTER  r[0-9]+
 "DW_OP_implicit_value" return T_DW_OP_implicit_value;
 "DW_OP_stack_value" return T_DW_OP_stack_value;
 
+  /*pointer encodings*/
+"DW_EH_PE_absptr" savedInt=DW_EH_PE_absptr; return T_DW_PTR_ENCODING;
+"DW_EH_PE_uleb128" savedInt=DW_EH_PE_uleb128; return T_DW_PTR_ENCODING;
+"DW_EH_PE_udata2" savedInt=DW_EH_PE_udata2; return T_DW_PTR_ENCODING;
+"DW_EH_PE_udata4" savedInt=DW_EH_PE_udata4; return T_DW_PTR_ENCODING;
+"DW_EH_PE_udata8" savedInt=DW_EH_PE_udata8; return T_DW_PTR_ENCODING;
+"DW_EH_PE_sleb128" savedInt=DW_EH_PE_sleb128; return T_DW_PTR_ENCODING;
+"DW_EH_PE_sdata2" savedInt=DW_EH_PE_sdata2; return T_DW_PTR_ENCODING;
+"DW_EH_PE_sdata4" savedInt=DW_EH_PE_sdata4; return T_DW_PTR_ENCODING;
+"DW_EH_PE_sdata8" savedInt=DW_EH_PE_sdata8; return T_DW_PTR_ENCODING;
+"DW_EH_PE_pcrel" savedInt=DW_EH_PE_pcrel; return T_DW_PTR_ENCODING;
+"DW_EH_PE_textrel" savedInt=DW_EH_PE_textrel; return T_DW_PTR_ENCODING;
+"DW_EH_PE_datarel" savedInt=DW_EH_PE_datarel; return T_DW_PTR_ENCODING;
+"DW_EH_PE_funcrel" savedInt=DW_EH_PE_funcrel; return T_DW_PTR_ENCODING;
+"DW_EH_PE_aligned" savedInt=DW_EH_PE_aligned; return T_DW_PTR_ENCODING;
+"DW_EH_PE_omit" savedInt=DW_EH_PE_omit; return T_DW_PTR_ENCODING;
+ /*pipe to indicuate using two encodings, one of the data encodings and one of the interpreation encodings*/
+"|" return '|';
+
+
 {POS_INT}   savedInt=atoi(yydwtext); return T_POS_INT;
 {NONNEG_INT}   savedInt=atoi(yydwtext); return T_NONNEG_INT;
 {INT}   savedInt=atoi(yydwtext); return T_INT;
 {HEX}   savedInt=strtol(yydwtext, NULL, 16); return T_NONNEG_INT;
 {HEXDATA}   getDataFromHexdata(yytext+4); return T_HEXDATA;
 {FLOAT}   savedDouble=strtod(yydwtext,NULL); return T_FLOAT;
+"true"|"yes" return T_BOOL_TRUE;
+"false"|"no"   return T_BOOL_FALSE;
 
 {REGISTER} savedRegisterNumber=atoi(yydwtext+1); return T_REGISTER;
 
@@ -237,7 +273,7 @@ REGISTER  r[0-9]+
 [ \t]+  //eat whitespace
 
 \n  dwLineNumber++;
-.   fprintf(stderr,"Encountered invalid token at line %i\n",dwLineNumber);return T_INVALID_TOKEN;
+.   fprintf(stderr,"Encountered invalid token '%s' at line %i\n",yytext,dwLineNumber);return T_INVALID_TOKEN;
 
 %%
 

@@ -6,6 +6,9 @@ CallFrameInfo cfi;
 CallFrameInfo* parsedCallFrameInfo=&cfi; 
 FDE* currentFDE;
 CIE* currentCIE;
+LSDA* currentLSDA;
+CallSiteRecord* currentCallSite;
+ActionRecord* currentAction; 
 //used when reading a DWARF expression 
 DwarfExpr currentExpr;
  
@@ -14,14 +17,14 @@ DwarfExpr currentExpr;
 
 extern int yydwlex();
 
-int dwLineNumber;
+int dwLineNumber=1;
  //values saved by the lexer
 char* savedString;
 int savedRegisterNumber;
 int savedInt;
 double savedDouble;
 int savedDataLen;
-byte* savedData; 
+byte* savedData;
 
 int yyerror(char *s);
 void makeBasicRegister1(ParseNode* node,ParseNode* intvalNode);
@@ -29,18 +32,33 @@ void makeBasicRegister2(ParseNode* node,ParseNode* intvalNode);
 
  %}
 
+%expect 0
+
 //different prefix to avoid conflicting with our other parser
 %name-prefix "yydw"
 
+ ////////////////////
 //token definitions
-%token T_BEGIN T_END
+
+//literals
+%token T_BOOL_TRUE T_BOOL_FALSE T_STRING_LITERAL T_HEXDATA
+%token T_POS_INT T_NONNEG_INT T_INT T_FLOAT T_REGISTER
+%token T_DW_PTR_ENCODING T_NONE
+
+// basic structure
+%token T_BEGIN T_END T_INVALID_TOKEN
+// section types
+%token T_FDE T_CIE T_INSTRUCTIONS
+%token T_LSDA_ T_CALL_SITE T_ACTION T_TYPE 
+//properties
 %token T_INDEX T_DATA_ALIGN T_CODE_ALIGN T_RET_ADDR_RULE T_AUGMENTATION
 %token T_INITIAL_LOCATION  T_ADDRESS_RANGE T_OFFSET T_LENGTH T_CIE_INDEX
-%token T_VERSION T_ADDRESS_SIZE T_SEGMENT_SIZE T_STRING_LITERAL T_HEXDATA
+%token T_VERSION T_ADDRESS_SIZE T_SEGMENT_SIZE 
 %token T_AUGMENTATION_DATA T_SECTION_TYPE T_SECTION_LOC T_EH_HDR_LOC
-%token T_FDE T_CIE T_INSTRUCTIONS
-%token T_POS_INT T_NONNEG_INT T_INT T_FLOAT T_REGISTER T_INVALID_TOKEN
-%token T_DW_CFA_advance_loc T_DW_CFA_offset T_DW_CFA_restore T_DW_CFA_extended
+%token T_LPSTART T_POSITION T_LANDING_PAD T_HAS_ACTION T_FIRST_ACTION
+%token T_TYPE_IDX T_NEXT T_TYPEINFO
+//CFA instructions
+%token T_DW_CFA_offset T_DW_CFA_advance_loc T_DW_CFA_restore T_DW_CFA_extended
 %token T_DW_CFA_nop T_DW_CFA_set_loc T_DW_CFA_advance_loc1 T_DW_CFA_advance_loc2
 %token T_DW_CFA_advance_loc4 T_DW_CFA_offset_extended T_DW_CFA_restore_extended
 %token T_DW_CFA_undefined T_DW_CFA_same_value T_DW_CFA_register
@@ -49,7 +67,7 @@ void makeBasicRegister2(ParseNode* node,ParseNode* intvalNode);
 %token T_DW_CFA_def_cfa_expression T_DW_CFA_expression T_DW_CFA_offset_extended_sf
 %token T_DW_CFA_def_cfa_sf  T_DW_CFA_def_cfa_offset_sf T_DW_CFA_val_offset
 %token T_DW_CFA_val_offset_sf T_DW_CFA_val_expression
-//tokens for DWARF expressions
+// DWARF expression instructions
 %token T_DWARF_EXPR
 %token T_DW_OP_addr T_DW_OP_deref T_DW_OP_const1u T_DW_OP_const1s T_DW_OP_const2u
 %token T_DW_OP_const2s T_DW_OP_const4u T_DW_OP_const4s T_DW_OP_const8u
@@ -67,13 +85,14 @@ void makeBasicRegister2(ParseNode* node,ParseNode* intvalNode);
 %token T_DW_OP_bit_piece T_DW_OP_implicit_value T_DW_OP_stack_value
 %%
 
+
 dwarfscript : top_property_stmt_list section_list
 {}
-| section_list
 
 section_list : section_list fde_section
 {}
 | section_list cie_section {}
+| section_list lsda_section {}
 | /*empty*/ {}
 
 fde_section : fde_begin_stmt fde_property_stmt_list instruction_section fde_property_stmt_list fde_end_stmt
@@ -146,6 +165,49 @@ cie_end_stmt : T_END T_CIE
   currentCIE=NULL;
 }
 
+
+lsda_begin_stmt : T_BEGIN T_LSDA_
+{
+  if(!cfi.exceptTable)
+  {
+    cfi.exceptTable=zmalloc(sizeof(ExceptTable));
+  }
+  cfi.exceptTable->numLSDAs++;
+  cfi.exceptTable->lsdas=realloc(cfi.exceptTable->lsdas,cfi.exceptTable->numLSDAs*sizeof(LSDA));
+  currentLSDA=&cfi.exceptTable->lsdas[cfi.exceptTable->numLSDAs-1];
+  memset(currentLSDA,0,sizeof(LSDA));
+}
+
+lsda_section : lsda_begin_stmt lsda_part_list T_END T_LSDA_
+{
+  currentLSDA=NULL;
+}
+
+call_site_begin_stmt : T_BEGIN T_CALL_SITE
+{
+  currentLSDA->numCallSites++;
+  currentLSDA->callSiteTable=realloc(currentLSDA->callSiteTable,currentLSDA->numCallSites*sizeof(CallSiteRecord));
+  currentCallSite=currentLSDA->callSiteTable+currentLSDA->numCallSites-1;
+  memset(currentCallSite,0,sizeof(CallSiteRecord));
+}
+
+call_site_section : call_site_begin_stmt call_site_property_stmt_list T_END T_CALL_SITE
+{
+  currentCallSite=NULL;
+}
+
+action_begin_stmt : T_BEGIN T_ACTION
+{
+  currentLSDA->numActionEntries++;
+  currentLSDA->actionTable=realloc(currentLSDA->actionTable,currentLSDA->numActionEntries*sizeof(ActionRecord));
+  currentAction=currentLSDA->actionTable+currentLSDA->numActionEntries-1;
+}
+
+action_section : action_begin_stmt action_property_stmt_list T_END T_ACTION
+{
+  currentAction=NULL;
+}
+
 top_property_stmt_list : top_property_stmt_list top_property_stmt
 {}
 | /*empty*/ {}
@@ -186,6 +248,19 @@ expr_stmt_list : expr_stmt_list expr_stmt
 | /*empty*/
 {}
 
+lsda_part_list : lsda_part_list lsda_part
+{}
+| /*empty*/ {}
+
+call_site_property_stmt_list : call_site_property_stmt_list call_site_property_stmt
+{}
+| /*empty*/ {}
+
+action_property_stmt_list : action_property_stmt_list action_property_stmt
+{}
+| /*empty*/ {}
+
+
 top_property_stmt :
 section_type_prop {}
 | section_location_prop {}
@@ -212,6 +287,26 @@ index_prop {}
 | address_range_prop {}
 | augmentation_data_prop {}
 
+lsda_part :
+lsda_property_stmt {}
+| call_site_section {}
+| action_section {}
+
+lsda_property_stmt :
+lpstart_prop {}
+| typeinfo_prop {}
+
+call_site_property_stmt :
+position_prop {}
+| length_prop {}
+| landing_pad_prop {}
+| has_action_prop {}
+| first_action_prop {}
+
+action_property_stmt :
+type_idx_prop {}
+| next_prop {}
+
 
 
 index_prop : T_INDEX ':' nonneg_int_lit
@@ -237,8 +332,20 @@ index_prop : T_INDEX ':' nonneg_int_lit
 
 length_prop : T_LENGTH ':' nonneg_int_lit
 {
-  //ignoring length for now, it changes too easily and we just
-  //recompute it when writing the CIE to binary
+  if(currentCallSite)
+  {
+    currentCallSite->length=$3.u.intval;
+  }
+  else if(currentCIE)
+  {
+    //ignoring length for now, it changes too easily and we just
+    //recompute it when writing the CIE to binary
+  }
+  else
+  {
+    fprintf(stderr,"length property not recognized for this section type\n");
+    YYERROR;
+  }
 }
 
 cie_index_prop : T_CIE_INDEX ':' nonneg_int_lit
@@ -303,6 +410,8 @@ augmentation_data_prop : T_AUGMENTATION_DATA ':' data_lit
   }
 }
 
+
+
 address_size_prop : T_ADDRESS_SIZE ':' nonneg_int_lit
 {
   assert(currentCIE);
@@ -362,6 +471,104 @@ eh_hdr_location_prop : T_EH_HDR_LOC ':' nonneg_int_lit
   cfi.ehHdrAddress=$3.u.intval;
 }
 
+lpstart_prop : T_LPSTART ':' nonneg_int_lit
+{
+  if(!currentLSDA)
+  {
+    fprintf(stderr,"lpstart property only applicable in LSDA section\n");
+    YYERROR;
+  }
+  currentLSDA->lpStart=$3.u.intval;
+}
+
+typeinfo_prop : T_TYPEINFO ':' nonneg_int_lit
+{
+  if(!currentLSDA)
+  {
+    fprintf(stderr,"typeinfo property only applicable in LSDA section\n");
+    YYERROR;
+  }
+  currentLSDA->numTypeEntries++;
+  currentLSDA->typeTable=realloc(currentLSDA->typeTable,currentLSDA->numTypeEntries*sizeof(word_t));
+  currentLSDA->typeTable[currentLSDA->numTypeEntries-1]=$3.u.intval;
+}
+
+position_prop : T_POSITION ':' nonneg_int_lit
+{
+  if(!currentCallSite)
+  {
+    fprintf(stderr,"position property only applicable in CALL_SITE section\n");
+    YYERROR;
+  }
+  currentCallSite->position=$3.u.intval;
+}
+
+landing_pad_prop : T_LANDING_PAD ':' nonneg_int_lit
+{
+  if(!currentCallSite)
+  {
+    fprintf(stderr,"landing_pad property only applicable in CALL_SITE section\n");
+    YYERROR;
+  }
+  currentCallSite->landingPadPosition=$3.u.intval;
+}
+
+has_action_prop : T_HAS_ACTION ':' bool_lit
+{
+  if(!currentCallSite)
+  {
+    fprintf(stderr,"has_action property only applicable in CALL_SITE section\n");
+    YYERROR;
+  }
+  currentCallSite->hasAction=$3.u.boolval;
+}
+
+
+first_action_prop : T_FIRST_ACTION ':' nonneg_int_lit
+{
+  if(!currentCallSite)
+  {
+    fprintf(stderr,"first_action property only applicable in CALL_SITE section\n");
+    YYERROR;
+  }
+  currentCallSite->firstAction=$3.u.intval;
+}
+
+type_idx_prop : T_TYPE_IDX ':' nonneg_int_lit
+{
+  if(!currentAction)
+  {
+    fprintf(stderr,"type_idx property only applicable in ACTION section\n");
+    YYERROR;
+  }
+  currentAction->typeFilterIndex=$3.u.intval;
+}
+
+next_prop : T_NEXT ':' nonneg_int_lit
+{
+  if(!currentAction)
+  {
+    fprintf(stderr,"'next' property only applicable in ACTION section\n");
+    YYERROR;
+  }
+  currentAction->nextAction=$3.u.intval;
+  currentAction->hasNextAction=true;
+}
+| T_NEXT ':' T_NONE
+{
+  if(!currentAction)
+  {
+    fprintf(stderr,"'next' property only applicable in ACTION section\n");
+    YYERROR;
+  }
+  currentAction->hasNextAction=false;
+}
+
+
+////////////////////////////////
+//literals
+///////////////////////////////
+
 int_lit : T_INT
 {
   $$.u.intval=savedInt;
@@ -392,8 +599,27 @@ data_lit : T_HEXDATA
   $$.u.dataval.len=savedDataLen;
 }
 
+bool_lit : T_BOOL_TRUE
+{
+  $$.u.boolval=true;
+}
+| T_BOOL_FALSE
+{
+  $$.u.boolval=false;
+}
+
+dw_pe_lit : T_DW_PTR_ENCODING
+{
+  $$.u.intval=savedInt;
+}
+| T_DW_PTR_ENCODING '|' T_DW_PTR_ENCODING
+{
+  $$.u.intval=$1.u.intval | $3.u.intval;
+}
 
 
+
+
 //OK, here come the DWARF instructions. There are a lot of them
 
 instruction_stmt : dw_cfa_set_loc {$$=$1;}
