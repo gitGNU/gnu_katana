@@ -82,8 +82,13 @@ typedef enum
 {
   CAF_DATA_PRESENT=1,//set if augmentation data is present
   CAF_FDE_ENC=2,//set if the fdePointerEncoding member of the
-                        //augmentationInfo struct is valid
-  CAF_FDE_LSDA=4,//fdeLSDAPointerEncoding is valid. The FDE will have an LSDA pointer
+               //augmentationInfo struct is
+               //valid. Corresponds to the R character in the
+               //augmentation string.
+  CAF_FDE_LSDA=4,//fdeLSDAPointerEncoding is valid. The FDE will have
+                 //an LSDA pointer. Corresponds to the L character in the augmentation string
+  CAF_PERSONALITY=8,//personalityFunction is valid. Corresponds to
+                        //the P character in the augmentation string.
 } CIEAugmentFlags;
 
 typedef struct CIE
@@ -94,10 +99,7 @@ typedef struct CIE
                             //version of a register to the rule (of
                             //type PoRegRule) for setting that
                             //register
-  //todo: I don't think this memory is currently freed
-  char* augmentation;//augmentation string. Not needed for patching
-                     //but needed for some more general-purpose DWARF
-                     //manipulations
+
   Dwarf_Signed dataAlign;
   Dwarf_Unsigned codeAlign;
   Dwarf_Half returnAddrRuleNum;
@@ -107,17 +109,15 @@ typedef struct CIE
   int segmentSize;//unused for most systems. Included for
                   //compatibility with the DWARF specification. Size
                   //of a segment selector.
-  Dwarf_Unsigned augmentationDataLen;
-  byte* augmentationData;
   //see the Linux Standards Base at
   //http://refspecs.freestandards.org/LSB_4.0.0/LSB-Core-generic/LSB-Core-generic/ehframechpt.html
   //for augmentation data information
-  struct
-  {
-    byte flags;//OR'd CIEAugmentFlags
-    byte fdePointerEncoding;
-    byte fdeLSDAPointerEncoding;
-  } augmentationInfo;
+
+  //augmentation information
+  byte augmentationFlags;//OR'd CIEAugmentFlags
+  byte fdePointerEncoding;
+  byte fdeLSDAPointerEncoding;
+  addr_t personalityFunction;
 } CIE;
 
 
@@ -138,14 +138,10 @@ typedef struct FDE
              //from dwarfscript it may not be set at all. For an FDE
              //loaded from a binary it will be set. 
   int idx;//what index fde this is in a DWARF section
-  Dwarf_Unsigned augmentationDataLen;
-  byte* augmentationData;
-  struct
-  {
-    //if this is false than all the other fields in this struct are invalid
-    bool filled;
-    addr_t LSDAPointer;
-  } augmentationInfo;
+  
+  bool hasLSDAPointer;
+  //todo: this should really store the index of an LSDA, not a pointer
+  addr_t lsdaPointer;
 } FDE;
 
 //struct for raw data returned from buildCallFrameSectionData
@@ -213,12 +209,22 @@ CallFrameSectionData buildCallFrameSectionData(CallFrameInfo* cfi);
 //see the Linux Standards Base at
 //http://refspecs.freestandards.org/LSB_4.0.0/LSB-Core-generic/LSB-Core-generic/ehframechpt.html
 //for augmentation data information
-void parseAugmentationStringAndData(CIE* cie);
-void parseFDEAugmentationData(FDE* fde,addr_t augDataAddress);
+void parseAugmentationStringAndData(CIE* cie,char* string,byte* data,int len);
+void parseFDEAugmentationData(FDE* fde,addr_t augDataAddress,byte* augmentationData,int augmentationDataLen);
+
+//decode an eh_frame pointer from the given data. The data pointer
+//must point to an area of data at least len bytes long. The pointer
+//will not necessarily occupy all of these len bytes.
+//dataStartAddress gives the loaded address (from the ELF object) of
+//the first byte in data this is necessary for pc-relative
+//encoding. bytesRead is the number of bytes actually read
+addr_t decodeEHPointer(byte* data,int len,addr_t dataStartAddress,byte encoding,usint* bytesRead);
 
 void printEHPointerEncoding(FILE* file,byte encoding);
 
 //builds an ExceptTable object from the raw ELF section
 ExceptTable parseExceptFrame(Elf_Scn* scn);
+
+
 
 #endif

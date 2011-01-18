@@ -126,6 +126,10 @@ REGISTER  r[0-9]+
 "next" return T_NEXT;
 "typeinfo" return T_TYPEINFO;
 "none" return T_NONE;
+"fde_ptr_enc" return T_FDE_PTR_ENC;
+"fde_lsda_ptr_enc" return T_FDE_LSDA_PTR_ENC;
+"personality" return T_PERSONALITY;
+"lsda_pointer" return T_LSDA_POINTER;
 
  /* section names */
 "FDE"|"fde" return T_FDE;
@@ -244,7 +248,7 @@ REGISTER  r[0-9]+
 "DW_EH_PE_aligned" savedInt=DW_EH_PE_aligned; return T_DW_PTR_ENCODING;
 "DW_EH_PE_omit" savedInt=DW_EH_PE_omit; return T_DW_PTR_ENCODING;
  /*pipe to indicuate using two encodings, one of the data encodings and one of the interpreation encodings*/
-"|" return '|';
+"," return ',';
 
 
 {POS_INT}   savedInt=atoi(yydwtext); return T_POS_INT;

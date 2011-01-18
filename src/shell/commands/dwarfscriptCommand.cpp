@@ -71,6 +71,8 @@ extern CallFrameInfo* parsedCallFrameInfo;
 DwarfscriptCommand::DwarfscriptCommand(DwarfscriptOperation op,ShellParam* input,ShellParam* outfile)
   :op(op),inputP(input),outfileP(outfile)
 {
+  sectionNameP=NULL;
+  elfObjectP=NULL;
   assert(op==DWOP_COMPILE);
   inputP->grab();
   if(outfileP)
@@ -118,12 +120,21 @@ void DwarfscriptCommand::printCIEInfo(FILE* file,CIE* cie)
   fprintf(file,"data_align: %li\n",(long int)cie->dataAlign);
   fprintf(file,"code_align: %li\n",(long int)cie->codeAlign);
   fprintf(file,"return_addr_rule: %li\n",(long int)cie->returnAddrRuleNum);
-  fprintf(file,"augmentation: \"%s\"\n",cie->augmentation);
-  if(cie->augmentationDataLen)
+  if(cie->augmentationFlags & CAF_FDE_ENC)
   {
-    char* str=getHexDataString(cie->augmentationData,cie->augmentationDataLen);
-    fprintf(file,"augmentation_data: hex;%s\n",str);
-    free(str);
+    fprintf(file,"fde_ptr_enc: ");
+    printEHPointerEncoding(file,cie->fdePointerEncoding);
+    fprintf(file,"\n");
+  }
+  if(cie->augmentationFlags & CAF_FDE_LSDA)
+  {
+    fprintf(file,"fde_lsda_ptr_enc: ");
+    printEHPointerEncoding(file,cie->fdeLSDAPointerEncoding);
+    fprintf(file,"\n");
+  }
+  if(cie->augmentationFlags & CAF_PERSONALITY)
+  {
+    fprintf(file,"personality: 0x%zx\n",cie->personalityFunction);
   }
   fprintf(file,"begin INSTRUCTIONS\n");
   for(int i=0;i<cie->numInitialInstructions;i++)
@@ -142,16 +153,14 @@ void DwarfscriptCommand::printFDEInfo(FILE* file,ElfInfo* elf,FDE* fde)
   fprintf(file,"cie_index: %i\n",fde->cie->idx);
   fprintf(file,"initial_location: 0x%x\n",fde->lowpc);
   fprintf(file,"address_range: 0x%x\n",fde->highpc-fde->lowpc);
-  if(fde->augmentationDataLen)
+  if(fde->hasLSDAPointer)
   {
-    char* str=getHexDataString(fde->augmentationData,fde->augmentationDataLen);
-    fprintf(file,"augmentation_data: hex;%s\n",str);
-    free(str);
+    fprintf(file,"lsda_pointer: 0x%zx\n",fde->lsdaPointer);
   }
   fprintf(file,"begin INSTRUCTIONS\n");
   for(int i=0;i<fde->numInstructions;i++)
   {
-    printInstruction(file,fde->instructions[i],DWIPF_NO_REG_NAMES);
+    printInstruction(file,fde->instructions[i],DWIPF_NO_REG_NAMES|DWIPF_DWARFSCRIPT);
   }
   fprintf(file,"end INSTRUCTIONS\n");
   fprintf(file,"end FDE\n");
@@ -174,7 +183,7 @@ void DwarfscriptCommand::printExceptTableInfo(FILE* file,ElfInfo* elf,ExceptTabl
       fprintf(file,"position: 0x%zx\n",callSite->position);
       fprintf(file,"length: 0x%zx\n",callSite->length);
       fprintf(file,"landing_pad: 0x%zx\n",callSite->landingPadPosition);
-      fprintf(file,"has_actions: %s\n",callSite->hasAction?"true":"false");
+      fprintf(file,"has_action: %s\n",callSite->hasAction?"true":"false");
       if(callSite->hasAction)
       {
         fprintf(file,"first_action: %zi\n",callSite->firstAction);
@@ -186,15 +195,20 @@ void DwarfscriptCommand::printExceptTableInfo(FILE* file,ElfInfo* elf,ExceptTabl
       fprintf(file,"#action %i\n",j);
       fprintf(file,"begin ACTION\n");
       fprintf(file,"type_idx: %zi\n",lsda->actionTable[j].typeFilterIndex);
-      fprintf(file,"next: %zi\n",lsda->actionTable[j].nextAction);
+      if(lsda->actionTable[j].hasNextAction)
+      {
+        fprintf(file,"next: %zi\n",lsda->actionTable[j].nextAction);
+      }
+      else
+      {
+        fprintf(file,"next: none\n");
+      }
       fprintf(file,"end ACTION\n");
     }
     for(int j=0;j<lsda->numTypeEntries;j++)
     {
       fprintf(file,"#type entry %i\n",j);
-      fprintf(file,"begin TYPE\n");
       fprintf(file,"typeinfo: 0x%zx\n",lsda->typeTable[j]);
-      fprintf(file,"end TYPE\n");
     }
     fprintf(file,"end LSDA\n");
   }
@@ -325,10 +339,12 @@ void DwarfscriptCommand::compileDwarfscript()
   if(this->outputVariable)
   {
     //make an array with .eh_frame_hdr and .eh_frame items
-    ShellVariableData** items=(ShellVariableData**)zmalloc(sizeof(ShellVariableData*)*2);
+    ShellVariableData** items=(ShellVariableData**)zmalloc(sizeof(ShellVariableData*)*3);
     items[0]=new ShellRawVariableData(data.ehData,data.ehDataLen);
     items[1]=new ShellRawVariableData(data.ehHdrData,data.ehHdrDataLen);
-    this->outputVariable->makeArray(items,2);
+    items[2]=new ShellRawVariableData(data.gccExceptTableData,data.gccExceptTableLen);
+    this->outputVariable->makeArray(items,3);
+    free(items);
   }
 }
 

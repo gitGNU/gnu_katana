@@ -76,22 +76,34 @@ void printCIEInfo(FILE* file,CIE* cie)
   fprintf(file,"\tdata align: %i\n",(int)cie->dataAlign);
   fprintf(file,"\tcode align: %u\n",(unsigned int)cie->codeAlign);
   fprintf(file,"\trule for return address: %i\n",cie->returnAddrRuleNum);
-  fprintf(file,"\taugmentation: \"%s\"\n",cie->augmentation);
-  int flags=cie->augmentationInfo.flags;
+  int flags=cie->augmentationFlags;
   if(flags & CAF_DATA_PRESENT)
   {
+    fprintf(file,"\taugmentation: \"z");
+    flags & CAF_PERSONALITY ? fprintf(file,"P"):false/*nop*/;
+    flags & CAF_FDE_LSDA ? fprintf(file,"L"):false/*nop*/;
+    flags & CAF_FDE_ENC ? fprintf(file,"R"):false/*nop*/;
+    fprintf(file,"\"\n");
+    if(flags & CAF_PERSONALITY)
+    {
+      fprintf(file,"Personality routine: 0x%zx\n",cie->personalityFunction);
+    }
     if(flags & CAF_FDE_ENC)
     {
       fprintf(file,"\tFDE pointer encoding:");
-      printEHPointerEncoding(file,cie->augmentationInfo.fdePointerEncoding);
+      printEHPointerEncoding(file,cie->fdePointerEncoding);
       fprintf(file,"\n");
     }
     if(flags & CAF_FDE_LSDA)
     {
       fprintf(file,"\tFDE LSDA pointer encoding:");
-      printEHPointerEncoding(file,cie->augmentationInfo.fdeLSDAPointerEncoding);
+      printEHPointerEncoding(file,cie->fdeLSDAPointerEncoding);
       fprintf(file,"\n");
     }
+  }
+  else
+  {
+    fprintf(file,"\taugmentation: \"\"");
   }
   fprintf(file,"\tInitial instructions:\n");
   for(int i=0;i<cie->numInitialInstructions;i++)
@@ -119,11 +131,11 @@ void printFDEInfo(FILE* file,FDE* fde,int num,ElfInfo* elf)
   }
   fprintf(file,"\tlowpc: 0x%x\n",fde->lowpc);
   fprintf(file,"\thighpc:0x%x\n",fde->highpc);
-  int flags=flags=cie->augmentationInfo.flags;
+  int flags=flags=cie->augmentationFlags;
   if(flags & CAF_FDE_LSDA)
   {
-    assert(fde->augmentationInfo.filled);
-    fprintf(file,"\tLSDA pointer: 0x%zx\n",fde->augmentationInfo.LSDAPointer);
+    assert(fde->hasLSDAPointer);
+    fprintf(file,"\tLSDA pointer: 0x%zx\n",fde->lsdaPointer);
   }
   fprintf(file,"  Instructions:\n");
   for(int i=0;i<fde->numInstructions;i++)

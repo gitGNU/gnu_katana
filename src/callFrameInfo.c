@@ -60,31 +60,45 @@
 #include "elfutil.h"
 #include "util/growingBuffer.h"
 
+static char* dwpeApplicationTable[16];
+static char* dwpeFormatTable[16];
+static bool dwpeTablesBuilt=false;
+
+void buildDWPETables()
+{
+  dwpeFormatTable[DW_EH_PE_absptr]="DW_EH_PE_absptr";
+  dwpeFormatTable[DW_EH_PE_udata2]="DW_EH_PE_udata2";
+  dwpeFormatTable[DW_EH_PE_sdata2]="DW_EH_PE_sdata2";
+  dwpeFormatTable[DW_EH_PE_udata4]="DW_EH_PE_udata4";
+  dwpeFormatTable[DW_EH_PE_sdata4]="DW_EH_PE_sdata4";
+  dwpeFormatTable[DW_EH_PE_udata8]="DW_EH_PE_udata8";
+  dwpeFormatTable[DW_EH_PE_sdata8]="DW_EH_PE_sdata8";
+  dwpeFormatTable[DW_EH_PE_uleb128]="DW_EH_PE_uleb128";
+  dwpeFormatTable[DW_EH_PE_sleb128]="DW_EH_PE_sleb128";
+  dwpeApplicationTable[DW_EH_PE_pcrel>>4]="DW_EH_PE_pcrel";
+  dwpeApplicationTable[DW_EH_PE_textrel>>4]="DW_EH_PE_textrel";
+  dwpeApplicationTable[DW_EH_PE_datarel>>4]="DW_EH_PE_datarel";
+  dwpeApplicationTable[DW_EH_PE_funcrel>>4]="DW_EH_PE_funcrel";
+  dwpeApplicationTable[DW_EH_PE_aligned>>4]="DW_EH_PE_aligned";
+  dwpeTablesBuilt=true;
+}
+
 void printEHPointerEncoding(FILE* file,byte encoding)
 {
-  static char* applicationTable[16];
-  static char* formatTable[16];
-  static bool tablesBuilt=false;
-  if(!tablesBuilt)
+  if(!dwpeTablesBuilt)
   {
-    formatTable[DW_EH_PE_absptr]="DW_EH_PE_absptr";
-    formatTable[DW_EH_PE_udata2]="DW_EH_PE_udata2";
-    formatTable[DW_EH_PE_sdata2]="DW_EH_PE_sdata2";
-    formatTable[DW_EH_PE_udata4]="DW_EH_PE_udata4";
-    formatTable[DW_EH_PE_sdata4]="DW_EH_PE_sdata4";
-    formatTable[DW_EH_PE_udata8]="DW_EH_PE_udata8";
-    formatTable[DW_EH_PE_sdata8]="DW_EH_PE_sdata8";
-    formatTable[DW_EH_PE_uleb128]="DW_EH_PE_uleb128";
-    formatTable[DW_EH_PE_sleb128]="DW_EH_PE_sleb128";
-    applicationTable[DW_EH_PE_pcrel>>4]="DW_EH_PE_pcrel";
-    applicationTable[DW_EH_PE_textrel>>4]="DW_EH_PE_textrel";
-    applicationTable[DW_EH_PE_datarel>>4]="DW_EH_PE_datarel";
-    applicationTable[DW_EH_PE_funcrel>>4]="DW_EH_PE_funcrel";
-    applicationTable[DW_EH_PE_aligned>>4]="DW_EH_PE_aligned";
+    buildDWPETables();
   }
   int format=encoding & 0xF;
   int application=encoding & 0xF0;
-  fprintf(file,"%s, %s",formatTable[format],applicationTable[application>>4]);
+  if(application)
+  {
+    fprintf(file,"%s, %s",dwpeFormatTable[format],dwpeApplicationTable[application>>4]);
+  }
+  else
+  {
+    fprintf(file,"%s",dwpeFormatTable[format]);
+  }
 }
 
 //pointer encodings for eh_frame as specified by LSB at
@@ -262,37 +276,39 @@ addr_t decodeEHPointer(byte* data,int len,addr_t dataStartAddress,byte encoding,
 //see the Linux Standards Base at
 //http://refspecs.freestandards.org/LSB_4.0.0/LSB-Core-generic/LSB-Core-generic/ehframechpt.html
 //for augmentation data information. Also in the x86_64 ABI
-void parseAugmentationStringAndData(CIE* cie)
+void parseAugmentationStringAndData(CIE* cie,char* augmentationString,byte* data,int len)
 {
-  if(!cie->augmentation)
-  {
-    return;
-  }
-  int cnt=strlen(cie->augmentation);
+  int cnt=strlen(augmentationString);
   int offset=0;
   for(int i=0;i<cnt;i++)
   {
-    assert(offset<cie->augmentationDataLen);
-    char c=cie->augmentation[i];
+    assert(offset<len);
+    char c=augmentationString[i];
     switch(c)
     {
     case 'z':
-      cie->augmentationInfo.flags|=CAF_DATA_PRESENT;
+      cie->augmentationFlags|=CAF_DATA_PRESENT;
       break;
     case 'R':
-      cie->augmentationInfo.flags|=CAF_FDE_ENC;
-      cie->augmentationInfo.fdePointerEncoding=cie->augmentationData[offset];
+      cie->augmentationFlags|=CAF_FDE_ENC;
+      cie->fdePointerEncoding=data[offset];
       offset++;
       break;
     case 'P':
       {
-        int len=getPointerSizeFromEHPointerEncoding(cie->augmentationData[offset]);
-        offset+=1+len;
+        byte personalityPointerEncoding=data[offset];
+        offset++;
+        usint numBytesRead;
+        cie->personalityFunction=decodeEHPointer(data+offset,len-offset,0,
+                                                 personalityPointerEncoding,
+                                                 &numBytesRead);
+        offset+=numBytesRead;
+        cie->augmentationFlags|=CAF_PERSONALITY;
       }
       break;
     case 'L':
-      cie->augmentationInfo.flags|=CAF_FDE_LSDA;
-      cie->augmentationInfo.fdeLSDAPointerEncoding=cie->augmentationData[offset];
+      cie->augmentationFlags|=CAF_FDE_LSDA;
+      cie->fdeLSDAPointerEncoding=data[offset];
       offset++;
     default:
       break;
@@ -300,24 +316,24 @@ void parseAugmentationStringAndData(CIE* cie)
   }
 }
 
-void parseFDEAugmentationData(FDE* fde,addr_t augDataAddress)
+void parseFDEAugmentationData(FDE* fde,addr_t augDataAddress,byte* augmentationData,int augmentationDataLen)
 {
   //todo: are there any other types of augmentation we may encounter?
-  if(fde->cie->augmentationInfo.flags & CAF_FDE_LSDA)
+  if(fde->cie->augmentationFlags & CAF_FDE_LSDA)
   {
-    if(fde->augmentationDataLen <
-       getPointerSizeFromEHPointerEncoding(fde->cie->augmentationInfo.fdeLSDAPointerEncoding))
+    if(augmentationDataLen <
+       getPointerSizeFromEHPointerEncoding(fde->cie->fdeLSDAPointerEncoding))
     {
       death("Mismatch between CIE and FDE: FDE does not have expected LSDA pointer augmentation data\n");
     }
-    fde->augmentationInfo.LSDAPointer=
-      decodeEHPointer(fde->augmentationData,
-                      fde->augmentationDataLen,
+    fde->lsdaPointer=
+      decodeEHPointer(augmentationData,
+                      augmentationDataLen,
                       augDataAddress,
-                      fde->cie->augmentationInfo.fdeLSDAPointerEncoding,NULL);
+                      fde->cie->fdeLSDAPointerEncoding,NULL);
     
   }
-  fde->augmentationInfo.filled=true;
+  fde->hasLSDAPointer=true;
 }
 
 void buildCIERawData(CIE* cie,GrowingBuffer* buf,bool isEHFrame)
@@ -354,13 +370,57 @@ void buildCIERawData(CIE* cie,GrowingBuffer* buf,bool isEHFrame)
   byte* dataAlign=intToLEB128(cie->dataAlign,&dataAlignLen);
   byte* returnAddrReg=uintToLEB128(cie->returnAddrRuleNum,&returnAddrRegLen);
 
+  //used to stare the LEB representation of the length of the augmentation data
   byte* augmentationDataLength;
   usint augmentationDataLengthLen=0;
+  //the actual raw augmentation data
+  byte cieAugmentationData[32];
+  //the length of the above data
+  int cieAugmentationDataLen=0;
+  char augmentationString[16];
+  augmentationString[0]='\0';
+  
   //from the Linux Standard's Base
   //http://refspecs.freestandards.org/LSB_3.0.0/LSB-Core-generic/LSB-Core-generic/ehframechpt.html
-  if(cie->augmentationInfo.flags & CAF_DATA_PRESENT)
+  if(cie->augmentationFlags & CAF_DATA_PRESENT)
   {
-    augmentationDataLength=uintToLEB128(cie->augmentationDataLen,&augmentationDataLengthLen);
+    int offset=0;
+    augmentationString[0]='z';
+    augmentationString[1]='\0';
+    //construct the cie augmentation data buffer and augmentation string
+    if(cie->augmentationFlags & CAF_PERSONALITY)
+    {
+      strcat(augmentationString,"P");
+      if(sizeof(cie->personalityFunction)<=4 ||
+         (cie->personalityFunction & 0xFFFFFFFF00000000) == 0)
+      {
+        //pointer can fit within 32 bits
+        cieAugmentationData[offset]=DW_EH_PE_udata4;
+        offset++;
+        memcpy(cieAugmentationData+offset,&cie->personalityFunction,4);
+        offset+=4;
+      }
+      else
+      {
+        //need 8 bytes
+        cieAugmentationData[offset]=DW_EH_PE_udata8;
+        offset++;
+        memcpy(cieAugmentationData+offset,&cie->personalityFunction,4);
+        offset+=8;
+      }
+    }
+    if(cie->augmentationFlags & CAF_FDE_LSDA)
+    {
+      strcat(augmentationString,"L");
+      cieAugmentationData[offset++]=cie->fdeLSDAPointerEncoding;
+    }
+    if(cie->augmentationFlags & CAF_FDE_ENC)
+    {
+      strcat(augmentationString,"R");
+      cieAugmentationData[offset++]=cie->fdePointerEncoding;
+    }
+    cieAugmentationDataLen=offset;
+    augmentationDataLength=uintToLEB128(cieAugmentationDataLen,&augmentationDataLengthLen);
   }
   
 
@@ -368,7 +428,7 @@ void buildCIERawData(CIE* cie,GrowingBuffer* buf,bool isEHFrame)
     serializeDwarfRegInstructions(cie->initialInstructions,
                                   cie->numInitialInstructions);
 
-  header1.length=sizeof(header1)-sizeof(header1.length)+strlen(cie->augmentation)+1+codeAlignLen+dataAlignLen+returnAddrRegLen+cie->augmentationDataLen+augmentationDataLengthLen+rawInstructions.numBytes;
+  header1.length=sizeof(header1)-sizeof(header1.length)+strlen(augmentationString)+1+codeAlignLen+dataAlignLen+returnAddrRegLen+cieAugmentationDataLen+augmentationDataLengthLen+rawInstructions.numBytes;
   if(cie->version >= 4)
   {
     header1.length+=sizeof(header2);
@@ -387,7 +447,7 @@ void buildCIERawData(CIE* cie,GrowingBuffer* buf,bool isEHFrame)
 
   //now we can actually write everythingo out
   addToGrowingBuffer(buf,&header1,sizeof(header1));
-  addToGrowingBuffer(buf,cie->augmentation,strlen(cie->augmentation)+1);
+  addToGrowingBuffer(buf,augmentationString,strlen(augmentationString)+1);
   if(cie->version >= 4)
   {
     addToGrowingBuffer(buf,&header2,sizeof(header2));
@@ -399,9 +459,9 @@ void buildCIERawData(CIE* cie,GrowingBuffer* buf,bool isEHFrame)
   {
     addToGrowingBuffer(buf,augmentationDataLength,augmentationDataLengthLen);
   }
-  if(cie->augmentationDataLen)
+  if(cieAugmentationDataLen)
   {
-    addToGrowingBuffer(buf,cie->augmentationData,cie->augmentationDataLen);
+    addToGrowingBuffer(buf,cieAugmentationData,cieAugmentationDataLen);
   }
   addToGrowingBuffer(buf,rawInstructions.instrs,rawInstructions.numBytes);
   addToGrowingBuffer(buf,padding,paddingNeeded);
@@ -465,7 +525,7 @@ void buildFDERawData(CallFrameInfo* cfi,FDE* fde,uint* cieOffsets,GrowingBuffer*
     addr_t pointerLocation=cfi->sectionAddress+buf->len+sizeof(header);
     initialLocation=
       encodeEHPointerFromEncoding(fde->lowpc,
-                                  fde->cie->augmentationInfo.fdePointerEncoding,
+                                  fde->cie->fdePointerEncoding,
                                   pointerLocation,&initialLocationByteLen);
     logprintf(ELL_INFO_V3,ELS_DWARF_BUILD,"Transforming pointer %p to %p for FDE\n",fde->lowpc,initialLocation);
   }
@@ -487,18 +547,40 @@ void buildFDERawData(CallFrameInfo* cfi,FDE* fde,uint* cieOffsets,GrowingBuffer*
   }
   assert(addressRangeByteLen <= sizeof(addressRange));
 
+  //store a LEB representation of the length
   byte* augmentationDataLength;
   usint augmentationDataLengthLen=0;
+  //the actual augmentation data to write out
+  byte augmentationData[128];
+  int augmentationDataLen=0;
+    
   //from the Linux Standard's Base
   //http://refspecs.freestandards.org/LSB_3.0.0/LSB-Core-generic/LSB-Core-generic/ehframechpt.html
-  if(fde->cie->augmentationInfo.flags & CAF_DATA_PRESENT)
+  if(fde->cie->augmentationFlags & CAF_DATA_PRESENT)
   {
-    augmentationDataLength=uintToLEB128(fde->augmentationDataLen,&augmentationDataLengthLen);
+    if(fde->cie->augmentationFlags & CAF_FDE_LSDA)
+    {
+      if(fde->hasLSDAPointer)
+      {
+        augmentationDataLen=getPointerSizeFromEHPointerEncoding(fde->cie->fdeLSDAPointerEncoding);
+        memcpy(augmentationData,&fde->lsdaPointer,augmentationDataLen);
+      }
+      else
+      {
+        logprintf(ELL_ERR,ELS_DWARF_FRAME,"FDE doesn't have an LSDA pointer even though its CIE says it should\n");
+      }
+    }
+    else if(fde->hasLSDAPointer)
+    {
+      logprintf(ELL_WARN,ELS_DWARF_FRAME,"Ignoring LSDA pointer for FDE referencing a CIE without the appropriate augmentation\n");
+    }
+    augmentationDataLength=uintToLEB128(augmentationDataLen,&augmentationDataLengthLen);
   }
+
 
   //now we finially have enough information to compute the length and padding
   header.length=sizeof(header)-sizeof(header.length)+initialLocationByteLen+
-    addressRangeByteLen+augmentationDataLengthLen+fde->augmentationDataLen+
+    addressRangeByteLen+augmentationDataLengthLen+augmentationDataLen+
     rawInstructions.numBytes;
   int paddingNeeded=0;
   byte* padding=NULL;
@@ -516,13 +598,12 @@ void buildFDERawData(CallFrameInfo* cfi,FDE* fde,uint* cieOffsets,GrowingBuffer*
   addToGrowingBuffer(buf,&header,sizeof(header));
   addToGrowingBuffer(buf,&initialLocation,initialLocationByteLen);
   addToGrowingBuffer(buf,&addressRange,addressRangeByteLen);
-  parseFDEAugmentationData(fde,cfi->sectionAddress+buf->len);
-  if(fde->cie->augmentationInfo.flags & CAF_DATA_PRESENT)
+  if(fde->cie->augmentationFlags & CAF_DATA_PRESENT)
   {
     addToGrowingBuffer(buf,augmentationDataLength,augmentationDataLengthLen);
-    if(fde->augmentationDataLen)
+    if(augmentationDataLen)
     {
-      addToGrowingBuffer(buf,fde->augmentationData,fde->augmentationDataLen);
+      addToGrowingBuffer(buf,augmentationData,augmentationDataLen);
     }
   }
   addToGrowingBuffer(buf,rawInstructions.instrs,rawInstructions.numBytes);

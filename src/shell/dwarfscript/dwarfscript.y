@@ -26,13 +26,16 @@ double savedDouble;
 int savedDataLen;
 byte* savedData;
 
+//save it here since we don't store it directly as part of the CIE
+static char* augmentationString;
+
 int yyerror(char *s);
 void makeBasicRegister1(ParseNode* node,ParseNode* intvalNode);
 void makeBasicRegister2(ParseNode* node,ParseNode* intvalNode);
 
  %}
 
-%expect 0
+%expect 1
 
 //different prefix to avoid conflicting with our other parser
 %name-prefix "yydw"
@@ -56,7 +59,8 @@ void makeBasicRegister2(ParseNode* node,ParseNode* intvalNode);
 %token T_VERSION T_ADDRESS_SIZE T_SEGMENT_SIZE 
 %token T_AUGMENTATION_DATA T_SECTION_TYPE T_SECTION_LOC T_EH_HDR_LOC
 %token T_LPSTART T_POSITION T_LANDING_PAD T_HAS_ACTION T_FIRST_ACTION
-%token T_TYPE_IDX T_NEXT T_TYPEINFO
+%token T_TYPE_IDX T_NEXT T_TYPEINFO T_LSDA_POINTER
+%token T_FDE_PTR_ENC T_FDE_LSDA_PTR_ENC T_PERSONALITY
 //CFA instructions
 %token T_DW_CFA_offset T_DW_CFA_advance_loc T_DW_CFA_restore T_DW_CFA_extended
 %token T_DW_CFA_nop T_DW_CFA_set_loc T_DW_CFA_advance_loc1 T_DW_CFA_advance_loc2
@@ -147,7 +151,6 @@ cie_begin_stmt : T_BEGIN T_CIE
 
 cie_end_stmt : T_END T_CIE
 {
-  parseAugmentationStringAndData(currentCIE);
   if(currentCIE->addressSize==0)
   {
     if(cfi.isEHFrame)
@@ -272,6 +275,9 @@ index_prop {}
 | version_prop {}
 | augmentation_prop {}
 | augmentation_data_prop {}
+| fde_ptr_enc_prop {}
+| fde_lsda_ptr_enc_prop {}
+| personality_prop {}
 | address_size_prop {}
 | segment_size_prop {}
 | data_align_prop {}
@@ -286,6 +292,7 @@ index_prop {}
 | initial_location_prop {}
 | address_range_prop {}
 | augmentation_data_prop {}
+| lsda_pointer_prop {}
 
 lsda_part :
 lsda_property_stmt {}
@@ -386,8 +393,7 @@ version_prop : T_VERSION ':' nonneg_int_lit
 }
 augmentation_prop : T_AUGMENTATION ':' string_lit
 {
-  assert(currentCIE);
-  currentCIE->augmentation=$3.u.stringval;
+  augmentationString=$3.u.stringval;
 }
 | T_AUGMENTATION ':' error
 {
@@ -399,18 +405,40 @@ augmentation_data_prop : T_AUGMENTATION_DATA ':' data_lit
 {
   if(currentCIE)
   {
-    currentCIE->augmentationData=$3.u.dataval.data;
-    currentCIE->augmentationDataLen=$3.u.dataval.len;
+    if(augmentationString)
+    {
+      fprintf(stderr,"augmentation must be read before augmentation_data\n");
+      YYERROR;
+    }
+    parseAugmentationStringAndData(currentCIE,augmentationString,$3.u.dataval.data,$3.u.dataval.len);
   }
   else
   {
     assert(currentFDE);
-    currentFDE->augmentationData=$3.u.dataval.data;
-    currentFDE->augmentationDataLen=$3.u.dataval.len;
+    parseFDEAugmentationData(currentFDE,0,$3.u.dataval.data,$3.u.dataval.len);
   }
 }
 
+fde_ptr_enc_prop : T_FDE_PTR_ENC ':' dw_pe_lit
+{
+  assert(currentCIE);
+  currentCIE->fdePointerEncoding=$3.u.intval;
+  currentCIE->augmentationFlags|=CAF_FDE_ENC | CAF_DATA_PRESENT;
+}
 
+fde_lsda_ptr_enc_prop : T_FDE_LSDA_PTR_ENC ':' dw_pe_lit
+{
+  assert(currentCIE);
+  currentCIE->fdeLSDAPointerEncoding=$3.u.intval;
+  currentCIE->augmentationFlags|=CAF_FDE_LSDA | CAF_DATA_PRESENT;
+}
+
+personality_prop : T_PERSONALITY ':' nonneg_int_lit
+{
+  assert(currentCIE);
+  currentCIE->personalityFunction=$3.u.intval;
+  currentCIE->augmentationFlags|=CAF_PERSONALITY | CAF_DATA_PRESENT;
+}
 
 address_size_prop : T_ADDRESS_SIZE ':' nonneg_int_lit
 {
@@ -564,6 +592,13 @@ next_prop : T_NEXT ':' nonneg_int_lit
   currentAction->hasNextAction=false;
 }
 
+lsda_pointer_prop : T_LSDA_POINTER ':' nonneg_int_lit
+{
+  assert(currentFDE);
+  currentFDE->hasLSDAPointer=true;
+  currentFDE->lsdaPointer=$3.u.intval;
+}
+
 
 ////////////////////////////////
 //literals
@@ -612,7 +647,7 @@ dw_pe_lit : T_DW_PTR_ENCODING
 {
   $$.u.intval=savedInt;
 }
-| T_DW_PTR_ENCODING '|' T_DW_PTR_ENCODING
+| dw_pe_lit ',' dw_pe_lit
 {
   $$.u.intval=$1.u.intval | $3.u.intval;
 }

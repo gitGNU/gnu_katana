@@ -535,17 +535,14 @@ Map* readDebugFrame(ElfInfo* elf,bool ehInsteadOfDebug)
     {
       dwarfErrorHandler(err,NULL);
     }
-    elf->callFrameInfo.cies[i].augmentation=strdup(augmenter);//todo: free this memory later
-
     //get the augmentation data
     Dwarf_Small* augdata;
+    Dwarf_Unsigned augdataLen;
     dwarf_get_cie_augmentation_data(cieData[i],
                                     &augdata,
-                                    &cie->augmentationDataLen,
+                                    &augdataLen,
                                     &err);
-    cie->augmentationData=zmalloc(cie->augmentationDataLen);
-    memcpy(cie->augmentationData,augdata,cie->augmentationDataLen);
-    parseAugmentationStringAndData(cie);
+    parseAugmentationStringAndData(cie,augmenter,augdata,augdataLen);
     
     //don't care about initial instructions, for patching,
     //but do if we're reading a debug frame for stack unwinding purposes
@@ -611,30 +608,29 @@ Map* readDebugFrame(ElfInfo* elf,bool ehInsteadOfDebug)
     }
     elf->callFrameInfo.fdes[i].offset=fdeOffset;
 
-    FDE* fde=&elf->callFrameInfo.fdes[i];
     Dwarf_Small* augdata;
+    Dwarf_Unsigned augdataLen;
     dwarf_get_fde_augmentation_data(dfde,
                                     &augdata,
-                                    &fde->augmentationDataLen,
+                                    &augdataLen,
                                     &err);
-    fde->augmentationData=zmalloc(fde->augmentationDataLen);
-    memcpy(fde->augmentationData,augdata,fde->augmentationDataLen);
-    if(elf->callFrameInfo.isEHFrame && fde->augmentationDataLen)
+
+    if(elf->callFrameInfo.isEHFrame && augdataLen)
     {
       //find the address of the augmentation data, because we'll need it
       addr_t augDataOffset=0;
       int iterationOffset=0;
       while(true)
       {
-        byte* ptr=memchr(fdeBytes+iterationOffset,fde->augmentationData[0],fdeBytesLength);
+        byte* ptr=memchr(fdeBytes+iterationOffset,augdata[0],fdeBytesLength);
         if(!ptr)
         {
           death("Augmentation data seemingly does not exist when scanning raw data!\n");
         }
         bool isMatch=true;
-        for(int j=1;j<fde->augmentationDataLen;j++)
+        for(int j=1;j<augdataLen;j++)
         {
-          if(fde->augmentationData[j]!=ptr[j])
+          if(augdata[j]!=ptr[j])
           {
             isMatch=false;
             break;
@@ -653,7 +649,8 @@ Map* readDebugFrame(ElfInfo* elf,bool ehInsteadOfDebug)
       }
       //turn the offset into an address
       addr_t augDataAddr=elf->callFrameInfo.sectionAddress+augDataOffset;
-      parseFDEAugmentationData(elf->callFrameInfo.fdes+i,augDataAddr);
+      parseFDEAugmentationData(elf->callFrameInfo.fdes+i,augDataAddr,
+                               augdata,augdataLen);
     }
     
     int* key=zmalloc(sizeof(int));
