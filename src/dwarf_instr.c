@@ -54,6 +54,7 @@
 */
 
 #include "util/util.h"
+#include "util/growingBuffer.h"
 #include "dwarf_instr.h"
 #include <math.h>
 #include <dwarf.h>
@@ -333,11 +334,15 @@ void printInstruction(FILE* file,RegInstruction inst,int printFlags)
     fprintf(file,"DW_CFA_nop\n");
     break;
   case DW_CFA_expression:
-    fprintf(file,"DW_CFA_expression\n");
+    fprintf(file,"DW_CFA_expression ");
+    printReg(file,inst.arg1Reg,printFlags);
+    fprintf(file,"\n");
     printExpr(file,"\t\t",inst.expr,printFlags);
     break;
   case DW_CFA_val_expression:
-    fprintf(file,"DW_CFA_val_expression\n");
+    fprintf(file,"DW_CFA_val_expression ");
+    printReg(file,inst.arg1Reg,printFlags);
+    fprintf(file,"\n");
     printExpr(file,"\t\t",inst.expr,printFlags);
     break;
   default:
@@ -896,8 +901,16 @@ void printExprInstruction(FILE* file,char* prefix,DwarfExprInstr instr,int print
 
 void printExpr(FILE* file,char* prefix,DwarfExpr expr,int printFlags)
 {
+  if(printFlags & DWIPF_DWARFSCRIPT)
+  {
+    fprintf(file,"begin EXPRESSION\n");
+  }
   for(int i=0;i<expr.numInstructions;i++)
   {
     printExprInstruction(file,prefix,expr.instructions[i],printFlags);
+  }
+  if(printFlags & DWIPF_DWARFSCRIPT)
+  {
+    fprintf(file,"end EXPRESSION\n");
   }
 }

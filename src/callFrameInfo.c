@@ -58,6 +58,7 @@
 #include "leb.h"
 #include "util/logging.h"
 #include "elfutil.h"
+#include "util/growingBuffer.h"
 
 void printEHPointerEncoding(FILE* file,byte encoding)
 {
@@ -538,6 +539,224 @@ typedef struct
   int32 fdeAddress;
 } EhFrameHdrTableEntry;
 
+//the Map parameter is used to store the transformation from an LSDA
+//index to the actual offset from the start of the .gcc_except_frame
+//that the LSDA lives at. This will be necessary when writing the FDEs
+void buildExceptTableRawData(CallFrameInfo* cfi,GrowingBuffer* buf,
+                             Map* outLSDAIdxToOffset)
+{
+  //use a slightly more manageable name internal to the function
+  Map* idxMap=outLSDAIdxToOffset;
+  ExceptTable* table=cfi->exceptTable;
+  assert(table);
+  for(int i=0;i<table->numLSDAs;i++)
+  {
+    //update the map
+    int* key=zmalloc(sizeof(int));
+    *key=i;
+    addr_t* value=zmalloc(sizeof(addr_t));
+    *value=buf->len;
+    mapInsert(idxMap,key,value);
+    
+    //now get on with actually building the binary data
+    LSDA* lsda=table->lsdas+i;
+    addr_t lsdaStartOffset=buf->len;
+    //gcc hasn't been writing lpstart (other than DW_PE_omit for the
+    //encoding) so I'm guessing at proper behaviour here.
+    if(lsda->lpStart!=0)
+    {
+      byte enc=DW_EH_PE_uleb128;
+      addToGrowingBuffer(buf,&enc,1);
+      addUlebToGrowingBuffer(buf,lsda->lpStart);
+    }
+    else
+    {
+      byte enc=DW_EH_PE_omit;
+      addToGrowingBuffer(buf,&enc,1);
+    }
+    //encoding used by entries in the type table
+    byte ttTypeFormat=DW_EH_PE_udata4;
+    addToGrowingBuffer(buf,&ttTypeFormat,1);
+
+    //unfortunately we now run into a problem. We need to write out
+    //the TType base offset as a uleb128. LEB values vary in length,
+    //but we don't yet know what the offset is so we can't tell how
+    //long it will be. We solve this with the inefficient solution of
+    //creating a second buffer which we will copy into the first
+    //later. We also don't know how long the call site table will be
+
+    //in order to properly create parts of the call-site table,
+    //however, we need the action table. 
+    GrowingBuffer actionBuf;
+    ZERO(actionBuf);
+    addr_t* actionIdxToOffset=zmalloc(sizeof(addr_t)*lsda->numActionEntries);
+    for(int j=0;j<lsda->numActionEntries;j++)
+    {
+      if(actionIdxToOffset[j])
+      {
+        //we already wrote this action. Skip it now.
+        break;
+      }
+      int idx=j;
+      while(true)
+      {
+        actionIdxToOffset[idx]=actionBuf.len;
+        ActionRecord* action=lsda->actionTable+idx;
+        //note we make the index 1-based when writing it out
+        addUlebToGrowingBuffer(&actionBuf,action->typeFilterIndex+1);
+        if(action->hasNextAction)
+        {
+          if(actionIdxToOffset[action->nextAction] || action->nextAction==0)
+          {
+            //the next action is an action we've already written out. Construct a self-relative offset.
+            sword_t offset=(sword_t)actionIdxToOffset[action->nextAction] - (sword_t)buf->len;
+            addSlebToGrowingBuffer(&actionBuf,offset);
+            //don't need to follow the chain any further, it's already been written out.
+            break;
+          }
+          else
+          {
+            //we'll just choose to write the next action next. In that case the offset is 1 byte.
+            byte offset=1;
+            addToGrowingBuffer(&actionBuf,&offset,1);
+            //the next iteration of this while loop will continue writing this chain
+            idx=action->nextAction;
+          }
+        }
+        else
+        {
+          //just write a zero to show there is no next action
+          byte nextAction=0;
+          addToGrowingBuffer(&actionBuf,&nextAction,1);
+          //and don't need to write out any actions in this chain.
+          break;
+        }
+      }
+    }
+
+    //write out the call site table
+    GrowingBuffer callSiteBuf;
+    ZERO(callSiteBuf);
+    for(int j=0;j<lsda->numCallSites;j++)
+    {
+      CallSiteRecord* callSite=&lsda->callSiteTable[j];
+      addUlebToGrowingBuffer(&callSiteBuf,callSite->position);
+      addUlebToGrowingBuffer(&callSiteBuf,callSite->length);
+      addUlebToGrowingBuffer(&callSiteBuf,callSite->landingPadPosition);
+      if(callSite->hasAction)
+      {
+        if(callSite->firstAction >= lsda->numActionEntries)
+        {
+          death("Invalid firstAction for call site, index is too high\n");
+        }
+        //note that we make the offset one more than it really is
+        //because of gcc convention to tell whether or not there is an
+        //action at all
+        addUlebToGrowingBuffer(&callSiteBuf,1+actionIdxToOffset[callSite->firstAction]);
+      }
+      else
+      {
+        byte noAction=0;
+        addToGrowingBuffer(&callSiteBuf,&noAction,1);
+      }
+    }
+
+    GrowingBuffer typeTableBuf;
+    ZERO(typeTableBuf);
+    for(int j=lsda->numTypeEntries-1;j>=0;j--)
+    {
+      //it appears empirically that this is the format the type table
+      //takes. Not really governed by any standard.
+      addToGrowingBuffer(&typeTableBuf,lsda->typeTable+j,4);
+    }
+
+    //ok, now we have the messy problem of calculating the offset of
+    //the end of the type table from the location at which we write
+    //the offset of the type table. This is icky because it depends on
+    //the alignment of the type table, which must be 4-byte aligned
+    //and that alignment depends on how many bytes are taken up by
+    //writing the offset. We kludgily solve this by always making sure
+    //we have extra space to move things around by a few bytes.
+
+
+    usint callSiteLengthLEBNumBytes;
+    byte* callSiteLengthLEB=encodeAsLEB128((byte*)&callSiteBuf.len,sizeof(callSiteBuf.len),false,&callSiteLengthLEBNumBytes);
+
+    addr_t ttBaseOffsetGuess=1+callSiteLengthLEBNumBytes+callSiteBuf.len+actionBuf.len+typeTableBuf.len;
+    usint ttBaseOffsetNumBytes;
+    byte* ttBaseOffsetLEB=encodeAsLEB128((byte*)&ttBaseOffsetGuess,sizeof(ttBaseOffsetGuess),false,&ttBaseOffsetNumBytes);
+    //see if there's some wiggle room at the bottom
+    bool foundRoom=false;
+    for(int idx=ttBaseOffsetNumBytes-1;idx>=0;idx--)
+    {
+      if(((ttBaseOffsetLEB[idx] &0x7f)!=0x7f && idx>0) ||
+         ((ttBaseOffsetLEB[idx] &0x70)!=0x70))
+      {
+        foundRoom=true;
+        break;
+      }
+    }
+    if(!foundRoom)
+    {
+      //add another byte to the LEB for wiggle room
+      ttBaseOffsetLEB=realloc(ttBaseOffsetLEB,ttBaseOffsetNumBytes+1);
+      ttBaseOffsetLEB[ttBaseOffsetNumBytes-1] |= 0x80;//to show that it is no
+                                             //longer the MSB
+      ttBaseOffsetLEB[ttBaseOffsetNumBytes]=0;
+      ttBaseOffsetNumBytes++;
+    }
+
+
+    //this is the offset from the beginning of the section to the
+    //beginning of the type table
+    addr_t offsetStartToTTTop=buf->len-lsdaStartOffset+ttBaseOffsetNumBytes
+      +1 //for call site format
+      +callSiteLengthLEBNumBytes+callSiteBuf.len
+      +actionBuf.len;
+    int misalignment=4-(offsetStartToTTTop%4);
+    //type table must be 4-byte aligned
+    offsetStartToTTTop+=misalignment;
+    //to get ttBase, add the length of the type table buf and subtract
+    //the number of bytes before the location we write the offset to
+    //get a self-relative offset
+    addr_t ttBaseOffset=offsetStartToTTTop+typeTableBuf.len-
+      (buf->len-lsdaStartOffset)-1;//-1 because points to last entry
+                                   //-in table, not below it table it
+                                   //-appears (no standard to confirm)
+    usint ttBaseOffsetNumBytesNew;
+    ttBaseOffsetLEB=encodeAsLEB128((byte*)&ttBaseOffset,sizeof(ttBaseOffset),false,
+                                   &ttBaseOffsetNumBytesNew);
+    if(ttBaseOffsetNumBytesNew > ttBaseOffsetNumBytes)
+    {
+      //we added in wiggle room but didn't actually have to use
+      //it. We'll just waste a byte
+      assert(ttBaseOffsetNumBytesNew-ttBaseOffsetNumBytes==1);
+      ttBaseOffsetLEB=realloc(ttBaseOffsetLEB,ttBaseOffsetNumBytes);
+      ttBaseOffsetLEB[ttBaseOffsetNumBytes-1] |= 0x80;//to show that it is no
+                                             //longer the MSB
+      ttBaseOffsetLEB[ttBaseOffsetNumBytes]=0;
+    }
+
+    //now we can actually write everything in
+    addToGrowingBuffer(buf,ttBaseOffsetLEB,ttBaseOffsetNumBytes);
+    byte callSiteFormat=DW_EH_PE_uleb128;
+    addToGrowingBuffer(buf,&callSiteFormat,1);
+    addToGrowingBuffer(buf,callSiteLengthLEB,callSiteLengthLEBNumBytes);
+    addToGrowingBuffer(buf,callSiteBuf.data,callSiteBuf.len);
+    free(callSiteBuf.data);
+    addToGrowingBuffer(buf,actionBuf.data,actionBuf.len);
+    free(actionBuf.data);
+    if(misalignment)
+    {
+      word_t zero=0;
+      addToGrowingBuffer(buf,&zero,misalignment);
+    }
+    addToGrowingBuffer(buf,typeTableBuf.data,typeTableBuf.len);
+    free(typeTableBuf.data);
+  }//end loop over lsdas for writing
+  
+}
+
 int compareEhFrameHdrTableEntries(const void* a_,const void* b_)
 {
   const EhFrameHdrTableEntry* a=a_;
@@ -551,6 +770,30 @@ int compareEhFrameHdrTableEntries(const void* a_,const void* b_)
 //the memory for the buffer should free'd when the caller is finished with it
 CallFrameSectionData buildCallFrameSectionData(CallFrameInfo* cfi)
 {
+  CallFrameSectionData result;
+  ZERO(result);
+  
+  //useless if not an eh_frame
+  Map* outLSDAIdxToOffset=NULL;
+
+  //if present, deal with .gcc_except_table first because the mapping
+  //from addresses/offsets to LSDA locations comes into play when
+  //writing FDES
+  if(cfi->isEHFrame)
+  {
+    //todo: choose bucket size sensibly, not magic number 100
+    outLSDAIdxToOffset=integerMapCreate(100);
+    GrowingBuffer exceptTableBuf;
+    ZERO(exceptTableBuf);
+
+    if(cfi->exceptTable)
+    {
+      buildExceptTableRawData(cfi,&exceptTableBuf,outLSDAIdxToOffset);
+      result.gccExceptTableData=exceptTableBuf.data;
+      result.gccExceptTableLen=exceptTableBuf.len;
+    }
+  }
+  
   GrowingBuffer buf;
   //allocate 1k initially as an arbitrary amount. We'll grow it as needed
   buf.allocated=10000;
@@ -570,7 +813,6 @@ CallFrameSectionData buildCallFrameSectionData(CallFrameInfo* cfi)
   }
   free(cieOffsets);
 
-  CallFrameSectionData result;
   result.ehData=buf.data;
   result.ehDataLen=buf.len;
   
@@ -795,6 +1037,10 @@ ExceptTable parseExceptFrame(Elf_Scn* scn)
 
       idx_t previousActionIdx=-1;
 
+      //keep track so we don't set the call site for everything in the
+      //chain, which would be wrong
+      bool fixedFirstAction=false;
+
       //follow the action chain for a single call site
       while(true)
       {
@@ -805,7 +1051,7 @@ ExceptTable parseExceptFrame(Elf_Scn* scn)
         //printf("nextRecordPtr is %i\n",(int)nextRecordPtr);
         if(nextRecordPtr != 0)
         {
-          //add numBytesOut to make it relative to the start of the act
+          //add numBytesOut to make it relative to the start of the action record
           nextRecordPtr+=numBytesOut;
         }
         highestActionOffset=max(highestActionOffset,actionOffset+numBytesOut+numBytesOut2);
@@ -816,6 +1062,10 @@ ExceptTable parseExceptFrame(Elf_Scn* scn)
           if(lsda->actionTable[k].typeFilterIndex==typeIdx &&
              lsda->actionTable[k].nextAction==nextRecordPtr)
           {
+            //we already read this action
+
+            //make the first action field into the correct form
+            lsda->callSiteTable[j].firstAction=k;
             foundAction=true;
             break;
           }
@@ -829,7 +1079,18 @@ ExceptTable parseExceptFrame(Elf_Scn* scn)
         lsda->actionTable=realloc(lsda->actionTable,sizeof(ActionRecord)*lsda->numActionEntries);
         idx_t actionIdx=lsda->numActionEntries-1;
         memset(lsda->actionTable+actionIdx,0,sizeof(ActionRecord));
-        lsda->actionTable[actionIdx].typeFilterIndex=typeIdx;
+
+        if(!fixedFirstAction)
+        {
+          //make the first action field into the correct form
+          lsda->callSiteTable[j].firstAction=actionIdx;
+          fixedFirstAction=true;//otherwise we keep setting it over
+                                //again for everything in the chain,
+                                //which is wrong
+        }
+        
+        //type indices seem to be 1-based, we make them 0-based
+        lsda->actionTable[actionIdx].typeFilterIndex=typeIdx-1;
         //can't set nextAction yet as we don't know the index of the
         //next one. Can set the one for the last though
         if(previousActionIdx!=-1)
@@ -839,7 +1100,12 @@ ExceptTable parseExceptFrame(Elf_Scn* scn)
         if(nextRecordPtr==0)
         {
           //reached the end of this chain
+          lsda->actionTable[actionIdx].hasNextAction=false;
           break;
+        }
+        else
+        {
+          lsda->actionTable[actionIdx].hasNextAction=true;
         }
         actionOffset=(sword_t)actionOffset+nextRecordPtr;
         previousActionIdx=actionIdx;

@@ -67,16 +67,6 @@ typedef unsigned char byte;
 typedef signed char sbyte;
 
 
-typedef struct
-{
-  byte* data;
-  int len;
-  int allocated;
-} GrowingBuffer;
-
-void addToGrowingBuffer(GrowingBuffer* buf,void* data,int dataLen);
-
-
 //malloc, check return value, and zero
 void* zmalloc(size_t size);
 
@@ -93,8 +83,12 @@ void death(const char* reason,...);
       death("No enough memory at %s:line %d ", __FILE__, __LINE__); \
   }
 
+
 //! \brief Set memory space starts at pointer \a n of size \a m to zero. 
 #define BZERO(n,m)  memset(n, 0, m)
+
+#define ZERO(a) memset(&a,0,sizeof(a))
+
 
 #define GARBAGE 0xCC //204 decimal
 

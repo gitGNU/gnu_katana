@@ -131,7 +131,8 @@ void addInstruction(DwarfInstructions* instrs,DwarfInstruction* instr);
 
 typedef enum _DwarfInstructionPrintFlags
 {
-  DWIPF_NO_REG_NAMES=1
+  DWIPF_NO_REG_NAMES=1,
+  DWIPF_DWARFSCRIPT=2 //we're printing things for purposes of dwarfscript
 } DwarfInstructionPrintFlags;
 
 //printing flags should be OR'd DwarfInstructionPrintFlags

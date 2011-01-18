@@ -59,7 +59,8 @@ am__objects_3 = katana-dictionary.$(OBJEXT) katana-hash.$(OBJEXT) \
 	katana-util.$(OBJEXT) katana-map.$(OBJEXT) \
 	katana-list.$(OBJEXT) katana-logging.$(OBJEXT) \
 	katana-path.$(OBJEXT) katana-refcounted.$(OBJEXT) \
-	katana-stack.$(OBJEXT) katana-cxxutil.$(OBJEXT)
+	katana-stack.$(OBJEXT) katana-cxxutil.$(OBJEXT) \
+	katana-growingBuffer.$(OBJEXT)
 am__objects_4 = katana-fdedump.$(OBJEXT) katana-dwinfo_dump.$(OBJEXT) \
 	katana-unsafe_funcs_dump.$(OBJEXT)
 am__objects_5 = katana-rewrite.$(OBJEXT)
@@ -263,8 +264,8 @@ PATCHER_SRC = patcher/hotpatch.c patcher/target.c patcher/patchapply.c patcher/v
 PATCHER_H = patcher/hotpatch.h patcher/target.h patcher/patchapply.h patcher/versioning.h patcher/linkmap.h patcher/safety.h patcher/pmap.h
 PATCHWRITE_SRC = patchwrite/patchwrite.c patchwrite/codediff.c patchwrite/typediff.c  patchwrite/sourcetree.c patchwrite/write_to_dwarf.c patchwrite/elfcmp.c
 PATCHWRITE_H = patchwrite/patchwrite.h patchwrite/codediff.h patchwrite/typediff.h patchwrite/sourcetree.h patchwrite/write_to_dwarf.h patchwrite/elfcmp.h
-UTIL_SRC = util/dictionary.c util/hash.c util/util.c util/map.c util/list.c util/logging.c util/path.c util/refcounted.c util/stack.c util/cxxutil.cpp
-UTIL_H = util/dictionary.h util/hash.h util/util.h util/map.h util/list.h util/logging.h util/path.h util/refcounted.h util/stack.h util/cxxutil.h
+UTIL_SRC = util/dictionary.c util/hash.c util/util.c util/map.c util/list.c util/logging.c util/path.c util/refcounted.c util/stack.c util/cxxutil.cpp util/growingBuffer.c
+UTIL_H = util/dictionary.h util/hash.h util/util.h util/map.h util/list.h util/logging.h util/path.h util/refcounted.h util/stack.h util/cxxutil.h util/growingBuffer.h
 SHELL_VARIABLE_SRC = shell/variableTypes/elfVariableData.cpp shell/variableTypes/rawVariableData.cpp shell/variableTypes/arrayData.cpp shell/variableTypes/elfSectionData.cpp
 SHELL_VARIABLE_H = shell/variableTypes/elfVariableData.h shell/variableTypes/rawVariableData.h shell/variableTypes/arrayData.h shell/variableTypes/elfSectionData.h
 SHELL_COMMANDS_SRC = shell/commands/command.cpp shell/commands/loadCommand.cpp shell/commands/saveCommand.cpp shell/commands/replaceCommand.cpp shell/commands/dwarfscriptCommand.cpp shell/commands/shellCommand.cpp shell/commands/infoCommand.cpp 
@@ -386,6 +387,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-elfwriter.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-fdedump.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-fderead.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-growingBuffer.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-hash.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-hotpatch.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-infoCommand.Po@am__quote@
@@ -970,6 +972,20 @@ katana-stack.obj: util/stack.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='util/stack.c' object='katana-stack.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-stack.obj `if test -f 'util/stack.c'; then $(CYGPATH_W) 'util/stack.c'; else $(CYGPATH_W) '$(srcdir)/util/stack.c'; fi`
+
+katana-growingBuffer.o: util/growingBuffer.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-growingBuffer.o -MD -MP -MF $(DEPDIR)/katana-growingBuffer.Tpo -c -o katana-growingBuffer.o `test -f 'util/growingBuffer.c' || echo '$(srcdir)/'`util/growingBuffer.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-growingBuffer.Tpo $(DEPDIR)/katana-growingBuffer.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='util/growingBuffer.c' object='katana-growingBuffer.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-growingBuffer.o `test -f 'util/growingBuffer.c' || echo '$(srcdir)/'`util/growingBuffer.c
+
+katana-growingBuffer.obj: util/growingBuffer.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-growingBuffer.obj -MD -MP -MF $(DEPDIR)/katana-growingBuffer.Tpo -c -o katana-growingBuffer.obj `if test -f 'util/growingBuffer.c'; then $(CYGPATH_W) 'util/growingBuffer.c'; else $(CYGPATH_W) '$(srcdir)/util/growingBuffer.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/katana-growingBuffer.Tpo $(DEPDIR)/katana-growingBuffer.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='util/growingBuffer.c' object='katana-growingBuffer.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -c -o katana-growingBuffer.obj `if test -f 'util/growingBuffer.c'; then $(CYGPATH_W) 'util/growingBuffer.c'; else $(CYGPATH_W) '$(srcdir)/util/growingBuffer.c'; fi`
 
 katana-fdedump.o: info/fdedump.c
 @am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(katana_CFLAGS) $(CFLAGS) -MT katana-fdedump.o -MD -MP -MF $(DEPDIR)/katana-fdedump.Tpo -c -o katana-fdedump.o `test -f 'info/fdedump.c' || echo '$(srcdir)/'`info/fdedump.c

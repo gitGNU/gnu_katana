@@ -72,6 +72,7 @@ typedef struct CallFrameInfo
   //todo: should really support relocations and then don't need to know this now
   addr_t sectionAddress;
   addr_t ehHdrAddress;//address of .eh_frame_hdr
+  addr_t exceptTableAddress;//address of .gcc_except_table
   //exception handling table, info that would be stored in
   //.gcc_except_frame
   struct ExceptTable* exceptTable;
@@ -154,6 +155,8 @@ typedef struct
   int ehDataLen;
   byte* ehHdrData;
   int ehHdrDataLen;
+  byte* gccExceptTableData;
+  int gccExceptTableLen;
 } CallFrameSectionData;
 
 //the info contained in a call-site table entry in a LSDA in
@@ -174,6 +177,7 @@ typedef struct
   idx_t nextAction;//the index into the actionTable associated with
                    //the LSDA of the next action record in the chain
                    //of action records to look at.
+  bool hasNextAction;
 } ActionRecord;
 
 
