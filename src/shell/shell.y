@@ -150,6 +150,11 @@ dwarfscriptcmd : T_DWARFSCRIPT T_COMPILE param
   fprintf(stderr,"Usage: dwarfscript compile  DWARFSCIRPT_FILENAME [DEBUG_DATA_OUT]\n");
   YYERROR;
 }
+| T_DWARFSCRIPT error
+{
+  fprintf(stderr,"Valid dwarfscript operations are 'compile' and 'emit'\n");
+  YYERROR;
+}
 
 /* translatecmd : T_TRANSLATE translate_fmt translate_fmt param */
 /* { */
