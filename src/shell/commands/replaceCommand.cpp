@@ -62,6 +62,16 @@ extern "C"
 ReplaceCommand::ReplaceCommand(ReplacementType type,ShellParam* elfObject,ShellParam* which,ShellParam* newThing)
   :type(type),elfObjectP(elfObject),whichThingP(which),newThingP(newThing)
 {
+  elfObjectP->grab();
+  whichThingP->grab();
+  newThingP->grab();
+}
+
+ReplaceCommand::~ReplaceCommand()
+{
+  elfObjectP->drop();
+  whichThingP->drop();
+  newThingP->drop();
 }
 
 void ReplaceCommand::execute()

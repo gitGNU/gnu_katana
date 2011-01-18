@@ -57,6 +57,7 @@
     getting replaced and the newThing parameter determines what it is
     getting replaced with
 */
+
 
 #ifndef replace_command_h
 #define replace_command_h
@@ -73,6 +74,7 @@ class ReplaceCommand : public ShellCommand
 {
 public:
   ReplaceCommand(ReplacementType type,ShellParam* elfObject,ShellParam* whichThingP,ShellParam* newThing);
+  virtual ~ReplaceCommand();
   virtual void execute();
 protected:
   ReplacementType type;
