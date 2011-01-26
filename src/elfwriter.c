@@ -103,6 +103,25 @@ void replaceScnData(Elf_Data* dataDest,void* data,int size)
   elf_flagdata(dataDest,ELF_C_SET,ELF_F_DIRTY);
 }
 
+//like replaceScnData except only modifies size amount of data
+//starting at offset. If offset+size is longer than the current length
+//of the data, extends it as necessary
+void modifyScnData(Elf_Data* dataDest,word_t offset,void* data,int size)
+{
+  if(offset+size > dataDest->d_size)
+  {
+    dataDest->d_buf=realloc(dataDest->d_buf,offset+size);
+    MALLOC_CHECK(dataDest->d_buf);
+    //zero out the data we just added that we won't fill
+    if(offset > dataDest->d_size)
+    {
+      memset(dataDest->d_buf+dataDest->d_size,0,offset-dataDest->d_size);
+    }
+    dataDest->d_size=offset+size;
+  }
+  memcpy((byte*)dataDest->d_buf+offset,data,size);
+}
+
 //adds an entry to the string table, return its offset
 int addStrtabEntry(ElfInfo* e,char* str)
 {

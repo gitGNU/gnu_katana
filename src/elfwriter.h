@@ -71,6 +71,11 @@ addr_t addDataToScn(Elf_Data* dataDest,void* data,int size);
 //wipes out the existing information in dataDest and replaces it with data
 void replaceScnData(Elf_Data* dataDest,void* data,int size);
 
+//like replaceScnData except only modifies size amount of data
+//starting at offset. If offset+size is longer than the current length
+//of the data, extends it as necessary
+void modifyScnData(Elf_Data* dataDest,word_t offset,void* data,int size);
+
 //adds an entry to the string table, return its offset
 int addStrtabEntry(ElfInfo* e,char* str);
 //return index of entry in symbol table
