@@ -71,7 +71,7 @@ public:
   DwarfscriptCommand(DwarfscriptOperation op,ShellParam* input,ShellParam* outfile);
   //constructor for emit operation
   DwarfscriptCommand(DwarfscriptOperation op,ShellParam* sectionName,ShellParam* elfObject,ShellParam* outfile);
-  ~DwarfscriptCommand();
+  virtual ~DwarfscriptCommand();
   virtual void execute();
 protected:
   void emitDwarfscript();
