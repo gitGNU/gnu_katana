@@ -1,7 +1,7 @@
 /*
   File: replaceCommand.h
   Author: James Oakley
-  Copyright (C): 2010 Dartmouth College
+  Copyright (C): 2011 Dartmouth College
   License: Katana is free software: you may redistribute it and/or
   modify it under the terms of the GNU General Public License as
   published by the Free Software Foundation, either version 2 of the
@@ -49,7 +49,7 @@
   http://www.gnu.org/licenses/gpl.html
     
   Project:  Katana
-  Date: December 2010
+  Date: January 2011
   Description: Command class for the katana shell. This command allows
     something to be replaced in an ELF object. The basic idea is that
     the type of replacement determines what *sort* of thing is being
@@ -57,7 +57,6 @@
     getting replaced and the newThing parameter determines what it is
     getting replaced with
 */
-
 
 #ifndef replace_command_h
 #define replace_command_h
@@ -68,6 +67,7 @@
 typedef enum
 {
   RT_SECTION=1,
+  RT_RAW,//replace the raw bytes at some offset in the ELF file
 } ReplacementType;
 
 class ReplaceCommand : public ShellCommand
@@ -81,7 +81,6 @@ protected:
   ShellParam* elfObjectP;
   ShellParam* whichThingP;
   ShellParam* newThingP;
-  
 };
 
 #endif

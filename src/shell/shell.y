@@ -7,6 +7,7 @@
 #include "commands/shellCommand.h"
 #include "commands/dwarfscriptCommand.h"
 #include "commands/infoCommand.h"
+#include "commands/hashCommand.h"
 #include "arrayAccessParam.h"  
 #include "parse_helper.h"
   
@@ -40,11 +41,13 @@ extern "C"
 
 %}
 
+%expect 0
 //Token definitions
 %token T_LOAD T_SAVE T_TRANSLATE T_REPLACE T_SECTION T_VARIABLE T_STRING_LITERAL
 %token T_DATA T_DWARFSCRIPT T_COMPILE T_EMIT T_SHELL_COMMAND
+%token T_HASH T_ELF
 %token T_INFO T_EXCEPTION_HANDLING
-%token T_NONNEG_INT
+%token T_NONNEG_INT T_RAW
 %token T_INVALID_TOKEN
 %token T_EOL T_EOF
 
@@ -108,6 +111,7 @@ commandline : loadcmd {$$=$1;$$.type=PNT_CMD;}
 | replacecmd {$$=$1;$$.type=PNT_CMD;}
 | shellcmd {$$=$1;$$.type=PNT_CMD;}
 | infocmd {$$=$1;$$.type=PNT_CMD;}
+| hashcmd {$$=$1;$$.type=PNT_CMD;}
 
 
 loadcmd : T_LOAD param
@@ -176,6 +180,13 @@ replacecmd : T_REPLACE T_SECTION param param param
   $4.u.param->drop();
   $5.u.param->drop();
 }
+| T_REPLACE T_RAW param param param
+{
+  $$.u.cmd=new ReplaceCommand(RT_RAW,$3.u.param,$4.u.param,$5.u.param);
+  $3.u.param->drop();
+  $4.u.param->drop();
+  $5.u.param->drop();
+}
 
 shellcmd : T_SHELL_COMMAND param
 {
@@ -201,6 +212,19 @@ infocmd : T_INFO T_EXCEPTION_HANDLING param param
   YYERROR;
 }
 
+hashcmd : T_HASH T_ELF param
+{
+  $$.u.cmd=new HashCommand(HT_ELF,$3.u.param);
+  $3.u.param->drop();
+}
+| T_HASH error
+{
+  fprintf(stderr,"Usage: hash TYPE STRING_TO_HASH\n");
+  fprintf(stderr,"The only hash type currently supported is 'elf'\n");
+  YYERROR;
+}
+
+
 param : variable
 {
   $$.u.param=$1.u.var;
@@ -216,6 +240,11 @@ param : variable
 | variable '[' nonneg_int_lit ']'
 {
   $$.u.param=new ShellArrayAccessParam($1.u.var,$3.u.intval);
+  $$.type=PNT_PARAM;
+}
+| nonneg_int_lit
+{
+  $$.u.param=new ShellIntParam($1.u.intval);
   $$.type=PNT_PARAM;
 }
 

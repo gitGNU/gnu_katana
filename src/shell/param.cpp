@@ -58,12 +58,12 @@
 //The default shell parameter is just a string
 //ShellVariables are also a type of ShellParameter
 ShellParam::ShellParam()
-  :stringValue(NULL),result(NULL)
+  :result(NULL),stringValue(NULL)
 {
 }
 
 ShellParam::ShellParam(char* string)
-  :stringValue(string),result(NULL)
+  :result(NULL),stringValue(string)
 {
 }
 
@@ -114,6 +114,19 @@ char* ShellParam::getString(int idx)
   assert(result && result->type==SPC_STRING_VALUE);
   return result->u.str;
 }
+
+int ShellParam::getInt(int idx)
+{
+  if(!isCapable(SPC_INT_VALUE))
+  {
+    logprintf(ELL_WARN,ELS_SHELL,"Attempting to get int value for a variable that cannot be converted to an int\n");
+    return 0;
+  }
+  ParamDataResult* result=this->getData(SPC_INT_VALUE,idx);
+  assert(result && result->type==SPC_INT_VALUE);
+  return result->u.intval;
+}
+
 ElfInfo* ShellParam::getElfObject(int idx)
 {
   if(!isCapable(SPC_ELF_VALUE))
@@ -147,4 +160,40 @@ SectionHeaderData* ShellParam::getSectionHeader(int idx)
   }
   ParamDataResult* result=this->getData(SPC_SECTION_HEADER,idx);
   return result->u.shdr;
+}
+
+ShellIntParam::ShellIntParam(sword_t intval)
+  :value(intval)
+{
+}
+ShellIntParam::~ShellIntParam()
+{
+}
+
+ParamDataResult* ShellIntParam::getData(ShellParamCapability dataType,int idx)
+{
+  switch(dataType)
+  {
+  case SPC_INT_VALUE:
+    if(!this->result)
+    {
+      this->result=(ParamDataResult*)zmalloc(sizeof(ParamDataResult));
+      MALLOC_CHECK(this->result);
+    }
+    this->result->type=dataType;
+    this->result->u.intval=this->value;
+    return result;
+    break;
+  default:
+    logprintf(ELL_WARN,ELS_SHELL,"Parameter asked for data type it cannot supply\n");
+    return NULL;
+  }
+}
+bool ShellIntParam::isCapable(ShellParamCapability cap,int idx)
+{
+  if(cap==SPC_INT_VALUE)
+  {
+    return true;
+  }
+  return false;
 }

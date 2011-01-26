@@ -68,6 +68,7 @@ typedef enum
 {
   SPC_SECTION_HEADER,
   SPC_STRING_VALUE,
+  SPC_INT_VALUE,
   SPC_ELF_VALUE,
   SPC_RAW_DATA,
   SPC_VARIABLE_DATA,//for arrays
@@ -98,6 +99,7 @@ struct ParamDataResult
   {
     ElfInfo* elf;
     char* str;
+    sword_t intval;
     struct
     {
       byte* data;
@@ -123,13 +125,27 @@ class ShellParam : public RefCountedClass
 
   //convenience functions
   char* getString(int idx=0);
+  int getInt(int idx=0);
   ElfInfo* getElfObject(int idx=0);
   byte* getRawData(int* numBytesOut,int idx=0);
   SectionHeaderData* getSectionHeader(int idx=0);
-  private:
-    char* stringValue;
+protected:
   ParamDataResult* result;
+private:
+  char* stringValue;
+
   
+};
+
+class ShellIntParam : public ShellParam
+{
+public:
+  ShellIntParam(sword_t intval);
+  virtual ~ShellIntParam();
+  virtual ParamDataResult* getData(ShellParamCapability dataType,int idx=0);
+  virtual bool isCapable(ShellParamCapability cap,int idx=0);
+protected:
+  sword_t value;
 };
 
 #endif

@@ -27,6 +27,7 @@ extern bool returnedEOFAlready;
 
 VARIABLE         \$[_a-zA-Z0-9]+
 NONNEG_INT [0-9]+
+HEX        0[Xx][0-9a-fA-F]+
 FLOAT     ([0-9]*\.[0-9]+)|([0-9]+\.[0-9]*)
 D_QUOTE_STRING  [\"][^\"\n][\"]
 S_QUOTE_STRING  [\'][^\'\n][\']
@@ -45,18 +46,22 @@ S_QUOTE_STRING  [\'][^\'\n][\']
 "translate" return T_TRANSLATE;
 "replace" return T_REPLACE;
 "section" return T_SECTION;
+"raw" return T_RAW;
 "data"    return T_DATA;
 "dwarfscript" return T_DWARFSCRIPT;
 "compile" return T_COMPILE;
 "emit" return T_EMIT;
 "info" return T_INFO;
 "eh" return T_EXCEPTION_HANDLING;
+"hash" return T_HASH;
+"elf" return T_ELF;
 ";" return ';';
 "\[" return '[';
 "\]" return ']';
 
 {VARIABLE}   savedVarName=strdup(yytext);return T_VARIABLE;
 {NONNEG_INT}   savedInt=atoi(yytext); return T_NONNEG_INT;
+{HEX}   savedInt=strtol(yytext, NULL, 16); return T_NONNEG_INT;
 
 
 <IN_STRING>{

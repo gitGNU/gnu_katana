@@ -57,6 +57,7 @@
 extern "C"
 {
 #include "elfutil.h"
+#include "util/file.h"
 }
 
 ReplaceCommand::ReplaceCommand(ReplacementType type,ShellParam* elfObject,ShellParam* which,ShellParam* newThing)
@@ -86,7 +87,7 @@ void ReplaceCommand::execute()
       if(!scn)
       {
         logprintf(ELL_WARN,ELS_SHELL,"Unable to find section '%s' when trying to execute replace section commnad\n",whichSectionName);
-        return;
+        throw "Cannot replace section";
       }
       Elf_Data* dataForSection=elf_getdata(scn,NULL);
       int dataLen=0;
@@ -106,6 +107,75 @@ void ReplaceCommand::execute()
         
         gelf_update_shdr(scn,&shdr);
       }
+    }
+    break;
+  case RT_RAW:
+    {
+      if(!whichThingP->isCapable(SPC_INT_VALUE))
+      {
+        logprintf(ELL_WARN,ELS_SHELL,"replace raw must be given a file offset at which to replace bytes\n");
+        throw "Unable to perform replace raw command";
+      }
+      word_t offset=whichThingP->getInt();
+      byte* rawBytes=NULL;
+      int rawBytesLen;
+      bool shouldFreeRawBytes=false;
+      if(newThingP->isCapable(SPC_RAW_DATA))
+      {
+        rawBytes=newThingP->getRawData(&rawBytesLen);
+      }
+      else if(newThingP->isCapable(SPC_STRING_VALUE))
+      {
+        //treat the string as a filename
+        char* filename=newThingP->getString();
+        rawBytes=(byte*)getFileContents(filename,&rawBytesLen);
+      }
+      else
+      {
+        throw "Unable to get raw data from parameter";
+      }
+
+      Elf_Scn* closestScn=NULL;
+      GElf_Shdr closestScnShdr;
+      
+      //now the tough thing to do is to find the right section to
+      //insert this data into
+      for(Elf_Scn* scn=elf_nextscn (e->e,NULL);scn;scn=elf_nextscn(e->e,scn))
+      {
+        GElf_Shdr shdr;
+        gelf_getshdr(scn,&shdr);
+        if(offset > shdr.sh_offset)
+        {
+          if(!closestScn || shdr.sh_offset > closestScnShdr.sh_offset)
+          {
+            //we've found a section we might be able to extend to get
+            //to the offset we need
+            closestScn=scn;
+            closestScnShdr=shdr;
+            if(shdr.sh_offset + shdr.sh_size > offset+rawBytesLen)
+            {
+              //the data we want to place fits exactly within the section
+              break;
+            }
+          }
+        }
+      }
+      if(!closestScn)
+      {
+        logprintf(ELL_WARN,ELS_SHELL,"Unable to find any ELF section in which to replace from file offset 0x%zx to 0x%zx\n",offset,offset+rawBytesLen);
+        throw "Unable to replace raw data\n";
+      }
+      
+      modifyScnData(elf_getdata(closestScn,NULL),offset-closestScnShdr.sh_offset,rawBytes,rawBytesLen);
+      logprintf(ELL_INFO_V2,ELS_SHELL,"Replaced %i bytes in section %s\n",
+                rawBytesLen,
+                getSectionNameFromIdx(e,elf_ndxscn(closestScn)));
+
+      if(shouldFreeRawBytes)
+      {
+        free(rawBytes);
+      }
+        
     }
     break;
   default:

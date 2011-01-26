@@ -93,7 +93,8 @@ HEX        0[Xx][0-9a-fA-F]+
 HEXDATA    hex;[0-9a-fA-F]*
 FLOAT     -?(([0-9]*\.[0-9]+)|([0-9]+\.[0-9]*))
 REGISTER  r[0-9]+
-
+BAD_DW_OP DW_OP_[^ \n\r\t]*
+DW_OP_lit DW_OP_lit[0-9]+
 %%
 
 "#"        BEGIN(POUND_COMMENT);
@@ -211,7 +212,7 @@ REGISTER  r[0-9]+
 "DW_OP_le" return T_DW_OP_le;
 "DW_OP_lt" return T_DW_OP_lt;
 "DW_OP_ne" return T_DW_OP_ne;
-"DW_OP_litn" return T_DW_OP_litn;
+{DW_OP_lit} savedInt=atoi(yydwtext+9); return T_DW_OP_litn;
 "DW_OP_regn" return T_DW_OP_regn;
 "DW_OP_bregn" return T_DW_OP_bregn;
 "DW_OP_regx" return T_DW_OP_regx;
@@ -230,6 +231,7 @@ REGISTER  r[0-9]+
 "DW_OP_bit_piece" return T_DW_OP_bit_piece;
 "DW_OP_implicit_value" return T_DW_OP_implicit_value;
 "DW_OP_stack_value" return T_DW_OP_stack_value;
+{BAD_DW_OP} fprintf(stderr,"Encountered unknown DW_OP  '%s' at line %i\n",yytext,dwLineNumber);return T_INVALID_TOKEN;
 
   /*pointer encodings*/
 "DW_EH_PE_absptr" savedInt=DW_EH_PE_absptr; return T_DW_PTR_ENCODING;

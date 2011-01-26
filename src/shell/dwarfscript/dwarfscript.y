@@ -608,6 +608,10 @@ int_lit : T_INT
 {
   $$.u.intval=savedInt;
 }
+| T_POS_INT
+{
+  $$.u.intval=savedInt;
+}
 
 register_lit : T_REGISTER
 {
@@ -949,6 +953,7 @@ dw_op_const1u : T_DW_OP_const1u nonneg_int_lit
   $$.u.opInstr.type=DW_OP_const1u;
   $$.u.opInstr.arg1=$2.u.intval;
 }
+
 dw_op_const1s : T_DW_OP_const1s int_lit
 {
   $$.u.opInstr.type=DW_OP_const1s;
@@ -989,6 +994,12 @@ dw_op_constu : T_DW_OP_constu nonneg_int_lit
   $$.u.opInstr.type=DW_OP_constu;
   $$.u.opInstr.arg1=$2.u.intval;
 }
+| T_DW_OP_constu
+{
+  fprintf(stderr,"expected integer constant after DW_OP_constu\n");
+  YYERROR;
+}
+
 dw_op_consts : T_DW_OP_consts int_lit
 {
   $$.u.opInstr.type=DW_OP_consts;
@@ -1007,9 +1018,10 @@ dw_op_over : T_DW_OP_over
 {
 $$.u.opInstr.type=DW_OP_over
 }
-dw_op_pick : T_DW_OP_pick
+dw_op_pick : T_DW_OP_pick nonneg_int_lit
 {
-$$.u.opInstr.type=DW_OP_pick
+  $$.u.opInstr.type=DW_OP_pick;
+  $$.u.opInstr.arg1=savedInt;
 }
 dw_op_swap : T_DW_OP_swap
 {
@@ -1117,10 +1129,14 @@ dw_op_ne : T_DW_OP_ne
 {
   $$.u.opInstr.type=DW_OP_ne;
 }
-dw_op_litn : T_DW_OP_litn nonneg_int_lit int_lit
+dw_op_litn : T_DW_OP_litn
 {
-  $$.u.opInstr.type=DW_OP_lit0+$2.u.intval;
-  $$.u.opInstr.arg1=$3.u.intval;
+  if(savedInt > 31)
+  {
+    logprintf(ELL_ERR,ELS_DWARFSCRIPT,"DW_OP_lit cannot take value greater than 31\n");
+    YYERROR;
+  }
+  $$.u.opInstr.type=DW_OP_lit0+savedInt;
 }
 dw_op_regn : T_DW_OP_regn nonneg_int_lit
 {
