@@ -116,14 +116,6 @@ size_t sextend(size_t val,int fromWhichByte)
   return val;
 }
 
-//Note: reseeksfile to the beginning
-int getFileLength(FILE* f)
-{
-  fseek(f,0,SEEK_END);
-  int flen=ftell(f);
-  fseek(f,0,SEEK_SET);
-  return flen;
-}
 
 //get a hexadecimal string version of binary string
 char* getHexDataString(byte* data,int len)
