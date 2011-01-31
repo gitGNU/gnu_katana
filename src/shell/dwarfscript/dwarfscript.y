@@ -1142,10 +1142,17 @@ dw_op_regn : T_DW_OP_regn nonneg_int_lit
 {
   $$.u.opInstr.type=DW_OP_reg0+$2.u.intval;
 }
-dw_op_bregn : T_DW_OP_bregn nonneg_int_lit int_lit
+
+//stage because we have to get savedInt here while it's valid
+stage_dw_op_bregn : T_DW_OP_bregn
 {
-  $$.u.opInstr.type=DW_OP_breg0+$2.u.intval;
-  $$.u.opInstr.arg1=$3.u.intval;
+  $$.u.opInstr.type=DW_OP_breg0+savedInt;
+}
+
+dw_op_bregn : stage_dw_op_bregn int_lit
+{
+  $$.u.opInstr.type=$1.u.opInstr.type;
+  $$.u.opInstr.arg1=$2.u.intval;
 }
 dw_op_regx : T_DW_OP_regx nonneg_int_lit
 {

@@ -612,7 +612,7 @@ byte* encodeDwarfExprAsFormBlock(DwarfExpr expr,usint* numBytesOut)
       }
       break;
     default:
-      death("Unsupported DW_OP with code 0x%x\n",instr->type);
+      death("While encoding DWARF expression, unsupported DW_OP with code 0x%x\n",instr->type);
     }
   }
   //unfortunately we have to do a bunch of memory copying because we
