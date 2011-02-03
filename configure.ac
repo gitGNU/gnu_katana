@@ -44,6 +44,7 @@ AC_CHECK_LIB(elf,elf_begin,[fndlibPlaceholder],[doMissingLibrary])
 #AC_CHECK_LIB(unwind-generic,[fndlibPlaceholder],[doMissingLibrary])
 AC_CHECK_LIB(unwind-ptrace,_UPT_create,[fndlibPlaceholder],[doMissingLibrary])
 AC_CHECK_LIB(m,ceil,[fndlibPlaceholder],[doMissingLibrary])
+AC_CHECK_LIB(readline,rl_initialize,[fndlibPlaceholder],[doMissingLibrary])
 
 echo "operation system....."$host_os
 case $host_os in
