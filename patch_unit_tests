@@ -3,4 +3,4 @@
 #start fresh with a new log file
 rm -f validator_log 
 
-./run_tests.py -d tests
+./run_tests.py -d tests/hotpatch
