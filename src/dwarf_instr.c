@@ -241,7 +241,7 @@ void printInstruction(FILE* file,RegInstruction inst,int printFlags)
     break;
   case DW_CFA_offset:
     {
-      signed long int tmp;
+      word_t tmp;
       memcpy(&tmp,&inst.arg2,sizeof(inst.arg2));
       fprintf(file,"DW_CFA_offset r%zi %zi\n",inst.arg1,tmp);
     }
