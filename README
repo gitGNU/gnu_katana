@@ -1,12 +1,17 @@
 This is a preliminary version of Katana, a toolchain-oriented
 hotpatching system for userland (in contrast to kernel-patching
-systems such as KSplice). More complete documentation will reside in
+systems such as KSplice) and a (somewhat) general-purpose ELF and
+DWARF manipulation tool. More complete documentation will reside in
 ./doc, although such is currently in a very early state
 
 
 DEPENDENCIES
 libelf
-  widely available with a couple different implementations
+  widely available with a couple different implementations. I
+  recommend the one from Red Hat at
+  https://fedorahosted.org/elfutils/. The FSF version
+  (http://directory.fsf.org/project/libelf/) which is the default
+  available to gentoo users, does not seem to be fully compatible.
 libdwarf
   you can get the latest version of libdwarf from
   http://reality.sgiweb.org/davea/dwarf.html. 
@@ -14,6 +19,10 @@ libunwind
   http://www.nongnu.org/libunwind/
 libreadline
   http://www.gnu.org/software/readline/
+bison
+  http://www.gnu.org/software/bison/
+flex
+  http://flex.sourceforge.net/
 
 BUILDING
 ./configure
@@ -29,10 +38,18 @@ TESTING
 To make sure katana works:
 make check
 
-USAGE
-To generate a patch file, run
-katana -g [-o OUT_FULE] OLD_OBJECT_TREE NEW_OBJECT_TREE EXEC
-(EXEC is the name of the executable file whose process will be patched)
+Note that at present this only tests the hotpatching features of katana
 
-To patch a process run
-katana -p PATCH_FILE PID
+USAGE
+  Katana presently has two main functions
+  HOTPATCHING
+    To generate a patch file, run
+    katana -g [-o OUT_FULE] OLD_OBJECT_TREE NEW_OBJECT_TREE EXEC
+    (EXEC is the name of the executable file whose process will be patched)
+
+    To patch a process run
+    katana -p PATCH_FILE PID
+
+  ELF/DWARF Manipulation
+    Documentation has not yet been written. Email
+    electron100@gmail.com if you are interested in this.
