@@ -6,9 +6,9 @@ bin_PROGRAMS=katana
 INCLUDEFLAGS=-I ../include -I /usr/local/include/libdwarf -I /usr/include/libdwarf
 DEFINEFLAGS=-D_POSIX_SOURCE -D_BSD_SOURCE -D_XOPEN_SOURCE -D_GNU_SOURCE -DDEBUG -Doff64_t=__off64_t 
 
-katana_CFLAGS=$(INCLUDEFLAGS) -g -Wall -Werror -Wno-error=pointer-sign -std=c99 $(DEFINEFLAGS)
+katana_CFLAGS=$(INCLUDEFLAGS) -g -Wall -std=c99 $(DEFINEFLAGS)
 
-katana_CPPFLAGS=$(INCLUDEFLAGS) -g -Wall -Werror -Wno-error=pointer-sign  $(DEFINEFLAGS)
+katana_CPPFLAGS=$(INCLUDEFLAGS) -g -Wall  $(DEFINEFLAGS)
 
 
 katana_LDFLAGS=-L /usr/local/lib -L ../external/
