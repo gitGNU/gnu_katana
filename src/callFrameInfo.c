@@ -571,8 +571,17 @@ void buildFDERawData(CallFrameInfo* cfi,FDE* fde,uint* cieOffsets,addr_t* lsdaPo
     {
       if(fde->hasLSDAPointer)
       {
-        augmentationDataLen=getPointerSizeFromEHPointerEncoding(fde->cie->fdeLSDAPointerEncoding);
-        memcpy(augmentationData,&lsdaPointers[fde->lsdaIdx],augmentationDataLen);
+        //+1 is because it will take one byte to encode the
+        //augmentation data length. We haven't computed it yet, which
+        //is why we don't use +augmenationDataLengthLen
+        addr_t augmentationDataAddress=cfi->sectionAddress+buf->len+sizeof(header)+
+          initialLocationByteLen+addressRangeByteLen + 1;
+        addr_t encodedLSDAPointer=
+          encodeEHPointerFromEncoding(lsdaPointers[fde->lsdaIdx],
+                                      fde->cie->fdeLSDAPointerEncoding,
+                                      augmentationDataAddress,
+                                      &augmentationDataLen);
+        memcpy(augmentationData,&encodedLSDAPointer,augmentationDataLen);
       }
       else
       {
