@@ -673,7 +673,7 @@ Map* readDebugFrame(ElfInfo* elf,bool ehInsteadOfDebug)
         }
         if(isMatch)
         {
-          augDataOffset=ptr-(byte*)fdeBytes;
+          augDataOffset=fdeOffset+ptr-(byte*)fdeBytes;
           break;
         }
         else
