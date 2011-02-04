@@ -1,1 +1,1 @@
-SUBDIRS=hotpatch code
+SUBDIRS=hotpatch code dwarf
