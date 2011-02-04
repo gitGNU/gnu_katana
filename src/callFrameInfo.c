@@ -145,6 +145,7 @@ addr_t encodeEHPointerFromEncoding(addr_t pointer,byte encoding,
     //no special application encoding needed. This does not seem to be
     //properly documented in the LSB, but in practice it seems to be
     //observed.
+    return pointer;
     break;
   case DW_EH_PE_pcrel:
     return pointer-pointerLocation;
