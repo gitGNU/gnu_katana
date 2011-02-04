@@ -499,6 +499,7 @@ Map* readDebugFrame(ElfInfo* elf,bool ehInsteadOfDebug)
   Map* result=integerMapCreate(100);//todo: remove arbitrary constant 100
   Dwarf_Error err;
   Dwarf_Debug dbg;
+  addr_t* lsdaPointers=NULL;
   if(DW_DLV_OK!=dwarf_elf_init(elf->e,DW_DLC_READ,&dwarfErrorHandler,NULL,&dbg,&err))
   {
     dwarfErrorHandler(err,NULL);
@@ -530,7 +531,9 @@ Map* readDebugFrame(ElfInfo* elf,bool ehInsteadOfDebug)
     Elf_Scn* exceptTableSection=getSectionByName(elf,".gcc_except_table");
     if(exceptTableSection)
     {
-      ExceptTable et=parseExceptFrame(exceptTableSection);
+      getShdr(exceptTableSection,&shdr);
+      elf->callFrameInfo.exceptTableAddress=shdr.sh_addr;
+      ExceptTable et=parseExceptFrame(exceptTableSection,&lsdaPointers);
       elf->callFrameInfo.exceptTable=zmalloc(sizeof(ExceptTable));
       memcpy(elf->callFrameInfo.exceptTable,&et,sizeof(et));
     }
@@ -682,7 +685,7 @@ Map* readDebugFrame(ElfInfo* elf,bool ehInsteadOfDebug)
       //turn the offset into an address
       addr_t augDataAddr=elf->callFrameInfo.sectionAddress+augDataOffset;
       parseFDEAugmentationData(elf->callFrameInfo.fdes+i,augDataAddr,
-                               augdata,augdataLen);
+                               augdata,augdataLen,lsdaPointers,elf->callFrameInfo.exceptTable->numLSDAs);
     }
     
     int* key=zmalloc(sizeof(int));

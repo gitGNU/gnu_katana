@@ -7,6 +7,7 @@ CallFrameInfo* parsedCallFrameInfo=&cfi;
 FDE* currentFDE;
 CIE* currentCIE;
 LSDA* currentLSDA;
+static addr_t* lsdaPointers;
 CallSiteRecord* currentCallSite;
 ActionRecord* currentAction; 
 //used when reading a DWARF expression 
@@ -57,9 +58,9 @@ void makeBasicRegister2(ParseNode* node,ParseNode* intvalNode);
 %token T_INDEX T_DATA_ALIGN T_CODE_ALIGN T_RET_ADDR_RULE T_AUGMENTATION
 %token T_INITIAL_LOCATION  T_ADDRESS_RANGE T_OFFSET T_LENGTH T_CIE_INDEX
 %token T_VERSION T_ADDRESS_SIZE T_SEGMENT_SIZE 
-%token T_AUGMENTATION_DATA T_SECTION_TYPE T_SECTION_LOC T_EH_HDR_LOC
+%token T_AUGMENTATION_DATA T_SECTION_TYPE T_SECTION_LOC T_EH_HDR_LOC T_EXCEPT_TABLE_ADDR
 %token T_LPSTART T_POSITION T_LANDING_PAD T_HAS_ACTION T_FIRST_ACTION
-%token T_TYPE_IDX T_NEXT T_TYPEINFO T_LSDA_POINTER
+%token T_TYPE_IDX T_NEXT T_TYPEINFO T_LSDA_IDX
 %token T_FDE_PTR_ENC T_FDE_LSDA_PTR_ENC T_PERSONALITY
 //CFA instructions
 %token T_DW_CFA_offset T_DW_CFA_advance_loc T_DW_CFA_restore T_DW_CFA_extended
@@ -268,6 +269,7 @@ top_property_stmt :
 section_type_prop {}
 | section_location_prop {}
 | eh_hdr_location_prop {}
+| except_table_addr_prop {}
 
 cie_property_stmt :
 index_prop {}
@@ -292,7 +294,7 @@ index_prop {}
 | initial_location_prop {}
 | address_range_prop {}
 | augmentation_data_prop {}
-| lsda_pointer_prop {}
+| lsda_idx_prop {}
 
 lsda_part :
 lsda_property_stmt {}
@@ -415,7 +417,9 @@ augmentation_data_prop : T_AUGMENTATION_DATA ':' data_lit
   else
   {
     assert(currentFDE);
-    parseFDEAugmentationData(currentFDE,0,$3.u.dataval.data,$3.u.dataval.len);
+    //todo: I don't think this will work, probably will not have read
+    //this data yet
+    parseFDEAugmentationData(currentFDE,0,$3.u.dataval.data,$3.u.dataval.len,lsdaPointers,cfi.exceptTable->numLSDAs);
   }
 }
 
@@ -497,6 +501,11 @@ section_location_prop : T_SECTION_LOC ':' nonneg_int_lit
 eh_hdr_location_prop : T_EH_HDR_LOC ':' nonneg_int_lit
 {
   cfi.ehHdrAddress=$3.u.intval;
+}
+
+except_table_addr_prop : T_EXCEPT_TABLE_ADDR ':' nonneg_int_lit
+{
+  cfi.exceptTableAddress=$3.u.intval;
 }
 
 lpstart_prop : T_LPSTART ':' nonneg_int_lit
@@ -592,11 +601,11 @@ next_prop : T_NEXT ':' nonneg_int_lit
   currentAction->hasNextAction=false;
 }
 
-lsda_pointer_prop : T_LSDA_POINTER ':' nonneg_int_lit
+lsda_idx_prop : T_LSDA_IDX ':' nonneg_int_lit
 {
   assert(currentFDE);
   currentFDE->hasLSDAPointer=true;
-  currentFDE->lsdaPointer=$3.u.intval;
+  currentFDE->lsdaIdx=$3.u.intval;
 }
 
 

@@ -135,7 +135,7 @@ void printFDEInfo(FILE* file,FDE* fde,int num,ElfInfo* elf)
   if(flags & CAF_FDE_LSDA)
   {
     assert(fde->hasLSDAPointer);
-    fprintf(file,"\tLSDA pointer: 0x%zx\n",fde->lsdaPointer);
+    fprintf(file,"\tLSDA index: 0x%zx\n",fde->lsdaIdx);
   }
   fprintf(file,"  Instructions:\n");
   for(int i=0;i<fde->numInstructions;i++)

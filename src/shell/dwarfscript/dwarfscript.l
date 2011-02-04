@@ -132,7 +132,8 @@ DW_OP_regn DW_OP_reg[0-9]+
 "fde_ptr_enc" return T_FDE_PTR_ENC;
 "fde_lsda_ptr_enc" return T_FDE_LSDA_PTR_ENC;
 "personality" return T_PERSONALITY;
-"lsda_pointer" return T_LSDA_POINTER;
+"lsda_idx" return T_LSDA_IDX;
+"except_table_addr" return T_EXCEPT_TABLE_ADDR;
 
  /* section names */
 "FDE"|"fde" return T_FDE;

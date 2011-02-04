@@ -316,7 +316,7 @@ void parseAugmentationStringAndData(CIE* cie,char* augmentationString,byte* data
   }
 }
 
-void parseFDEAugmentationData(FDE* fde,addr_t augDataAddress,byte* augmentationData,int augmentationDataLen)
+void parseFDEAugmentationData(FDE* fde,addr_t augDataAddress,byte* augmentationData,int augmentationDataLen,addr_t* lsdaPointers,int numLSDAPointers)
 {
   //todo: are there any other types of augmentation we may encounter?
   if(fde->cie->augmentationFlags & CAF_FDE_LSDA)
@@ -326,14 +326,23 @@ void parseFDEAugmentationData(FDE* fde,addr_t augDataAddress,byte* augmentationD
     {
       death("Mismatch between CIE and FDE: FDE does not have expected LSDA pointer augmentation data\n");
     }
-    fde->lsdaPointer=
+    addr_t lsdaPointer=
       decodeEHPointer(augmentationData,
                       augmentationDataLen,
                       augDataAddress,
                       fde->cie->fdeLSDAPointerEncoding,NULL);
+    fde->hasLSDAPointer=true;
+    for(int i=0;i<numLSDAPointers;i++)
+    {
+      if(lsdaPointers[i]==lsdaPointer)
+      {
+        fde->lsdaIdx=i;
+        return;
+      }
+    }
+    death("FDE appears to have an invalid LSDA pointer\n");
     
   }
-  fde->hasLSDAPointer=true;
 }
 
 void buildCIERawData(CIE* cie,GrowingBuffer* buf,bool isEHFrame)
@@ -468,7 +477,7 @@ void buildCIERawData(CIE* cie,GrowingBuffer* buf,bool isEHFrame)
   destroyRawInstructions(rawInstructions);
 }
 
-void buildFDERawData(CallFrameInfo* cfi,FDE* fde,uint* cieOffsets,GrowingBuffer* buf)
+void buildFDERawData(CallFrameInfo* cfi,FDE* fde,uint* cieOffsets,addr_t* lsdaPointers,GrowingBuffer* buf)
 {
   //todo: support 64-bit DWARF format. Here I am always building 32-bit dwarf format
 
@@ -563,7 +572,7 @@ void buildFDERawData(CallFrameInfo* cfi,FDE* fde,uint* cieOffsets,GrowingBuffer*
       if(fde->hasLSDAPointer)
       {
         augmentationDataLen=getPointerSizeFromEHPointerEncoding(fde->cie->fdeLSDAPointerEncoding);
-        memcpy(augmentationData,&fde->lsdaPointer,augmentationDataLen);
+        memcpy(augmentationData,&lsdaPointers[fde->lsdaIdx],augmentationDataLen);
       }
       else
       {
@@ -620,24 +629,18 @@ typedef struct
   int32 fdeAddress;
 } EhFrameHdrTableEntry;
 
-//the Map parameter is used to store the transformation from an LSDA
-//index to the actual offset from the start of the .gcc_except_frame
-//that the LSDA lives at. This will be necessary when writing the FDEs
+//the lsdaPointers parameter is used to store the transformation from an LSDA
+//index to the actual address that the LSDA lives at. This will be necessary when writing the FDEs
 void buildExceptTableRawData(CallFrameInfo* cfi,GrowingBuffer* buf,
-                             Map* outLSDAIdxToOffset)
+                             addr_t** lsdaPointers)
 {
-  //use a slightly more manageable name internal to the function
-  Map* idxMap=outLSDAIdxToOffset;
   ExceptTable* table=cfi->exceptTable;
   assert(table);
+  *lsdaPointers=zmalloc(table->numLSDAs*sizeof(addr_t));
   for(int i=0;i<table->numLSDAs;i++)
   {
     //update the map
-    int* key=zmalloc(sizeof(int));
-    *key=i;
-    addr_t* value=zmalloc(sizeof(addr_t));
-    *value=buf->len;
-    mapInsert(idxMap,key,value);
+    (*lsdaPointers)[i]=cfi->exceptTableAddress+buf->len;
     
     //now get on with actually building the binary data
     LSDA* lsda=table->lsdas+i;
@@ -855,21 +858,19 @@ CallFrameSectionData buildCallFrameSectionData(CallFrameInfo* cfi)
   ZERO(result);
   
   //useless if not an eh_frame
-  Map* outLSDAIdxToOffset=NULL;
+  addr_t* lsdaPointers;
 
   //if present, deal with .gcc_except_table first because the mapping
   //from addresses/offsets to LSDA locations comes into play when
   //writing FDES
   if(cfi->isEHFrame)
   {
-    //todo: choose bucket size sensibly, not magic number 100
-    outLSDAIdxToOffset=integerMapCreate(100);
     GrowingBuffer exceptTableBuf;
     ZERO(exceptTableBuf);
 
     if(cfi->exceptTable)
     {
-      buildExceptTableRawData(cfi,&exceptTableBuf,outLSDAIdxToOffset);
+      buildExceptTableRawData(cfi,&exceptTableBuf,&lsdaPointers);
       result.gccExceptTableData=exceptTableBuf.data;
       result.gccExceptTableLen=exceptTableBuf.len;
     }
@@ -890,7 +891,7 @@ CallFrameSectionData buildCallFrameSectionData(CallFrameInfo* cfi)
   for(int i=0;i<cfi->numFDEs;i++)
   {
     fdeOffsets[i]=buf.len;
-    buildFDERawData(cfi,cfi->fdes+i,cieOffsets,&buf);
+    buildFDERawData(cfi,cfi->fdes+i,cieOffsets,lsdaPointers,&buf);
   }
   free(cieOffsets);
 
@@ -977,7 +978,7 @@ CallFrameSectionData buildCallFrameSectionData(CallFrameInfo* cfi)
 //format of this section is not governed by any standard, so there is
 //no means to validate that what we are doing is correct or even that
 //it will work with all binaries emitted by gcc
-ExceptTable parseExceptFrame(Elf_Scn* scn)
+ExceptTable parseExceptFrame(Elf_Scn* scn,addr_t** lsdaPointers)
 {
   ExceptTable result;
   memset(&result,0,sizeof(result));
@@ -997,6 +998,9 @@ ExceptTable parseExceptFrame(Elf_Scn* scn)
   {
     //increase the number of LSDAs
     result.numLSDAs++;
+    *lsdaPointers=realloc(*lsdaPointers,sizeof(addr_t)*result.numLSDAs);
+    MALLOC_CHECK(*lsdaPointers);
+    (*lsdaPointers)[result.numLSDAs-1]=sectionAddress+offset;
     result.lsdas=realloc(result.lsdas,result.numLSDAs*sizeof(LSDA));
     LSDA* lsda=&(result.lsdas[result.numLSDAs-1]);
     memset(lsda,0,sizeof(LSDA));

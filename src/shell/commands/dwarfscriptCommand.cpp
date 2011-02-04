@@ -155,7 +155,7 @@ void DwarfscriptCommand::printFDEInfo(FILE* file,ElfInfo* elf,FDE* fde)
   fprintf(file,"address_range: 0x%x\n",fde->highpc-fde->lowpc);
   if(fde->hasLSDAPointer)
   {
-    fprintf(file,"lsda_pointer: 0x%zx\n",fde->lsdaPointer);
+    fprintf(file,"lsda_idx: 0x%zx\n",fde->lsdaIdx);
   }
   fprintf(file,"begin INSTRUCTIONS\n");
   for(int i=0;i<fde->numInstructions;i++)
@@ -262,6 +262,7 @@ void DwarfscriptCommand::emitDwarfscript()
   if(cfi->isEHFrame)
   {
     fprintf(file,"eh_hdr_addr: 0x%zx\n",cfi->ehHdrAddress);
+    fprintf(file,"except_table_addr: 0x%zx\n",cfi->exceptTableAddress);
   }
   for(int i=0;i<cfi->numCIEs;i++)
   {

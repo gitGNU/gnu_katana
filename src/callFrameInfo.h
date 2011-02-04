@@ -140,8 +140,7 @@ typedef struct FDE
   int idx;//what index fde this is in a DWARF section
   
   bool hasLSDAPointer;
-  //todo: this should really store the index of an LSDA, not a pointer
-  addr_t lsdaPointer;
+  idx_t lsdaIdx;
 } FDE;
 
 //struct for raw data returned from buildCallFrameSectionData
@@ -210,7 +209,7 @@ CallFrameSectionData buildCallFrameSectionData(CallFrameInfo* cfi);
 //http://refspecs.freestandards.org/LSB_4.0.0/LSB-Core-generic/LSB-Core-generic/ehframechpt.html
 //for augmentation data information
 void parseAugmentationStringAndData(CIE* cie,char* string,byte* data,int len);
-void parseFDEAugmentationData(FDE* fde,addr_t augDataAddress,byte* augmentationData,int augmentationDataLen);
+void parseFDEAugmentationData(FDE* fde,addr_t augDataAddress,byte* augmentationData,int augmentationDataLen,addr_t* lsdaPointers,int numLSDAPointers);
 
 //decode an eh_frame pointer from the given data. The data pointer
 //must point to an area of data at least len bytes long. The pointer
@@ -223,7 +222,8 @@ addr_t decodeEHPointer(byte* data,int len,addr_t dataStartAddress,byte encoding,
 void printEHPointerEncoding(FILE* file,byte encoding);
 
 //builds an ExceptTable object from the raw ELF section
-ExceptTable parseExceptFrame(Elf_Scn* scn);
+//writes out mapping from lsda indices to addresses
+ExceptTable parseExceptFrame(Elf_Scn* scn,addr_t** lsdaPointers);
 
 
 
