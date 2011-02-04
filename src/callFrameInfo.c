@@ -1211,14 +1211,14 @@ ExceptTable parseExceptFrame(Elf_Scn* scn)
     int ttEntrySize=getPointerSizeFromEHPointerEncoding(ttFormat);
 
     idx_t ttIdx=0;
-    printf("ttBase is 0x%zx\n",ttBase);
-    printf("ttEntrySize is 0x%x\n",ttEntrySize);
-    printf("offset is 0x%zx\n",offset);
+    //printf("ttBase is 0x%zx\n",ttBase);
+    //printf("ttEntrySize is 0x%x\n",ttEntrySize);
+    //printf("offset is 0x%zx\n",offset);
     for(sword_t ttOffset=ttBase-ttEntrySize-offset;
         ttOffset >= 0;
         ttOffset-=ttEntrySize,ttIdx++)
     {
-      printf("ttOffset is 0x%zx\n",ttOffset);
+      //printf("ttOffset is 0x%zx\n",ttOffset);
       lsda->numTypeEntries++;
       lsda->typeTable=realloc(lsda->typeTable,sizeof(word_t)*lsda->numTypeEntries);
       usint numBytesOut;

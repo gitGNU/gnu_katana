@@ -69,6 +69,7 @@
 #include "target.h"
 #include "util/logging.h"
 
+
 //locate the address of the link map
 //todo: this may be more architecture-specific than I'd like
 addr_t locateLinkMap(ElfInfo* e)
@@ -231,7 +232,7 @@ addr_t locateRuntimeSymbolInTarget(ElfInfo* e,char* name)
     addr_t addr;//store the result address
     //can't seem to get rid of a sign cast warning in below line, it seems
     //different library versions of libelf have different signdness for the param there
-    if(locateSymbolInLinkMap(&lm,&addr,name,elf_hash((const unsigned char*)name)))
+    if(locateSymbolInLinkMap(&lm,&addr,name,elf_hash(name)))
     {
       return addr;
     }

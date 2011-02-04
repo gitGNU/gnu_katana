@@ -96,6 +96,7 @@ REGISTER  r[0-9]+
 BAD_DW_OP DW_OP_[^ \n\r\t]*
 DW_OP_lit DW_OP_lit[0-9]+
 DW_OP_bregn DW_OP_breg[0-9]+
+DW_OP_regn DW_OP_reg[0-9]+
 %%
 
 "#"        BEGIN(POUND_COMMENT);
@@ -214,8 +215,8 @@ DW_OP_bregn DW_OP_breg[0-9]+
 "DW_OP_lt" return T_DW_OP_lt;
 "DW_OP_ne" return T_DW_OP_ne;
 {DW_OP_lit} savedInt=atoi(yydwtext+9); return T_DW_OP_litn;
-"DW_OP_regn" return T_DW_OP_regn;
 {DW_OP_bregn} savedInt=atoi(yydwtext+10);return T_DW_OP_bregn;
+{DW_OP_regn} savedInt=atoi(yydwtext+9);return T_DW_OP_regn;
 "DW_OP_regx" return T_DW_OP_regx;
 "DW_OP_fbreg" return T_DW_OP_fbreg;
 "DW_OP_bregx" return T_DW_OP_bregx;
