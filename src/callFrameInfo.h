@@ -209,7 +209,7 @@ CallFrameSectionData buildCallFrameSectionData(CallFrameInfo* cfi);
 //see the Linux Standards Base at
 //http://refspecs.freestandards.org/LSB_4.0.0/LSB-Core-generic/LSB-Core-generic/ehframechpt.html
 //for augmentation data information
-void parseAugmentationStringAndData(CIE* cie,char* string,byte* data,int len);
+void parseAugmentationStringAndData(CIE* cie,char* string,byte* data,int len,addr_t augdataAddress);
 void parseFDEAugmentationData(FDE* fde,addr_t augDataAddress,byte* augmentationData,int augmentationDataLen,addr_t* lsdaPointers,int numLSDAPointers);
 
 //builds an ExceptTable object from the raw ELF section

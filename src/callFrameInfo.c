@@ -66,7 +66,7 @@
 //see the Linux Standards Base at
 //http://refspecs.freestandards.org/LSB_4.0.0/LSB-Core-generic/LSB-Core-generic/ehframechpt.html
 //for augmentation data information. Also in the x86_64 ABI
-void parseAugmentationStringAndData(CIE* cie,char* augmentationString,byte* data,int len)
+void parseAugmentationStringAndData(CIE* cie,char* augmentationString,byte* data,int len,addr_t augDataAddress)
 {
   int cnt=strlen(augmentationString);
   int offset=0;
@@ -89,7 +89,7 @@ void parseAugmentationStringAndData(CIE* cie,char* augmentationString,byte* data
         cie->personalityPointerEncoding=data[offset];
         offset++;
         usint numBytesRead;
-        cie->personalityFunction=decodeEHPointer(data+offset,len-offset,0,
+        cie->personalityFunction=decodeEHPointer(data+offset,len-offset,augDataAddress+offset,
                                                  cie->personalityPointerEncoding,
                                                  &numBytesRead);
         offset+=numBytesRead;

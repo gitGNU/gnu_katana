@@ -560,11 +560,11 @@ Map* readDebugFrame(ElfInfo* elf,bool ehInsteadOfDebug)
     //should respect types more
     if(DW_DLV_OK!=dwarf_get_cie_info(cieData[i],
                                      &cieLength,
-                                     &elf->callFrameInfo.cies[i].version,
+                                     &cie->version,
                                      &augmenter,
-                                     &elf->callFrameInfo.cies[i].codeAlign,
-                                     &elf->callFrameInfo.cies[i].dataAlign,
-                                     &elf->callFrameInfo.cies[i].returnAddrRuleNum,
+                                     &cie->codeAlign,
+                                     &cie->dataAlign,
+                                     &cie->returnAddrRuleNum,
                                      &initInstr,
                                      &initInstrLen, &err))
     {
@@ -577,7 +577,30 @@ Map* readDebugFrame(ElfInfo* elf,bool ehInsteadOfDebug)
                                     &augdata,
                                     &augdataLen,
                                     &err);
-    parseAugmentationStringAndData(cie,augmenter,augdata,augdataLen);
+    //computing the precise address of the augmentation data (for
+    //doing pc-relative pointer encodings) is a bit of a pain.
+    Dwarf_Off cieOff;
+    dwarf_cie_section_offset(dbg,cieData[i],&cieOff,&err);
+    addr_t cieAddress=elf->callFrameInfo.sectionAddress+cieOff;
+    //ok, now we have the address of the cie. We want the offset to
+    //the augmentation todo: the below sizes are all for 32-bit DWARF
+    //format, not 64-bit.  (32-bit DWARF format is still most
+    //prevalent on 64-bit systems and is not directly correlated to
+    //the ELF class)
+    addr_t augdataAddress=cieAddress + 4 //the length fields
+      + 4 //CIE_id
+      + 1 //version byte
+      + strlen(augmenter)+1
+      + 1 //byte for code align, assuming less than 64
+      + 1 //byte for data align, assuming less than 64
+      + 1; //byte for returnAddrRegLen assuming the return address
+           //register is less than 128
+    assert(cie->codeAlign < 64);
+    assert(cie->dataAlign < 64);
+    assert(cie->returnAddrRuleNum < 64);
+
+    
+    parseAugmentationStringAndData(cie,augmenter,augdata,augdataLen,augdataAddress);
     
     //don't care about initial instructions, for patching,
     //but do if we're reading a debug frame for stack unwinding purposes
