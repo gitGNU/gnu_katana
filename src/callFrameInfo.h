@@ -117,6 +117,7 @@ typedef struct CIE
   byte augmentationFlags;//OR'd CIEAugmentFlags
   byte fdePointerEncoding;
   byte fdeLSDAPointerEncoding;
+  byte personalityPointerEncoding;
   addr_t personalityFunction;
 } CIE;
 
@@ -210,16 +211,6 @@ CallFrameSectionData buildCallFrameSectionData(CallFrameInfo* cfi);
 //for augmentation data information
 void parseAugmentationStringAndData(CIE* cie,char* string,byte* data,int len);
 void parseFDEAugmentationData(FDE* fde,addr_t augDataAddress,byte* augmentationData,int augmentationDataLen,addr_t* lsdaPointers,int numLSDAPointers);
-
-//decode an eh_frame pointer from the given data. The data pointer
-//must point to an area of data at least len bytes long. The pointer
-//will not necessarily occupy all of these len bytes.
-//dataStartAddress gives the loaded address (from the ELF object) of
-//the first byte in data this is necessary for pc-relative
-//encoding. bytesRead is the number of bytes actually read
-addr_t decodeEHPointer(byte* data,int len,addr_t dataStartAddress,byte encoding,usint* bytesRead);
-
-void printEHPointerEncoding(FILE* file,byte encoding);
 
 //builds an ExceptTable object from the raw ELF section
 //writes out mapping from lsda indices to addresses

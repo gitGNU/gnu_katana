@@ -61,7 +61,7 @@ void makeBasicRegister2(ParseNode* node,ParseNode* intvalNode);
 %token T_AUGMENTATION_DATA T_SECTION_TYPE T_SECTION_LOC T_EH_HDR_LOC T_EXCEPT_TABLE_ADDR
 %token T_LPSTART T_POSITION T_LANDING_PAD T_HAS_ACTION T_FIRST_ACTION
 %token T_TYPE_IDX T_NEXT T_TYPEINFO T_LSDA_IDX
-%token T_FDE_PTR_ENC T_FDE_LSDA_PTR_ENC T_PERSONALITY
+%token T_FDE_PTR_ENC T_FDE_LSDA_PTR_ENC T_PERSONALITY_PTR_ENC T_PERSONALITY
 //CFA instructions
 %token T_DW_CFA_offset T_DW_CFA_advance_loc T_DW_CFA_restore T_DW_CFA_extended
 %token T_DW_CFA_nop T_DW_CFA_set_loc T_DW_CFA_advance_loc1 T_DW_CFA_advance_loc2
@@ -279,6 +279,7 @@ index_prop {}
 | augmentation_data_prop {}
 | fde_ptr_enc_prop {}
 | fde_lsda_ptr_enc_prop {}
+| personality_ptr_enc_prop {}
 | personality_prop {}
 | address_size_prop {}
 | segment_size_prop {}
@@ -435,6 +436,13 @@ fde_lsda_ptr_enc_prop : T_FDE_LSDA_PTR_ENC ':' dw_pe_lit
   assert(currentCIE);
   currentCIE->fdeLSDAPointerEncoding=$3.u.intval;
   currentCIE->augmentationFlags|=CAF_FDE_LSDA | CAF_DATA_PRESENT;
+}
+
+personality_ptr_enc_prop : T_PERSONALITY_PTR_ENC ':' dw_pe_lit
+{
+  assert(currentCIE);
+  currentCIE->personalityPointerEncoding=$3.u.intval;
+  currentCIE->augmentationFlags|=CAF_PERSONALITY | CAF_DATA_PRESENT;
 }
 
 personality_prop : T_PERSONALITY ':' nonneg_int_lit

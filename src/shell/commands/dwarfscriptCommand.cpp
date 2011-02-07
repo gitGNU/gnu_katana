@@ -60,6 +60,7 @@ extern "C"
 #include "fderead.h"
 #include "shell/dwarfscript/dwarfscript.yy.h"
 #include "elfutil.h"
+#include "eh_pe.h"
   
 extern int yydwdebug;
 extern FILE *yydwin;
@@ -134,7 +135,9 @@ void DwarfscriptCommand::printCIEInfo(FILE* file,CIE* cie)
   }
   if(cie->augmentationFlags & CAF_PERSONALITY)
   {
-    fprintf(file,"personality: 0x%zx\n",cie->personalityFunction);
+    fprintf(file,"personality_ptr_enc: ");
+    printEHPointerEncoding(file,cie->personalityPointerEncoding);
+    fprintf(file,"\npersonality: 0x%zx\n",cie->personalityFunction);
   }
   fprintf(file,"begin INSTRUCTIONS\n");
   for(int i=0;i<cie->numInitialInstructions;i++)

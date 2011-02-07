@@ -61,6 +61,7 @@
 #include "dwarf_instr.h"
 #include "dwarftypes.h"
 #include "elfutil.h"
+#include "eh_pe.h"
 
 Dwarf_Debug dbgForFDEDump;
 

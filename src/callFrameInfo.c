@@ -1,7 +1,7 @@
 /*
   File: callFrameInfo.c
   Author: James Oakley
-  Copyright (C): 2010 Dartmouth College
+  Copyright (C): 2010-2011 Dartmouth College
   License: Katana is free software: you may redistribute it and/or
   modify it under the terms of the GNU General Public License as
   published by the Free Software Foundation, either version 2 of the
@@ -49,7 +49,7 @@
   http://www.gnu.org/licenses/gpl.html
 
   Project: Katana
-  Date: December 2010
+  Date: February, 2011
   Description: Data structures and methods dealing with call frame information
 */
 
@@ -59,218 +59,7 @@
 #include "util/logging.h"
 #include "elfutil.h"
 #include "util/growingBuffer.h"
-
-static char* dwpeApplicationTable[16];
-static char* dwpeFormatTable[16];
-static bool dwpeTablesBuilt=false;
-
-void buildDWPETables()
-{
-  dwpeFormatTable[DW_EH_PE_absptr]="DW_EH_PE_absptr";
-  dwpeFormatTable[DW_EH_PE_udata2]="DW_EH_PE_udata2";
-  dwpeFormatTable[DW_EH_PE_sdata2]="DW_EH_PE_sdata2";
-  dwpeFormatTable[DW_EH_PE_udata4]="DW_EH_PE_udata4";
-  dwpeFormatTable[DW_EH_PE_sdata4]="DW_EH_PE_sdata4";
-  dwpeFormatTable[DW_EH_PE_udata8]="DW_EH_PE_udata8";
-  dwpeFormatTable[DW_EH_PE_sdata8]="DW_EH_PE_sdata8";
-  dwpeFormatTable[DW_EH_PE_uleb128]="DW_EH_PE_uleb128";
-  dwpeFormatTable[DW_EH_PE_sleb128]="DW_EH_PE_sleb128";
-  dwpeApplicationTable[DW_EH_PE_pcrel>>4]="DW_EH_PE_pcrel";
-  dwpeApplicationTable[DW_EH_PE_textrel>>4]="DW_EH_PE_textrel";
-  dwpeApplicationTable[DW_EH_PE_datarel>>4]="DW_EH_PE_datarel";
-  dwpeApplicationTable[DW_EH_PE_funcrel>>4]="DW_EH_PE_funcrel";
-  dwpeApplicationTable[DW_EH_PE_aligned>>4]="DW_EH_PE_aligned";
-  dwpeTablesBuilt=true;
-}
-
-void printEHPointerEncoding(FILE* file,byte encoding)
-{
-  if(!dwpeTablesBuilt)
-  {
-    buildDWPETables();
-  }
-  int format=encoding & 0xF;
-  int application=encoding & 0xF0;
-  if(application)
-  {
-    fprintf(file,"%s, %s",dwpeFormatTable[format],dwpeApplicationTable[application>>4]);
-  }
-  else
-  {
-    fprintf(file,"%s",dwpeFormatTable[format]);
-  }
-}
-
-//pointer encodings for eh_frame as specified by LSB at
-//http://refspecs.freestandards.org/LSB_3.1.0/LSB-Core-generic/LSB-Core-generic/dwarfext.html#DWARFEHENCODING
-int getPointerSizeFromEHPointerEncoding(byte encoding)
-{
-  int format=encoding & 0xF;
-  switch(format)
-  {
-  case DW_EH_PE_absptr:
-    return sizeof(addr_t);
-    break;
-  case DW_EH_PE_udata2:
-  case DW_EH_PE_sdata2:
-    return 2;
-  case DW_EH_PE_udata4:
-  case DW_EH_PE_sdata4:
-    return 4;
-  case DW_EH_PE_udata8:
-  case DW_EH_PE_sdata8:
-    return 8;
-  case DW_EH_PE_uleb128:
-  case DW_EH_PE_sleb128:
-    death("getPointerSize not implemented for LEB encodings yet\n");
-  default:
-    death("getPointerSize not implemented for unknown eh_frame pointer encoding yet\n");
-  }
-  return 0;
-}
-
-//encodes a pointer for writing to .eh_frame. The number of bytes of
-//the returned address that should be used is indicated by numBytesOut
-//the location of the pointer is included for PC-relative addresses
-//pointer encodings for eh_frame as specified by LSB at
-//http://refspecs.freestandards.org/LSB_3.1.0/LSB-Core-generic/LSB-Core-generic/dwarfext.html#DWARFEHENCODING
-addr_t encodeEHPointerFromEncoding(addr_t pointer,byte encoding,
-                                   addr_t pointerLocation,int* numBytesOut)
-{
-  *numBytesOut=getPointerSizeFromEHPointerEncoding(encoding);
-  int application=encoding & 0xF0;
-  switch(application)
-  {
-  case 0:
-    //no special application encoding needed. This does not seem to be
-    //properly documented in the LSB, but in practice it seems to be
-    //observed.
-    return pointer;
-    break;
-  case DW_EH_PE_pcrel:
-    return pointer-pointerLocation;
-    break;
-  case DW_EH_PE_textrel:
-    death("DW_EH_PE_textrel not implemented yet");
-    break;
-  case DW_EH_PE_datarel:
-    death("DW_EH_PE_datarel not implemented yet");
-    break;
-  case DW_EH_PE_funcrel:
-    death("DW_EH_PE_funcrel not implemented yet");
-    break;
-  case DW_EH_PE_aligned:
-    death("DW_EH_PE_aligned not implemented yet");
-    break;
-  default:
-    death("Unknown eh_frame pointer encoding\n");
-    //todo: implement DW_EH_PE_omit
-  }
-  return 0;
-}
-
-//decode an eh_frame pointer from the given data. The data pointer
-//must point to an area of data at least len bytes long. The pointer
-//will not necessarily occupy all of these len bytes.
-//dataStartAddress gives the loaded address (from the ELF object) of
-//the first byte in data this is necessary for pc-relative
-//encoding. bytesRead is the number of bytes actually read
-addr_t decodeEHPointer(byte* data,int len,addr_t dataStartAddress,byte encoding,usint* bytesRead)
-{
-  int application=encoding & 0xF0;
-  int format=encoding & 0xF;
-  addr_t result=0;
-  bool resultSigned=false;
-  usint byteSize=0;
-  switch(format)
-  {
-  case DW_EH_PE_absptr:
-    memcpy(&result,data,min(len,sizeof(addr_t)));
-    byteSize=sizeof(addr_t);
-    break;
-  case DW_EH_PE_sdata2:
-    resultSigned=true;
-  case DW_EH_PE_udata2:
-    assert(len>=2);
-    memcpy(&result,data,2);
-    byteSize=2;
-    break;
-  case DW_EH_PE_sdata4:
-    resultSigned=true;
-  case DW_EH_PE_udata4:
-    assert(len>=4);
-    memcpy(&result,data,4);
-    byteSize=4;
-    break;
-  case DW_EH_PE_udata8:
-  case DW_EH_PE_sdata8:
-    assert(len>=8);
-    assert(sizeof(addr_t)>=8);
-    memcpy(&result,data,8);
-    byteSize=4;
-    break;
-  case DW_EH_PE_uleb128:
-    {
-      usint numBytes;
-      byte* decodedLEB=decodeLEB128(data,false,&numBytes,&byteSize);
-      assert(numBytes<=sizeof(result));
-      memcpy(&result,decodedLEB,numBytes);
-      free(decodedLEB);
-    }
-    break;
-  case DW_EH_PE_sleb128:
-    {
-      resultSigned=true;
-      usint numBytes;
-      byte* decodedLEB=decodeLEB128(data,false,&numBytes,&byteSize);
-      assert(numBytes<=sizeof(result));
-      memcpy(&result,decodedLEB,numBytes);
-      free(decodedLEB);
-    }
-    break;
-  default:
-    //todo: implement DW_EH_PE_omit
-    death("decodeEHPointer not implemented for unknown eh_frame pointer encoding yet\n");
-  }
-
-  if(bytesRead)
-  {
-    *bytesRead=byteSize;
-  }
-  
-  switch(application)
-  {
-  case DW_EH_PE_pcrel:
-    //todo: do I need to treat signed any differently? I forget the
-    //details of how gcc munges arithmetic. Theoretically 2's
-    //complement requires no changes to addition since it's just
-    //overflow...
-    return result+dataStartAddress;
-    break;
-  case DW_EH_PE_textrel:
-    death("DW_EH_PE_textrel not implemented yet");
-    break;
-  case DW_EH_PE_datarel:
-    death("DW_EH_PE_datarel not implemented yet");
-    break;
-  case DW_EH_PE_funcrel:
-    death("DW_EH_PE_funcrel not implemented yet");
-    break;
-  case DW_EH_PE_aligned:
-    death("DW_EH_PE_aligned not implemented yet");
-    break;
-  default:
-    //no standard states it, but examing both code used in libdwarf and code
-    //used in gcc (see the function read_encoded_value_with_base in gcc/unwind-pe.h)
-    //reveals that normal behaviour seems to be to apply no special
-    //offset if the application bits of format are 0. In practice this
-    //behaviour seems to be necessary base don what gcc emits.
-    return result;
-  }
-  return result;
-}
-
-
+#include "eh_pe.h"
 
 //reads the CIE's augmentationData and tries to set up
 //the cie->augmentationInfo
@@ -297,11 +86,11 @@ void parseAugmentationStringAndData(CIE* cie,char* augmentationString,byte* data
       break;
     case 'P':
       {
-        byte personalityPointerEncoding=data[offset];
+        cie->personalityPointerEncoding=data[offset];
         offset++;
         usint numBytesRead;
         cie->personalityFunction=decodeEHPointer(data+offset,len-offset,0,
-                                                 personalityPointerEncoding,
+                                                 cie->personalityPointerEncoding,
                                                  &numBytesRead);
         offset+=numBytesRead;
         cie->augmentationFlags|=CAF_PERSONALITY;
@@ -346,7 +135,7 @@ void parseFDEAugmentationData(FDE* fde,addr_t augDataAddress,byte* augmentationD
   }
 }
 
-void buildCIERawData(CIE* cie,GrowingBuffer* buf,bool isEHFrame)
+void buildCIERawData(CIE* cie,GrowingBuffer* buf,CallFrameInfo* cfi)
 {
   //todo: support 64-bit DWARF format. Here I am always building 32-bit dwarf format
 
@@ -367,7 +156,7 @@ void buildCIERawData(CIE* cie,GrowingBuffer* buf,bool isEHFrame)
   } __attribute__((__packed__)) header2;
 
   //we'll set the length last as we don't know it yet
-  header1.CIE_id=isEHFrame?EH_CIE_ID:DEBUG_CIE_ID;
+  header1.CIE_id=cfi->isEHFrame?EH_CIE_ID:DEBUG_CIE_ID;
   header1.version=cie->version;
   assert(cie->addressSize<256);
   assert(cie->segmentSize<256);
@@ -405,10 +194,14 @@ void buildCIERawData(CIE* cie,GrowingBuffer* buf,bool isEHFrame)
          (cie->personalityFunction & 0xFFFFFFFF00000000) == 0)
       {
         //pointer can fit within 32 bits
-        cieAugmentationData[offset]=DW_EH_PE_udata4;
+        byte encoding=cie->personalityPointerEncoding;
+        cieAugmentationData[offset]=encoding;
         offset++;
-        memcpy(cieAugmentationData+offset,&cie->personalityFunction,4);
-        offset+=4;
+        int numBytesOut;
+        addr_t pointerLocation=cfi->sectionAddress+sizeof(header1)+strlen(augmentationString)+1+codeAlignLen+dataAlignLen+returnAddrRegLen+offset;
+        addr_t personalityFunction=encodeEHPointerFromEncoding(cie->personalityFunction,encoding,pointerLocation,&numBytesOut);
+        memcpy(cieAugmentationData+offset,&personalityFunction,numBytesOut);
+        offset+=numBytesOut;
       }
       else
       {
@@ -896,7 +689,7 @@ CallFrameSectionData buildCallFrameSectionData(CallFrameInfo* cfi)
   for(int i=0;i<cfi->numCIEs;i++)
   {
     cieOffsets[i]=buf.len;
-    buildCIERawData(cfi->cies+i,&buf,cfi->isEHFrame);
+    buildCIERawData(cfi->cies+i,&buf,cfi);
   }
   for(int i=0;i<cfi->numFDEs;i++)
   {

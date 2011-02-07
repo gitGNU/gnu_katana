@@ -134,6 +134,7 @@ DW_OP_regn DW_OP_reg[0-9]+
 "personality" return T_PERSONALITY;
 "lsda_idx" return T_LSDA_IDX;
 "except_table_addr" return T_EXCEPT_TABLE_ADDR;
+"personality_ptr_enc" return T_PERSONALITY_PTR_ENC;
 
  /* section names */
 "FDE"|"fde" return T_FDE;
