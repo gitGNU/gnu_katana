@@ -2,7 +2,7 @@ BFLAGS=-d -v
 dwarfscript.yy.h : dwarfscript.l
 	flex $<
 
-dwarfscript.yy.cpp : dwarfscript.l
+dwarfscript.yy.c : dwarfscript.l
 	flex $<
 
 dwarfscript.tab.c : dwarfscript.y

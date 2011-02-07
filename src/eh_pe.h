@@ -59,6 +59,16 @@
 #ifndef eh_pe_h
 #define eh_pe_h
 
+#include <dwarf.h>
+
+#ifndef DW_EH_PE_indirect
+//not defined in dwarf.h for some reason
+#define DW_EH_PE_indirect 0x80
+#endif
+
+#include "types.h"
+
+
 //decode an eh_frame pointer from the given data. The data pointer
 //must point to an area of data at least len bytes long. The pointer
 //will not necessarily occupy all of these len bytes.

@@ -72,7 +72,8 @@
 #include <stdio.h>
 #include "types.h"   
 #include "shell/dwarfscript/dwarfscript.tab.h"
-#include <dwarf.h>
+#include "eh_pe.h"
+   
 extern int dwLineNumber;
 //values saved for the parser
 extern char* savedString;
@@ -252,6 +253,7 @@ DW_OP_regn DW_OP_reg[0-9]+
 "DW_EH_PE_datarel" savedInt=DW_EH_PE_datarel; return T_DW_PTR_ENCODING;
 "DW_EH_PE_funcrel" savedInt=DW_EH_PE_funcrel; return T_DW_PTR_ENCODING;
 "DW_EH_PE_aligned" savedInt=DW_EH_PE_aligned; return T_DW_PTR_ENCODING;
+"DW_EH_PE_indirect" savedInt=DW_EH_PE_indirect; return T_DW_PTR_ENCODING;
 "DW_EH_PE_omit" savedInt=DW_EH_PE_omit; return T_DW_PTR_ENCODING;
  /*pipe to indicuate using two encodings, one of the data encodings and one of the interpreation encodings*/
 "," return ',';
@@ -283,7 +285,7 @@ DW_OP_regn DW_OP_reg[0-9]+
 [ \t]+  //eat whitespace
 
 \n  dwLineNumber++;
-.   fprintf(stderr,"Encountered invalid token '%s' at line %i\n",yytext,dwLineNumber);return T_INVALID_TOKEN;
+[a-zA-Z0-9_]+   fprintf(stderr,"Encountered invalid token '%s' at line %i\n",yytext,dwLineNumber);return T_INVALID_TOKEN;
 
 %%
 

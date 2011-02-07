@@ -54,9 +54,11 @@
 */
 
 
-#include <dwarf.h>
+
+
+
+#include "eh_pe.h"
 #include "util/util.h"
-#include "types.h"
 #include "leb.h"
 #include "util/logging.h"
 
@@ -81,6 +83,7 @@ void buildDWPETables()
   dwpeApplicationTable[DW_EH_PE_datarel>>4]="DW_EH_PE_datarel";
   dwpeApplicationTable[DW_EH_PE_funcrel>>4]="DW_EH_PE_funcrel";
   dwpeApplicationTable[DW_EH_PE_aligned>>4]="DW_EH_PE_aligned";
+  dwpeApplicationTable[DW_EH_PE_indirect>>4 | DW_EH_PE_pcrel>>4]="DW_EH_PE_indirect, DW_EH_PE_pcrel";
   dwpeTablesBuilt=true;
 }
 
@@ -148,7 +151,11 @@ addr_t encodeEHPointerFromEncoding(addr_t pointer,byte encoding,
 {
   *numBytesOut=getPointerSizeFromEHPointerEncoding(encoding);
   int application=encoding & 0xF0;
-  switch(application)
+  //DW_EH_PE_indirect can be ORd with one of the others.  we don't
+  //care about it right now, all we have to do is to make sure that if
+  //we're told the encoding is indirect that we write it out as
+  //indirect again in the end
+  switch(application & ~DW_EH_PE_indirect)
   {
   case 0:
     //no special application encoding needed. This does not seem to be
@@ -246,8 +253,13 @@ addr_t decodeEHPointer(byte* data,int len,addr_t dataStartAddress,byte encoding,
   {
     *bytesRead=byteSize;
   }
+
+  //DW_EH_PE_indirect can be ORd with one of the others.  we don't
+  //care about it right now, all we have to do is to make sure that if
+  //we're told the encoding is indirect that we write it out as
+  //indirect again in the end
   
-  switch(application)
+  switch(application & ~DW_EH_PE_indirect)
   {
   case DW_EH_PE_absptr:
     return result;

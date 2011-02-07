@@ -7,7 +7,6 @@ CallFrameInfo* parsedCallFrameInfo=&cfi;
 FDE* currentFDE;
 CIE* currentCIE;
 LSDA* currentLSDA;
-static addr_t* lsdaPointers;
 CallSiteRecord* currentCallSite;
 ActionRecord* currentAction; 
 //used when reading a DWARF expression 
@@ -276,7 +275,6 @@ index_prop {}
 | length_prop {}
 | version_prop {}
 | augmentation_prop {}
-| augmentation_data_prop {}
 | fde_ptr_enc_prop {}
 | fde_lsda_ptr_enc_prop {}
 | personality_ptr_enc_prop {}
@@ -294,7 +292,6 @@ index_prop {}
 | cie_index_prop {}
 | initial_location_prop {}
 | address_range_prop {}
-| augmentation_data_prop {}
 | lsda_idx_prop {}
 
 lsda_part :
@@ -402,26 +399,6 @@ augmentation_prop : T_AUGMENTATION ':' string_lit
 {
   fprintf(stderr,"augmentation must be a string\n");
   YYERROR;
-}
-
-augmentation_data_prop : T_AUGMENTATION_DATA ':' data_lit
-{
-  if(currentCIE)
-  {
-    if(augmentationString)
-    {
-      fprintf(stderr,"augmentation must be read before augmentation_data\n");
-      YYERROR;
-    }
-    parseAugmentationStringAndData(currentCIE,augmentationString,$3.u.dataval.data,$3.u.dataval.len);
-  }
-  else
-  {
-    assert(currentFDE);
-    //todo: I don't think this will work, probably will not have read
-    //this data yet
-    parseFDEAugmentationData(currentFDE,0,$3.u.dataval.data,$3.u.dataval.len,lsdaPointers,cfi.exceptTable->numLSDAs);
-  }
 }
 
 fde_ptr_enc_prop : T_FDE_PTR_ENC ':' dw_pe_lit
@@ -649,11 +626,13 @@ string_lit : T_STRING_LITERAL
   $$.u.stringval=savedString;
 }
 
-data_lit : T_HEXDATA
+/*hexdata lit no longer used now that we don't allow direct hex setting of augmentation data
+  data_lit : T_HEXDATA
 {
   $$.u.dataval.data=savedData;
   $$.u.dataval.len=savedDataLen;
 }
+*/
 
 bool_lit : T_BOOL_TRUE
 {
