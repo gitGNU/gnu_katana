@@ -13,7 +13,7 @@ dwarfscript.tab.h : dwarfscript.y
 	bison $(BFLAGS) -o dwarfscript.tab.cpp $<
 
 
-all-local: dwarfscript.yy.cpp dwarfscript.tab.c
+all-local: dwarfscript.yy.c dwarfscript.tab.c
 
 clean-local:
 	rm -f dwarfscript.yy.* dwarfscript.tab.*
