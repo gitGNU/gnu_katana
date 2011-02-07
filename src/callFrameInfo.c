@@ -187,9 +187,22 @@ void buildCIERawData(CIE* cie,GrowingBuffer* buf,CallFrameInfo* cfi)
     augmentationString[0]='z';
     augmentationString[1]='\0';
     //construct the cie augmentation data buffer and augmentation string
+    //create the string first
     if(cie->augmentationFlags & CAF_PERSONALITY)
     {
       strcat(augmentationString,"P");
+    }
+    if(cie->augmentationFlags & CAF_FDE_LSDA)
+    {
+      strcat(augmentationString,"L");
+    }
+    if(cie->augmentationFlags & CAF_FDE_ENC)
+    {
+      strcat(augmentationString,"R");
+    }
+    //and then the data buffer
+    if(cie->augmentationFlags & CAF_PERSONALITY)
+    {
       if(sizeof(cie->personalityFunction)<=4 ||
          (cie->personalityFunction & 0xFFFFFFFF00000000) == 0)
       {
@@ -198,7 +211,7 @@ void buildCIERawData(CIE* cie,GrowingBuffer* buf,CallFrameInfo* cfi)
         cieAugmentationData[offset]=encoding;
         offset++;
         int numBytesOut;
-        addr_t pointerLocation=cfi->sectionAddress+sizeof(header1)+strlen(augmentationString)+1+codeAlignLen+dataAlignLen+returnAddrRegLen+offset;
+        addr_t pointerLocation=cfi->sectionAddress+buf->len+sizeof(header1)+strlen(augmentationString)+1+codeAlignLen+dataAlignLen+returnAddrRegLen+offset;
         addr_t personalityFunction=encodeEHPointerFromEncoding(cie->personalityFunction,encoding,pointerLocation,&numBytesOut);
         memcpy(cieAugmentationData+offset,&personalityFunction,numBytesOut);
         offset+=numBytesOut;
@@ -214,12 +227,10 @@ void buildCIERawData(CIE* cie,GrowingBuffer* buf,CallFrameInfo* cfi)
     }
     if(cie->augmentationFlags & CAF_FDE_LSDA)
     {
-      strcat(augmentationString,"L");
       cieAugmentationData[offset++]=cie->fdeLSDAPointerEncoding;
     }
     if(cie->augmentationFlags & CAF_FDE_ENC)
     {
-      strcat(augmentationString,"R");
       cieAugmentationData[offset++]=cie->fdePointerEncoding;
     }
     cieAugmentationDataLen=offset;
