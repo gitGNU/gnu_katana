@@ -7,10 +7,8 @@ check()
   fi
 }
 
-katana recompile.ksh
+../../../katana recompile.ksh
 check
-./test_mod > log
-check
-diff log test.out
+diff test.dws test_mod.dws
 check
 

@@ -21,7 +21,7 @@ AC_INIT([katana],[0.2a],[electron100@gmail.com])
 
 
 AC_CANONICAL_TARGET
-AM_INIT_AUTOMAKE([-Wall -Werror foreign])
+AM_INIT_AUTOMAKE([color-tests -Wall -Werror foreign])
 SAVED_CFLAGS="$CFLAGS"
 SAVED_CPPFLAGS="$CPPFLAGS"
 SAVED_CXXFLAGS="$CXXFLAGS"
@@ -31,7 +31,7 @@ CFLAGS=$SAVED_CFLAGS #avoid the default CFLAGS set by AC_PROG_CC
 CPPFLAGS=$SAVED_CPPFLAGS #avoid the default set by AC_PROG_CXX
 CXXFLAGS=$SAVED_CXXFLAGS #avoid the default set by AC_PROG_CXX
 AC_CONFIG_HEADERS([config.h])
-AC_CONFIG_FILES([Makefile  src/Makefile tests/Makefile tests/code/Makefile tests/dwarf/Makefile tests/dwarf/passthrough/Makefile src/shell/Makefile src/shell/dwarfscript/Makefile tests/hotpatch/Makefile tests/hotpatch/t1_basic/Makefile tests/hotpatch/t1_basic/v0/Makefile tests/hotpatch/t1_basic/v1/Makefile tests/hotpatch/t2_nested_types/Makefile tests/hotpatch/t2_nested_types/v0/Makefile tests/hotpatch/t2_nested_types/v1/Makefile tests/hotpatch/t3_multiple_cu/Makefile tests/hotpatch/t3_multiple_cu/v0/Makefile tests/hotpatch/t3_multiple_cu/v1/Makefile tests/hotpatch/t4_new_var/Makefile tests/hotpatch/t4_new_var/v0/Makefile tests/hotpatch/t4_new_var/v1/Makefile tests/hotpatch/t5_pointers/Makefile tests/hotpatch/t5_pointers/v0/Makefile tests/hotpatch/t5_pointers/v1/Makefile tests/hotpatch/t6_unions_enums/Makefile tests/hotpatch/t6_unions_enums/v0/Makefile tests/hotpatch/t6_unions_enums/v1/Makefile tests/hotpatch/t7_const/Makefile tests/hotpatch/t7_const/v0/Makefile tests/hotpatch/t7_const/v1/Makefile doc/Makefile])
+AC_CONFIG_FILES([Makefile  src/Makefile tests/Makefile tests/code/Makefile tests/dwarf/Makefile tests/dwarf/passthrough/Makefile tests/dwarf/identity/Makefile src/shell/Makefile src/shell/dwarfscript/Makefile tests/hotpatch/Makefile tests/hotpatch/t1_basic/Makefile tests/hotpatch/t1_basic/v0/Makefile tests/hotpatch/t1_basic/v1/Makefile tests/hotpatch/t2_nested_types/Makefile tests/hotpatch/t2_nested_types/v0/Makefile tests/hotpatch/t2_nested_types/v1/Makefile tests/hotpatch/t3_multiple_cu/Makefile tests/hotpatch/t3_multiple_cu/v0/Makefile tests/hotpatch/t3_multiple_cu/v1/Makefile tests/hotpatch/t4_new_var/Makefile tests/hotpatch/t4_new_var/v0/Makefile tests/hotpatch/t4_new_var/v1/Makefile tests/hotpatch/t5_pointers/Makefile tests/hotpatch/t5_pointers/v0/Makefile tests/hotpatch/t5_pointers/v1/Makefile tests/hotpatch/t6_unions_enums/Makefile tests/hotpatch/t6_unions_enums/v0/Makefile tests/hotpatch/t6_unions_enums/v1/Makefile tests/hotpatch/t7_const/Makefile tests/hotpatch/t7_const/v0/Makefile tests/hotpatch/t7_const/v1/Makefile doc/Makefile])
 
 #AC_CONFIG_SUBDIRS([external/json-1.2])   
 
@@ -75,6 +75,7 @@ fi
 if test x$HAVE_FLEX != xyes; then
    AC_MSG_ERROR(["No flex on this system, needed for katana shell"])
 fi
+
 
 AC_OUTPUT
 

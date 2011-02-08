@@ -1,1 +1,2 @@
-SUBDIRS=passthrough
+SUBDIRS=passthrough identity
+

@@ -17,7 +17,7 @@ if os.path.exists("katana_err_log"):
   os.remove("katana_err_log")
 
 def runTestInDir(dir,execName="test",programArguments=[]):
-  msg="running test "+os.path.basename(dir)
+  msg="  running test "+os.path.basename(dir)
   dots=''.join(['.' for x in range(0,35-len(msg))])
   sys.stdout.write(msg+dots+'|')
   sys.stdout.flush()

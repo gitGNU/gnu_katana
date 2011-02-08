@@ -1,0 +1,3 @@
+This test just checks to see whether Katana can read and recreate the
+exception handling data. It does not run any programs but checks to
+make sure the resulting dwarfscript is the same as what was read in.

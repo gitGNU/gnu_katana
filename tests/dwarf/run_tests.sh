@@ -9,11 +9,13 @@ check()
 
 doTest()
 {
-  cd $1
+  cd $1 > /dev/null
+  check
   ./test.sh > /dev/null
   check
   cd ..
-  echo Dwarf test $1 passed
+  echo "  DWARF test $1 passed"
 }
 
 doTest passthrough
+doTest identity
