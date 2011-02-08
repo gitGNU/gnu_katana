@@ -178,6 +178,9 @@ void DwarfscriptCommand::printExceptTableInfo(FILE* file,ElfInfo* elf,ExceptTabl
     fprintf(file,"#LSDA %i\n",i);
     fprintf(file,"begin LSDA\n");
     fprintf(file,"lpstart: 0x%zx\n",lsda->lpStart);
+    fprintf(file,"typeinfo_enc: ");
+    printEHPointerEncoding(file,lsda->ttEncoding);
+    fprintf(file,"\n");
     for(int j=0;j<lsda->numCallSites;j++)
     {
       CallSiteRecord* callSite=lsda->callSiteTable+j;

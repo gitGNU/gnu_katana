@@ -59,7 +59,7 @@ void makeBasicRegister2(ParseNode* node,ParseNode* intvalNode);
 %token T_VERSION T_ADDRESS_SIZE T_SEGMENT_SIZE 
 %token T_AUGMENTATION_DATA T_SECTION_TYPE T_SECTION_LOC T_EH_HDR_LOC T_EXCEPT_TABLE_ADDR
 %token T_LPSTART T_POSITION T_LANDING_PAD T_HAS_ACTION T_FIRST_ACTION
-%token T_TYPE_IDX T_NEXT T_TYPEINFO T_LSDA_IDX
+%token T_TYPE_IDX T_NEXT T_TYPEINFO T_TYPEINFO_ENC T_LSDA_IDX
 %token T_FDE_PTR_ENC T_FDE_LSDA_PTR_ENC T_PERSONALITY_PTR_ENC T_PERSONALITY
 //CFA instructions
 %token T_DW_CFA_offset T_DW_CFA_advance_loc T_DW_CFA_restore T_DW_CFA_extended
@@ -301,6 +301,7 @@ lsda_property_stmt {}
 
 lsda_property_stmt :
 lpstart_prop {}
+| typeinfo_enc_prop {}
 | typeinfo_prop {}
 
 call_site_property_stmt :
@@ -501,6 +502,16 @@ lpstart_prop : T_LPSTART ':' nonneg_int_lit
     YYERROR;
   }
   currentLSDA->lpStart=$3.u.intval;
+}
+
+typeinfo_enc_prop : T_TYPEINFO_ENC ':' dw_pe_lit
+{
+  if(!currentLSDA)
+  {
+    fprintf(stderr,"typeinfo_enc property only applicable in LSDA section\n");
+    YYERROR;
+  }
+  currentLSDA->ttEncoding=$3.u.intval;
 }
 
 typeinfo_prop : T_TYPEINFO ':' nonneg_int_lit

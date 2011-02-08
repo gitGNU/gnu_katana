@@ -129,6 +129,7 @@ DW_OP_regn DW_OP_reg[0-9]+
 "type_idx" return T_TYPE_IDX;
 "next" return T_NEXT;
 "typeinfo" return T_TYPEINFO;
+"typeinfo_enc" return T_TYPEINFO_ENC;
 "none" return T_NONE;
 "fde_ptr_enc" return T_FDE_PTR_ENC;
 "fde_lsda_ptr_enc" return T_FDE_LSDA_PTR_ENC;

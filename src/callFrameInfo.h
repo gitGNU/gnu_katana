@@ -184,6 +184,7 @@ typedef struct
   int numCallSites;//number of CallSiteEntrys in callSiteTable
   ActionRecord* actionTable;
   int numActionEntries;
+  byte ttEncoding;//encoding of type table;
   //todo: will the type table entries ever be longer than a word? They
   //don't seem to be in what gcc emits, and this is after all gcc
   //specific stuff (although LLVM follows it as well)

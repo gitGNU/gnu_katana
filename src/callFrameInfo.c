@@ -473,8 +473,7 @@ void buildExceptTableRawData(CallFrameInfo* cfi,GrowingBuffer* buf,
       addToGrowingBuffer(buf,&enc,1);
     }
     //encoding used by entries in the type table
-    byte ttTypeFormat=DW_EH_PE_udata4;
-    addToGrowingBuffer(buf,&ttTypeFormat,1);
+    addToGrowingBuffer(buf,&lsda->ttEncoding,1);
 
     //unfortunately we now run into a problem. We need to write out
     //the TType base offset as a uleb128. LEB values vary in length,
@@ -532,6 +531,7 @@ void buildExceptTableRawData(CallFrameInfo* cfi,GrowingBuffer* buf,
       }
     }
 
+    /////////////////////////////////
     //write out the call site table
     GrowingBuffer callSiteBuf;
     ZERO(callSiteBuf);
@@ -559,15 +559,13 @@ void buildExceptTableRawData(CallFrameInfo* cfi,GrowingBuffer* buf,
       }
     }
 
-    GrowingBuffer typeTableBuf;
-    ZERO(typeTableBuf);
-    for(int j=lsda->numTypeEntries-1;j>=0;j--)
-    {
-      //it appears empirically that this is the format the type table
-      //takes. Not really governed by any standard.
-      addToGrowingBuffer(&typeTableBuf,lsda->typeTable+j,4);
-    }
 
+    //defer writing out the type table for now so we can write out
+    //pc-relative type table stuff more easily
+    int ttEntrySize=getPointerSizeFromEHPointerEncoding(lsda->ttEncoding);
+    int ttSize=ttEntrySize*lsda->numTypeEntries;
+
+    /////////////////////////////////////
     //ok, now we have the messy problem of calculating the offset of
     //the end of the type table from the location at which we write
     //the offset of the type table. This is icky because it depends on
@@ -580,7 +578,7 @@ void buildExceptTableRawData(CallFrameInfo* cfi,GrowingBuffer* buf,
     usint callSiteLengthLEBNumBytes;
     byte* callSiteLengthLEB=encodeAsLEB128((byte*)&callSiteBuf.len,sizeof(callSiteBuf.len),false,&callSiteLengthLEBNumBytes);
 
-    addr_t ttBaseOffsetGuess=1+callSiteLengthLEBNumBytes+callSiteBuf.len+actionBuf.len+typeTableBuf.len;
+    addr_t ttBaseOffsetGuess=1+callSiteLengthLEBNumBytes+callSiteBuf.len+actionBuf.len+ttSize;
     usint ttBaseOffsetNumBytes;
     byte* ttBaseOffsetLEB=encodeAsLEB128((byte*)&ttBaseOffsetGuess,sizeof(ttBaseOffsetGuess),false,&ttBaseOffsetNumBytes);
     //see if there's some wiggle room at the bottom
@@ -617,7 +615,7 @@ void buildExceptTableRawData(CallFrameInfo* cfi,GrowingBuffer* buf,
     //to get ttBase, add the length of the type table buf and subtract
     //the number of bytes before the location we write the offset to
     //get a self-relative offset
-    addr_t ttBaseOffset=offsetStartToTTTop+typeTableBuf.len-
+    addr_t ttBaseOffset=offsetStartToTTTop+ttSize-
       (buf->len-lsdaStartOffset)-1;//-1 because points to last entry
                                    //-in table, not below it table it
                                    //-appears (no standard to confirm)
@@ -649,8 +647,22 @@ void buildExceptTableRawData(CallFrameInfo* cfi,GrowingBuffer* buf,
       word_t zero=0;
       addToGrowingBuffer(buf,&zero,misalignment);
     }
-    addToGrowingBuffer(buf,typeTableBuf.data,typeTableBuf.len);
-    free(typeTableBuf.data);
+    //////////////////////////////
+    //write out the type table
+    for(int j=lsda->numTypeEntries-1;j>=0;j--)
+    {
+      //it appears empirically that this is the format the type table
+      //takes. Not really governed by any standard.
+      addr_t pointerLocation=cfi->exceptTableAddress+buf->len+j*ttEntrySize;
+      int numBytesOut;
+      addr_t typeinfo=encodeEHPointerFromEncoding(lsda->typeTable[j],
+                                                  lsda->ttEncoding,
+                                                  pointerLocation,
+                                                  &numBytesOut);
+      assert(numBytesOut==ttEntrySize);
+      addToGrowingBuffer(buf,&typeinfo,ttEntrySize);
+      
+    }
   }//end loop over lsdas for writing
   
 }
@@ -830,7 +842,7 @@ ExceptTable parseExceptFrame(Elf_Scn* scn,addr_t** lsdaPointers)
       bytes+=numBytesOut;
       offset+=numBytesOut;
     }
-    byte ttFormat=bytes[0];
+    lsda->ttEncoding=bytes[0];
     bytes++;
     offset++;
     usint numSeptets;
@@ -1026,7 +1038,7 @@ ExceptTable parseExceptFrame(Elf_Scn* scn,addr_t** lsdaPointers)
     //observing gcc emitting LEB values in the type table we'll need
     //to switch to something else like only going through the type
     //table entries at offsets given in the action table
-    int ttEntrySize=getPointerSizeFromEHPointerEncoding(ttFormat);
+    int ttEntrySize=getPointerSizeFromEHPointerEncoding(lsda->ttEncoding);
 
     idx_t ttIdx=0;
     //printf("ttBase is 0x%zx\n",ttBase);
@@ -1042,7 +1054,7 @@ ExceptTable parseExceptFrame(Elf_Scn* scn,addr_t** lsdaPointers)
       usint numBytesOut;
       lsda->typeTable[ttIdx]=decodeEHPointer(bytes+ttOffset,ttEntrySize,
                                              sectionAddress+offset+ttOffset,
-                                             ttFormat,&numBytesOut);
+                                             lsda->ttEncoding,&numBytesOut);
     }
     bytes+=ttBase-offset;
     offset=ttBase;
