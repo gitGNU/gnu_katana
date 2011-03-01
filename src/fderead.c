@@ -336,20 +336,18 @@ RegInstruction* parseFDEInstructions(Dwarf_Debug dbg,unsigned char* bytes,
     switch(high)
     {
     case DW_CFA_advance_loc:
+    case DW_CFA_restore:
       result[*numInstrs].type=high;
       result[*numInstrs].arg1=low;
       break;
     case DW_CFA_offset:
-      result[*numInstrs].type=high;
+      result[*numInstrs].type=DW_CFA_offset;
       result[*numInstrs].arg1=low;
       result[*numInstrs].arg1Reg.type=ERT_BASIC;
       result[*numInstrs].arg1Reg.u.index=low;
       result[*numInstrs].arg2=leb128ToUWord(bytes + 1, &uleblen);
       bytes+=uleblen;
       len-=uleblen;
-      break;
-    case DW_CFA_restore:
-      death("DW_CFA_restore not handled\n");
       break;
     default:
       //deal with the things encoded by the bottom portion

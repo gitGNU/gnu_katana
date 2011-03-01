@@ -235,6 +235,20 @@ int evaluateInstructionsToRules(CIE* cie,RegInstruction* instrs,int numInstrs,Di
       rule->type=ERRT_CFA;
       rule->offset=inst.arg1;
       break;
+    case DW_CFA_restore:
+      {
+        PoRegRule* initialRule=dictGet(cie->initialRules,str);
+        if(initialRule)
+        {
+          *rule=*initialRule;
+        }
+        else
+        {
+          //there was no inital rule. Is there ever a valid usage for this?
+          death("Unable to create DW_CFA_restore rule because no rule assigned in the CIE\n");
+        }
+      }
+      break;
     case DW_CFA_KATANA_fixups:
       rule->type=ERRT_RECURSE_FIXUP;
       rule->regRH=inst.arg2Reg;
