@@ -66,24 +66,24 @@
 char* joinPaths(char* path1,char* path2)
 {
   if(!path1 && !path2)
-  {return NULL;}
-  char* result=zmalloc(strlen(path1)+strlen(path2)+2);
-  if(path1)
   {
-    strcpy(result,path1);
+    return NULL;
+  }
+  if(!path1)
+  {
+    return strdup(path2);
   }
   if(!path2)
   {
-    return result;
+    return strdup(path1);
   }
-  if(path1 && path1[0]!='\0' && !strEndsWith(path1,"/"))
+  char* result=zmalloc(strlen(path1)+strlen(path2)+2);
+  strcpy(result,path1);
+  if(path1[0]!='\0' && !strEndsWith(path1,"/"))
   {
     strcat(result,"/");
   }
-  if(path2)
-  {
-    strcat(result,path2);
-  }
+  strcat(result,path2);
   return result;
 }
 
@@ -100,6 +100,10 @@ char** getPathComponents(char* path)
   char** components=NULL;
   int cnt=0;
   int len=strlen(path);
+  if(!len)
+  {
+    components=zmalloc(sizeof(char**));
+  }
   for(int i=0;i<len;i++)
   {
     if('/'==path[i] && (i==0  || path[i-1]!='\\'))
