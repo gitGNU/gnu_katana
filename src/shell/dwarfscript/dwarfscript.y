@@ -1145,9 +1145,9 @@ dw_op_litn : T_DW_OP_litn
   }
   $$.u.opInstr.type=DW_OP_lit0+savedInt;
 }
-dw_op_regn : T_DW_OP_regn nonneg_int_lit
+dw_op_regn : T_DW_OP_regn
 {
-  $$.u.opInstr.type=DW_OP_reg0+$2.u.intval;
+  $$.u.opInstr.type=DW_OP_reg0+savedInt;
 }
 
 //stage because we have to get savedInt here while it's valid
