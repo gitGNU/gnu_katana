@@ -185,7 +185,7 @@ List* mergeSortedLists(List* a,List* b,int (*cmpfunc)(void*,void*))
   {
     if(!result)
     {
-      result=a;
+      result=resultTail=a;
     }
     else
     {
@@ -199,7 +199,7 @@ List* mergeSortedLists(List* a,List* b,int (*cmpfunc)(void*,void*))
   {
     if(!result)
     {
-      result=b;
+      result=resultTail=b;
     }
     else
     {
