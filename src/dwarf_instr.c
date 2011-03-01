@@ -923,7 +923,7 @@ void printExprInstruction(FILE* file,char* prefix,DwarfExprInstr instr,int print
   case DW_OP_breg30:
   case DW_OP_breg31:
   case DW_OP_fbreg:
-    fprintf(file," 0x%zi",(sword_t)instr.arg1);
+    fprintf(file," %zi",(sword_t)instr.arg1);
     break;
   //instructions with more than one argument
   case DW_OP_bregx:
