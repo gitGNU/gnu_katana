@@ -42,8 +42,7 @@ void stackDelete(Stack* st,void (*deleteData)(void*))
 
 void stackPush(Stack* st,void* item)
 {
-  SNode* node=malloc(sizeof(SNode));
-  MALLOC_CHECK(node);
+  SNode* node=zmalloc(sizeof(SNode));
   node->next=st->top;
   node->data=item;
   st->top=node;
@@ -53,10 +52,11 @@ void stackPush(Stack* st,void* item)
 void* stackPop(Stack* st)
 {
   SNode* result=st->top;
-  if(result)
+  if(!result)
   {
-    st->top=result->next;
+    return NULL;
   }
+  st->top=result->next;
   return result->data;;
 }
 
