@@ -114,6 +114,7 @@ void addInstruction(DwarfInstructions* instrs,DwarfInstruction* instr)
   case DW_CFA_val_offset:
   case DW_CFA_val_offset_sf:
   case DW_CFA_register:
+  case DW_CFA_expression:
   case DW_CFA_val_expression:
   case DW_CFA_def_cfa:
   case DW_CFA_def_cfa_sf:
@@ -206,7 +207,6 @@ void addInstruction(DwarfInstructions* instrs,DwarfInstruction* instr)
     bytes[0]=instr->opcode;
     addBytes(instrs,bytes,1);
     free(bytes);
-    break;
     break;
   default:
     {
