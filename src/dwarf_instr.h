@@ -137,6 +137,8 @@ typedef enum _DwarfInstructionPrintFlags
 
 //printing flags should be OR'd DwarfInstructionPrintFlags
 void printInstruction(FILE* file,RegInstruction inst,int printFlags);
+//printFlags should be OR'd DwarfInstructionPrintFlags
+void printExprInstruction(FILE* file,char* prefix,DwarfExprInstr instr,int printFlags);
 void printExpr(FILE* file,char* prefix,DwarfExpr expr,int printFlags);
 
 void destroyRawInstructions(DwarfInstructions instrs);

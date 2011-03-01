@@ -688,6 +688,10 @@ void addToDwarfExpression(DwarfExpr* expr,DwarfExprInstr instr)
 
 void initDwarfExpressionNames()
 {
+  if(dwarfExpressionNames)
+  {
+    return;
+  }
   dwarfExpressionNames=zmalloc(sizeof(char*)*DW_OP_hi_user);
   dwarfExpressionNames[DW_OP_addr]="DW_OP_addr";
   dwarfExpressionNames[DW_OP_deref]="DW_OP_deref";
