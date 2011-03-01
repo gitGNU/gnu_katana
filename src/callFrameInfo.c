@@ -883,6 +883,10 @@ ExceptTable parseExceptFrame(Elf_Scn* scn,addr_t** lsdaPointers)
     int i=0;
     while(i<callSiteTableSize)
     {
+      if(offset+i > data->d_size)
+      {
+        death("Malformed gcc_except_table\n");
+      }
       //set up the call site we're dealing with right now
       lsda->numCallSites++;
       lsda->callSiteTable=realloc(lsda->callSiteTable,lsda->numCallSites*sizeof(CallSiteRecord));

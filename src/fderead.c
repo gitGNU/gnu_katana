@@ -73,10 +73,11 @@ DwarfExpr parseDwarfExpression(byte* data,uint len)
   //allocate more mem than we'll actually need. We can free some
   //later.
   result.instructions=zmalloc(sizeof(DwarfExprInstr)*len);
-  for(;len>0;len--,result.numInstructions++)
+  for(;len>0;len--,result.numInstructions++,data++)
   {
     DwarfExprInstr* instr=&result.instructions[result.numInstructions];
     instr->type=data[0];
+
     switch(instr->type)
     {
       //handle all of the operations which take no operands
@@ -193,6 +194,7 @@ DwarfExpr parseDwarfExpression(byte* data,uint len)
       instr->arg1=sextend(instr->arg1,1);
       data++;
       len--;
+      break;
       //handle all the opcodes which take a 2-byte unsigned argument
     case DW_OP_const2u:
       memcpy(&instr->arg1,data+1,2);
@@ -307,6 +309,7 @@ DwarfExpr parseDwarfExpression(byte* data,uint len)
     default:
       death("Unsupported DW_OP with code 0x%x\n",instr->type);
     }
+    printExprInstruction(stdout,"adding instruction ",*instr,0);
   }
 
   result.instructions=realloc(result.instructions,sizeof(DwarfExprInstr)*result.numInstructions);
