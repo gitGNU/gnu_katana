@@ -88,6 +88,7 @@ typedef struct _DICTIONARY {
 typedef struct _DICTIONARY DICTIONARY;
 typedef struct _DICTIONARY Dictionary;
 typedef void* (*DictDataCopy)(void*);
+typedef void (*DictDataDelete)(void*);
 
 //! create an empty dictionary
 Dictionary* dictCreate(int nBuckets);
@@ -97,7 +98,7 @@ Dictionary* dictDuplicate(Dictionary* dict,void* (*dataCP)(void*));
 
 //! clean up a dictionary that's no longer needed
 //! If deleteData is non-NULL it is called for each data element
-void dictDelete(Dictionary* dict,void (*deleteData)(void*));
+void dictDelete(Dictionary* dict,DictDataDelete deleteData);
 
 //!check if a key exists in the dictionary
 bool dictExists(const Dictionary* dict,char* key);

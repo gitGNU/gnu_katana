@@ -58,7 +58,22 @@
 
 #include "dwarf_instr.h"
 
-typedef struct
+typedef struct Label
+{
+  int byteLocation;
+  bool locationKnown;
+  int* references;//instruction indices in a DwarfExpr of references to the label
+  int numReferences;
+
+} Label;
+
+void deleteLabel(Label* lbl)
+{
+  free(lbl->references);
+  free(lbl);
+}
+
+typedef struct ParseNode
 {
   //union of all the things that can be encountered in a parse
   union
@@ -74,6 +89,7 @@ typedef struct
     RegInstruction regInstr;
     DwarfExprInstr opInstr;
     DwarfExpr expr;
+    Label* label;
   } u;
 } ParseNode;
 

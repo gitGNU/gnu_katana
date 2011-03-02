@@ -26,12 +26,16 @@ double savedDouble;
 int savedDataLen;
 byte* savedData;
 
+//labels keyed by name
+Dictionary* labels;
+ 
 //save it here since we don't store it directly as part of the CIE
 static char* augmentationString;
 
 int yyerror(char *s);
 void makeBasicRegister1(ParseNode* node,ParseNode* intvalNode);
 void makeBasicRegister2(ParseNode* node,ParseNode* intvalNode);
+void flowControlLabelReference(ParseNode* node);
 
  %}
 
@@ -47,6 +51,7 @@ void makeBasicRegister2(ParseNode* node,ParseNode* intvalNode);
 %token T_BOOL_TRUE T_BOOL_FALSE T_STRING_LITERAL T_HEXDATA
 %token T_POS_INT T_NONNEG_INT T_INT T_FLOAT T_REGISTER
 %token T_DW_PTR_ENCODING T_NONE
+%token T_IDENTIFIER
 
 // basic structure
 %token T_BEGIN T_END T_INVALID_TOKEN
@@ -113,11 +118,15 @@ instruction_section : T_BEGIN T_INSTRUCTIONS instruction_stmt_list T_END T_INSTR
 expr_begin_stmt : T_BEGIN T_DWARF_EXPR
 {
   memset(&currentExpr,0,sizeof(currentExpr));
+  //todo: don't use arbitrary dictionary size
+  labels=dictCreate(100);
 }
 
 expression_section : expr_begin_stmt expr_stmt_list T_END T_DWARF_EXPR
 {
   $$.u.expr=currentExpr;
+  dictDelete(labels,(DictDataDelete)deleteLabel);
+
 }
 
 fde_begin_stmt : T_BEGIN T_FDE
@@ -247,6 +256,9 @@ instruction_stmt_list : instruction_stmt_list instruction_stmt
 expr_stmt_list : expr_stmt_list expr_stmt
 {
   addToDwarfExpression(&currentExpr,$2.u.opInstr);
+}
+expr_stmt_list : expr_stmt_list label
+{
 }
 | /*empty*/
 {}
@@ -637,6 +649,8 @@ string_lit : T_STRING_LITERAL
   $$.u.stringval=savedString;
 }
 
+
+
 /*hexdata lit no longer used now that we don't allow direct hex setting of augmentation data
   data_lit : T_HEXDATA
 {
@@ -881,6 +895,8 @@ dw_cfa_val_expression : T_DW_CFA_val_expression register_lit expression_section
 //DWARF expression instructions
 
 
+
+
 expr_stmt :
 dw_op_addr {$$=$1;}
 |dw_op_deref {$$=$1;}
@@ -943,6 +959,40 @@ dw_op_addr {$$=$1;}
 |dw_op_bit_piece {$$=$1;}
 |dw_op_implicit_value {$$=$1;}
 |dw_op_stack_value {$$=$1;}
+
+//labels are used for jumps/branches
+label : T_IDENTIFIER ':'
+{
+  Label* lbl=dictGet(labels,savedString);
+  $$.u.label=lbl;
+  if(!lbl)
+  {
+    lbl=zmalloc(sizeof(Label));
+    dictInsert(labels,savedString,lbl);
+  }
+  if(lbl->locationKnown)
+  {
+    fprintf(stderr,"Cannot redefine label '%s'\n",savedString);
+    free(savedString);
+    YYERROR;
+  }
+  free(savedString);
+
+  lbl->byteLocation=currentExpr.byteLength;
+  lbl->locationKnown=true;
+  for(int i=0;i<lbl->numReferences;i++)
+  {
+    int idx=lbl->references[i];
+    //note we can do this because the only two instructions which
+    //labels should apply to are DW_OP_bra, and DW_OP_skip which have
+    //only one argument and don't use any variable length data
+    assert(currentExpr.instructions[idx].type==DW_OP_bra ||
+           currentExpr.instructions[idx].type==DW_OP_skip);
+    currentExpr.instructions[i].arg1=lbl->byteLocation;
+  }
+  lbl->numReferences=0;
+  free(lbl->references);
+}
 
 dw_op_addr : T_DW_OP_addr nonneg_int_lit
 {
@@ -1107,10 +1157,20 @@ dw_op_skip : T_DW_OP_skip int_lit
   $$.u.opInstr.type=DW_OP_skip;
   $$.u.opInstr.arg1=$2.u.intval;
 }
+| T_DW_OP_skip T_IDENTIFIER
+{
+  $$.u.opInstr.type=DW_OP_skip;
+  flowControlLabelReference(&$$);
+}
 dw_op_bra : T_DW_OP_bra int_lit
 {
   $$.u.opInstr.type=DW_OP_bra;
   $$.u.opInstr.arg1=$2.u.intval;
+}
+| T_DW_OP_bra T_IDENTIFIER
+{
+  $$.u.opInstr.type=DW_OP_bra;
+  flowControlLabelReference(&$$);
 }
 dw_op_eq : T_DW_OP_eq
 {
@@ -1256,6 +1316,34 @@ void makeBasicRegister2(ParseNode* node,ParseNode* intvalNode)
   node->u.regInstr.arg2Reg.type=ERT_BASIC;
   node->u.regInstr.arg2Reg.u.index=intvalNode->u.intval;
 }
+
+void flowControlLabelReference(ParseNode* node)
+{
+  //ah, we have a label
+  Label* lbl=dictGet(labels,savedString);
+  node->u.label=lbl;
+  if(!lbl)
+  {
+    lbl=zmalloc(sizeof(Label));
+    dictInsert(labels,savedString,lbl);
+  }
+  free(savedString);
+  if(lbl->locationKnown)
+  {
+    //the label was above us in the source program so we can fill it
+    //in now
+    node->u.opInstr.arg1=lbl->byteLocation;
+  }
+  else
+  {
+    node->u.opInstr.arg1=0;//will be filled in later
+    //create a reference so we know to fill this in later
+    lbl->numReferences++;
+    lbl->references=realloc(lbl->references,sizeof(int)*lbl->numReferences);
+    lbl->references[lbl->numReferences-1]=currentExpr.numInstructions;
+  }
+}
+
 int yyerror(char *s)
 {
   fprintf(stderr, "dwarfscript %s at line %d\n", s, dwLineNumber);

@@ -98,6 +98,7 @@ BAD_DW_OP DW_OP_[^ \n\r\t]*
 DW_OP_lit DW_OP_lit[0-9]+
 DW_OP_bregn DW_OP_breg[0-9]+
 DW_OP_regn DW_OP_reg[0-9]+
+IDENTIFIER [a-zA-Z_][a-zA-Z_0-9]*
 %%
 
 "#"        BEGIN(POUND_COMMENT);
@@ -270,6 +271,7 @@ DW_OP_regn DW_OP_reg[0-9]+
 "false"|"no"   return T_BOOL_FALSE;
 
 {REGISTER} savedRegisterNumber=atoi(yydwtext+1); return T_REGISTER;
+{IDENTIFIER} savedString=strdup(yydwtext); return T_IDENTIFIER;
 
 <POUND_COMMENT>{
   [\n]      dwLineNumber++;BEGIN(INITIAL);
