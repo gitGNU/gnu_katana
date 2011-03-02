@@ -103,9 +103,11 @@ typedef struct
 {
   DwarfExprInstr* instructions;
   int numInstructions;
+  int byteLength;//the total byte length required by all of the instructions
 } DwarfExpr;
 
-void addToDwarfExpression(DwarfExpr* expr,DwarfExprInstr instr);
+//returns the index of the instruction that's been added
+int addToDwarfExpression(DwarfExpr* expr,DwarfExprInstr instr);
 
 
 //This struct is used when parsing DWARF binary information into a

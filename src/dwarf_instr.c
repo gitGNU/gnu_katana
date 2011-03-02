@@ -433,6 +433,213 @@ DwarfInstruction regInstructionToRawDwarfInstruction(RegInstruction* inst)
   return result;
 }
 
+void encodeDwarfExprInstr(DwarfExprInstr* instr,GrowingBuffer* buf)
+{
+  //all expression instructions start with a 1-byte opcode
+  addToGrowingBuffer(buf,&instr->type,1);
+  switch(instr->type)
+  {
+    //all of the instructions for which we don't need to do anything else
+  case DW_OP_lit0:
+  case DW_OP_lit1:
+  case DW_OP_lit2:
+  case DW_OP_lit3:
+  case DW_OP_lit4:
+  case DW_OP_lit5:
+  case DW_OP_lit6:
+  case DW_OP_lit7:
+  case DW_OP_lit8:
+  case DW_OP_lit9:
+  case DW_OP_lit10:
+  case DW_OP_lit11:
+  case DW_OP_lit12:
+  case DW_OP_lit13:
+  case DW_OP_lit14:
+  case DW_OP_lit15:
+  case DW_OP_lit16:
+  case DW_OP_lit17:
+  case DW_OP_lit18:
+  case DW_OP_lit19:
+  case DW_OP_lit20:
+  case DW_OP_lit21:
+  case DW_OP_lit22:
+  case DW_OP_lit23:
+  case DW_OP_lit24:
+  case DW_OP_lit25:
+  case DW_OP_lit26:
+  case DW_OP_lit27:
+  case DW_OP_lit28:
+  case DW_OP_lit29:
+  case DW_OP_lit30:
+  case DW_OP_lit31:
+  case DW_OP_reg0:
+  case DW_OP_reg1:
+  case DW_OP_reg2:
+  case DW_OP_reg3:
+  case DW_OP_reg4:
+  case DW_OP_reg5:
+  case DW_OP_reg6:
+  case DW_OP_reg7:
+  case DW_OP_reg8:
+  case DW_OP_reg9:
+  case DW_OP_reg10:
+  case DW_OP_reg11:
+  case DW_OP_reg12:
+  case DW_OP_reg13:
+  case DW_OP_reg14:
+  case DW_OP_reg15:
+  case DW_OP_reg16:
+  case DW_OP_reg17:
+  case DW_OP_reg18:
+  case DW_OP_reg19:
+  case DW_OP_reg20:
+  case DW_OP_reg21:
+  case DW_OP_reg22:
+  case DW_OP_reg23:
+  case DW_OP_reg24:
+  case DW_OP_reg25:
+  case DW_OP_reg26:
+  case DW_OP_reg27:
+  case DW_OP_reg28:
+  case DW_OP_reg29:
+  case DW_OP_reg30:
+  case DW_OP_reg31:
+  case DW_OP_dup:
+  case DW_OP_drop:
+  case DW_OP_over:
+  case DW_OP_swap:
+  case DW_OP_rot:
+  case DW_OP_deref:
+  case DW_OP_xderef:
+  case DW_OP_push_object_address:
+  case DW_OP_form_tls_address:
+  case DW_OP_call_frame_cfa:
+  case DW_OP_abs:
+  case DW_OP_and:
+  case DW_OP_div:
+  case DW_OP_minus:
+  case DW_OP_mod:
+  case DW_OP_mul:
+  case DW_OP_neg:
+  case DW_OP_not:
+  case DW_OP_or:
+  case DW_OP_plus:
+  case DW_OP_shl:
+  case DW_OP_shr:
+  case DW_OP_shra:
+  case DW_OP_xor:
+  case DW_OP_le:
+  case DW_OP_ge:
+  case DW_OP_eq:
+  case DW_OP_lt:
+  case DW_OP_gt:
+  case DW_OP_ne:
+  case DW_OP_nop:
+    //don't need to do anything for these opcodes
+    break;
+    //handle all the opcodes which take a 1-byte argument
+  case DW_OP_const1u:
+  case DW_OP_const1s:
+  case DW_OP_pick:
+  case DW_OP_deref_size:
+  case DW_OP_xderef_size:
+    addToGrowingBuffer(buf,&instr->arg1,1);
+    break;
+    //handle all the opcodes which take a 2-byte argument
+  case DW_OP_const2u:
+  case DW_OP_const2s:
+  case DW_OP_skip:
+  case DW_OP_bra:
+    addToGrowingBuffer(buf,&instr->arg1,2);
+    break;
+    //handle all the opcodes which take a 4-byte argument
+  case DW_OP_const4u:
+  case DW_OP_const4s:
+    addToGrowingBuffer(buf,&instr->arg1,4);
+    break;
+    //handle all the opcodes which take an 8-byte arugment
+  case DW_OP_const8u:
+  case DW_OP_const8s:
+    //this may be an issue if on 32-bit but presumably these don't
+    //get used on 32-bit. We'll add support to katana for it if we
+    //need to
+    assert(sizeof(instr->arg1)>=8);
+    addToGrowingBuffer(buf,&instr->arg1,8);
+    break;
+    //handle all the opcodes which take a target machine address
+    //sized argument
+  case DW_OP_addr:
+    addToGrowingBuffer(buf,&instr->arg1,sizeof(addr_t));
+    break;
+    //handle all the opcodes which take an unsigned LEB argument
+  case DW_OP_constu:
+  case DW_OP_plus_uconst:
+    {
+      usint numBytes;
+      byte* data=encodeAsLEB128((byte*)&instr->arg1,sizeof(instr->arg1),false,&numBytes);
+      addToGrowingBuffer(buf,data,numBytes);
+      free(data);
+    }
+    break;
+    //handle all the opcodes which take a signed LEB argument
+  case DW_OP_consts:
+  case DW_OP_fbreg:
+  case DW_OP_breg0:
+  case DW_OP_breg1:
+  case DW_OP_breg2:
+  case DW_OP_breg3:
+  case DW_OP_breg4:
+  case DW_OP_breg5:
+  case DW_OP_breg6:
+  case DW_OP_breg7:
+  case DW_OP_breg8:
+  case DW_OP_breg9:
+  case DW_OP_breg10:
+  case DW_OP_breg11:
+  case DW_OP_breg12:
+  case DW_OP_breg13:
+  case DW_OP_breg14:
+  case DW_OP_breg15:
+  case DW_OP_breg16:
+  case DW_OP_breg17:
+  case DW_OP_breg18:
+  case DW_OP_breg19:
+  case DW_OP_breg20:
+  case DW_OP_breg21:
+  case DW_OP_breg22:
+  case DW_OP_breg23:
+  case DW_OP_breg24:
+  case DW_OP_breg25:
+  case DW_OP_breg26:
+  case DW_OP_breg27:
+  case DW_OP_breg28:
+  case DW_OP_breg29:
+  case DW_OP_breg30:
+  case DW_OP_breg31:
+    {
+      usint numBytes;
+      byte* data=encodeAsLEB128((byte*)&instr->arg1,sizeof(instr->arg1),true,&numBytes);
+      addToGrowingBuffer(buf,data,numBytes);
+      free(data);
+    }
+    break;
+    //instructions with more than one argument
+  case DW_OP_bregx:
+    {
+      usint numBytes;
+      byte* data=encodeAsLEB128((byte*)&instr->arg1,sizeof(instr->arg1),false,&numBytes);
+      addToGrowingBuffer(buf,data,numBytes);
+      free(data);
+      data=encodeAsLEB128((byte*)&instr->arg2,sizeof(instr->arg2),true,&numBytes);
+      addToGrowingBuffer(buf,data,numBytes);
+      free(data);
+    }
+    break;
+  default:
+    death("While encoding DWARF expression, unsupported DW_OP with code 0x%x\n",instr->type);
+  }
+}
+
 //encodes a Dwarf Expression as a LEB-encoded length followed
 //by length bytes of Dwarf expression
 //the returned pointer should be freed
@@ -443,209 +650,7 @@ byte* encodeDwarfExprAsFormBlock(DwarfExpr expr,usint* numBytesOut)
   for(int i=0;i<expr.numInstructions;i++)
   {
     DwarfExprInstr* instr=expr.instructions+i;
-    //all expression instructions start with a 1-byte opcode
-    addToGrowingBuffer(&blockData,&instr->type,1);
-    switch(instr->type)
-    {
-      //all of the instructions for which we don't need to do anything else
-    case DW_OP_lit0:
-    case DW_OP_lit1:
-    case DW_OP_lit2:
-    case DW_OP_lit3:
-    case DW_OP_lit4:
-    case DW_OP_lit5:
-    case DW_OP_lit6:
-    case DW_OP_lit7:
-    case DW_OP_lit8:
-    case DW_OP_lit9:
-    case DW_OP_lit10:
-    case DW_OP_lit11:
-    case DW_OP_lit12:
-    case DW_OP_lit13:
-    case DW_OP_lit14:
-    case DW_OP_lit15:
-    case DW_OP_lit16:
-    case DW_OP_lit17:
-    case DW_OP_lit18:
-    case DW_OP_lit19:
-    case DW_OP_lit20:
-    case DW_OP_lit21:
-    case DW_OP_lit22:
-    case DW_OP_lit23:
-    case DW_OP_lit24:
-    case DW_OP_lit25:
-    case DW_OP_lit26:
-    case DW_OP_lit27:
-    case DW_OP_lit28:
-    case DW_OP_lit29:
-    case DW_OP_lit30:
-    case DW_OP_lit31:
-    case DW_OP_reg0:
-    case DW_OP_reg1:
-    case DW_OP_reg2:
-    case DW_OP_reg3:
-    case DW_OP_reg4:
-    case DW_OP_reg5:
-    case DW_OP_reg6:
-    case DW_OP_reg7:
-    case DW_OP_reg8:
-    case DW_OP_reg9:
-    case DW_OP_reg10:
-    case DW_OP_reg11:
-    case DW_OP_reg12:
-    case DW_OP_reg13:
-    case DW_OP_reg14:
-    case DW_OP_reg15:
-    case DW_OP_reg16:
-    case DW_OP_reg17:
-    case DW_OP_reg18:
-    case DW_OP_reg19:
-    case DW_OP_reg20:
-    case DW_OP_reg21:
-    case DW_OP_reg22:
-    case DW_OP_reg23:
-    case DW_OP_reg24:
-    case DW_OP_reg25:
-    case DW_OP_reg26:
-    case DW_OP_reg27:
-    case DW_OP_reg28:
-    case DW_OP_reg29:
-    case DW_OP_reg30:
-    case DW_OP_reg31:
-    case DW_OP_dup:
-    case DW_OP_drop:
-    case DW_OP_over:
-    case DW_OP_swap:
-    case DW_OP_rot:
-    case DW_OP_deref:
-    case DW_OP_xderef:
-    case DW_OP_push_object_address:
-    case DW_OP_form_tls_address:
-    case DW_OP_call_frame_cfa:
-    case DW_OP_abs:
-    case DW_OP_and:
-    case DW_OP_div:
-    case DW_OP_minus:
-    case DW_OP_mod:
-    case DW_OP_mul:
-    case DW_OP_neg:
-    case DW_OP_not:
-    case DW_OP_or:
-    case DW_OP_plus:
-    case DW_OP_shl:
-    case DW_OP_shr:
-    case DW_OP_shra:
-    case DW_OP_xor:
-    case DW_OP_le:
-    case DW_OP_ge:
-    case DW_OP_eq:
-    case DW_OP_lt:
-    case DW_OP_gt:
-    case DW_OP_ne:
-    case DW_OP_nop:
-      //don't need to do anything for these opcodes
-      break;
-    //handle all the opcodes which take a 1-byte argument
-    case DW_OP_const1u:
-    case DW_OP_const1s:
-    case DW_OP_pick:
-    case DW_OP_deref_size:
-    case DW_OP_xderef_size:
-      addToGrowingBuffer(&blockData,&instr->arg1,1);
-      break;
-    //handle all the opcodes which take a 2-byte argument
-    case DW_OP_const2u:
-    case DW_OP_const2s:
-    case DW_OP_skip:
-    case DW_OP_bra:
-      addToGrowingBuffer(&blockData,&instr->arg1,2);
-      break;
-    //handle all the opcodes which take a 4-byte argument
-    case DW_OP_const4u:
-    case DW_OP_const4s:
-      addToGrowingBuffer(&blockData,&instr->arg1,4);
-      break;
-    //handle all the opcodes which take an 8-byte arugment
-    case DW_OP_const8u:
-    case DW_OP_const8s:
-      //this may be an issue if on 32-bit but presumably these don't
-      //get used on 32-bit. We'll add support to katana for it if we
-      //need to
-      assert(sizeof(instr->arg1)>=8);
-      addToGrowingBuffer(&blockData,&instr->arg1,8);
-      break;
-    //handle all the opcodes which take a target machine address
-    //sized argument
-    case DW_OP_addr:
-      addToGrowingBuffer(&blockData,&instr->arg1,sizeof(addr_t));
-      break;
-    //handle all the opcodes which take an unsigned LEB argument
-    case DW_OP_constu:
-    case DW_OP_plus_uconst:
-      {
-        usint numBytes;
-        byte* data=encodeAsLEB128((byte*)&instr->arg1,sizeof(instr->arg1),false,&numBytes);
-        addToGrowingBuffer(&blockData,data,numBytes);
-        free(data);
-      }
-      break;
-    //handle all the opcodes which take a signed LEB argument
-    case DW_OP_consts:
-    case DW_OP_fbreg:
-    case DW_OP_breg0:
-    case DW_OP_breg1:
-    case DW_OP_breg2:
-    case DW_OP_breg3:
-    case DW_OP_breg4:
-    case DW_OP_breg5:
-    case DW_OP_breg6:
-    case DW_OP_breg7:
-    case DW_OP_breg8:
-    case DW_OP_breg9:
-    case DW_OP_breg10:
-    case DW_OP_breg11:
-    case DW_OP_breg12:
-    case DW_OP_breg13:
-    case DW_OP_breg14:
-    case DW_OP_breg15:
-    case DW_OP_breg16:
-    case DW_OP_breg17:
-    case DW_OP_breg18:
-    case DW_OP_breg19:
-    case DW_OP_breg20:
-    case DW_OP_breg21:
-    case DW_OP_breg22:
-    case DW_OP_breg23:
-    case DW_OP_breg24:
-    case DW_OP_breg25:
-    case DW_OP_breg26:
-    case DW_OP_breg27:
-    case DW_OP_breg28:
-    case DW_OP_breg29:
-    case DW_OP_breg30:
-    case DW_OP_breg31:
-      {
-        usint numBytes;
-        byte* data=encodeAsLEB128((byte*)&instr->arg1,sizeof(instr->arg1),true,&numBytes);
-        addToGrowingBuffer(&blockData,data,numBytes);
-        free(data);
-      }
-      break;
-    //instructions with more than one argument
-    case DW_OP_bregx:
-      {
-        usint numBytes;
-        byte* data=encodeAsLEB128((byte*)&instr->arg1,sizeof(instr->arg1),false,&numBytes);
-        addToGrowingBuffer(&blockData,data,numBytes);
-        free(data);
-        data=encodeAsLEB128((byte*)&instr->arg2,sizeof(instr->arg2),true,&numBytes);
-        addToGrowingBuffer(&blockData,data,numBytes);
-        free(data);
-      }
-      break;
-    default:
-      death("While encoding DWARF expression, unsupported DW_OP with code 0x%x\n",instr->type);
-    }
+    encodeDwarfExprInstr(instr,&blockData);
   }
   //unfortunately we have to do a bunch of memory copying because we
   //need to put at the start of the buffer the length of the rest of the buffer
@@ -679,11 +684,18 @@ void destroyRawInstructions(DwarfInstructions instrs)
   free(instrs.instrs);
 }
 
-void addToDwarfExpression(DwarfExpr* expr,DwarfExprInstr instr)
+//returns the index of the instruction that's been added
+int addToDwarfExpression(DwarfExpr* expr,DwarfExprInstr instr)
 {
   expr->instructions=realloc(expr->instructions,(expr->numInstructions+1)*sizeof(DwarfExprInstr));
   expr->instructions[expr->numInstructions]=instr;
-  expr->numInstructions++;
+  //encode this instruction in its binary form so we can figure out
+  //how long it is
+  GrowingBuffer buf;
+  ZERO(buf);
+  encodeDwarfExprInstr(&instr,&buf);
+  expr->byteLength+=buf.len;
+  return expr->numInstructions++;
 }
 
 void initDwarfExpressionNames()
