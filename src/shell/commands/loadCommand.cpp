@@ -71,13 +71,45 @@ void LoadCommand::execute()
   if(this->outputVariable)
   {
     char* filename=this->filename->getString();
-    ElfInfo* elf=openELFFile(filename);
-    if(!elf)
+    //figure out whether this is an elf file or not
+    FILE* f=fopen(filename,"r");
+    if(!f)
     {
-      throw "Unable to open ELF file";
+      char buffer[1024];
+      snprintf(buffer,128,"Unable to open file %s for reading\n",filename);
+      throw buffer;
     }
-    this->outputVariable->setValue(elf);
-    logprintf(ELL_INFO_V2,ELS_SHELL,"Loaded ELF \"%s\"\n",filename);
+    char headerBuf[4];
+    char elfMagic[4]={0x7F,'E','L','F'};
+    fread(headerBuf,4,1,f);
+    if(!memcmp(headerBuf,elfMagic,4))
+    {
+      fclose(f);
+      //we're loading an ELF file
+      ElfInfo* elf=openELFFile(filename);
+      if(!elf)
+      {
+        throw "Unable to open ELF file";
+      }
+      this->outputVariable->setValue(elf);
+      logprintf(ELL_INFO_V2,ELS_SHELL,"Loaded ELF \"%s\"\n",filename);
+    }
+    else
+    {
+      //loading raw data
+      int flen=getFileLength(f);
+      byte* dataBuf=(byte*)zmalloc(flen);
+      int readCnt=fread(dataBuf,flen,1,f);
+      fclose(f);
+      if(readCnt!=1)
+      {
+        char buffer[1024];
+        snprintf(buffer,128,"Unable to fully read data from %s\n",filename);
+        throw buffer;
+      }
+      this->outputVariable->setValue(dataBuf,flen);
+      logprintf(ELL_INFO_V2,ELS_SHELL,"Loaded raw data from \"%s\"\n",filename);
+    }
   }
   else
   {

@@ -96,6 +96,9 @@ class ShellVariable : public ShellParam
   ShellVariable(char* name);
   virtual ~ShellVariable();
   void setValue(ElfInfo* e);
+  //note that the data is not copied and will be freed when it is no
+  //longer needed. Copy the data first if you need to retain control
+  //over it.
   void setValue(byte* data,int dataLen);
   void setValue(byte* data,int dataLen,SectionHeaderData* header);
   void makeArray(ShellVariableData** items,int cnt);
