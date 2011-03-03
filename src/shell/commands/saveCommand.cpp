@@ -55,38 +55,63 @@
 
 #include "saveCommand.h"
 
-SaveCommand::SaveCommand(ShellParam* elfObject,ShellParam* filename)
-  :elfObjectP(elfObject),filenameP(filename)
+SaveCommand::SaveCommand(ShellParam* objectToSave,ShellParam* filename)
+  :objectToSaveP(objectToSave),filenameP(filename)
 {
-  elfObjectP->grab();
+  objectToSaveP->grab();
   filenameP->grab();
 }
 
 SaveCommand::~SaveCommand()
 {
-  elfObjectP->drop();
+  objectToSaveP->drop();
   filenameP->drop();
 }
 
 void SaveCommand::execute()
 {
-  ElfInfo* e=elfObjectP->getElfObject();
   char* filename=filenameP->getString();
-  if(!e)
+  if(objectToSaveP->isCapable(SPC_ELF_VALUE))
   {
-    logprintf(ELL_WARN,ELS_SHELL,"First parameter to save command must be a variable representing an ELF object\n");
+    //we are saving an elf object
+    ElfInfo* e=objectToSaveP->getElfObject();
+    if(!e)
+    {
+      logprintf(ELL_WARN,ELS_SHELL,"First parameter to save command must be a variable representing an ELF object\n");
+    }
+    if(!filename)
+    {
+      logprintf(ELL_WARN,ELS_SHELL,"Second parameter to save command must be a filename or variable representing a filename\n");
+    }
+    finalizeModifiedElf(e);
+    if(writeOutElf(e,filename,true))
+    {
+      logprintf(ELL_INFO_V2,ELS_SHELL,"Saved ELF object to \"%s\"\n",filename);
+    }
+    else
+    {
+      throw "Unable to save ELF file";
+    }
   }
-  if(!filename)
+  else if(objectToSaveP->isCapable(SPC_RAW_DATA))
   {
-    logprintf(ELL_WARN,ELS_SHELL,"Second parameter to save command must be a filename or variable representing a filename\n");
-  }
-  finalizeModifiedElf(e);
-  if(writeOutElf(e,filename,true))
-  {
-    logprintf(ELL_INFO_V2,ELS_SHELL,"Saved ELF object to \"%s\"\n",filename);
-  }
-  else
-  {
-    throw "Unable to save ELF file";
+    //just save a raw data file
+    int dataLen;
+    byte* data=objectToSaveP->getRawData(&dataLen);
+    FILE* f=fopen(filename,"w");
+    if(!f)
+    {
+      char buffer[1024];
+      snprintf(buffer,128,"Unable to open file %s for writing\n",filename);
+      throw buffer;
+    }
+    int ret=fwrite(data,dataLen,1,f);
+    if(ret!=1)
+    {
+      char buffer[1024];
+      snprintf(buffer,128,"Unable to write data to file %s properly\n",filename);
+      throw buffer;
+    }
+    logprintf(ELL_INFO_V2,ELS_SHELL,"Saved data object to \"%s\"\n",filename);
   }
 }
