@@ -629,6 +629,10 @@ int_lit : T_INT
 {
   $$.u.intval=savedInt;
 }
+| T_NONNEG_INT
+{
+  $$.u.intval=savedInt;
+}
 
 register_lit : T_REGISTER
 {
