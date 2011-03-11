@@ -3,6 +3,7 @@
 check()
 {
   if [ $? -ne 0 ]; then
+    echo "  DWARF test $1 failed"
     exit 1
   fi
 }
@@ -10,9 +11,9 @@ check()
 doTest()
 {
   cd $1 > /dev/null
-  check
+  check $1
   ./test.sh > /dev/null
-  check
+  check $1
   cd ..
   echo "  DWARF test $1 passed"
 }
