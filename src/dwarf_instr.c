@@ -247,7 +247,7 @@ void printInstruction(FILE* file,RegInstruction inst,int printFlags)
     }
     break;
   case DW_CFA_restore:
-    fprintf(file,"DW_CFA_register ");
+    fprintf(file,"DW_CFA_restore ");
     if(ERT_NONE==inst.arg1Reg.type)
     {
       fprintf(file,"r%zi ",inst.arg1);
@@ -257,6 +257,7 @@ void printInstruction(FILE* file,RegInstruction inst,int printFlags)
       printReg(file,inst.arg1Reg,printFlags);
       fprintf(file," ");
     }
+    fprintf(file,"\n");
     break;
   case DW_CFA_register:
     fprintf(file,"DW_CFA_register ");

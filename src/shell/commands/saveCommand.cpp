@@ -106,6 +106,7 @@ void SaveCommand::execute()
       throw buffer;
     }
     int ret=fwrite(data,dataLen,1,f);
+    fclose(f);
     if(ret!=1)
     {
       char buffer[1024];
