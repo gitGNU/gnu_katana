@@ -33,16 +33,17 @@ CXXFLAGS=$SAVED_CXXFLAGS #avoid the default set by AC_PROG_CXX
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([Makefile  src/Makefile tests/Makefile tests/code/Makefile tests/dwarf/Makefile tests/dwarf/passthrough/Makefile tests/dwarf/identity/Makefile src/shell/Makefile src/shell/dwarfscript/Makefile tests/hotpatch/Makefile tests/hotpatch/t1_basic/Makefile tests/hotpatch/t1_basic/v0/Makefile tests/hotpatch/t1_basic/v1/Makefile tests/hotpatch/t2_nested_types/Makefile tests/hotpatch/t2_nested_types/v0/Makefile tests/hotpatch/t2_nested_types/v1/Makefile tests/hotpatch/t3_multiple_cu/Makefile tests/hotpatch/t3_multiple_cu/v0/Makefile tests/hotpatch/t3_multiple_cu/v1/Makefile tests/hotpatch/t4_new_var/Makefile tests/hotpatch/t4_new_var/v0/Makefile tests/hotpatch/t4_new_var/v1/Makefile tests/hotpatch/t5_pointers/Makefile tests/hotpatch/t5_pointers/v0/Makefile tests/hotpatch/t5_pointers/v1/Makefile tests/hotpatch/t6_unions_enums/Makefile tests/hotpatch/t6_unions_enums/v0/Makefile tests/hotpatch/t6_unions_enums/v1/Makefile tests/hotpatch/t7_const/Makefile tests/hotpatch/t7_const/v0/Makefile tests/hotpatch/t7_const/v1/Makefile doc/Makefile])
 
-#AC_CONFIG_SUBDIRS([external/json-1.2])   
 
 #set up variables for use in Makefile.am
 AC_CHECK_LIB(elf,elf_begin,[fndlibPlaceholder],[doMissingLibrary])
+#todo: should check for libdwarf but I was having issues finding the correct symbol to do so
 #AC_CHECK_LIB(dwarf,dwarf_dealloc,[fndlibPlaceholder],[doMissingLibrary])
 #todo: should include check for libunwind-generic, but it seems to compile
 #such that all its functions are prefixed differently on different platforms,
 #so not sure what function to check for
 #AC_CHECK_LIB(unwind-generic,[fndlibPlaceholder],[doMissingLibrary])
-AC_CHECK_LIB(unwind-ptrace,_UPT_create,[fndlibPlaceholder],[doMissingLibrary])
+#todo: check both libunwinds we need, but I was having issues with these lines on some platforms
+#AC_CHECK_LIB(unwind-ptrace,_UPT_create,[fndlibPlaceholder],[doMissingLibrary])
 AC_CHECK_LIB(m,ceil,[fndlibPlaceholder],[doMissingLibrary])
 AC_CHECK_LIB(readline,rl_initialize,[fndlibPlaceholder],[doMissingLibrary])
 
