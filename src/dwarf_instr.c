@@ -246,6 +246,18 @@ void printInstruction(FILE* file,RegInstruction inst,int printFlags)
       fprintf(file,"DW_CFA_offset r%zi %zi\n",inst.arg1,tmp);
     }
     break;
+  case DW_CFA_restore:
+    fprintf(file,"DW_CFA_register ");
+    if(ERT_NONE==inst.arg1Reg.type)
+    {
+      fprintf(file,"r%zi ",inst.arg1);
+    }
+    else
+    {
+      printReg(file,inst.arg1Reg,printFlags);
+      fprintf(file," ");
+    }
+    break;
   case DW_CFA_register:
     fprintf(file,"DW_CFA_register ");
     if(ERT_NONE==inst.arg1Reg.type)
