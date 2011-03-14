@@ -18,8 +18,10 @@
 /config.h.in~
 /config.log
 /config.status
+/info_for_sergey.txt
 /katana-0.1.0b.tar.gz
 /katana-0.1.0b.tar.gz.sig
+/katana-0.1.1b.tar.gz
 /nohup.out
 /pullAll.sh
 /pushAll.sh

@@ -197,7 +197,6 @@ void addInstruction(DwarfInstructions* instrs,DwarfInstruction* instr)
   case DW_CFA_restore:
     bytes=zmalloc(1);
     bytes[0]=DW_CFA_restore | instr->arg1;
-    memcpy(bytes+1,instr->arg2Bytes,instr->arg2NumBytes);
     addBytes(instrs,bytes,1);
     free(bytes);
     break;
@@ -422,7 +421,7 @@ DwarfInstruction regInstructionToRawDwarfInstruction(RegInstruction* inst)
     result.arg1Bytes=encodeAsLEB128((byte*)&inst->arg1,sizeof(inst->arg1),false,&result.arg1NumBytes);
     break;
   case DW_CFA_restore:
-    result.arg1=inst->arg2;
+    result.arg1=inst->arg1;
   case DW_CFA_remember_state:
   case DW_CFA_restore_state:
   case DW_CFA_nop:
