@@ -119,7 +119,7 @@ char* rlgets(char* prompt,bool isInputTty)
   }
 }
 
-void doCommandList(CommandList* list)
+bool doCommandList(CommandList* list)
 {
   while(list)
   {
@@ -130,23 +130,39 @@ void doCommandList(CommandList* list)
     catch(char* str)
     {
       logprintf(ELL_WARN,ELS_SHELL,"Unable to execute command, error message is '%s'\n",str);
-      break;
+      return false;
     }
     catch(char const* str)
     {
       logprintf(ELL_WARN,ELS_SHELL,"Unable to execute command, error message is '%s'\n",str);
-      break;
+      return false;
     }
     catch(...)
     {
       logprintf(ELL_WARN,ELS_SHELL,"Unable to execute command, unknown error message\n");
-      break;
+      return false;
     }
     CommandList* next=list->next;
     delete list->cmd;
     free(list);
     list=next;
   }
+  return true;
+}
+
+bool doShellCommand(char* cmdString)
+{
+  yy_scan_string(cmdString);
+  bool parseSuccess = (0==yyparse());
+  if(!parseSuccess)
+  {
+    logprintf(ELL_WARN,ELS_SHELL,"Unable to execute shell command\n");
+    return false;
+  }
+  assert(rootParseNode.type==PNT_LIST);
+  CommandList* list=rootParseNode.u.listItem;
+  doCommandList(list);
+  return true;
 }
 
 void doShell(char* inputFilename)

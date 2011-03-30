@@ -78,7 +78,6 @@ ElfInfo* newBinary=NULL;
 
 ElfInfo* patch;
 addr_t rodataOffset;//used to keep track of how much rodata we've used
-Elf *outelf;
 
 
 Dwarf_P_Die firstCUDie=NULL;
@@ -740,13 +739,13 @@ void writeROData(ElfInfo* binary)
 }
 
 
-void writePatch(char* oldSourceTree,char* newSourceTree,char* oldBinName,char* newBinName,char* patchOutName)
+ElfInfo* createPatch(char* oldSourceTree,char* newSourceTree,char* oldBinName,char* newBinName,FILE* patchOutfile)
 {
   newBinary=openELFFile(newBinName);
   findELFSections(newBinary);
   oldBinary=openELFFile(oldBinName);
   findELFSections(oldBinary);
-  patch=startPatchElf(patchOutName);
+  patch=startPatchElf(patchOutfile);
   Dwarf_Error err;
   //todo: always creating 32-bit Dwarf sections. DWARF standard
   //recommends never having 64-bit Dwarf as the default, even on
@@ -826,7 +825,7 @@ void writePatch(char* oldSourceTree,char* newSourceTree,char* oldBinName,char* n
     Dwarf_Signed elfScnIdx;
     Dwarf_Unsigned length;
     Dwarf_Ptr buf=dwarf_get_section_bytes(dbg,i,&elfScnIdx,&length,&err);
-    Elf_Scn* scn=elf_getscn(outelf,elfScnIdx);
+    Elf_Scn* scn=elf_getscn(patch->e,elfScnIdx);
     Elf_Data* data=elf_newdata(scn);
     ElfXX_Shdr* shdr=elfxx_getshdr(scn);
     shdr->sh_size=length;
@@ -836,14 +835,14 @@ void writePatch(char* oldSourceTree,char* newSourceTree,char* oldBinName,char* n
     memcpy(data->d_buf,buf,length);
   }
   
-  endPatchElf();
+  finalizeModifiedElf(patch);
   int res=dwarf_producer_finish(dbg,&err);
   if(DW_DLV_ERROR==res)
   {
     dwarfErrorHandler(err,NULL);
   }
-  logprintf(ELL_INFO_V1,ELS_ELFWRITE,"wrote elf file %s\n",patchOutName);
   endELF(oldBinary);
   endELF(newBinary);
+  return patch;
 }
 

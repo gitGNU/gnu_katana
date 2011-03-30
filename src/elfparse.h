@@ -105,7 +105,7 @@ typedef struct ElfInfo
   int dataStart[2];//in memory and on disk
   int textStart[2];//in memory and on disk
   int fd;//file descriptor for elf file
-  char* fname;//file name associated with descriptor
+  char* fname;//file name associated with descriptor. Not always set
   DwarfInfo* dwarfInfo;
   CallFrameInfo callFrameInfo;
   bool dataAllocatedByKatana;//used for memory management

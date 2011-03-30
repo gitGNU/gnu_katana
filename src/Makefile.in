@@ -68,7 +68,7 @@ am__objects_6 = katana-command.$(OBJEXT) katana-loadCommand.$(OBJEXT) \
 	katana-saveCommand.$(OBJEXT) katana-replaceCommand.$(OBJEXT) \
 	katana-dwarfscriptCommand.$(OBJEXT) \
 	katana-shellCommand.$(OBJEXT) katana-infoCommand.$(OBJEXT) \
-	katana-hashCommand.$(OBJEXT)
+	katana-hashCommand.$(OBJEXT) katana-patchCommand.$(OBJEXT)
 am__objects_7 = katana-elfVariableData.$(OBJEXT) \
 	katana-rawVariableData.$(OBJEXT) katana-arrayData.$(OBJEXT) \
 	katana-elfSectionData.$(OBJEXT)
@@ -269,8 +269,8 @@ UTIL_SRC = util/dictionary.c util/hash.c util/util.c util/map.c util/list.c util
 UTIL_H = util/dictionary.h util/hash.h util/util.h util/map.h util/list.h util/logging.h util/path.h util/refcounted.h util/stack.h util/cxxutil.h util/growingBuffer.h util/file.h
 SHELL_VARIABLE_SRC = shell/variableTypes/elfVariableData.cpp shell/variableTypes/rawVariableData.cpp shell/variableTypes/arrayData.cpp shell/variableTypes/elfSectionData.cpp
 SHELL_VARIABLE_H = shell/variableTypes/elfVariableData.h shell/variableTypes/rawVariableData.h shell/variableTypes/arrayData.h shell/variableTypes/elfSectionData.h
-SHELL_COMMANDS_SRC = shell/commands/command.cpp shell/commands/loadCommand.cpp shell/commands/saveCommand.cpp shell/commands/replaceCommand.cpp shell/commands/dwarfscriptCommand.cpp shell/commands/shellCommand.cpp shell/commands/infoCommand.cpp  shell/commands/hashCommand.cpp
-SHELL_COMMANDS_H = shell/commands/command.h shell/commands/loadCommand.h shell/commands/saveCommand.h shell/commands/replaceCommand.h shell/commands/dwarfscriptCommand.h shell/commands/shellCommand.h shell/commands/infoCommand.h shell/commands/hashCommand.cpp
+SHELL_COMMANDS_SRC = shell/commands/command.cpp shell/commands/loadCommand.cpp shell/commands/saveCommand.cpp shell/commands/replaceCommand.cpp shell/commands/dwarfscriptCommand.cpp shell/commands/shellCommand.cpp shell/commands/infoCommand.cpp  shell/commands/hashCommand.cpp shell/commands/patchCommand.cpp
+SHELL_COMMANDS_H = shell/commands/command.h shell/commands/loadCommand.h shell/commands/saveCommand.h shell/commands/replaceCommand.h shell/commands/dwarfscriptCommand.h shell/commands/shellCommand.h shell/commands/infoCommand.h shell/commands/hashCommand.cpp shell/commands/patchCommand.h
 DWARFSCRIPT_SRC = shell/dwarfscript/dwarfscript.yy.c shell/dwarfscript/dwarfscript.tab.c
 DWARFSCRIPT_H = shell/dwarfscript/dwarfscript.tab.h
 SHELL_SRC = shell/shell.cpp  shell/shell.yy.cpp shell/shell.tab.cpp shell/param.cpp shell/variable.cpp shell/arrayAccessParam.cpp $(SHELL_COMMANDS_SRC) $(SHELL_VARIABLE_SRC) $(DWARFSCRIPT_SRC)
@@ -403,6 +403,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-logging.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-map.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-param.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-patchCommand.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-patchapply.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-patchwrite.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-path.Po@am__quote@
@@ -1326,6 +1327,20 @@ katana-hashCommand.obj: shell/commands/hashCommand.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='shell/commands/hashCommand.cpp' object='katana-hashCommand.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o katana-hashCommand.obj `if test -f 'shell/commands/hashCommand.cpp'; then $(CYGPATH_W) 'shell/commands/hashCommand.cpp'; else $(CYGPATH_W) '$(srcdir)/shell/commands/hashCommand.cpp'; fi`
+
+katana-patchCommand.o: shell/commands/patchCommand.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT katana-patchCommand.o -MD -MP -MF $(DEPDIR)/katana-patchCommand.Tpo -c -o katana-patchCommand.o `test -f 'shell/commands/patchCommand.cpp' || echo '$(srcdir)/'`shell/commands/patchCommand.cpp
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/katana-patchCommand.Tpo $(DEPDIR)/katana-patchCommand.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='shell/commands/patchCommand.cpp' object='katana-patchCommand.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o katana-patchCommand.o `test -f 'shell/commands/patchCommand.cpp' || echo '$(srcdir)/'`shell/commands/patchCommand.cpp
+
+katana-patchCommand.obj: shell/commands/patchCommand.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT katana-patchCommand.obj -MD -MP -MF $(DEPDIR)/katana-patchCommand.Tpo -c -o katana-patchCommand.obj `if test -f 'shell/commands/patchCommand.cpp'; then $(CYGPATH_W) 'shell/commands/patchCommand.cpp'; else $(CYGPATH_W) '$(srcdir)/shell/commands/patchCommand.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/katana-patchCommand.Tpo $(DEPDIR)/katana-patchCommand.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='shell/commands/patchCommand.cpp' object='katana-patchCommand.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o katana-patchCommand.obj `if test -f 'shell/commands/patchCommand.cpp'; then $(CYGPATH_W) 'shell/commands/patchCommand.cpp'; else $(CYGPATH_W) '$(srcdir)/shell/commands/patchCommand.cpp'; fi`
 
 katana-elfVariableData.o: shell/variableTypes/elfVariableData.cpp
 @am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT katana-elfVariableData.o -MD -MP -MF $(DEPDIR)/katana-elfVariableData.Tpo -c -o katana-elfVariableData.o `test -f 'shell/variableTypes/elfVariableData.cpp' || echo '$(srcdir)/'`shell/variableTypes/elfVariableData.cpp

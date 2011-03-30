@@ -143,8 +143,15 @@ int main(int argc,char** argv)
       strcpy(config.outfileName,oldBinPath);
       strcat(config.outfileName,".po");
     }
-    
-    writePatch(config.oldSourceTree,config.newSourceTree,oldBinPath,newBinPath,config.outfileName);
+
+    FILE* outfile=fopen(config.outfileName,"w");
+    ElfInfo* patch=createPatch(config.oldSourceTree,config.newSourceTree,oldBinPath,newBinPath,outfile);
+    if(elf_update (patch->e, ELF_C_WRITE) <0)
+    {
+      death("Failed to write out elf file: %s\n",elf_errmsg (-1));
+      exit(1);
+    }  
+    endELF(patch);
     free(oldBinPath);
     free(newBinPath);
   }

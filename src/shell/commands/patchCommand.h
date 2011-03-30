@@ -1,7 +1,7 @@
 /*
-  File: saveCommand.cpp
+  File: patchCommand.h
   Author: James Oakley
-  Copyright (C): 2010 Dartmouth College
+  Copyright (C): 2011 Dartmouth College
   License: Katana is free software: you may redistribute it and/or
   modify it under the terms of the GNU General Public License as
   published by the Free Software Foundation, either version 2 of the
@@ -49,70 +49,46 @@
   http://www.gnu.org/licenses/gpl.html
     
   Project:  Katana
-  Date: December 2010
-  Description: Command class for the katana shell
+  Date: March 2011
+  Description: Command class for the katana shell. Performs actions
+               related to hotpatching.
+
 */
 
-#include "saveCommand.h"
+#ifndef patch_command_h
+#define patch_command_h
 
-SaveCommand::SaveCommand(ShellParam* objectToSave,ShellParam* filename)
-  :objectToSaveP(objectToSave),filenameP(filename)
-{
-  objectToSaveP->grab();
-  filenameP->grab();
-}
+#include "command.h"
 
-SaveCommand::~SaveCommand()
+typedef enum PatchOperation
 {
-  objectToSaveP->drop();
-  filenameP->drop();
-}
+  PO_GENERATE_PATCH,
+  PO_APPLY_PATCH
+} PatchOperation;
 
-void SaveCommand::execute()
+class PatchCommand : public ShellCommand
 {
-  char* filename=filenameP->getString();
-  if(objectToSaveP->isCapable(SPC_ELF_VALUE))
-  {
-    //we are saving an elf object
-    ElfInfo* e=objectToSaveP->getElfObject();
-    if(!e)
-    {
-      logprintf(ELL_WARN,ELS_SHELL,"First parameter to save command must be a variable representing an ELF object\n");
-    }
-    if(!filename)
-    {
-      logprintf(ELL_WARN,ELS_SHELL,"Second parameter to save command must be a filename or variable representing a filename\n");
-    }
-    finalizeModifiedElf(e);
-    if(writeOutElf(e,filename,e->isPO?false:true))
-    {
-      logprintf(ELL_INFO_V2,ELS_SHELL,"Saved ELF object to \"%s\"\n",filename);
-    }
-    else
-    {
-      throw "Unable to save ELF file";
-    }
-  }
-  else if(objectToSaveP->isCapable(SPC_RAW_DATA))
-  {
-    //just save a raw data file
-    int dataLen;
-    byte* data=objectToSaveP->getRawData(&dataLen);
-    FILE* f=fopen(filename,"w");
-    if(!f)
-    {
-      char buffer[1024];
-      snprintf(buffer,128,"Unable to open file %s for writing\n",filename);
-      throw buffer;
-    }
-    int ret=fwrite(data,dataLen,1,f);
-    fclose(f);
-    if(ret!=1)
-    {
-      char buffer[1024];
-      snprintf(buffer,128,"Unable to write data to file %s properly\n",filename);
-      throw buffer;
-    }
-    logprintf(ELL_INFO_V2,ELS_SHELL,"Saved data object to \"%s\"\n",filename);
-  }
-}
+ public:
+  //constructor for patch generation
+  PatchCommand(PatchOperation op,ShellParam* oldObjectsDir,ShellParam* newObjectsDir,ShellParam* executableName);
+  //constructor for patch application
+  PatchCommand(PatchOperation op,ShellParam* patchfile,ShellParam* pid);
+
+  virtual ~PatchCommand();
+  virtual void execute();
+protected:
+  void generatePatch();
+  void applyPatch();
+
+  PatchOperation op;
+  ShellParam* oldObjectsDirP;
+  ShellParam* newObjectsDirP;
+  ShellParam* executableNameP;
+  ShellParam* patchfileP;
+  ShellParam* pidP;
+};
+
+#endif
+// Local Variables:
+// mode: c++
+// End:

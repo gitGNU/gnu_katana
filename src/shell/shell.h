@@ -60,7 +60,9 @@
 extern "C"
 {
 #endif
-void doShell(char* inputFile);
+  void doShell(char* inputFile);
+  //returns true on success
+  bool doShellCommand(char* cmdString);
 #ifdef __cplusplus
 }
 #endif

@@ -55,6 +55,10 @@ S_QUOTE_STRING  [\'][^\'\n][\']
 "eh" return T_EXCEPTION_HANDLING;
 "hash" return T_HASH;
 "elf" return T_ELF;
+"patch" return T_PATCH;
+"gen" return T_GENERATE;
+"generate" return T_GENERATE;
+"apply" return T_APPLY;
 ";" return ';';
 "\[" return '[';
 "\]" return ']';
