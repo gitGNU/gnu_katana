@@ -128,12 +128,12 @@ void loggingDefaults()
   sourceEnables[ELS_PATCHAPPLY]=ELL_CNT;
   sourceEnables[ELS_LINKMAP]=ELL_INFO_V4;
   sourceEnables[ELS_DWARFTYPES]=ELL_WARN;
-  sourceEnables[ELS_SAFETY]=ELL_INFO_V4;
+  sourceEnables[ELS_SAFETY]=ELL_INFO_V1;
   sourceEnables[ELS_PATH]=ELL_CNT;
   sourceEnables[ELS_ELFWRITE]=ELL_INFO_V2;
   sourceEnables[ELS_PATCHWRITE]=ELL_WARN;
   sourceEnables[ELS_VERSION]=ELL_WARN;
-  sourceEnables[ELS_DWARFWRITE]=ELL_INFO_V4;
+  sourceEnables[ELS_DWARFWRITE]=ELL_INFO_V2;
   sourceEnables[ELS_LEB]=ELL_INFO_V3;
   sourceEnables[ELS_CONFIG]=ELL_INFO_V4;
   sourceEnables[ELS_SHELL]=ELL_INFO_V4;
