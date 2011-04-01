@@ -1,7 +1,7 @@
 /*
-  File: shellCommand.cpp
+  File: patchCommand.h
   Author: James Oakley
-  Copyright (C): 2010 Dartmouth College
+  Copyright (C): 2011 Dartmouth College
   License: Katana is free software: you may redistribute it and/or
   modify it under the terms of the GNU General Public License as
   published by the Free Software Foundation, either version 2 of the
@@ -49,52 +49,46 @@
   http://www.gnu.org/licenses/gpl.html
     
   Project:  Katana
-  Date: December 2010
-  Description: Command class for the katana shell
+  Date: March 2011
+  Description: Command class for the katana shell. Performs actions
+               related to hotpatching.
+
 */
 
-#include "shellCommand.h"
+#ifndef patch_command_h
+#define patch_command_h
 
-SystemShellCommand::SystemShellCommand(ShellParam* commands)
-  :commandsP(commands)
-{
-  commandsP->grab();
-}
+#include "command.h"
 
-SystemShellCommand::~SystemShellCommand()
+typedef enum PatchOperation
 {
-  commandsP->drop();
-}
+  PO_GENERATE_PATCH,
+  PO_APPLY_PATCH
+} PatchOperation;
 
-void SystemShellCommand::execute()
+class PatchCommand : public ShellCommand
 {
-  if(!this->outputVariable)
-  {
-    system(commandsP->getString());
-  }
-  else
-  {
-    //we need to actually get the output from the shell command
-    FILE* f=popen(commandsP->getString(),"r");
-    if(!f)
-    {
-      throw "Cannot run shell command because popen() failed\n";
-    }
-    int outputStringLen=0;
-    int outputStringAllocated=128;
-    char* outputString=(char*)malloc(outputStringAllocated);
-    char buffer[1024];
-    while (int bytesRead=fgets(buffer, sizeof(buffer)-1, f) != NULL)
-    {
-      if(outputStringLen+bytesRead >= outputStringAllocated)
-      {
-        outputStringAllocated=outputStringAllocated*2+bytesRead;
-        outputString=(char*)realloc(outputString,outputStringAllocated);
-      }
-      memcpy(outputString+outputStringLen,buffer,bytesRead);
-      outputStringLen+=bytesRead;
-      outputString[outputStringLen]='\0';
-    }
-    this->outputVariable->setValue(outputString);
-  }
-}
+ public:
+  //constructor for patch generation
+  PatchCommand(PatchOperation op,ShellParam* oldObjectsDir,ShellParam* newObjectsDir,ShellParam* executableName);
+  //constructor for patch application
+  PatchCommand(PatchOperation op,ShellParam* patch,ShellParam* pid);
+
+  virtual ~PatchCommand();
+  virtual void execute();
+protected:
+  void generatePatch();
+  void applyPatch();
+
+  PatchOperation op;
+  ShellParam* oldObjectsDirP;
+  ShellParam* newObjectsDirP;
+  ShellParam* executableNameP;
+  ShellParam* patchP;
+  ShellParam* pidP;
+};
+
+#endif
+// Local Variables:
+// mode: c++
+// End:

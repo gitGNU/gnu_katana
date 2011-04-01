@@ -60,9 +60,11 @@
 #include "elfparse.h"
 #include "arch.h"
 
-//must be called before any other routines
-//for each patch object to create
-ElfInfo* startPatchElf(char* fname);
+//Must be called before any other routines for each patch object to
+//create. Filename is just used for identification purposes it is not
+//enforced to correspond to file. If file is NULL, however, a new file
+//will be created at filename
+ElfInfo* startPatchElf(FILE* file,char* filename);
 
 //adds data to a section and returns the offset of that
 //data in the section
@@ -82,11 +84,6 @@ int addStrtabEntry(ElfInfo* e,char* str);
 int addSymtabEntry(ElfInfo* e,Elf_Data* data,ElfXX_Sym* sym);
 
 int reindexSectionForPatch(ElfInfo* e,int scnIdx,ElfInfo* patch);
-
-//must be called at the end of each patch and
-//before a new patch can be started
-//it may *NOT* be called in the middle of creating a patch
-void endPatchElf();
 
 int dwarfWriteSectionCallback(char* name,int size,Dwarf_Unsigned type,
                               Dwarf_Unsigned flags,Dwarf_Unsigned link,

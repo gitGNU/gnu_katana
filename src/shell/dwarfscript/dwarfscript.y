@@ -36,6 +36,7 @@ int yyerror(char *s);
 void makeBasicRegister1(ParseNode* node,ParseNode* intvalNode);
 void makeBasicRegister2(ParseNode* node,ParseNode* intvalNode);
 void flowControlLabelReference(ParseNode* node);
+ void fillInReference(DwarfExprInstr* opInstr,int labelByteLocation,int opInstrByteLocation);
 
  %}
 
@@ -968,7 +969,7 @@ dw_op_addr {$$=$1;}
 label : T_IDENTIFIER ':'
 {
   Label* lbl=dictGet(labels,savedString);
-  $$.u.label=lbl;
+  $$.label=lbl;
   if(!lbl)
   {
     lbl=zmalloc(sizeof(Label));
@@ -987,15 +988,12 @@ label : T_IDENTIFIER ':'
   for(int i=0;i<lbl->numReferences;i++)
   {
     int idx=lbl->references[i];
-    //note we can do this because the only two instructions which
-    //labels should apply to are DW_OP_bra, and DW_OP_skip which have
-    //only one argument and don't use any variable length data
-    assert(currentExpr.instructions[idx].type==DW_OP_bra ||
-           currentExpr.instructions[idx].type==DW_OP_skip);
-    currentExpr.instructions[i].arg1=lbl->byteLocation;
+    //we previously stored the byte location of the given instruction
+    //in its first argument. This is kind of hackish.
+    fillInReference(&currentExpr.instructions[idx],lbl->byteLocation,currentExpr.instructions[idx].arg1);
+
   }
   lbl->numReferences=0;
-  free(lbl->references);
 }
 
 dw_op_addr : T_DW_OP_addr nonneg_int_lit
@@ -1163,6 +1161,7 @@ dw_op_skip : T_DW_OP_skip int_lit
 }
 | T_DW_OP_skip T_IDENTIFIER
 {
+  printf("reading op skip with identifier\n");
   $$.u.opInstr.type=DW_OP_skip;
   flowControlLabelReference(&$$);
 }
@@ -1321,26 +1320,43 @@ void makeBasicRegister2(ParseNode* node,ParseNode* intvalNode)
   node->u.regInstr.arg2Reg.u.index=intvalNode->u.intval;
 }
 
+void fillInReference(DwarfExprInstr* opInstr,int labelByteLocation,int opInstrByteLocation)
+{
+  switch(opInstr->type)
+  {
+  case DW_OP_skip:
+  case DW_OP_bra:
+    //reference is relative. -3 because of the length of these instructions
+    opInstr->arg1=labelByteLocation-opInstrByteLocation-3;
+    printf("Filling in label to value %zi\n",opInstr->arg1);
+    break;
+  default:
+    death("Unexepected use of label reference, instruction not expected\n");
+  }
+}
+
 void flowControlLabelReference(ParseNode* node)
 {
   //ah, we have a label
   Label* lbl=dictGet(labels,savedString);
-  node->u.label=lbl;
+  node->label=lbl;
   if(!lbl)
   {
     lbl=zmalloc(sizeof(Label));
     dictInsert(labels,savedString,lbl);
   }
   free(savedString);
+  int currentInstructionLocation=currentExpr.byteLength;
   if(lbl->locationKnown)
   {
-    //the label was above us in the source program so we can fill it
-    //in now
-    node->u.opInstr.arg1=lbl->byteLocation;
+    fillInReference(&node->u.opInstr,lbl->byteLocation,currentInstructionLocation);
   }
   else
   {
-    node->u.opInstr.arg1=0;//will be filled in later
+    node->u.opInstr.arg1=currentInstructionLocation;//we just save
+                                                    //this value here
+                                                    //because we may
+                                                    //need it later
     //create a reference so we know to fill this in later
     lbl->numReferences++;
     lbl->references=realloc(lbl->references,sizeof(int)*lbl->numReferences);

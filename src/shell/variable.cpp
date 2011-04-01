@@ -99,6 +99,15 @@ void ShellVariable::setValue(byte* data,int dataLen,SectionHeaderData* header)
   this->data=new ShellElfSectionVariableData(data,dataLen,header);
 }
 
+void ShellVariable::setValue(char* string)
+{
+  if(this->data)
+  {
+    delete this->data;
+  }
+  ShellParam::setValue(string);
+}
+
 void ShellVariable::makeArray(ShellVariableData** items,int cnt)
 {
   if(this->data)
@@ -116,6 +125,7 @@ void ShellVariable::makeArray(ShellVariableData** items,int cnt)
 //the returned pointer is valid until the next call to getData
 ParamDataResult* ShellVariable::getData(ShellParamCapability dataType,int idx)
 {
+  //todo: this will fail for strings
   return this->data->getData(dataType,idx);
 }
 

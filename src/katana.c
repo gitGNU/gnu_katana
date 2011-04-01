@@ -143,8 +143,9 @@ int main(int argc,char** argv)
       strcpy(config.outfileName,oldBinPath);
       strcat(config.outfileName,".po");
     }
-    
-    writePatch(config.oldSourceTree,config.newSourceTree,oldBinPath,newBinPath,config.outfileName);
+
+    ElfInfo* patch=createPatch(config.oldSourceTree,config.newSourceTree,oldBinPath,newBinPath,NULL,config.outfileName);
+    endELF(patch);
     free(oldBinPath);
     free(newBinPath);
   }
@@ -156,6 +157,7 @@ int main(int argc,char** argv)
     findELFSections(patch);
     patch->isPO=true;
     readAndApplyPatch(config.pid,oldBinElfInfo,patch);
+    endELF(patch);
   }
   else if(EKM_INFO==config.mode)
   {

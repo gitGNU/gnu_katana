@@ -44,7 +44,8 @@
      (cons (regexp-opt dws-types 'words) 'font-lock-type-face)
      (cons (regexp-opt dws-variables 'words) 'font-lock-variable-name-face)
      (cons (regexp-opt dws-builtins 'words) 'font-lock-builtin-face)
-     (cons "\\(?:DW_CFA\\|DW_OP\\)_[a-zA-Z0-9_]*" 'font-lock-function-name-face))))
+     (cons "\\(?:DW_CFA\\|DW_OP\\)_[a-zA-Z0-9_]*" 'font-lock-function-name-face)
+     (cons "[ \t]*[a-zA-Z_][a-zA-Z_0-9]*:" 'font-lock-preprocessor-face))))
 
 (define-derived-mode dws-mode fundamental-mode "DWS"
   "Major mode for editing Katana dwarfscript files"

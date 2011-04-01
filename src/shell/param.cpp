@@ -162,6 +162,11 @@ SectionHeaderData* ShellParam::getSectionHeader(int idx)
   return result->u.shdr;
 }
 
+void ShellParam::setValue(char* string)
+{
+  this->stringValue=strdup(string);
+}
+
 ShellIntParam::ShellIntParam(sword_t intval)
   :value(intval)
 {
@@ -197,3 +202,4 @@ bool ShellIntParam::isCapable(ShellParamCapability cap,int idx)
   }
   return false;
 }
+

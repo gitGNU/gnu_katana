@@ -95,6 +95,7 @@ typedef enum
   ELS_DWARFSCRIPT,
   ELS_DWARF_BUILD,
   ELS_VM,
+  ELS_CLEANUP,
   ELS_CNT
 } E_LOG_SOURCE;//describes what subsystem the message came from
 

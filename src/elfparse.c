@@ -90,6 +90,7 @@ ElfInfo* openELFFile(char* fname)
 
 void endELF(ElfInfo* e)
 {
+  logprintf(ELL_INFO_V2,ELS_CLEANUP,"ending elf %s\n",e->fname);
   if(e->dataAllocatedByKatana)
   {
     //since we wrote this elf file we malloc'd all the
@@ -115,7 +116,8 @@ void endELF(ElfInfo* e)
   }
   free(e->callFrameInfo.fdes);
   elf_end(e->e);
-  close(e->fd);
+  //I think elf_end must call close on the file descriptor
+  //close(e->fd);
   free(e->fname);
   free(e);
 }
@@ -183,7 +185,7 @@ ElfInfo* duplicateElf(ElfInfo* e,char* outfname,bool flushToDisk,bool keepLayout
   elf_flagelf(outelf, ELF_C_SET, ELF_F_DIRTY);
   if(keepLayout)
   {
-      elf_flagelf(outelf,ELF_C_SET,ELF_F_LAYOUT);
+    elf_flagelf(outelf,ELF_C_SET,ELF_F_LAYOUT);
   }
 
   if (elf_update(outelf, flushToDisk?ELF_C_WRITE:ELF_C_NULL) <0)
@@ -206,6 +208,7 @@ bool writeOutElf(ElfInfo* e,char* outfname,bool keepLayout)
   if(newE)
   {
     elf_end(newE->e);
+    //elf_end seems to close the file descriptor
     //close(newE->fd);
     free(newE);
     return true;

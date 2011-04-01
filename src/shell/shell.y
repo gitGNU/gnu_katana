@@ -8,6 +8,7 @@
 #include "commands/dwarfscriptCommand.h"
 #include "commands/infoCommand.h"
 #include "commands/hashCommand.h"
+#include "commands/patchCommand.h"
 #include "arrayAccessParam.h"  
 #include "parse_helper.h"
   
@@ -47,6 +48,7 @@ extern "C"
 %token T_DATA T_DWARFSCRIPT T_COMPILE T_EMIT T_SHELL_COMMAND
 %token T_HASH T_ELF
 %token T_INFO T_EXCEPTION_HANDLING
+%token T_PATCH T_GENERATE T_APPLY
 %token T_NONNEG_INT T_RAW
 %token T_INVALID_TOKEN
 %token T_EOL T_EOF
@@ -112,6 +114,7 @@ commandline : loadcmd {$$=$1;$$.type=PNT_CMD;}
 | shellcmd {$$=$1;$$.type=PNT_CMD;}
 | infocmd {$$=$1;$$.type=PNT_CMD;}
 | hashcmd {$$=$1;$$.type=PNT_CMD;}
+| patchcmd {$$=$1;$$.type=PNT_CMD;}
 
 
 loadcmd : T_LOAD param
@@ -230,6 +233,19 @@ hashcmd : T_HASH T_ELF param
   YYERROR;
 }
 
+patchcmd : T_PATCH T_GENERATE param param param
+{
+  $$.u.cmd=new PatchCommand(PO_GENERATE_PATCH,$3.u.param,$4.u.param,$5.u.param);
+  $3.u.param->drop();
+  $4.u.param->drop();
+  $5.u.param->drop();
+}
+| T_PATCH T_APPLY param param
+{
+  $$.u.cmd=new PatchCommand(PO_APPLY_PATCH,$3.u.param,$4.u.param);
+  $3.u.param->drop();
+  $4.u.param->drop();
+}
 
 param : variable
 {

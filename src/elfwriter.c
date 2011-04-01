@@ -61,15 +61,11 @@
 #include "elfutil.h"
 
 
-//now not writing old symbols b/c
-//better to get the from /proc/PID/exe
-/*Elf_Scn* old_symtab_scn=NULL;//relevant symbols from the symbol table of the old binary
-                             //we must store this in the patch object in case the object
-                             //in memory does not have a symbol table loaded in memory
-                             */
+//global because libdwarf gives us no way of passing data into
+//dwarfWriteSectionCallback. This means we cannot be concurrently
+//generating two patch objects
+static ElfInfo* patch=NULL;
 
-//todo: use smth like this in the future rather than having a separate variable for everything
-//currently this isn't used for everything
 typedef struct
 {
   Elf_Scn* scn;
@@ -77,11 +73,11 @@ typedef struct
   //size_t allocatedSize;//bytes allocated for data->d_buf
 } ScnInProgress;
 
-ScnInProgress scnInfo[ERS_CNT];
+//todo: what is this actually used for?
+static ScnInProgress scnInfo[ERS_CNT];
 
 
-ElfInfo* patch=NULL;
-Elf* outelf;
+
 
 //returns the offset into the section that the data was added at
 addr_t addDataToScn(Elf_Data* dataDest,void* data,int size)
@@ -90,6 +86,7 @@ addr_t addDataToScn(Elf_Data* dataDest,void* data,int size)
   MALLOC_CHECK(dataDest->d_buf);
   memcpy((byte*)dataDest->d_buf+dataDest->d_size,data,size);
   dataDest->d_size=dataDest->d_size+size;
+  elf_flagdata(dataDest,ELF_C_SET,ELF_F_DIRTY);
   return dataDest->d_size-size;
 }
 
@@ -120,6 +117,7 @@ void modifyScnData(Elf_Data* dataDest,word_t offset,void* data,int size)
     dataDest->d_size=offset+size;
   }
   memcpy((byte*)dataDest->d_buf+offset,data,size);
+  elf_flagdata(dataDest,ELF_C_SET,ELF_F_DIRTY);
 }
 
 //adds an entry to the string table, return its offset
@@ -201,6 +199,7 @@ void createSections(ElfInfo* e)
   Elf_Scn* symtab_scn=elf_newscn(outelf);
   Elf_Data* symtab_data=elf_newdata(symtab_scn);
   symtab_data->d_align=1;
+  symtab_data->d_type=ELF_T_SYM;
   symtab_data->d_buf=NULL;
   symtab_data->d_off=0;
   symtab_data->d_size=0;
@@ -290,6 +289,7 @@ void createSections(ElfInfo* e)
   rela_text_data->d_off=0;
   rela_text_data->d_size=0;
   rela_text_data->d_version=EV_CURRENT;
+  rela_text_data->d_type=ELF_T_RELA;
   scnInfo[ERS_RELA_TEXT].scn=rela_text_scn;
   scnInfo[ERS_RELA_TEXT].data=rela_text_data;
   shdr=elfxx_getshdr(rela_text_scn);
@@ -318,24 +318,26 @@ void createSections(ElfInfo* e)
   e->sectionIndices[ERS_UNSAFE_FUNCTIONS]=elf_ndxscn(scnInfo[ERS_UNSAFE_FUNCTIONS].scn);
 }
 
-//must be called before any other routines
-//for each patch object to create
-ElfInfo* startPatchElf(char* fname)
+//Must be called before any other routines for each patch object to
+//create. Filename is just used for identification purposes it is not
+//enforced to correspond to file. If file is NULL, however, a new file
+//will be created at filename
+ElfInfo* startPatchElf(FILE* file,char* filename)
 {
+  if(!file)
+  {
+    file=fopen(filename,"w");
+  }
   patch=zmalloc(sizeof(ElfInfo));
   patch->isPO=true;
-  int outfd = creat(fname, 0666);
-  if (outfd < 0)
-  {
-    fprintf(stderr,"cannot open output file '%s'", fname);
-  }
+  patch->fname=strdup(filename);
+  int outfd = fileno(file);
 
-  outelf = elf_begin (outfd, ELF_C_WRITE, NULL);
+  patch->e = elf_begin (outfd, ELF_C_WRITE, NULL);
   //todo: get rid of the need for permissive. Need it right now
   //because libdwarf creates some sections with wrong entsizes.
-  elf_flagelf(outelf,ELF_C_SET,ELF_F_PERMISSIVE);
-  patch->e=outelf;
-  ElfXX_Ehdr* ehdr=elfxx_newehdr(outelf);
+  elf_flagelf(patch->e,ELF_C_SET,ELF_F_PERMISSIVE);
+  ElfXX_Ehdr* ehdr=elfxx_newehdr(patch->e);
   if(!ehdr)
   {
     death("Unable to create new ehdr\n");
@@ -370,6 +372,8 @@ void finalizeDataSize(ElfInfo* e,Elf_Scn* scn,Elf_Data* data)
 {
   ElfXX_Shdr* shdr=elfxx_getshdr(scn);
   shdr->sh_size=data->d_size;
+  elf_flagshdr(scn,ELF_C_SET,ELF_F_DIRTY);
+  elf_flagdata(data,ELF_C_SET,ELF_F_DIRTY);
   logprintf(ELL_INFO_V3,ELS_ELFWRITE,"finalizing data size to 0x%x for section with name %s(%i)\n",shdr->sh_size,getScnHdrString(e,shdr->sh_name),shdr->sh_name);
 }
 
@@ -411,20 +415,14 @@ void finalizeModifiedElf(ElfInfo* e)
   finalizeDataSizes(e);
 }
 
-void endPatchElf()
-{
-  finalizeModifiedElf(patch);
+
+
+/*
+  //The code commented out below was in the removed function
+  //endPatchElf but commented out at the time that function was
+  //removed. I haven't yet thought about whether this snippet of code
+  //will ever be useful
   
-      //don't actually have to reindex symbols because everything is set up with a zero address
-
-  /*
-  if(elf_update (outelf, ELF_C_NULL) <0)
-  {
-    death("Failed to write out elf file: %s\n",elf_errmsg (-1));
-    exit(1);
-  }
-
-
   //all symbols created so far that were relative to sections
   //assumed that their sections started at location 0. This obviously
   //can't be true of all sections. We now relocate the symbols appropriately
@@ -444,14 +442,6 @@ void endPatchElf()
     }
     }*/
 
-  if(elf_update (outelf, ELF_C_WRITE) <0)
-  {
-    death("Failed to write out elf file: %s\n",elf_errmsg (-1));
-    exit(1);
-  }  
-  
-  endELF(patch);
-}
 
 int reindexSectionForPatch(ElfInfo* e,int scnIdx,ElfInfo* patch)
 {
@@ -473,7 +463,7 @@ int reindexSectionForPatch(ElfInfo* e,int scnIdx,ElfInfo* patch)
       Elf_Scn* scn=elf_getscn(e->e,scnIdx);
       GElf_Shdr shdr;
       getShdr(scn,&shdr);
-      patchScn=elf_newscn(outelf);
+      patchScn=elf_newscn(patch->e);
       ElfXX_Shdr* patchShdr=elfxx_getshdr(patchScn);
       patchShdr->sh_type=shdr.sh_type;
       patchShdr->sh_link=shdr.sh_link;
@@ -498,13 +488,14 @@ int dwarfWriteSectionCallback(char* name,int size,Dwarf_Unsigned type,
                               Dwarf_Unsigned flags,Dwarf_Unsigned link,
                               Dwarf_Unsigned info,int* sectNameIdx,int* error)
 {
+  ElfInfo* e=patch;
   //look through all the sections for one which matches to
   //see if we've already created this section
-  Elf_Scn* scn=elf_nextscn(outelf,NULL);
+  Elf_Scn* scn=elf_nextscn(e->e,NULL);
   int nameLen=strlen(name);
-  Elf_Data* symtab_data=getDataByERS(patch,ERS_SYMTAB);
-  Elf_Data* strtab_data=getDataByERS(patch,ERS_STRTAB);
-  for(;scn;scn=elf_nextscn(outelf,scn))
+  Elf_Data* symtab_data=getDataByERS(e,ERS_SYMTAB);
+  Elf_Data* strtab_data=getDataByERS(e,ERS_STRTAB);
+  for(;scn;scn=elf_nextscn(e->e,scn))
   {
     ElfXX_Shdr* shdr=elfxx_getshdr(scn);
     if(!strncmp(strtab_data->d_buf+shdr->sh_name,name,nameLen))
@@ -530,19 +521,19 @@ int dwarfWriteSectionCallback(char* name,int size,Dwarf_Unsigned type,
   //section doesn't already exist, create it
  
   //todo: write this section
-  scn=elf_newscn(outelf);
+  scn=elf_newscn(e->e);
   ElfXX_Shdr* shdr=elfxx_getshdr(scn);
-  shdr->sh_name=addStrtabEntry(patch,name);
+  shdr->sh_name=addStrtabEntry(e,name);
   shdr->sh_type=type;
   shdr->sh_flags=flags;
   shdr->sh_size=size;
   shdr->sh_entsize=1; //todo: find some way to actually set this intelligently
-  printf("creating new dwarf section %s with name at %d and size %zd\n",name,shdr->sh_name,shdr->sh_size);
+  //printf("creating new dwarf section %s with name at %d and size %zd\n",name,shdr->sh_name,shdr->sh_size);
   shdr->sh_link=link;
   if(0==link && SHT_REL==type)
   {
     //make symtab the link
-    shdr->sh_link=elf_ndxscn(getSectionByERS(patch,ERS_SYMTAB));
+    shdr->sh_link=elf_ndxscn(getSectionByERS(e,ERS_SYMTAB));
   }
   shdr->sh_info=info;
   ElfXX_Sym sym;
@@ -552,7 +543,11 @@ int dwarfWriteSectionCallback(char* name,int size,Dwarf_Unsigned type,
   sym.st_info=ELFXX_ST_INFO(STB_LOCAL,STT_SECTION);
   sym.st_other=0;
   sym.st_shndx=elf_ndxscn(scn);
+  if(!strcmp(".debug_info",name))
+  {
+    e->sectionIndices[ERS_DEBUG_INFO]=elf_ndxscn(scn);
+  }
   *sectNameIdx=addSymtabEntry(patch,symtab_data,&sym);
-  *error=0;  
+  *error=0;
   return sym.st_shndx;
 }

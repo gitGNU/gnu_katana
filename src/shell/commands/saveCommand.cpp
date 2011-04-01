@@ -84,7 +84,7 @@ void SaveCommand::execute()
       logprintf(ELL_WARN,ELS_SHELL,"Second parameter to save command must be a filename or variable representing a filename\n");
     }
     finalizeModifiedElf(e);
-    if(writeOutElf(e,filename,true))
+    if(writeOutElf(e,filename,e->isPO?false:true))
     {
       logprintf(ELL_INFO_V2,ELS_SHELL,"Saved ELF object to \"%s\"\n",filename);
     }

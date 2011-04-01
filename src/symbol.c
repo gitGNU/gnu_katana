@@ -66,7 +66,7 @@ void getSymbol(ElfInfo* e,int symIdx,GElf_Sym* outSym)
   Elf_Data* symTabData=getDataByERS(e,ERS_SYMTAB);
   if(!gelf_getsym(symTabData,symIdx,outSym))
   {
-    death("gelf_getsym failed trying to get symbol at index %i\n",symIdx);
+    death("gelf_getsym failed trying to get symbol at index %i in ELF %s\n",symIdx,e->fname);
   }
 }
 

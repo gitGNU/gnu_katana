@@ -101,6 +101,7 @@ class ShellVariable : public ShellParam
   //over it.
   void setValue(byte* data,int dataLen);
   void setValue(byte* data,int dataLen,SectionHeaderData* header);
+  virtual void setValue(char* string);
   void makeArray(ShellVariableData** items,int cnt);
 
   //the returned pointer is valid until the next call to getData
