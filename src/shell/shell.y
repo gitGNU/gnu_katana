@@ -144,6 +144,12 @@ dwarfscriptcmd : T_DWARFSCRIPT T_COMPILE param
 {
   $$.u.cmd=new DwarfscriptCommand(DWOP_EMIT,$3.u.param,$4.u.param,$5.u.param);
 }
+| T_DWARFSCRIPT T_EMIT param param
+{
+  ShellParam* section=new ShellParam(".eh_frame");
+  $$.u.cmd=new DwarfscriptCommand(DWOP_EMIT,section,$3.u.param,$4.u.param);
+  section->drop();
+}
 | T_DWARFSCRIPT T_EMIT error
 {
   fprintf(stderr,"Usage: dwarfscript emit (\".eh_frame\"|\".debug_frame\") ELF [OUTFILE]\n");
