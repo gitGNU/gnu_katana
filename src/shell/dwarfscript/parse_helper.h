@@ -89,8 +89,10 @@ typedef struct ParseNode
     RegInstruction regInstr;
     DwarfExprInstr opInstr;
     DwarfExpr expr;
-    Label* label;
   } u;
+  //only valid for certain opInstr nodes, which refer to a label which
+  //is filled in later.
+  Label* label;
 } ParseNode;
 
 #endif
