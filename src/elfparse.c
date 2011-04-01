@@ -90,6 +90,7 @@ ElfInfo* openELFFile(char* fname)
 
 void endELF(ElfInfo* e)
 {
+  logprintf(ELL_INFO_V2,ELS_CLEANUP,"ending elf %s\n",e->fname);
   if(e->dataAllocatedByKatana)
   {
     //since we wrote this elf file we malloc'd all the
