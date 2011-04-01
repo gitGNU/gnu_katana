@@ -55,5 +55,5 @@
 
 #ifndef patchwrite_h
 #define patchwrite_h
-ElfInfo* createPatch(char* oldSourceTree,char* newSourceTree,char* oldBinaryName,char* newBinaryName,FILE* patchOutfile);
+ElfInfo* createPatch(char* oldSourceTree,char* newSourceTree,char* oldBinaryName,char* newBinaryName,FILE* patchOutfile,char* filename);
 #endif

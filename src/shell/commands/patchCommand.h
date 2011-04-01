@@ -72,7 +72,7 @@ class PatchCommand : public ShellCommand
   //constructor for patch generation
   PatchCommand(PatchOperation op,ShellParam* oldObjectsDir,ShellParam* newObjectsDir,ShellParam* executableName);
   //constructor for patch application
-  PatchCommand(PatchOperation op,ShellParam* patchfile,ShellParam* pid);
+  PatchCommand(PatchOperation op,ShellParam* patch,ShellParam* pid);
 
   virtual ~PatchCommand();
   virtual void execute();
@@ -84,7 +84,7 @@ protected:
   ShellParam* oldObjectsDirP;
   ShellParam* newObjectsDirP;
   ShellParam* executableNameP;
-  ShellParam* patchfileP;
+  ShellParam* patchP;
   ShellParam* pidP;
 };
 

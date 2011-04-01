@@ -144,13 +144,7 @@ int main(int argc,char** argv)
       strcat(config.outfileName,".po");
     }
 
-    FILE* outfile=fopen(config.outfileName,"w");
-    ElfInfo* patch=createPatch(config.oldSourceTree,config.newSourceTree,oldBinPath,newBinPath,outfile);
-    if(elf_update (patch->e, ELF_C_WRITE) <0)
-    {
-      death("Failed to write out elf file: %s\n",elf_errmsg (-1));
-      exit(1);
-    }  
+    ElfInfo* patch=createPatch(config.oldSourceTree,config.newSourceTree,oldBinPath,newBinPath,NULL,config.outfileName);
     endELF(patch);
     free(oldBinPath);
     free(newBinPath);
@@ -163,6 +157,7 @@ int main(int argc,char** argv)
     findELFSections(patch);
     patch->isPO=true;
     readAndApplyPatch(config.pid,oldBinElfInfo,patch);
+    endELF(patch);
   }
   else if(EKM_INFO==config.mode)
   {

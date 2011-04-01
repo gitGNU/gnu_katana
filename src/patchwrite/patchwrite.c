@@ -739,13 +739,21 @@ void writeROData(ElfInfo* binary)
 }
 
 
-ElfInfo* createPatch(char* oldSourceTree,char* newSourceTree,char* oldBinName,char* newBinName,FILE* patchOutfile)
+ElfInfo* createPatch(char* oldSourceTree,char* newSourceTree,char* oldBinName,char* newBinName,FILE* patchOutfile,char* filename)
 {
+  if(!patchOutfile)
+  {
+    patchOutfile=fopen(filename,"w");
+    if(!patchOutfile)
+    {
+      death("Could not create patch because could not open file %s for writing\n",filename);
+    }
+  }
   newBinary=openELFFile(newBinName);
   findELFSections(newBinary);
   oldBinary=openELFFile(oldBinName);
   findELFSections(oldBinary);
-  patch=startPatchElf(patchOutfile);
+  patch=startPatchElf(patchOutfile,filename);
   Dwarf_Error err;
   //todo: always creating 32-bit Dwarf sections. DWARF standard
   //recommends never having 64-bit Dwarf as the default, even on
@@ -843,6 +851,12 @@ ElfInfo* createPatch(char* oldSourceTree,char* newSourceTree,char* oldBinName,ch
   }
   endELF(oldBinary);
   endELF(newBinary);
+
+  if(elf_update (patch->e, ELF_C_WRITE) <0)
+  {
+    death("Failed to write out elf file: %s\n",elf_errmsg (-1));
+    exit(1);
+  }
   return patch;
 }
 

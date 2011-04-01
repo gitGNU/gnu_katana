@@ -58,13 +58,15 @@
 #include "patchCommand.h"
 extern "C"
 {
-#include "patchwrite/patchwrite.h"
 #include "util/path.h"
+#include "patchwrite/patchwrite.h"
+#include "patcher/patchapply.h"
+#include "patcher/versioning.h"  
 }
 
   //constructor for patch generation
 PatchCommand::PatchCommand(PatchOperation op,ShellParam* oldObjectsDir,ShellParam* newObjectsDir,ShellParam* executableName)
-  :op(op),oldObjectsDirP(oldObjectsDir),newObjectsDirP(newObjectsDir),executableNameP(executableName),patchfileP(NULL),pidP(NULL)
+  :op(op),oldObjectsDirP(oldObjectsDir),newObjectsDirP(newObjectsDir),executableNameP(executableName),patchP(NULL),pidP(NULL)
 {
   assert(op==PO_GENERATE_PATCH);
   newObjectsDirP->grab();
@@ -72,11 +74,11 @@ PatchCommand::PatchCommand(PatchOperation op,ShellParam* oldObjectsDir,ShellPara
   executableNameP->grab();
 }
   //constructor for patch application
-PatchCommand::PatchCommand(PatchOperation op,ShellParam* patchfile,ShellParam* pid)
-  :op(op),oldObjectsDirP(NULL),newObjectsDirP(NULL),executableNameP(NULL),patchfileP(patchfile),pidP(pid)
+PatchCommand::PatchCommand(PatchOperation op,ShellParam* patch,ShellParam* pid)
+  :op(op),oldObjectsDirP(NULL),newObjectsDirP(NULL),executableNameP(NULL),patchP(patch),pidP(pid)
 {
   assert(op==PO_APPLY_PATCH);
-  patchfileP->grab();
+  patchP->grab();
   pidP->grab();
 }
 
@@ -95,9 +97,9 @@ PatchCommand::~PatchCommand()
   {
     executableNameP->drop();
   }
-  if(patchfileP)
+  if(patchP)
   {
-    patchfileP->drop();
+    patchP->drop();
   }
   if(pidP)
   {
@@ -122,8 +124,12 @@ void PatchCommand::generatePatch()
   char* oldBinPath=joinPaths(oldSrcTree,execName);
   char* newBinPath=joinPaths(newSrcTree,execName);
 
-  FILE* tmpOutfile=tmpfile();
-  ElfInfo* patch=createPatch(oldSrcTree,newSrcTree,oldBinPath,newBinPath,tmpOutfile);
+  char fnameBuffer[128];
+  strncpy(fnameBuffer,P_tmpdir,121);
+  strcat(fnameBuffer,"/katana-XXXXXX");
+  int tmpOutfileFD=mkstemp(fnameBuffer);
+  FILE* tmpOutfile=fdopen(tmpOutfileFD,"w");
+  ElfInfo* patch=createPatch(oldSrcTree,newSrcTree,oldBinPath,newBinPath,tmpOutfile,fnameBuffer);
   if(!patch)
   {
     throw "Unable to generate patch";
@@ -133,7 +139,18 @@ void PatchCommand::generatePatch()
 
 void PatchCommand::applyPatch()
 {
-  throw "Not yet implemented\n";
+  if(!pidP || !pidP->isCapable(SPC_INT_VALUE) ||
+     !patchP ||
+     !patchP->isCapable(SPC_ELF_VALUE))
+  {
+    throw "pid or patch not specified (or wrong data type) for patch application";
+  }
+  int pid=pidP->getInt();
+  ElfInfo* patch=patchP->getElfObject();
+  ElfInfo* oldBinElfInfo=getElfRepresentingProc(pid);
+  findELFSections(oldBinElfInfo);
+  assert(patch && oldBinElfInfo);
+  readAndApplyPatch(pid,oldBinElfInfo,patch);
 }
 
 void PatchCommand::execute()

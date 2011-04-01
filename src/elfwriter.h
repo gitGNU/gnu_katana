@@ -60,9 +60,11 @@
 #include "elfparse.h"
 #include "arch.h"
 
-//must be called before any other routines
-//for each patch object to create
-ElfInfo* startPatchElf(FILE* file);
+//Must be called before any other routines for each patch object to
+//create. Filename is just used for identification purposes it is not
+//enforced to correspond to file. If file is NULL, however, a new file
+//will be created at filename
+ElfInfo* startPatchElf(FILE* file,char* filename);
 
 //adds data to a section and returns the offset of that
 //data in the section
