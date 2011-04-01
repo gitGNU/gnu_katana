@@ -569,18 +569,17 @@ void fixupPatchRelocations(ElfInfo* patch)
     //if some not taken care of?
     if(type==R_386_PC32 || type==R_X86_64_PC32)
     {
-      //todo: BROKEN. Shouldn't be assuming we're using textData, might not be in text
-        assert(rela->r_offset<textData->d_size);
-        word_t addrAccessed=*((word_t*)(textData->d_buf+rela->r_offset));
-        //if we were using a PC-relative relocation and the PC wasn't in the patch text,
-        //have to update it for this relocation
-        //todo: don't do this if the relocation was actually
-        //for something relative to the patch
-        addr_t diff=patchTextAddr-oldTextNewStart;
-        logprintf(ELL_INFO_V2,ELS_RELOCATION,"for PC32 relocation, modifying access at 0x%x to access 0x%x by adding 0x%x\n",(uint)newOffset,(uint)(addrAccessed+diff),(uint)diff);
-        addr_t newAddr=addrAccessed+diff;
+      assert(rela->r_offset+sizeof(uint32) <= textData->d_size);
+      addr_t addrAccessed=(addr_t)*((uint32*)(textData->d_buf+rela->r_offset));
+      //if we were using a PC-relative relocation and the PC wasn't in the patch text,
+      //have to update it for this relocation
+      //todo: don't do this if the relocation was actually
+      //for something relative to the patch
+      addr_t diff=patchTextAddr-oldTextNewStart;
+      logprintf(ELL_INFO_V2,ELS_RELOCATION,"for PC32 relocation, modifying access at 0x%x to access 0x%x by adding 0x%x\n",(uint)newOffset,(uint)(addrAccessed+diff),(uint)diff);
+      addr_t newAddr=addrAccessed+diff;
         
-        memcpyToTarget(newOffset,(byte*)&newAddr,4);//always copy only 4 bytes b/c this is PC32
+      memcpyToTarget(newOffset,(byte*)&newAddr,4);//always copy only 4 bytes b/c this is PC32
         //todo: I'm not sure this is necessary here, since we do
         //relocations later. I think it is though. Look into this
     }
@@ -945,7 +944,6 @@ void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch)
   writeOutPatchedBin(true);
   endELF(targetBin);
   endELF(patchedBin);
-  endELF(patch);
   cleanupDwarfVM();
   endPtrace(isFlag(EKCF_P_STOP_TARGET));
   printf("hooray! completed application of patch successfully\n");
