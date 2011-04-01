@@ -68,5 +68,33 @@ SystemShellCommand::~SystemShellCommand()
 
 void SystemShellCommand::execute()
 {
-  system(commandsP->getString());
+  if(!this->outputVariable)
+  {
+    system(commandsP->getString());
+  }
+  else
+  {
+    //we need to actually get the output from the shell command
+    FILE* f=popen(commandsP->getString(),"r");
+    if(!f)
+    {
+      throw "Cannot run shell command because popen() failed\n";
+    }
+    int outputStringLen=0;
+    int outputStringAllocated=128;
+    char* outputString=(char*)malloc(outputStringAllocated);
+    char buffer[1024];
+    while (int bytesRead=fgets(buffer, sizeof(buffer)-1, f) != NULL)
+    {
+      if(outputStringLen+bytesRead >= outputStringAllocated)
+      {
+        outputStringAllocated=outputStringAllocated*2+bytesRead;
+        outputString=(char*)realloc(outputString,outputStringAllocated);
+      }
+      memcpy(outputString+outputStringLen,buffer,bytesRead);
+      outputStringLen+=bytesRead;
+      outputString[outputStringLen]='\0';
+    }
+    this->outputVariable->setValue(outputString);
+  }
 }
