@@ -71,7 +71,7 @@ am__objects_6 = katana-command.$(OBJEXT) katana-loadCommand.$(OBJEXT) \
 	katana-hashCommand.$(OBJEXT) katana-patchCommand.$(OBJEXT)
 am__objects_7 = katana-elfVariableData.$(OBJEXT) \
 	katana-rawVariableData.$(OBJEXT) katana-arrayData.$(OBJEXT) \
-	katana-elfSectionData.$(OBJEXT)
+	katana-elfSectionData.$(OBJEXT) katana-stringData.$(OBJEXT)
 am__objects_8 = katana-dwarfscript.yy.$(OBJEXT) \
 	katana-dwarfscript.tab.$(OBJEXT)
 am__objects_9 = katana-shell.$(OBJEXT) katana-shell.yy.$(OBJEXT) \
@@ -267,8 +267,8 @@ PATCHWRITE_SRC = patchwrite/patchwrite.c patchwrite/codediff.c patchwrite/typedi
 PATCHWRITE_H = patchwrite/patchwrite.h patchwrite/codediff.h patchwrite/typediff.h patchwrite/sourcetree.h patchwrite/write_to_dwarf.h patchwrite/elfcmp.h
 UTIL_SRC = util/dictionary.c util/hash.c util/util.c util/map.c util/list.c util/logging.c util/path.c util/refcounted.c util/stack.c util/cxxutil.cpp util/growingBuffer.c util/file.c
 UTIL_H = util/dictionary.h util/hash.h util/util.h util/map.h util/list.h util/logging.h util/path.h util/refcounted.h util/stack.h util/cxxutil.h util/growingBuffer.h util/file.h
-SHELL_VARIABLE_SRC = shell/variableTypes/elfVariableData.cpp shell/variableTypes/rawVariableData.cpp shell/variableTypes/arrayData.cpp shell/variableTypes/elfSectionData.cpp
-SHELL_VARIABLE_H = shell/variableTypes/elfVariableData.h shell/variableTypes/rawVariableData.h shell/variableTypes/arrayData.h shell/variableTypes/elfSectionData.h
+SHELL_VARIABLE_SRC = shell/variableTypes/elfVariableData.cpp shell/variableTypes/rawVariableData.cpp shell/variableTypes/arrayData.cpp shell/variableTypes/elfSectionData.cpp shell/variableTypes/stringData.cpp
+SHELL_VARIABLE_H = shell/variableTypes/elfVariableData.h shell/variableTypes/rawVariableData.h shell/variableTypes/arrayData.h shell/variableTypes/elfSectionData.h shell/variableTypes/stringData.h
 SHELL_COMMANDS_SRC = shell/commands/command.cpp shell/commands/loadCommand.cpp shell/commands/saveCommand.cpp shell/commands/replaceCommand.cpp shell/commands/dwarfscriptCommand.cpp shell/commands/shellCommand.cpp shell/commands/infoCommand.cpp  shell/commands/hashCommand.cpp shell/commands/patchCommand.cpp
 SHELL_COMMANDS_H = shell/commands/command.h shell/commands/loadCommand.h shell/commands/saveCommand.h shell/commands/replaceCommand.h shell/commands/dwarfscriptCommand.h shell/commands/shellCommand.h shell/commands/infoCommand.h shell/commands/hashCommand.cpp shell/commands/patchCommand.h
 DWARFSCRIPT_SRC = shell/dwarfscript/dwarfscript.yy.c shell/dwarfscript/dwarfscript.tab.c
@@ -422,6 +422,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-shellCommand.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-sourcetree.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-stack.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-stringData.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-symbol.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-target.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/katana-typediff.Po@am__quote@
@@ -1397,6 +1398,20 @@ katana-elfSectionData.obj: shell/variableTypes/elfSectionData.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='shell/variableTypes/elfSectionData.cpp' object='katana-elfSectionData.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o katana-elfSectionData.obj `if test -f 'shell/variableTypes/elfSectionData.cpp'; then $(CYGPATH_W) 'shell/variableTypes/elfSectionData.cpp'; else $(CYGPATH_W) '$(srcdir)/shell/variableTypes/elfSectionData.cpp'; fi`
+
+katana-stringData.o: shell/variableTypes/stringData.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT katana-stringData.o -MD -MP -MF $(DEPDIR)/katana-stringData.Tpo -c -o katana-stringData.o `test -f 'shell/variableTypes/stringData.cpp' || echo '$(srcdir)/'`shell/variableTypes/stringData.cpp
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/katana-stringData.Tpo $(DEPDIR)/katana-stringData.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='shell/variableTypes/stringData.cpp' object='katana-stringData.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o katana-stringData.o `test -f 'shell/variableTypes/stringData.cpp' || echo '$(srcdir)/'`shell/variableTypes/stringData.cpp
+
+katana-stringData.obj: shell/variableTypes/stringData.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT katana-stringData.obj -MD -MP -MF $(DEPDIR)/katana-stringData.Tpo -c -o katana-stringData.obj `if test -f 'shell/variableTypes/stringData.cpp'; then $(CYGPATH_W) 'shell/variableTypes/stringData.cpp'; else $(CYGPATH_W) '$(srcdir)/shell/variableTypes/stringData.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/katana-stringData.Tpo $(DEPDIR)/katana-stringData.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='shell/variableTypes/stringData.cpp' object='katana-stringData.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(katana_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o katana-stringData.obj `if test -f 'shell/variableTypes/stringData.cpp'; then $(CYGPATH_W) 'shell/variableTypes/stringData.cpp'; else $(CYGPATH_W) '$(srcdir)/shell/variableTypes/stringData.cpp'; fi`
 
 # This directory's subdirectories are mostly independent; you can cd
 # into them and run `make' without going through this Makefile.

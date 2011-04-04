@@ -59,6 +59,7 @@
 #include "variableTypes/rawVariableData.h"
 #include "variableTypes/elfSectionData.h"
 #include "variableTypes/arrayData.h"
+#include "variableTypes/stringData.h"
 
 ShellVariable::ShellVariable(char* name)
 {
@@ -105,7 +106,11 @@ void ShellVariable::setValue(char* string)
   {
     delete this->data;
   }
-  ShellParam::setValue(string);
+  if(this->data)
+  {
+    delete this->data;
+  }
+  this->data=new ShellStringVariableData(string);
 }
 
 void ShellVariable::makeArray(ShellVariableData** items,int cnt)
