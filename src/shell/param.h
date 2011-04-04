@@ -129,7 +129,6 @@ class ShellParam : public RefCountedClass
   ElfInfo* getElfObject(int idx=0);
   byte* getRawData(int* numBytesOut,int idx=0);
   SectionHeaderData* getSectionHeader(int idx=0);
-  virtual void setValue(char* string);
 protected:
   ParamDataResult* result;
 private:

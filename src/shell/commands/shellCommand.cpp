@@ -84,8 +84,9 @@ void SystemShellCommand::execute()
     int outputStringAllocated=128;
     char* outputString=(char*)malloc(outputStringAllocated);
     char buffer[1024];
-    while (int bytesRead=fgets(buffer, sizeof(buffer)-1, f) != NULL)
+    while (fgets(buffer, sizeof(buffer)-1, f) != 0)
     {
+      int bytesRead=strlen(buffer);
       if(outputStringLen+bytesRead >= outputStringAllocated)
       {
         outputStringAllocated=outputStringAllocated*2+bytesRead;

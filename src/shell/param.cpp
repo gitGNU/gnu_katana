@@ -98,7 +98,7 @@ bool ShellParam::isCapable(ShellParamCapability cap,int idx)
 {
   if(cap==SPC_STRING_VALUE)
   {
-    return true;
+    return stringValue!=NULL;
   }
   return false;
 }
@@ -147,6 +147,11 @@ byte* ShellParam::getRawData(int* numBytesOut,int idx)
     return NULL;
   }
   ParamDataResult* result=this->getData(SPC_RAW_DATA,idx);
+  if(!result)
+  {
+    *numBytesOut=0;
+    return NULL;
+  }
   *numBytesOut=result->u.rawData.len;
   return result->u.rawData.data;
 }
@@ -160,11 +165,6 @@ SectionHeaderData* ShellParam::getSectionHeader(int idx)
   }
   ParamDataResult* result=this->getData(SPC_SECTION_HEADER,idx);
   return result->u.shdr;
-}
-
-void ShellParam::setValue(char* string)
-{
-  this->stringValue=strdup(string);
 }
 
 ShellIntParam::ShellIntParam(sword_t intval)
