@@ -29,7 +29,7 @@
   source code itself. This has the added bonus of making it, in
   theory, language agnostic (although no work has been done to test it
   with anything besides programs written in C). A diagram of software
-  lifecycle with hotpatching is shown below
+  lifecycle with hotpatching is shown below (unless you are reading this in plain text)
 
 
 #+BEGIN_LaTeX
@@ -52,6 +52,35 @@
   This document is a work in progress. It is not a polished guide yet.
 
 * General Usage Information
+** Shell
+   If Katana is not passed an argument indicating one of the
+   hot-patching commands (described later in  [[*How to Use Katana For
+   Hotpatching]]), then it is assumed to be operating as a shell. If it
+   is provided an argument, that argument is taken as the name of a
+   file to read shell commands from. Otherwise commands are read from
+   stdin using the readline library. 
+*** Syntax and Data Model
+    The Katana shell syntax is very simple. There are no control flow
+    structures, only commands and variables. A line is terminated by a
+    semicolon (;) or a newline character. Each line may be either
+    blank, contain exactly one COMMAND, or contain an ASSIGNMENT.
+
+    A COMMAND is of the form COMMAND_IDENTIFIER PARAM PARAM PARAM ...., where
+    tokens are seperated by spaces and the number of PARAMs depends on
+    the command.
+
+    An ASSIGNMENT is currently of the form VARIABLE=COMMAND although
+    in the future it may be possible to write other sorts of
+    assignments.
+
+    A VARIABLE reference consists of a dollar-sign ($) followed by a
+    letter or underscore followed by any number of letters,
+    underscores, or digits.
+    
+*** Available Commands
+*** History
+    Command history is saved using libreadline in
+    $HOME/.katana_history.
 * Hotpatching
 ** Other Systems
    There are other hotpatching systems in existence. The curious are
