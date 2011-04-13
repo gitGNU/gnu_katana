@@ -76,11 +76,110 @@
     A VARIABLE reference consists of a dollar-sign ($) followed by a
     letter or underscore followed by any number of letters,
     underscores, or digits.
-    
+
+    A COMMAND_IDENTIFIER is one or more words which identify a
+    COMMAND. In many cases a command is identified by only one word,
+    but sometimes similar commands are grouped by sharing the first
+    word in their identifier.
+
+    A PARAM is a VARIABLE reference, STRING, or NUMBER
+
+    A STRING is any literal beginning and ending with the character ".
+
+    A NUMBER is a decimal, hex, or float literal.
+
+**** Data Types
+     The following types of variables exist
+     + string
+     + elf
+     + elf section
+     + raw data
+     + array
+      
 *** Available Commands
+**** load
+     /Usage/: =load FILENAME=\\
+     /Params/: FILENAME must a string literal or variable that can be interpreted
+               as a string.\\
+     /Function/: Loads the data in the given file as an ELF object if
+               possible. If not, loads it as raw data.
+**** save
+     /Usage/: =save VAR FILENAME=\\
+     /Params/: VAR must be a variable that can be interpreted as an ELF
+               object or that can be interpreted as raw data. FILENAME must be a
+               literal or variable that can be interpreted as a string.\\
+     /Function/: Saves VAR to FILENAME.
+**** dwarfscript
+***** dwarfscript emit
+      /Usage/: =dwarfscript emit [SECTION] ELF OUTFILE=\\
+      /Params/: SECTION must be the name (string) of the section to write as
+                Dwarfscript. If not specified it defaults to
+                ".eh_frame". ELF must be an ELF object. OUTFILE must
+                be a string with the name of a file to write the resulting
+                Dwarfscript to.\\
+      /Function/: Writes the Dwarfscript representation of the given
+                  SECTION from the given ELF to OUTFILE.
+***** dwarfscript compile
+      /Usage/: =dwarfscript compile INFILE=\\
+      /Params/: INFILE must be a string containing the name of a file.\\
+      /Function/: Interprets the contents of the file named by INFILE
+                  as Dwarfscript and compiles the Dwarfscript into
+                  beinary form. Returns an array with 3 items
+                  0: raw data for .eh_frame 
+                  1: raw data for .eh_frame_hdr
+                  2: raw data for .gcc_except_table.
+**** replace
+***** replace section
+      /Usage/: =replace section ELF SECTION_NAME NEW_SECTION=
+      /Params/: ELF must be an ELF object. SECTION_NAME must be a
+                string. NEW_SECTION must be either an ELF section or raw data.
+      /Function/: Replaces the section with the name SECTION_NAME in
+                  the oject ELF with the data from
+                  NEW_SECTION. Section headers are replaced if NEW_SECTION is
+                  able to provide them, but not if it is only raw data.
+                   
+***** replace raw
+      /Usage/: =replace raw ELF OFFSET NEW_DATA=
+      /Params/: ELF must be an ELF object. ADDRESS must be an
+                integer. NEW_DATA must be raw data.
+      /Function/: Replaces the raw data at OFFSET in the ELF object
+                  with NEW_DATA. OFFSET must refer to a location in an
+                  existing section.
+**** info
+***** info eh
+      /Usage/: =info eh ELF [OUTFILE]=
+      /Params/: ELF must be an ELF object. OUTFILE, if present, must
+                be the name of a writable file (which may or may not
+                exist yet). 
+      /Function/: Prints out information about the exception-handling
+                  structures in ELF. If OUTFILE is present, this
+                  information is written to it.
+**** hash
+***** hash elf
+      /Usage/: =hash elf STR=
+      /Params/: STR must be a string.
+      /Function/: Prints the result of running elf_hash (from libelf)
+                  on the string.
+                  
+**** patch
+***** gen
+      /Usage/: =patch gen OLD_OBJECTS_DIR NEW_OBJECTS_DIR EXECUTABLE=
+      /Params/: All three params are strings. The first two are the
+                old and new object file directories respectively. The
+                last is the name of the executable that can be found
+                in both directories.
+      /Function/: Generates (and returns) a patch object ELF.
+***** apply
+      /Usage/: =patch apply PO PID=
+      /Params/: The PO parameter should be an ELF patch object. PID
+                should be the (integer) pid of the process that PO is
+                to be applied to.
+      /Function/: Applies the patch object PO to the running process
+                  described by PID.
+**** ! (shell command)
+     The rest of the line following by ! is executed in a shell.
 *** History
-    Command history is saved using libreadline in
-    $HOME/.katana_history.
+    Command history is saved using libreadline in =$HOME/.katana_history=.
 * Hotpatching
 ** Other Systems
    There are other hotpatching systems in existence. The curious are
@@ -290,11 +389,12 @@
   Dartmouth College. It may be distributed under the terms of the GNU
   General Public License with attribution to Dartmouth College as
   specified in the file COPYING distributed with Katana. This document
-  is Copyright 2010 Dartmouth College and may be distributed under the
-  terms of the GNU Free Documentation License as found in the file FDL
-  which should have been distributed with this documentation. If it
-  was not, it may be found at http://www.gnu.org/licenses/fdl.txt.
+  is Copyright 2010-2011 Dartmouth College and may be distributed
+  under the terms of the GNU Free Documentation License as found in
+  the file FDL which should have been distributed with this
+  documentation. If it was not, it may be found at
+  http://www.gnu.org/licenses/fdl.txt.
 
-  Katana is being written by James Oakley and was designed
-  by Sergey Bratus, Ashwin Ramaswamy, James Oakley, Michael Locasto,
-  and Sean Smith.
+  Katana is being written by James Oakley and was designed by Sergey
+  Bratus, Ashwin Ramaswamy, James Oakley, Michael Locasto, and Sean
+  Smith.

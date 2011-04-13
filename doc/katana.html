@@ -4,10 +4,10 @@
 <html xmlns="http://www.w3.org/1999/xhtml"
 lang="en" xml:lang="en">
 <head>
-<title>Katana: A Userland Toolchain-Oriented Hotpatching System</title>
+<title>Katana: An ELF/DWARF Manipulation Tool with Hotpatching Capabilities</title>
 <meta http-equiv="Content-Type" content="text/html;charset=iso-8859-1"/>
 <meta name="generator" content="Org-mode"/>
-<meta name="generated" content="2010-06-22 19:27:22 PDT"/>
+<meta name="generated" content="2011-04-13 00:01:56 EDT"/>
 <meta name="author" content="James Oakley"/>
 <meta name="description" content=""/>
 <meta name="keywords" content=""/>
@@ -70,7 +70,8 @@ lang="en" xml:lang="en">
 <body>
 <div id="content">
 
-<h1 class="title">Katana: A Userland Toolchain-Oriented Hotpatching System</h1>
+<h1 class="title">Katana: An ELF/DWARF Manipulation Tool with Hotpatching Capabilities</h1>
+
 
 
 <div id="table-of-contents">
@@ -78,29 +79,48 @@ lang="en" xml:lang="en">
 <div id="text-table-of-contents">
 <ul>
 <li><a href="#sec-1">1 Introduction </a></li>
-<li><a href="#sec-2">2 Other Systems </a></li>
-<li><a href="#sec-3">3 What Katana Does </a></li>
-<li><a href="#sec-4">4 What Katana Does Not Do (Yet) </a></li>
-<li><a href="#sec-5">5 What Katana May Never Do </a></li>
-<li><a href="#sec-6">6 How to Use Katana </a>
+<li><a href="#sec-2">2 General Usage Information </a>
 <ul>
-<li><a href="#sec-6.1">6.1 Preparing a Package for Patching Support </a>
+<li><a href="#sec-2.1">2.1 Shell </a>
 <ul>
-<li><a href="#sec-6.1.1">6.1.1 Source Code Practices </a></li>
-<li><a href="#sec-6.1.2">6.1.2 Compilation/Linking </a></li>
+<li><a href="#sec-2.1.1">2.1.1 Syntax and Data Model </a></li>
+<li><a href="#sec-2.1.2">2.1.2 Available Commands </a></li>
+<li><a href="#sec-2.1.3">2.1.3 History </a></li>
+</ul></li>
 </ul>
 </li>
-<li><a href="#sec-6.2">6.2 To Generate a Patch </a></li>
-<li><a href="#sec-6.3">6.3 To Apply a Patch </a></li>
-<li><a href="#sec-6.4">6.4 To View a Patch </a></li>
-<li><a href="#sec-6.5">6.5 See Also </a></li>
+<li><a href="#sec-3">3 Hotpatching </a>
+<ul>
+<li><a href="#sec-3.1">3.1 Other Systems </a></li>
+<li><a href="#sec-3.2">3.2 What Katana Does </a></li>
+<li><a href="#sec-3.3">3.3 What Katana Does Not Do (Yet) </a></li>
+<li><a href="#sec-3.4">3.4 What Katana May Never Do </a></li>
+<li><a href="#sec-3.5">3.5 How to Use Katana For Hotpatching </a>
+<ul>
+<li><a href="#sec-3.5.1">3.5.1 Preparing a Package for Patching Support </a></li>
+<li><a href="#sec-3.5.2">3.5.2 Source Code Practices </a></li>
+<li><a href="#sec-3.5.3">3.5.3 Compilation/Linking </a></li>
+<li><a href="#sec-3.5.4">3.5.4 To Generate a Patch </a></li>
+<li><a href="#sec-3.5.5">3.5.5 To Apply a Patch </a></li>
+<li><a href="#sec-3.5.6">3.5.6 To View a Patch </a></li>
+<li><a href="#sec-3.5.7">3.5.7 Options </a></li>
+<li><a href="#sec-3.5.8">3.5.8 Configuration Files </a></li>
+<li><a href="#sec-3.5.9">3.5.9 See Also </a></li>
 </ul>
 </li>
-<li><a href="#sec-7">7 Patch Object Format </a></li>
-<li><a href="#sec-8">8 Patch Generation Process </a></li>
-<li><a href="#sec-9">9 Patch Application Process </a></li>
-<li><a href="#sec-10">10 Roadmap </a></li>
-<li><a href="#sec-11">11 Credits and Licensing </a></li>
+<li><a href="#sec-3.6">3.6 Patch Object Format </a></li>
+<li><a href="#sec-3.7">3.7 Patch Generation Process </a></li>
+<li><a href="#sec-3.8">3.8 Configuration </a></li>
+<li><a href="#sec-3.9">3.9 Initializing the patch object </a></li>
+<li><a href="#sec-3.10">3.10 Comparing source trees </a></li>
+<li><a href="#sec-3.11">3.11 Type Diffing </a></li>
+<li><a href="#sec-3.12">3.12 Function Diffing </a></li>
+<li><a href="#sec-3.13">3.13 Patch Application Process </a></li>
+<li><a href="#sec-3.14">3.14 Roadmap </a></li>
+</ul>
+</li>
+<li><a href="#sec-4">4 DWARF Manipulation </a></li>
+<li><a href="#sec-5">5 Credits and Licensing </a></li>
 </ul>
 </div>
 </div>
@@ -109,7 +129,18 @@ lang="en" xml:lang="en">
 <h2 id="sec-1"><span class="section-number-2">1</span> Introduction </h2>
 <div class="outline-text-2" id="text-1">
 
-<p>Katana aims to provide a hot-patching system for userland. Further
+<p>Katana is a research system for ELF/DWARF manipulation. It was
+originally developed for research into hotpatching. It was later
+revised for research into security implication of gcc/C++ exception
+handling, which is implemented primarily using DWARF call frame
+information. Therefore, if you are interested in vulnerabilities
+related to exceptiong handling/DWARF you may probably ignore the
+parts of this manual which discuss hotpatching. If you are instead
+interested in hotpatching, you may probably ignore the parts of this
+manual that deal with manipulating exception handling structures.
+</p>
+<p>
+Katana aims to provide a hot-patching system for userland. Further
 it aims to work with existing toolchains and formats so as to be
 easy to use and to hopefully pave the way for incorporating patching
 as a standard part of the toolchain. Because of this aim, Katana
@@ -117,7 +148,7 @@ operates at the object level rather than requiring any access to the
 source code itself. This has the added bonus of making it, in
 theory, language agnostic (although no work has been done to test it
 with anything besides programs written in C). A diagram of software
-lifecycle with hotpatching is shown below
+lifecycle with hotpatching is shown below (unless you are reading this in plain text)
 </p>
 
 
@@ -132,18 +163,239 @@ plans for the future. As the software is not complete, making use of
 Katana without understanding the inner workings and technical
 shortcomings is not recommended. Nevertheless, the only sections of
 this document necessary for "Users' Guide" purposes are 
-<a href="#sec-3">"What Katana Does"</a>, <a href="#sec-4">"What Katana Does Not Do (Yet)"</a>, and most importantly 
-<a href="#sec-6">"How to Use Katana"</a>.
+<a href="#sec-3.2">"What Katana Does"</a>, <a href="#sec-3.3">"What Katana Does Not Do (Yet)"</a>, and most importantly 
+<a href="#sec-3.5">"How to Use Katana For Hotpatching"</a>.
 </p>
 <p>
 This document is a work in progress. It is not a polished guide yet.
-</p></div>
+</p>
+</div>
 
 </div>
 
 <div id="outline-container-2" class="outline-2">
-<h2 id="sec-2"><span class="section-number-2">2</span> Other Systems </h2>
+<h2 id="sec-2"><span class="section-number-2">2</span> General Usage Information </h2>
 <div class="outline-text-2" id="text-2">
+
+
+</div>
+
+<div id="outline-container-2.1" class="outline-3">
+<h3 id="sec-2.1"><span class="section-number-3">2.1</span> Shell </h3>
+<div class="outline-text-3" id="text-2.1">
+
+<p>If Katana is not passed an argument indicating one of the
+hot-patching commands (described later in  <a href="#sec-3.5">*How to Use Katana For Hotpatching</a>), then it is assumed to be operating as a shell. If it
+is provided an argument, that argument is taken as the name of a
+file to read shell commands from. Otherwise commands are read from
+stdin using the readline library. 
+</p>
+</div>
+
+<div id="outline-container-2.1.1" class="outline-4">
+<h4 id="sec-2.1.1"><span class="section-number-4">2.1.1</span> Syntax and Data Model </h4>
+<div class="outline-text-4" id="text-2.1.1">
+
+<p>The Katana shell syntax is very simple. There are no control flow
+structures, only commands and variables. A line is terminated by a
+semicolon (;) or a newline character. Each line may be either
+blank, contain exactly one COMMAND, or contain an ASSIGNMENT.
+</p>
+<p>
+A COMMAND is of the form COMMAND<sub>IDENTIFIER</sub> PARAM PARAM PARAM &hellip;., where
+tokens are seperated by spaces and the number of PARAMs depends on
+the command.
+</p>
+<p>
+An ASSIGNMENT is currently of the form VARIABLE=COMMAND although
+in the future it may be possible to write other sorts of
+assignments.
+</p>
+<p>
+A VARIABLE reference consists of a dollar-sign ($) followed by a
+letter or underscore followed by any number of letters,
+underscores, or digits.
+</p>
+<p>
+A COMMAND<sub>IDENTIFIER</sub> is one or more words which identify a
+COMMAND. In many cases a command is identified by only one word,
+but sometimes similar commands are grouped by sharing the first
+word in their identifier.
+</p>
+<p>
+A PARAM is a VARIABLE reference, STRING, or NUMBER
+</p>
+<p>
+A STRING is any literal beginning and ending with the character ".
+</p>
+<p>
+A NUMBER is a decimal, hex, or float literal.
+</p>
+<ul>
+<li id="sec-2.1.1.1">Data Types <br/>
+The following types of variables exist
+<ul>
+<li>
+string
+</li>
+<li>
+elf
+</li>
+<li>
+elf section
+</li>
+<li>
+raw data
+</li>
+<li>
+array
+
+</li>
+</ul>
+</li>
+</ul>
+</div>
+
+</div>
+
+<div id="outline-container-2.1.2" class="outline-4">
+<h4 id="sec-2.1.2"><span class="section-number-4">2.1.2</span> Available Commands </h4>
+<div class="outline-text-4" id="text-2.1.2">
+
+<ul>
+<li id="sec-2.1.2.1">load <br/>
+<i>Usage</i>: <code>load FILENAME</code><br/>
+<i>Params</i>: FILENAME must a string literal or variable that can be interpreted
+as a string.<br/>
+<i>Function</i>: Loads the data in the given file as an ELF object if
+possible. If not, loads it as raw data.
+</li>
+<li id="sec-2.1.2.2">save <br/>
+<i>Usage</i>: <code>save VAR FILENAME</code><br/>
+<i>Params</i>: VAR must be a variable that can be interpreted as an ELF
+object or that can be interpreted as raw data. FILENAME must be a
+literal or variable that can be interpreted as a string.<br/>
+<i>Function</i>: Saves VAR to FILENAME.
+</li>
+<li id="sec-2.1.2.3">dwarfscript <br/>
+<ul>
+<li id="sec-2.1.2.3.1">dwarfscript emit <br/>
+<i>Usage</i>: <code>dwarfscript emit [SECTION] ELF OUTFILE</code><br/>
+<i>Params</i>: SECTION must be the name (string) of the section to write as
+Dwarfscript. If not specified it defaults to
+".eh<sub>frame</sub>". ELF must be an ELF object. OUTFILE must
+be a string with the name of a file to write the resulting
+Dwarfscript to.<br/>
+<i>Function</i>: Writes the Dwarfscript representation of the given
+SECTION from the given ELF to OUTFILE.
+</li>
+<li id="sec-2.1.2.3.2">dwarfscript compile <br/>
+<i>Usage</i>: <code>dwarfscript compile INFILE</code><br/>
+<i>Params</i>: INFILE must be a string containing the name of a file.<br/>
+<i>Function</i>: Interprets the contents of the file named by INFILE
+as Dwarfscript and compiles the Dwarfscript into
+beinary form. Returns an array with 3 items
+0: raw data for .eh<sub>frame</sub> 
+1: raw data for .eh<sub>frame</sub><sub>hdr</sub>
+2: raw data for .gcc<sub>except</sub><sub>table</sub>.
+</li>
+</ul>
+</li>
+<li id="sec-2.1.2.4">replace <br/>
+<ul>
+<li id="sec-2.1.2.4.1">replace section <br/>
+<i>Usage</i>: <code>replace section ELF SECTION_NAME NEW_SECTION</code>
+<i>Params</i>: ELF must be an ELF object. SECTION<sub>NAME</sub> must be a
+string. NEW<sub>SECTION</sub> must be either an ELF section or raw data.
+<i>Function</i>: Replaces the section with the name SECTION<sub>NAME</sub> in
+the oject ELF with the data from
+NEW<sub>SECTION</sub>. Section headers are replaced if NEW<sub>SECTION</sub> is
+able to provide them, but not if it is only raw data.
+
+</li>
+<li id="sec-2.1.2.4.2">replace raw <br/>
+<i>Usage</i>: <code>replace raw ELF OFFSET NEW_DATA</code>
+<i>Params</i>: ELF must be an ELF object. ADDRESS must be an
+integer. NEW<sub>DATA</sub> must be raw data.
+<i>Function</i>: Replaces the raw data at OFFSET in the ELF object
+with NEW<sub>DATA</sub>. OFFSET must refer to a location in an
+existing section.
+</li>
+</ul>
+</li>
+<li id="sec-2.1.2.5">info <br/>
+<ul>
+<li id="sec-2.1.2.5.1">info eh <br/>
+<i>Usage</i>: <code>info eh ELF [OUTFILE]</code>
+<i>Params</i>: ELF must be an ELF object. OUTFILE, if present, must
+be the name of a writable file (which may or may not
+exist yet). 
+<i>Function</i>: Prints out information about the exception-handling
+structures in ELF. If OUTFILE is present, this
+information is written to it.
+</li>
+</ul>
+</li>
+<li id="sec-2.1.2.6">hash <br/>
+<ul>
+<li id="sec-2.1.2.6.1">hash elf <br/>
+<i>Usage</i>: <code>hash elf STR</code>
+<i>Params</i>: STR must be a string.
+<i>Function</i>: Prints the result of running elf<sub>hash</sub> (from libelf)
+on the string.
+
+</li>
+</ul>
+</li>
+<li id="sec-2.1.2.7">patch <br/>
+<ul>
+<li id="sec-2.1.2.7.1">gen <br/>
+<i>Usage</i>: <code>patch gen OLD_OBJECTS_DIR NEW_OBJECTS_DIR EXECUTABLE</code>
+<i>Params</i>: All three params are strings. The first two are the
+old and new object file directories respectively. The
+last is the name of the executable that can be found
+in both directories.
+<i>Function</i>: Generates (and returns) a patch object ELF.
+</li>
+<li id="sec-2.1.2.7.2">apply <br/>
+<i>Usage</i>: <code>patch apply PO PID</code>
+<i>Params</i>: The PO parameter should be an ELF patch object. PID
+should be the (integer) pid of the process that PO is
+to be applied to.
+<i>Function</i>: Applies the patch object PO to the running process
+described by PID.
+</li>
+</ul>
+</li>
+<li id="sec-2.1.2.8">! (shell command) <br/>
+The rest of the line following by ! is executed in a shell.
+</li>
+</ul>
+</div>
+
+</div>
+
+<div id="outline-container-2.1.3" class="outline-4">
+<h4 id="sec-2.1.3"><span class="section-number-4">2.1.3</span> History </h4>
+<div class="outline-text-4" id="text-2.1.3">
+
+<p>Command history is saved using libreadline in <code>$HOME/.katana_history</code>.
+</p></div>
+</div>
+</div>
+
+</div>
+
+<div id="outline-container-3" class="outline-2">
+<h2 id="sec-3"><span class="section-number-2">3</span> Hotpatching </h2>
+<div class="outline-text-2" id="text-3">
+
+
+</div>
+
+<div id="outline-container-3.1" class="outline-3">
+<h3 id="sec-3.1"><span class="section-number-3">3.1</span> Other Systems </h3>
+<div class="outline-text-3" id="text-3.1">
 
 <p>There are other hotpatching systems in existence. The curious are
 invited to explore Ginseng and Polus. Both of these systems parse
@@ -166,9 +418,9 @@ general ELF-based patch format.
 
 </div>
 
-<div id="outline-container-3" class="outline-2">
-<h2 id="sec-3"><span class="section-number-2">3</span> What Katana Does </h2>
-<div class="outline-text-2" id="text-3">
+<div id="outline-container-3.2" class="outline-3">
+<h3 id="sec-3.2"><span class="section-number-3">3.2</span> What Katana Does </h3>
+<div class="outline-text-3" id="text-3.2">
 
 <ul>
 <li>
@@ -185,9 +437,9 @@ Applies simple patches
 
 </div>
 
-<div id="outline-container-4" class="outline-2">
-<h2 id="sec-4"><span class="section-number-2">4</span> What Katana Does Not Do (Yet) </h2>
-<div class="outline-text-2" id="text-4">
+<div id="outline-container-3.3" class="outline-3">
+<h3 id="sec-3.3"><span class="section-number-3">3.3</span> What Katana Does Not Do (Yet) </h3>
+<div class="outline-text-3" id="text-3.3">
 
 <ul>
 <li>
@@ -223,15 +475,15 @@ And much more
 </li>
 </ul>
 
-<p>See <a href="#sec-10">Roadmap</a> for more things which are not complete
+<p>See <a href="#sec-3.14">Roadmap</a> for more things which are not complete
 </p>
 </div>
 
 </div>
 
-<div id="outline-container-5" class="outline-2">
-<h2 id="sec-5"><span class="section-number-2">5</span> What Katana May Never Do </h2>
-<div class="outline-text-2" id="text-5">
+<div id="outline-container-3.4" class="outline-3">
+<h3 id="sec-3.4"><span class="section-number-3">3.4</span> What Katana May Never Do </h3>
+<div class="outline-text-3" id="text-3.4">
 
 <ul>
 <li>
@@ -242,9 +494,9 @@ Work on any binary formats besides ELF
 
 </div>
 
-<div id="outline-container-6" class="outline-2">
-<h2 id="sec-6"><span class="section-number-2">6</span> How to Use Katana </h2>
-<div class="outline-text-2" id="text-6">
+<div id="outline-container-3.5" class="outline-3">
+<h3 id="sec-3.5"><span class="section-number-3">3.5</span> How to Use Katana For Hotpatching </h3>
+<div class="outline-text-3" id="text-3.5">
 
 <p>Katana is intended to be used in two stages. The first stage
 generates a patch object from two different versions of an
@@ -263,19 +515,20 @@ makes, etc.
 </p>
 </div>
 
-<div id="outline-container-6.1" class="outline-3">
-<h3 id="sec-6.1"><span class="section-number-3">6.1</span> Preparing a Package for Patching Support </h3>
-<div class="outline-text-3" id="text-6.1">
+<div id="outline-container-3.5.1" class="outline-4">
+<h4 id="sec-3.5.1"><span class="section-number-4">3.5.1</span> Preparing a Package for Patching Support </h4>
+<div class="outline-text-4" id="text-3.5.1">
 
 <p>Katana aims to be much less invasive than other hot-patching system
 and require minimal work to be used with any project. It does,
 however, have some requirements.<br/>
-</p>
+</p></div>
+
 </div>
 
-<div id="outline-container-6.1.1" class="outline-4">
-<h4 id="sec-6.1.1"><span class="section-number-4">6.1.1</span> Source Code Practices </h4>
-<div class="outline-text-4" id="text-6.1.1">
+<div id="outline-container-3.5.2" class="outline-4">
+<h4 id="sec-3.5.2"><span class="section-number-4">3.5.2</span> Source Code Practices </h4>
+<div class="outline-text-4" id="text-3.5.2">
 
 <p>Katana does not look at the source code, therefore unlike several
 other hotpatching systems, it does not require any annotation in
@@ -304,9 +557,9 @@ when you do this.
 
 </div>
 
-<div id="outline-container-6.1.2" class="outline-4">
-<h4 id="sec-6.1.2"><span class="section-number-4">6.1.2</span> Compilation/Linking </h4>
-<div class="outline-text-4" id="text-6.1.2">
+<div id="outline-container-3.5.3" class="outline-4">
+<h4 id="sec-3.5.3"><span class="section-number-4">3.5.3</span> Compilation/Linking </h4>
+<div class="outline-text-4" id="text-3.5.3">
 
 <p>Required CFLAGS:
 </p><ul>
@@ -335,13 +588,12 @@ when you do this.
 </li>
 </ul>
 </div>
-</div>
 
 </div>
 
-<div id="outline-container-6.2" class="outline-3">
-<h3 id="sec-6.2"><span class="section-number-3">6.2</span> To Generate a Patch </h3>
-<div class="outline-text-3" id="text-6.2">
+<div id="outline-container-3.5.4" class="outline-4">
+<h4 id="sec-3.5.4"><span class="section-number-4">3.5.4</span> To Generate a Patch </h4>
+<div class="outline-text-4" id="text-3.5.4">
 
 <p>Let the location of your project be /project. You must have two
 versions of your software available: the version identical to the
@@ -356,13 +608,13 @@ does not parse it. Similarly, /project/v1/foo must exist and
 /project/v1/foo. Katana is then invoked as
 </p>
 <p>
-<code>katana -g [-o OUTPUT_FILE] /project/v0 /project/v1 foo</code>
+<code>katana [OPTIONS] -g [-o OUTPUT_FILE] /project/v0 /project/v1 foo</code>
 </p>
 <p>
 or more formally
 </p>
 <p>
-<code>katana -g [-o OUTUT_FILE] OLD_OBJECTS_DIR NEW_OBJECTS_DIR EXECUTABLE_NAME</code>
+<code>katana [OPTIONS] -g [-o OUTUT_FILE] OLD_OBJECTS_DIR NEW_OBJECTS_DIR EXECUTABLE_NAME</code>
 </p>
 <p>
 If <code>-o OUTPUT_FILE</code> is not specified, the output file will be <code>OLD_OBJECTS_DIR/EXECUTABLE_NAME.po</code>
@@ -370,16 +622,16 @@ If <code>-o OUTPUT_FILE</code> is not specified, the output file will be <code>O
 
 </div>
 
-<div id="outline-container-6.3" class="outline-3">
-<h3 id="sec-6.3"><span class="section-number-3">6.3</span> To Apply a Patch </h3>
-<div class="outline-text-3" id="text-6.3">
+<div id="outline-container-3.5.5" class="outline-4">
+<h4 id="sec-3.5.5"><span class="section-number-4">3.5.5</span> To Apply a Patch </h4>
+<div class="outline-text-4" id="text-3.5.5">
 
 <p>The process to be patched is running with a pid of PID. It can be
 patched from its current version to a more recent version by the
 Patch Object (PO) file PATCH. Katana is then invoked as
 </p>
 <p>
-<code>katana -p [-s] PATCH PID</code>
+<code>katana [OPTIONS] -p [-s] PATCH PID</code>
 </p>
 <p>
 If all goes well, the patcher will run, print out some status
@@ -391,9 +643,9 @@ debugging Katana.
 
 </div>
 
-<div id="outline-container-6.4" class="outline-3">
-<h3 id="sec-6.4"><span class="section-number-3">6.4</span> To View a Patch </h3>
-<div class="outline-text-3" id="text-6.4">
+<div id="outline-container-3.5.6" class="outline-4">
+<h4 id="sec-3.5.6"><span class="section-number-4">3.5.6</span> To View a Patch </h4>
+<div class="outline-text-4" id="text-3.5.6">
 
 <p>One of the goals of Katana and its Patch Object (PO) format is to
 increase the transparency of patches: a user about to apply a patch
@@ -401,44 +653,183 @@ should know what it will do. This goal is not yet fully realized,
 but it is possible to view some information about a patch with
 </p>
 <p>
-<code>katana -l PATCH</code>
+<code>katana [OPTIONS] -l PATCH</code>
 </p></div>
 
 </div>
 
-<div id="outline-container-6.5" class="outline-3">
-<h3 id="sec-6.5"><span class="section-number-3">6.5</span> See Also </h3>
-<div class="outline-text-3" id="text-6.5">
+<div id="outline-container-3.5.7" class="outline-4">
+<h4 id="sec-3.5.7"><span class="section-number-4">3.5.7</span> Options </h4>
+<div class="outline-text-4" id="text-3.5.7">
 
-<p>the katana manpage (once it's written, which it is not yet)
+<p>The following options may be passed to katana regardless of whether
+one is generating, applying, or viewing a patch:
+</p><ul>
+<li>
+-c CONFIG
+where CONFIG is the name of a configuration file to load
+</li>
+</ul>
+</div>
+
+</div>
+
+<div id="outline-container-3.5.8" class="outline-4">
+<h4 id="sec-3.5.8"><span class="section-number-4">3.5.8</span> Configuration Files </h4>
+<div class="outline-text-4" id="text-3.5.8">
+
+<p>Katana loads configuration files as follows. Configuration files
+loaded later in the sequence may overwrite settings from files
+earlier in the sequence.
+</p><ul>
+<li>
+<i>etc/katana     + ~</i>.katana
+</li>
+<li>
+~/.config/katana
+</li>
+<li>
+./katana
+</li>
+<li>
+any file specified with -c
+
+</li>
+</ul>
+
+<p>Configuration files are written in JSON. The JSON requirement that
+strings be quoted is relaxed (i.e. anything is assumed to be a
+string unless it can be interpreted otherwise). The following
+properties are recognized:
+</p><ul>
+<li>
+maxWaitForPatching &lt;INTEGER&gt;
+This value specifies the maximum number of seconds to wait for
+the target to enter a safe state.
+</li>
+<li>
+flags &lt;OBJECT&gt;
+The value of flags should be an object which may contain the
+following properties, all of which should be bool-valued:
+<ul>
+<li>
+checkPtraceWrites
+Whenever something is written into the target memory, read the
+value back out and verify that it was written correctly. This
+has a performance penalty, but does provide some more robust
+error checking, although it should not be necessary.
+</li>
+</ul>
+</li>
+</ul>
+</div>
+
+</div>
+
+<div id="outline-container-3.5.9" class="outline-4">
+<h4 id="sec-3.5.9"><span class="section-number-4">3.5.9</span> See Also </h4>
+<div class="outline-text-4" id="text-3.5.9">
+
+<p>the katana manpage (although the information in this document is
+considerably more extensive than in the manpage)
 </p></div>
 </div>
 
 </div>
 
-<div id="outline-container-7" class="outline-2">
-<h2 id="sec-7"><span class="section-number-2">7</span> Patch Object Format </h2>
-<div class="outline-text-2" id="text-7">
+<div id="outline-container-3.6" class="outline-3">
+<h3 id="sec-3.6"><span class="section-number-3">3.6</span> Patch Object Format </h3>
+<div class="outline-text-3" id="text-3.6">
 
 <p>This section of the document is not yet written. It will provide a description and specification of the PO format used by Katana
 </p></div>
 
 </div>
 
-<div id="outline-container-8" class="outline-2">
-<h2 id="sec-8"><span class="section-number-2">8</span> Patch Generation Process </h2>
-<div class="outline-text-2" id="text-8">
+<div id="outline-container-3.7" class="outline-3">
+<h3 id="sec-3.7"><span class="section-number-3">3.7</span> Patch Generation Process </h3>
+<div class="outline-text-3" id="text-3.7">
 
-<p>This section of the document is not yet written. It will provide a
-description of the internal process that Katana uses to generate a
-patch. Understanding it is not necessary for using Katana.
+<p>This section of the document is still under construction. When
+complete, it will provide a description of the internal process that
+Katana uses to generate a patch. Understanding it is not necessary
+for using Katana.
+</p>
+</div>
+
+</div>
+
+<div id="outline-container-3.8" class="outline-3">
+<h3 id="sec-3.8"><span class="section-number-3">3.8</span> Configuration </h3>
+<div class="outline-text-3" id="text-3.8">
+
+<p>Katana reads configuration files from (in order, with later
+configuration files overriding options found in earlier ones) from
+<code>/etc/katana</code>, <code>~/.katana</code>, <code>~/.config/katana</code>, and <code>./.katana</code>.
+</p>
+</div>
+
+</div>
+
+<div id="outline-container-3.9" class="outline-3">
+<h3 id="sec-3.9"><span class="section-number-3">3.9</span> Initializing the patch object </h3>
+<div class="outline-text-3" id="text-3.9">
+
+<p>Katana sets up a patch object ELF file with the necessary sections,
+see <a href="#sec-3.6">Patch Object Format</a>
 </p></div>
 
 </div>
 
-<div id="outline-container-9" class="outline-2">
-<h2 id="sec-9"><span class="section-number-2">9</span> Patch Application Process </h2>
-<div class="outline-text-2" id="text-9">
+<div id="outline-container-3.10" class="outline-3">
+<h3 id="sec-3.10"><span class="section-number-3">3.10</span> Comparing source trees </h3>
+<div class="outline-text-3" id="text-3.10">
+
+<ul>
+<li>
+Katana compare the old and new source trees, looking at the object (.o)
+files.
+</li>
+<li>
+For object files which exist only in the new tree, their contents
+are added to the patch object being created.
+</li>
+<li>
+For object files which exist only in the old tree, a warning
+about their removal is issued and nothing further is done.
+</li>
+<li>
+For object files which exist in both trees, type diffing and
+function diffing are performed and the differences are written
+tot he patch object being created.
+</li>
+</ul>
+</div>
+
+</div>
+
+<div id="outline-container-3.11" class="outline-3">
+<h3 id="sec-3.11"><span class="section-number-3">3.11</span> Type Diffing </h3>
+<div class="outline-text-3" id="text-3.11">
+
+<p>This section of the document still needs to be written. The general
+idea is that structures are examined for for added members, moved
+members, and changed members.
+</p></div>
+
+</div>
+
+<div id="outline-container-3.12" class="outline-3">
+<h3 id="sec-3.12"><span class="section-number-3">3.12</span> Function Diffing </h3>
+<div class="outline-text-3" id="text-3.12">
+
+</div>
+
+</div>
+
+<div id="outline-container-3.13" class="outline-3">
+<h3 id="sec-3.13"><span class="section-number-3">3.13</span> Patch Application Process </h3>
+<div class="outline-text-3" id="text-3.13">
 
 <p>This section of the document is not yet written. It will provide a
 description of the internal process that Katana uses to apply a
@@ -447,9 +838,9 @@ patch. Understanding it is not necessary for using Katana.
 
 </div>
 
-<div id="outline-container-10" class="outline-2">
-<h2 id="sec-10"><span class="section-number-2">10</span> Roadmap </h2>
-<div class="outline-text-2" id="text-10">
+<div id="outline-container-3.14" class="outline-3">
+<h3 id="sec-3.14"><span class="section-number-3">3.14</span> Roadmap </h3>
+<div class="outline-text-3" id="text-3.14">
 
 <p>This section is highly incomplete. Future goals include
 </p><ul>
@@ -477,33 +868,43 @@ Storing warnings from generation inside a patch
 </li>
 </ul>
 </div>
+</div>
 
 </div>
 
-<div id="outline-container-11" class="outline-2">
-<h2 id="sec-11"><span class="section-number-2">11</span> Credits and Licensing </h2>
-<div class="outline-text-2" id="text-11">
+<div id="outline-container-4" class="outline-2">
+<h2 id="sec-4"><span class="section-number-2">4</span> DWARF Manipulation </h2>
+<div class="outline-text-2" id="text-4">
+
+</div>
+
+</div>
+
+<div id="outline-container-5" class="outline-2">
+<h2 id="sec-5"><span class="section-number-2">5</span> Credits and Licensing </h2>
+<div class="outline-text-2" id="text-5">
 
 <p>Katana is under development at Dartmouth College and Copyright 2010
 Dartmouth College. It may be distributed under the terms of the GNU
 General Public License with attribution to Dartmouth College as
 specified in the file COPYING distributed with Katana. This document
-is Copyright 2010 Dartmouth College and may be distributed under the
-terms of the GNU Free Documentation License as found in the file FDL
-which should have been distributed with this documentation. If it
-was not, it may be found at <a href="http://www.gnu.org/licenses/fdl.txt">http://www.gnu.org/licenses/fdl.txt</a>.
+is Copyright 2010-2011 Dartmouth College and may be distributed
+under the terms of the GNU Free Documentation License as found in
+the file FDL which should have been distributed with this
+documentation. If it was not, it may be found at
+<a href="http://www.gnu.org/licenses/fdl.txt">http://www.gnu.org/licenses/fdl.txt</a>.
 </p>
 <p>
-Katana is being written by James Oakley and was designed
-by Sergey Bratus, Ashwin Ramaswamy, James Oakley, Michael Locasto,
-and Sean Smith.
+Katana is being written by James Oakley and was designed by Sergey
+Bratus, Ashwin Ramaswamy, James Oakley, Michael Locasto, and Sean
+Smith.
 </p></div>
 </div>
 <div id="postamble">
 <p class="author"> Author: James Oakley
 <a href="mailto:james.oakley@dartmouth.edu">&lt;james.oakley@dartmouth.edu&gt;</a>
 </p>
-<p class="date"> Date: 2010-06-22 19:27:22 PDT</p>
+<p class="date"> Date: 2011-04-13 00:01:56 EDT</p>
 <p class="creator">HTML generated by org-mode 6.33x in emacs 23</p>
 </div>
 </div>
