@@ -609,7 +609,7 @@ void buildExceptTableRawData(CallFrameInfo* cfi,GrowingBuffer* buf,
       +1 //for call site format
       +callSiteLengthLEBNumBytes+callSiteBuf.len
       +actionBuf.len;
-    int misalignment=4-(offsetStartToTTTop%4);
+    int misalignment=(offsetStartToTTTop%4)?(4-(offsetStartToTTTop%4)):0;
     //type table must be 4-byte aligned
     offsetStartToTTTop+=misalignment;
     //to get ttBase, add the length of the type table buf and subtract

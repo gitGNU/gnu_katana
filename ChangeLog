@@ -1,5 +1,8 @@
 2011-04-13  james  <james.oakley@dartmouth.edu>
-	* elfwriter.c flagging data sections with SHT_NOBITS as dirty was
+
+	* src/callFrameInfo.c fixed alignment issue for the type table
+
+	* src/elfwriter.c flagging data sections with SHT_NOBITS as dirty was
 	causing bizarre crashes on x86. Didn't fully debug, but simply
 	don't flag them as dirty (since there's not really any
 	need afaik). Should perhaps eventually give them more attention.
