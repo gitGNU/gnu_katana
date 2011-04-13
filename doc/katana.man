@@ -1,12 +1,19 @@
 .\ manpage for katana
-.TH "KATANA" 1 2010-06-20 "Dartmouth College" "Katana Manual"
+.TH "KATANA" 1 2011-04-13 "Dartmouth College" "Katana Manual"
 .SH NAME
 .B katana
-\- A binary-level hot-patching system for userland.
+\- A binary-level hot-patching system for userland and a
+general-purpose ELF and DWARF manipulation shell.
 .SH SYNOPSIS
 
 .\ disable filling
 .nf
+Run the Katana shell interactively:
+n\fBkatana\fP
+
+Run a Katana shell script:
+\fBkatana\fP SCRIPT_FILENAME
+
 Generate a patch:
 \fBkatana\fP [-c CONFIG]-g [-o OUTPUT_FILE] OLD_OBJECTS_DIR NEW_OBJECTS_DIR EXECUTABLE_NAME
 
@@ -15,22 +22,33 @@ Apply a patch:
 
 List patch information:
 \fBkatana\fP -l PATCH_FILE
+
+
 .\ enable filling again
 .fi
 
 
+
 .SH OVERVIEW
-Katana is intended to be used in two stages. The first stage generates
-a patch object from two different versions of an treee. By an object
-tree, we mean the set of object files (.o files) and the executable
-binary they comprise. Katana works completely at the object level, so
-the source code itself is not strictly required, although all objects
-must be compiled with debugging information. This step may be done by
-the software vendor. In the second stage, the patch is applied to a
-running process. The original source trees are not necessary during
-patch application, as the patch object contains all information
-necessary to patch the in-memory process at the object level. It is
-also possible to view the contents of a patch object in a
+Katana was developed initially for hotpatching. It was then extended
+as a more general binary manipulation framework, especially for
+research into security issues surrounding the DWARF format. The rest
+of this manual page deals with use for hotpatching. For information on
+the usage of the Katana shell, see the complete Katana User's Guide which
+can be found at http://katana.nongnu.org or in the katana subdirectory
+of your system's standard location for installing documentation.
+
+As a patcher, Katana is intended to be used in two stages. The first
+stage generates a patch object from two different versions of an
+treee. By an object tree, we mean the set of object files (.o files)
+and the executable binary they comprise. Katana works completely at
+the object level, so the source code itself is not strictly required,
+although all objects must be compiled with debugging information. This
+step may be done by the software vendor. In the second stage, the
+patch is applied to a running process. The original source trees are
+not necessary during patch application, as the patch object contains
+all information necessary to patch the in-memory process at the object
+level. It is also possible to view the contents of a patch object in a
 human-readable way for the purposes of sanity-checking, determining
 what changes the patch makes, etc.
 
@@ -98,13 +116,19 @@ written in JSON (with the requirement to quote strings relaxed). For a
 complete guide to configuration options, see the Katana User's Guide
 which should be available at http://katana.nongnu.org.
 
+.SH SEE ALSO
+Read the complete Katana User's Guide which should be available in
+several formats at http://katana.nongnu.org or in the katana
+subdirectory of your system's standard location for installing
+documentation.
+
 .SH AUTHORS
 Katana was written by James Oakley (<james.oakley@dartmouth.edu> or
 <electron100@gmail.com>). It was designed by Sergey Bratus, James
 Oakley, Ashwin Ramaswamy, Michael E. Locasto, and Sean
-W. Smith. Katana is Copyright (C) 2010 Dartmouth College.
+W. Smith. Katana is Copyright (C) 2010-2011 Dartmouth College.
 
-This document is Copyright 2010 Dartmouth College and may be
+This document is Copyright 2010-2011 Dartmouth College and may be
 distributed under the terms of the GNU Free Documentation License as
 found in the file FDL which should have been distributed with this
 documentation. If it was not, it may be found at
