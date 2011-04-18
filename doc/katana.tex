@@ -1,4 +1,4 @@
-% Created 2011-04-13 Wed 00:01
+% Created 2011-04-18 Mon 01:44
 \documentclass[11pt]{article}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
@@ -13,7 +13,7 @@
 
 \title{Katana: An ELF/DWARF Manipulation Tool with Hotpatching Capabilities}
 \author{James Oakley}
-\date{13 April 2011}
+\date{18 April 2011}
 
 \begin{document}
 
@@ -83,7 +83,7 @@
     semicolon (;) or a newline character. Each line may be either
     blank, contain exactly one COMMAND, or contain an ASSIGNMENT.
 
-    A COMMAND is of the form COMMAND$_{\mathrm{IDENTIFIER}}$ PARAM PARAM PARAM \ldots{}., where
+    A COMMAND is of the form COMMAND\_{}IDENTIFIER PARAM PARAM PARAM \ldots{}., where
     tokens are seperated by spaces and the number of PARAMs depends on
     the command.
 
@@ -95,7 +95,7 @@
     letter or underscore followed by any number of letters,
     underscores, or digits.
 
-    A COMMAND$_{\mathrm{IDENTIFIER}}$ is one or more words which identify a
+    A COMMAND\_{}IDENTIFIER is one or more words which identify a
     COMMAND. In many cases a command is identified by only one word,
     but sometimes similar commands are grouped by sharing the first
     word in their identifier.
@@ -114,8 +114,8 @@
      The following types of variables exist
 \begin{itemize}
 \item string
-\item elf
-\item elf section
+\item ELF
+\item ELF section
 \item raw data
 \item array
 \end{itemize}
@@ -154,7 +154,7 @@
       \emph{Usage}: \texttt{dwarfscript emit [SECTION] ELF OUTFILE}\\
       \emph{Params}: SECTION must be the name (string) of the section to write as
                 Dwarfscript. If not specified it defaults to
-                ``.eh$_{\mathrm{frame}}$''. ELF must be an ELF object. OUTFILE must
+                ``.eh\_{}frame''. ELF must be an ELF object. OUTFILE must
                 be a string with the name of a file to write the resulting
                 Dwarfscript to.\\
       \emph{Function}: Writes the Dwarfscript representation of the given
@@ -168,9 +168,9 @@
       \emph{Function}: Interprets the contents of the file named by INFILE
                   as Dwarfscript and compiles the Dwarfscript into
                   beinary form. Returns an array with 3 items
-                  0: raw data for .eh$_{\mathrm{frame}}$ 
-                  1: raw data for .eh$_{\mathrm{frame}}$$_{\mathrm{hdr}}$
-                  2: raw data for .gcc$_{\mathrm{except}}$$_{\mathrm{table}}$.
+                  0: raw data for .eh\_{}frame 
+                  1: raw data for .eh\_{}frame\_{}hdr
+                  2: raw data for .gcc\_{}except\_{}table.
 \end{itemize} % ends low level
 
 \item replace\\
@@ -182,11 +182,11 @@
 \label{sec-2.1.2.4.1}
 
       \emph{Usage}: \texttt{replace section ELF SECTION\_NAME NEW\_SECTION}
-      \emph{Params}: ELF must be an ELF object. SECTION$_{\mathrm{NAME}}$ must be a
-                string. NEW$_{\mathrm{SECTION}}$ must be either an ELF section or raw data.
-      \emph{Function}: Replaces the section with the name SECTION$_{\mathrm{NAME}}$ in
+      \emph{Params}: ELF must be an ELF object. SECTION\_{}NAME must be a
+                string. NEW\_{}SECTION must be either an ELF section or raw data.
+      \emph{Function}: Replaces the section with the name SECTION\_{}NAME in
                   the oject ELF with the data from
-                  NEW$_{\mathrm{SECTION}}$. Section headers are replaced if NEW$_{\mathrm{SECTION}}$ is
+                  NEW\_{}SECTION. Section headers are replaced if NEW\_{}SECTION is
                   able to provide them, but not if it is only raw data.
                    
 
@@ -195,9 +195,9 @@
 
       \emph{Usage}: \texttt{replace raw ELF OFFSET NEW\_DATA}
       \emph{Params}: ELF must be an ELF object. ADDRESS must be an
-                integer. NEW$_{\mathrm{DATA}}$ must be raw data.
+                integer. NEW\_{}DATA must be raw data.
       \emph{Function}: Replaces the raw data at OFFSET in the ELF object
-                  with NEW$_{\mathrm{DATA}}$. OFFSET must refer to a location in an
+                  with NEW\_{}DATA. OFFSET must refer to a location in an
                   existing section.
 \end{itemize} % ends low level
 
@@ -228,7 +228,7 @@
 
       \emph{Usage}: \texttt{hash elf STR}
       \emph{Params}: STR must be a string.
-      \emph{Function}: Prints the result of running elf$_{\mathrm{hash}}$ (from libelf)
+      \emph{Function}: Prints the result of running elf\_{}hash (from libelf)
                   on the string.
                   
 \end{itemize} % ends low level
@@ -439,6 +439,10 @@
 \subsubsection{Configuration Files}
 \label{sec-3.5.8}
 
+    Note that this feature is a work in progress. There isn't much you
+   can do with configuration files right now and the information here
+   may be out of date. Please do not rely on it.
+
     Katana loads configuration files as follows. Configuration files
     loaded later in the sequence may overwrite settings from files
     earlier in the sequence.
@@ -472,23 +476,88 @@
 \subsubsection{See Also}
 \label{sec-3.5.9}
 
-    the katana manpage (although the information in this document is
-    considerably more extensive than in the manpage)
+\begin{itemize}
+\item The katana manpage (although the information in this document is
+      considerably more extensive than in the manpage)
+\item S. Bratus, J. Oakley, A. Ramaswamy, S. Smith,
+      M. Locasto. \emph{Katana: Towards Patching as a Runtime part of the       Compiler-Linker-Loader Toolchain}. International Journal of
+      Secure Software Engineering (IJSEE). 1, 3 (2010).
+\end{itemize}
 \subsection{Patch Object Format}
 \label{sec-3.6}
 
-   This section of the document is not yet written. It will provide a description and specification of the PO format used by Katana
+   We have developed a patch object (PO) format which we hope will
+   eventually pave the way for a standardized vendor-neutral patch
+   format for hotpatching. We are not advancing our format as such,
+   but it embodies some of the principles which we think are
+   important. Why should patching not be a part of the ABI and of the
+   standard toolchain?
+\begin{itemize}
+\item A PO is a valid ELF file.
+\item A PO utilizes DWARF information to describe types, variables, and
+     functions requiring patching.
+\item A PO allows type transformations to be specified using a language
+     based on the DWARF standard.
+\end{itemize}
+   Through the use of existing standards and well-structured ELF files
+   utilizing a simple expression language for data patching, we aim to
+   create patches that are easily examined (or modified) with existing
+   tools. Relocatable objects containing new code and data which may
+   be inserted at runtime are nothing new. This is the entire premise
+   of the dynamic library. User-written functions which may have this
+   code injection (in the case of patching data where the desired
+   actions cannot be determined automatically) already exist as the
+   .init and .fini sections. It is our view, however, that it is
+   important to have a seperate patch format as opposed to patches
+   merely being dynamic libraries which contain both the patch data
+   and the logic to perform the patching (as is done by some other
+   hotpatching systems). We view this as an unnecessary mixing of data
+   and logic. The code to apply patches should live in one place on
+   any given system, as most other executable content does.
+
+   As an ELF object, our PO files contain the following non-standard
+   sections.
+
+\begin{itemize}
+\item .text.new
+     Contains new/modified functions
+\item .rodata.new, .data.new
+     new data
+\item .unsafe\_{}functions
+     Contains a simple listing (of symbol indices) of the functions in
+     the binary to be patched which should not have activation records
+     on the stack when patching is taking place.
+\item .debug\_{}info
+     Contains listings of the variables and functions which need to be
+     patched using the DWARF data format. This section is standard and
+     is used here with validly formatted data, but is used for
+     patching instead of debugging. The use of the the .debug\_{} name is
+     preserved for compatibility with libdwarf and tools such as
+     readelf, objdump, dwarfdump capable of listing DWARF
+     information. It can be, however, confusing and the name will
+     likely change in the future.
+\item .debug\_{}frame
+     Like .debug\_{}info a standard section used in a nonstandard way,
+     see notes above about the naming. Contains an extended version of
+     DWARF Call Frame Information which describes how various data
+     structures are to be patched. The details are not properly
+     documented at the moment, please email the Authors for more
+     details if you would like further information.
+\end{itemize}
 \subsection{Patch Generation Process}
 \label{sec-3.7}
 
-   This section of the document is still under construction. When
-   complete, it will provide a description of the internal process that
-   Katana uses to generate a patch. Understanding it is not necessary
-   for using Katana.
+   This section of the document is still under construction, but we
+   hope that the information that is provided will be of some use.
+
+
    
 \subsection{Configuration}
 \label{sec-3.8}
 
+   Note that this feature is a work in progress. There isn't much you
+   can do with configuration files right now.
+   
    Katana reads configuration files from (in order, with later
    configuration files overriding options found in earlier ones) from
    \texttt{/etc/katana}, \texttt{\textasciitilde{}/.katana}, \texttt{\textasciitilde{}/.config/katana}, and \texttt{./.katana}.
@@ -501,6 +570,7 @@
 \subsection{Comparing source trees}
 \label{sec-3.10}
 
+   High level view:
 \begin{itemize}
 \item Katana compare the old and new source trees, looking at the object (.o)
      files.
@@ -512,21 +582,94 @@
      function diffing are performed and the differences are written
      tot he patch object being created.
 \end{itemize}
+   A more detailed (although still very rough) algorithm:
+
+\begin{verbatim}
+Walk the old and new object trees in parallel
+  For each pair of objects (corresponding old and new objects)
+    If the new object does not exist
+      Issue a warning and continue
+    If the old object does not exist
+      Add all functions and vars to patch
+      Continue
+    If the two objects are the same
+      Continue
+    If the two objects differ
+      For every global variable in the old object
+        Compare with matching variable in the new object
+        If the two are a different type or the type struct changes
+          Generate a type transformation for the patch
+        If the variable initializers changed
+          If the variable is const
+            Add new data to the patch
+          Else
+            Generate a warning (can't determine automatically if
+                the change should be applied)
+        If anything related to the variable changed
+          Find all functions using the variable
+          Add them to the unsafe functions list
+      For every global variable only in the new object
+        Add it to the patch
+      For every function in the old object
+        Compare with matching function in the new object
+          If the functions differ
+            Add the new text to the patch
+            Add the function to the unsafe functions list.
+      For ever function only in the new object
+        Add the function to the patch
+Write out the patch ELF!
+\end{verbatim}
+
+
 \subsection{Type Diffing}
 \label{sec-3.11}
 
-   This section of the document still needs to be written. The general
-   idea is that structures are examined for for added members, moved
-   members, and changed members.
+   The general idea is that structures are examined for for added
+   members, moved members, and changed members. If you need more
+   detail than this, please contact the Authors.
 \subsection{Function Diffing}
 \label{sec-3.12}
 
+   Functions are compared in an unsophisticated manner. The comparison
+   is essentially byte-by-byte (i.e. no parsing of the machine
+   instruction set is done). If bytes differ between the compiled
+   version of the old function and the new function, then the function
+   is assumed to need patching.  The one exception to this is that
+   relocations are accounted for. If bytes differ at an address that
+   is fixed up by relocations, the relocations are examined to make
+   sure that they are for the same symbol. If in fact they are, then
+   the function is deemed not to have changed. If the symbol referred
+   to corresponds to a variable that has changed then it may need to
+   be moved to be patched. In that event the function may in fact have
+   to be modified, but it will be modified only to apply the
+   relocations rather than as a patch to the function per se and thus
+   the function diffing stage does not concern itself with whether
+   referenced symbols have changed.
 \subsection{Patch Application Process}
 \label{sec-3.13}
 
    This section of the document is not yet written. It will provide a
    description of the internal process that Katana uses to apply a
    patch. Understanding it is not necessary for using Katana.
+
+   The basic process is as follows
+
+\begin{verbatim}
+Read the patch file
+Calculate versioning. This is currently not implemented.
+Find malloc in the target, as we may need it
+Calculate a safe state for the target (based on the unsafe functions list)
+Wait for the target to reach a safe state
+Map in necessary sections from the patch
+Copy PLT and GOT to new locations as we may need to expand them
+For each variable listed in the patch
+  Apply the variable patch
+For each function listed in the patch
+ Apply the function patch
+Apply necessary relocations
+\end{verbatim}
+
+
 \subsection{Roadmap}
 \label{sec-3.14}
 
@@ -544,6 +687,8 @@
 \section{DWARF Manipulation}
 \label{sec-4}
 
+  For information on how katana can be used specifically for DWARF
+  manipulation, please see Dartmouth College Tech Report TR2011-680.
 \section{Credits and Licensing}
 \label{sec-5}
 
@@ -558,7 +703,7 @@
   \href{http://www.gnu.org/licenses/fdl.txt}{http://www.gnu.org/licenses/fdl.txt}.
 
   Katana is being written by James Oakley and was designed by Sergey
-  Bratus, Ashwin Ramaswamy, James Oakley, Michael Locasto, and Sean
+  Bratus, James Oakley, Ashwin Ramaswamy, Michael Locasto, and Sean
   Smith.
 
 \end{document}

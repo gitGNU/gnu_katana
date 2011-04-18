@@ -6,6 +6,8 @@
 #Description: validate the output of a single unit test for katana
 #+OPTIONS: LaTeX:t
 #+OPTIONS: Tex:t
+#+OPTIONS ^:nil
+#+OPTIONS _:nil
 #+LATEX_HEADER:  \usepackage{graphicx}
 
        Katana: An ELF/DWARF Manipulation Tool with Hotpatching Capabilities
@@ -91,8 +93,8 @@
 **** Data Types
      The following types of variables exist
      + string
-     + elf
-     + elf section
+     + ELF
+     + ELF section
      + raw data
      + array
       
@@ -311,6 +313,10 @@
     + -c CONFIG
       where CONFIG is the name of a configuration file to load
 *** Configuration Files
+    Note that this feature is a work in progress. There isn't much you
+   can do with configuration files right now and the information here
+   may be out of date. Please do not rely on it.
+
     Katana loads configuration files as follows. Configuration files
     loaded later in the sequence may overwrite settings from files
     earlier in the sequence.
@@ -336,17 +342,78 @@
         has a performance penalty, but does provide some more robust
         error checking, although it should not be necessary.
 *** See Also 
-    the katana manpage (although the information in this document is
-    considerably more extensive than in the manpage)
+    + The katana manpage (although the information in this document is
+      considerably more extensive than in the manpage)
+    + S. Bratus, J. Oakley, A. Ramaswamy, S. Smith,
+      M. Locasto. /Katana: Towards Patching as a Runtime part of the
+      Compiler-Linker-Loader Toolchain/. International Journal of
+      Secure Software Engineering (IJSEE). 1, 3 (2010).
 ** Patch Object Format
-   This section of the document is not yet written. It will provide a description and specification of the PO format used by Katana
+   We have developed a patch object (PO) format which we hope will
+   eventually pave the way for a standardized vendor-neutral patch
+   format for hotpatching. We are not advancing our format as such,
+   but it embodies some of the principles which we think are
+   important. Why should patching not be a part of the ABI and of the
+   standard toolchain?
+   + A PO is a valid ELF file.
+   + A PO utilizes DWARF information to describe types, variables, and
+     functions requiring patching.
+   + A PO allows type transformations to be specified using a language
+     based on the DWARF standard.
+
+   Through the use of existing standards and well-structured ELF files
+   utilizing a simple expression language for data patching, we aim to
+   create patches that are easily examined (or modified) with existing
+   tools. Relocatable objects containing new code and data which may
+   be inserted at runtime are nothing new. This is the entire premise
+   of the dynamic library. User-written functions which may have this
+   code injection (in the case of patching data where the desired
+   actions cannot be determined automatically) already exist as the
+   .init and .fini sections. It is our view, however, that it is
+   important to have a seperate patch format as opposed to patches
+   merely being dynamic libraries which contain both the patch data
+   and the logic to perform the patching (as is done by some other
+   hotpatching systems). We view this as an unnecessary mixing of data
+   and logic. The code to apply patches should live in one place on
+   any given system, as most other executable content does.
+
+   As an ELF object, our PO files contain the following non-standard
+   sections.
+
+   + .text.new
+     Contains new/modified functions
+   + .rodata.new, .data.new
+     new data
+   + .unsafe_functions
+     Contains a simple listing (of symbol indices) of the functions in
+     the binary to be patched which should not have activation records
+     on the stack when patching is taking place. 
+   + .debug_info
+     Contains listings of the variables and functions which need to be
+     patched using the DWARF data format. This section is standard and
+     is used here with validly formatted data, but is used for
+     patching instead of debugging. The use of the the .debug_ name is
+     preserved for compatibility with libdwarf and tools such as
+     readelf, objdump, dwarfdump capable of listing DWARF
+     information. It can be, however, confusing and the name will
+     likely change in the future.
+   + .debug_frame
+     Like .debug_info a standard section used in a nonstandard way,
+     see notes above about the naming. Contains an extended version of
+     DWARF Call Frame Information which describes how various data
+     structures are to be patched. The details are not properly
+     documented at the moment, please email the Authors for more
+     details if you would like further information.
 ** Patch Generation Process
-   This section of the document is still under construction. When
-   complete, it will provide a description of the internal process that
-   Katana uses to generate a patch. Understanding it is not necessary
-   for using Katana.
+   This section of the document is still under construction, but we
+   hope that the information that is provided will be of some use.
+
+
    
 ** Configuration
+   Note that this feature is a work in progress. There isn't much you
+   can do with configuration files right now.
+   
    Katana reads configuration files from (in order, with later
    configuration files overriding options found in earlier ones) from
    =/etc/katana=, =~/.katana=, =~/.config/katana=, and =./.katana=.
@@ -355,6 +422,7 @@
    Katana sets up a patch object ELF file with the necessary sections,
    see [[Patch Object Format]]
 ** Comparing source trees
+   High level view:
    + Katana compare the old and new source trees, looking at the object (.o)
      files.
    + For object files which exist only in the new tree, their contents
@@ -364,15 +432,83 @@
    + For object files which exist in both trees, type diffing and
      function diffing are performed and the differences are written
      tot he patch object being created.
+
+   A more detailed (although still very rough) algorithm:
+   #+BEGIN_EXAMPLE
+   Walk the old and new object trees in parallel
+     For each pair of objects (corresponding old and new objects)
+       If the new object does not exist
+         Issue a warning and continue
+       If the old object does not exist
+         Add all functions and vars to patch
+         Continue
+       If the two objects are the same
+         Continue
+       If the two objects differ
+         For every global variable in the old object
+           Compare with matching variable in the new object
+           If the two are a different type or the type struct changes
+             Generate a type transformation for the patch
+           If the variable initializers changed
+             If the variable is const
+               Add new data to the patch
+             Else
+               Generate a warning (can't determine automatically if
+                   the change should be applied)
+           If anything related to the variable changed
+             Find all functions using the variable
+             Add them to the unsafe functions list
+         For every global variable only in the new object
+           Add it to the patch
+         For every function in the old object
+           Compare with matching function in the new object
+             If the functions differ
+               Add the new text to the patch
+               Add the function to the unsafe functions list.
+         For ever function only in the new object
+           Add the function to the patch
+   Write out the patch ELF!
+   #+END_EXAMPLE
 ** Type Diffing
-   This section of the document still needs to be written. The general
-   idea is that structures are examined for for added members, moved
-   members, and changed members.
+   The general idea is that structures are examined for for added
+   members, moved members, and changed members. If you need more
+   detail than this, please contact the Authors.
 ** Function Diffing
+   Functions are compared in an unsophisticated manner. The comparison
+   is essentially byte-by-byte (i.e. no parsing of the machine
+   instruction set is done). If bytes differ between the compiled
+   version of the old function and the new function, then the function
+   is assumed to need patching.  The one exception to this is that
+   relocations are accounted for. If bytes differ at an address that
+   is fixed up by relocations, the relocations are examined to make
+   sure that they are for the same symbol. If in fact they are, then
+   the function is deemed not to have changed. If the symbol referred
+   to corresponds to a variable that has changed then it may need to
+   be moved to be patched. In that event the function may in fact have
+   to be modified, but it will be modified only to apply the
+   relocations rather than as a patch to the function per se and thus
+   the function diffing stage does not concern itself with whether
+   referenced symbols have changed.
 ** Patch Application Process
    This section of the document is not yet written. It will provide a
    description of the internal process that Katana uses to apply a
    patch. Understanding it is not necessary for using Katana.
+
+   The basic process is as follows
+   #+BEGIN_EXAMPLE
+   Read the patch file
+   Calculate versioning. This is currently not implemented.
+   Find malloc in the target, as we may need it
+   Calculate a safe state for the target (based on the unsafe functions list)
+   Wait for the target to reach a safe state
+   Map in necessary sections from the patch
+   Copy PLT and GOT to new locations as we may need to expand them
+   For each variable listed in the patch
+     Apply the variable patch
+   For each function listed in the patch
+    Apply the function patch
+   Apply necessary relocations
+   #+END_EXAMPLE
 ** Roadmap
    This section is highly incomplete. Future goals include
    + Better interaction with the heap and dynamically allocated variables
@@ -384,6 +520,8 @@
      the process it's being applied to
    + Storing warnings from generation inside a patch
 * DWARF Manipulation
+  For information on how katana can be used specifically for DWARF
+  manipulation, please see Dartmouth College Tech Report TR2011-680.
 * Credits and Licensing
   Katana is under development at Dartmouth College and Copyright 2010
   Dartmouth College. It may be distributed under the terms of the GNU
@@ -396,5 +534,5 @@
   http://www.gnu.org/licenses/fdl.txt.
 
   Katana is being written by James Oakley and was designed by Sergey
-  Bratus, Ashwin Ramaswamy, James Oakley, Michael Locasto, and Sean
+  Bratus, James Oakley, Ashwin Ramaswamy, Michael Locasto, and Sean
   Smith.
