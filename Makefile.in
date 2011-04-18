@@ -37,8 +37,8 @@ target_triplet = @target@
 subdir = .
 DIST_COMMON = README $(am__configure_deps) $(srcdir)/Makefile.am \
 	$(srcdir)/Makefile.in $(srcdir)/config.h.in \
-	$(top_srcdir)/configure AUTHORS COPYING INSTALL config.guess \
-	config.sub depcomp install-sh missing
+	$(top_srcdir)/configure AUTHORS COPYING ChangeLog INSTALL \
+	config.guess config.sub depcomp install-sh missing
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
@@ -224,6 +224,9 @@ TESTS_ENVIRONMENT = PATH=$(PWD):$(PATH)
 #add ./apache_test when it is ready
 TESTS = tests/code/listsort ./run_dwarf_tests.sh  ./patch_unit_tests
 EXTRA_DIST = LICENSE $(TESTS) validator.py
+SIGFILES_GZ = $(DIST_ARCHIVES:.gz=.gz.sig)
+SIGFILES_BZ = $(SIGFILES_GZ:.bz2=.bz2.sig)
+SIGFILES = $(SIGFILES_BZ)
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 
@@ -804,6 +807,13 @@ uninstall-am:
 
 all-local : src/katana
 	if [ ! -x katana ]; then ln -s src/katana katana ;fi
+
+release : dist
+	gpg -b $(DIST_ARCHIVES)
+	git tag $(PACKAGE_VERSION)
+	scp $(DIST_ARCHIVES) $(SIGFILES) electron@dl.sv.nongnu.org:/releases/katana/
+#TODO: if anyone else ever gains admin rights on the project the
+#name above will not always be electron
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
