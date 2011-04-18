@@ -750,8 +750,16 @@ ElfInfo* createPatch(char* oldSourceTree,char* newSourceTree,char* oldBinName,ch
     }
   }
   newBinary=openELFFile(newBinName);
+  if(!newBinary)
+  {
+    death("Could not create patch because could not open new binary\n");
+  }
   findELFSections(newBinary);
   oldBinary=openELFFile(oldBinName);
+  if(!oldBinary)
+  {
+    death("Could not create patch because could not open old binary\n");
+  }
   findELFSections(oldBinary);
   patch=startPatchElf(patchOutfile,filename);
   Dwarf_Error err;
