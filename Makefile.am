@@ -15,7 +15,7 @@ SIGFILES_BZ=$(SIGFILES_GZ:.bz2=.bz2.sig)
 SIGFILES=$(SIGFILES_BZ) 
 
 release : dist
-	stat=`git status -uno -s`; if [[ $stat ]]; then echo "commit your changes first"; exit 1; fi
+	stat=`git status -uno -s`; if [[ $$stat ]]; then echo "commit your changes first"; exit 1; fi
 	gpg -b $(DIST_ARCHIVES)
 	git tag $(PACKAGE_VERSION)
 	scp $(DIST_ARCHIVES) $(SIGFILES) electron@dl.sv.nongnu.org:/releases/katana/
