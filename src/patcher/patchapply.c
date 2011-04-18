@@ -591,6 +591,7 @@ void fixupPatchRelocations(ElfInfo* patch)
   }
 }
 
+//copy PLT and GOT to new locations, as we may need to expand them
 ///todo: this function may not work for x86-64 Large Code Model
 void katanaPLT()
 {
