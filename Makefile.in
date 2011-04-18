@@ -226,7 +226,7 @@ TESTS = tests/code/listsort ./run_dwarf_tests.sh  ./patch_unit_tests
 EXTRA_DIST = LICENSE $(TESTS) validator.py
 SIGFILES_GZ = $(DIST_ARCHIVES:.gz=.gz.sig)
 SIGFILES_BZ = $(SIGFILES_GZ:.bz2=.bz2.sig)
-SIGFILES = $(SIGFILES_BZ)
+SIGFILES = $(SIGFILES_BZ) 
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 
@@ -809,9 +809,10 @@ all-local : src/katana
 	if [ ! -x katana ]; then ln -s src/katana katana ;fi
 
 release : dist
-	gpg -b $(DIST_ARCHIVES)
-	git tag $(PACKAGE_VERSION)
-	scp $(DIST_ARCHIVES) $(SIGFILES) electron@dl.sv.nongnu.org:/releases/katana/
+	stat=`git status -uno -s`; if [[ $stat ]]; then echo "commit your changes first"; exit 1; fi
+#	gpg -b $(DIST_ARCHIVES)
+#	git tag $(PACKAGE_VERSION)
+#	scp $(DIST_ARCHIVES) $(SIGFILES) electron@dl.sv.nongnu.org:/releases/katana/
 #TODO: if anyone else ever gains admin rights on the project the
 #name above will not always be electron
 
