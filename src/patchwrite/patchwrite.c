@@ -862,7 +862,7 @@ ElfInfo* createPatch(char* oldSourceTree,char* newSourceTree,char* oldBinName,ch
 
   if(elf_update (patch->e, ELF_C_WRITE) <0)
   {
-    death("Failed to write out elf file: %s\n",elf_errmsg (-1));
+    death("Failed to write out elf file %s: %s\n",patch->fname,elf_errmsg (-1));
     exit(1);
   }
   return patch;
