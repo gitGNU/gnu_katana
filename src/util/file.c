@@ -45,6 +45,6 @@ char* getFileContents(char* filename,int* flen)
   {
     *flen=len;
   }
-  fclose(f)
+  fclose(f);
   return buf;
 }
