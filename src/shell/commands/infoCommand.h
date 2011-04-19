@@ -23,6 +23,7 @@
 typedef enum
 {
   IOP_EXCEPTION=1,
+  IOP_PATCH,
 } InfoOperation;
 
 class InfoCommand : public ShellCommand

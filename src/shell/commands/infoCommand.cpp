@@ -19,6 +19,8 @@
 extern "C"
 {
 #include "info/fdedump.h"
+#include "info/dwinfo_dump.h"
+#include "info/unsafe_funcs_dump.h"
 }
 
 InfoCommand::InfoCommand(InfoOperation op,ShellParam* elfObject,ShellParam* outfile)
@@ -70,6 +72,26 @@ void InfoCommand::execute()
       //todo: print gcc except table
     }
     break;
+  case IOP_PATCH:
+    {
+      ElfInfo* elf=elfObjectP->getElfObject();
+      if(!elf)
+      {
+        logprintf(ELL_WARN,ELS_SHELL,"Cannot write info out because first parameter was not an ELF object\n");
+      }
+      if(!elf->isPO)
+      {
+        throw "ELF object is not a patch";
+      }
+      Map* fdeMap=readDebugFrame(elf,false);
+      printf("*********Type and Function Info****************\n");
+      printPatchDwarfInfo(elf,fdeMap);
+      printf("\n*********Safety Info****************\n");
+      printPatchUnsafeFuncsInfo(elf);
+      printf("\n*********Type Transformation Rules****************\n");
+      printCallFrameInfo(stdout,&elf->callFrameInfo,elf);
+      break;
+    }
   default:
     death("Unknown info sub-command\n");
   }

@@ -215,6 +215,11 @@ infocmd : T_INFO T_EXCEPTION_HANDLING param param
   $$.u.cmd=new InfoCommand(IOP_EXCEPTION,$3.u.param);
   $3.u.param->drop();
 }
+| T_INFO T_PATCH param
+{
+  $$.u.cmd=new InfoCommand(IOP_PATCH,$3.u.param);
+  $3.u.param->drop();
+}
 | T_INFO error
 {
   fprintf(stderr,"Unrecognized info usage\n");
