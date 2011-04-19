@@ -467,6 +467,7 @@ int reindexSectionForPatch(ElfInfo* e,int scnIdx,ElfInfo* patch)
       GElf_Shdr shdr;
       getShdr(scn,&shdr);
       patchScn=elf_newscn(patch->e);
+      elf_newdata(patchScn);//libelf seems to get pissy if a section doesn't have any data, I'm not quite sure why
       ElfXX_Shdr* patchShdr=elfxx_getshdr(patchScn);
       patchShdr->sh_type=shdr.sh_type;
       patchShdr->sh_link=shdr.sh_link;

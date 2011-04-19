@@ -2,8 +2,7 @@ SUBDIRS= src tests doc
 
 
 TESTS_ENVIRONMENT=PATH=$(PWD):$(PATH)
-#add ./apache_test when it is ready
-TESTS=tests/code/listsort ./run_dwarf_tests.sh  ./patch_unit_tests
+TESTS=tests/code/listsort ./run_dwarf_tests.sh  ./patch_unit_tests ./apache_test.sh
 
 EXTRA_DIST=LICENSE $(TESTS) validator.py
 

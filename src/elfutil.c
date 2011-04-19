@@ -218,7 +218,7 @@ char* getSectionNameFromIdx(ElfInfo* e,int idx)
   }
   GElf_Shdr shdr;
   gelf_getshdr(scn,&shdr);
-  return elf_strptr(e->e,e->sectionHdrStrTblIdx,shdr.sh_name);
+  return getScnHdrString(e,shdr.sh_name);
 }
 
 
