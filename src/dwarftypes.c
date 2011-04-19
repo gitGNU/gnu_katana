@@ -705,7 +705,7 @@ void* addStructureFromDie(Dwarf_Debug dbg,Dwarf_Die die,CompilationUnit* cu)
       else
       {
         type->fieldOffsets[idx]=offsetGuessSoFar;
-        printf("from guess, set offset for %s.%s  to %i\n",name,type->fields[idx],type->fieldOffsets[idx]);
+        logprintf(ELL_INFO_V4,ELS_DWARFTYPES,"from guess, set offset for %s.%s  to %i\n",name,type->fields[idx],type->fieldOffsets[idx]);
       }
       offsetGuessSoFar+=typeOfField->length;
       type->fieldTypes[idx]=typeOfField;
