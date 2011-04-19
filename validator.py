@@ -49,7 +49,7 @@ if len(args)>1:
   execName=args[1]
 programArguments=[]
 if len(args)>2:
-  programArguments=args[2:]
+  programArguments=list(map(lambda x:x[1:] if x.startswith("/-") else x,args[2:]))
   for i in range(0,len(programArguments)):
     #unescape options for the executable
     if programArguments[i][0]=='\\':
