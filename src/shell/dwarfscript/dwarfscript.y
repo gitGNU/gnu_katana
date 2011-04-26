@@ -67,6 +67,8 @@ void flowControlLabelReference(ParseNode* node);
 %token T_LPSTART T_POSITION T_LANDING_PAD T_HAS_ACTION T_FIRST_ACTION
 %token T_TYPE_IDX T_NEXT T_TYPEINFO T_TYPEINFO_ENC T_LSDA_IDX
 %token T_FDE_PTR_ENC T_FDE_LSDA_PTR_ENC T_PERSONALITY_PTR_ENC T_PERSONALITY
+//special values
+%token T_MATCH_ALL
 //CFA instructions
 %token T_DW_CFA_offset T_DW_CFA_advance_loc T_DW_CFA_restore T_DW_CFA_extended
 %token T_DW_CFA_nop T_DW_CFA_set_loc T_DW_CFA_advance_loc1 T_DW_CFA_advance_loc2
@@ -588,6 +590,15 @@ type_idx_prop : T_TYPE_IDX ':' nonneg_int_lit
     YYERROR;
   }
   currentAction->typeFilterIndex=$3.u.intval;
+}
+| T_TYPE_IDX ':' T_MATCH_ALL
+{
+  if(!currentAction)
+  {
+    fprintf(stderr,"type_idx property only applicable in ACTION section\n");
+    YYERROR;
+  }
+  currentAction->typeFilterIndex=TYPE_IDX_MATCH_ALL;
 }
 
 next_prop : T_NEXT ':' nonneg_int_lit

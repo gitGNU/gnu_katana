@@ -498,9 +498,17 @@ ExceptTable parseExceptFrame(Elf_Scn* scn,addr_t* lsdaPointers,int numLSDAPointe
                                 //which is wrong
         }
         
-        //type indices seem to be 1-based, we make them 0-based
-        assert(typeIdx>=1);
-        lsda->actionTable[actionIdx].typeFilterIndex=typeIdx-1;
+        //type indices seem to be 1-based, we make them 0-based here
+        //being 0 in the first place means match all types
+        if(typeIdx==0)
+        {
+          typeIdx=TYPE_IDX_MATCH_ALL;
+        }
+        else
+        {
+          assert(typeIdx >= 1);
+          lsda->actionTable[actionIdx].typeFilterIndex=typeIdx-1;
+        }
         //can't set nextAction yet as we don't know the index of the
         //next one. Can set the one for the last though
         if(previousActionIdx!=-1)

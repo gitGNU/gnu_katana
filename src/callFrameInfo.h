@@ -166,16 +166,19 @@ typedef struct
   bool hasAction;
 } CallSiteRecord;
 
+#define TYPE_IDX_MATCH_ALL -1
 //entry in the action table in an LSDA in .gcc_except_frame
 typedef struct
 {
-  idx_t typeFilterIndex;//index into the typeTable associated with the LSDA
+  int typeFilterIndex;//index into the typeTable associated with the
+                      //LSDA. Note, this is an int because it can be
+                      //-1 in the case that the original entry in
+                      //.gcc_except table is 0, which means catch all.
   idx_t nextAction;//the index into the actionTable associated with
                    //the LSDA of the next action record in the chain
                    //of action records to look at.
   bool hasNextAction;
 } ActionRecord;
-
 
 typedef struct
 {

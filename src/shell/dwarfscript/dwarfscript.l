@@ -138,6 +138,7 @@ IDENTIFIER [a-zA-Z_][a-zA-Z_0-9]*
 "lsda_idx" return T_LSDA_IDX;
 "except_table_addr" return T_EXCEPT_TABLE_ADDR;
 "personality_ptr_enc" return T_PERSONALITY_PTR_ENC;
+"match_all" return T_MATCH_ALL;
 
  /* section names */
 "FDE"|"fde" return T_FDE;

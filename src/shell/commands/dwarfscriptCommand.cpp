@@ -200,7 +200,14 @@ void DwarfscriptCommand::printExceptTableInfo(FILE* file,ElfInfo* elf,ExceptTabl
     {
       fprintf(file,"#action %i\n",j);
       fprintf(file,"begin ACTION\n");
-      fprintf(file,"type_idx: %zi\n",lsda->actionTable[j].typeFilterIndex);
+      if(lsda->actionTable[j].typeFilterIndex==-1)
+      {
+        fprintf(file,"type_idx: match_all");
+      }
+      else
+      {
+        fprintf(file,"type_idx: %zi\n",lsda->actionTable[j].typeFilterIndex);
+      }
       if(lsda->actionTable[j].hasNextAction)
       {
         fprintf(file,"next: %zi\n",lsda->actionTable[j].nextAction);
