@@ -71,6 +71,7 @@ class RefCountedClass
   }
   void drop()
   {
+    assert(this->count>0);
     this->count--;
     if(0==this->count)
     {
