@@ -346,7 +346,12 @@ word_t readActionTable(LSDA* lsda,byte* bytes,word_t offset)
 {
   word_t oldOffset=offset;
 
-  //Read the action table
+  //we keep track of the mapping between offsets into the action table
+  //and the index assigned to the action. This is so that we don't
+  //read actions multiple times. This array has one entry for every
+  //entry in lsda->ActionTable
+  addr_t* actionOffsets=NULL;
+
   addr_t highestActionOffset=0;//try to find the end of the action table
   for(int j=0;j<lsda->numCallSites;j++)
   {
@@ -356,55 +361,84 @@ word_t readActionTable(LSDA* lsda,byte* bytes,word_t offset)
     }
     addr_t actionOffset=lsda->callSiteTable[j].firstAction;
 
+    //previous action in the chain. -1 means invalid
     idx_t previousActionIdx=-1;
 
     //keep track so we don't set the call site for everything in the
     //chain, which would be wrong
     bool fixedFirstAction=false;
 
+    bool continueChain=true;
     //follow the action chain for a single call site
-    while(true)
+    while(continueChain)
     {
-      //printf("action offset is 0x%zx\n",actionOffset);
-      usint numBytesOut;
-      idx_t typeIdx=leb128ToUWord(bytes+actionOffset,&numBytesOut);
-      usint numBytesOut2;
-      sword_t nextRecordPtr=leb128ToSWord(bytes+actionOffset+numBytesOut,&numBytesOut2);
-      //printf("nextRecordPtr is %i\n",(int)nextRecordPtr);
-      if(nextRecordPtr != 0)
-      {
-        //add numBytesOut to make it relative to the start of the action record
-        nextRecordPtr+=numBytesOut;
-      }
-      highestActionOffset=max(highestActionOffset,actionOffset+numBytesOut+numBytesOut2);
-      //see whether we already read this action record
+      //see if we've read this action already
       bool foundAction=false;
+      idx_t actionIdx=-1;
       for(int k=0;k<lsda->numActionEntries;k++)
       {
-        if(lsda->actionTable[k].typeFilterIndex==typeIdx &&
-           lsda->actionTable[k].nextAction==nextRecordPtr)
+        if(actionOffsets[k]==actionOffset)
         {
-          //we already read this action
-
-          if(!fixedFirstAction)
-          {
-            //make the first action field into the correct form
-            lsda->callSiteTable[j].firstAction=k;
-            foundAction=true;
-            break;
-          }
+          foundAction=true;
+          continueChain=false;
+          actionIdx=k;
+          break;
         }
       }
-      if(foundAction)
+      if(!foundAction)
       {
-        continue;
-      }
-      //create a new action record
-      lsda->numActionEntries++;
-      lsda->actionTable=realloc(lsda->actionTable,sizeof(ActionRecord)*lsda->numActionEntries);
-      idx_t actionIdx=lsda->numActionEntries-1;
-      memset(lsda->actionTable+actionIdx,0,sizeof(ActionRecord));
+        //printf("action offset is 0x%zx\n",actionOffset);
+        usint numBytesOut;
+        idx_t typeIdx=leb128ToUWord(bytes+actionOffset,&numBytesOut);
+        usint numBytesOut2;
+        sword_t nextRecordPtr=leb128ToSWord(bytes+actionOffset+numBytesOut,&numBytesOut2);
+        //printf("nextRecordPtr is %i\n",(int)nextRecordPtr);
+        if(nextRecordPtr != 0)
+        {
+          //add numBytesOut to make it relative to the start of the action record
+          nextRecordPtr+=numBytesOut;
+        }
+        highestActionOffset=max(highestActionOffset,actionOffset+numBytesOut+numBytesOut2);
 
+        //create a new action record
+        lsda->numActionEntries++;
+        lsda->actionTable=realloc(lsda->actionTable,sizeof(ActionRecord)*lsda->numActionEntries);
+        MALLOC_CHECK(lsda->actionTable);
+        actionIdx=lsda->numActionEntries-1;
+        memset(lsda->actionTable+actionIdx,0,sizeof(ActionRecord));
+
+        //update teh action offsets table too
+        actionOffsets=realloc(actionOffsets,sizeof(addr_t)*lsda->numActionEntries);
+        MALLOC_CHECK(actionOffsets);
+        actionOffsets[actionIdx]=actionOffset;
+
+        
+
+        
+        //type indices seem to be 1-based, we make them 0-based here
+        //being 0 in the first place means match all types
+        if(typeIdx==0)
+        {
+          typeIdx=TYPE_IDX_MATCH_ALL;
+        }
+        else
+        {
+          assert(typeIdx >= 1);
+          lsda->actionTable[actionIdx].typeFilterIndex=typeIdx-1;
+        }
+        if(nextRecordPtr==0)
+        {
+          //reached the end of this chain
+          lsda->actionTable[actionIdx].hasNextAction=false;
+          continueChain=false;
+        }
+        else
+        {
+          lsda->actionTable[actionIdx].hasNextAction=true;
+        }
+        actionOffset=(sword_t)actionOffset+nextRecordPtr;
+        previousActionIdx=actionIdx;
+      }
       if(!fixedFirstAction)
       {
         //make the first action field into the correct form
@@ -413,36 +447,14 @@ word_t readActionTable(LSDA* lsda,byte* bytes,word_t offset)
         //again for everything in the chain,
         //which is wrong
       }
-        
-      //type indices seem to be 1-based, we make them 0-based here
-      //being 0 in the first place means match all types
-      if(typeIdx==0)
-      {
-        typeIdx=TYPE_IDX_MATCH_ALL;
-      }
-      else
-      {
-        assert(typeIdx >= 1);
-        lsda->actionTable[actionIdx].typeFilterIndex=typeIdx-1;
-      }
+      
       //can't set nextAction yet as we don't know the index of the
-      //next one. Can set the one for the last though
+      //next one. Can set the nextAction field for the previous action
+      //in the chain, however.
       if(previousActionIdx!=-1)
       {
         lsda->actionTable[previousActionIdx].nextAction=actionIdx;
       }
-      if(nextRecordPtr==0)
-      {
-        //reached the end of this chain
-        lsda->actionTable[actionIdx].hasNextAction=false;
-        break;
-      }
-      else
-      {
-        lsda->actionTable[actionIdx].hasNextAction=true;
-      }
-      actionOffset=(sword_t)actionOffset+nextRecordPtr;
-      previousActionIdx=actionIdx;
     }//end following the action chain for a specific call stie
   }
   bytes+=highestActionOffset;
