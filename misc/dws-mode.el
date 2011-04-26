@@ -31,7 +31,7 @@
     "version" "data_align" "code_align" "return_addr_rule" "fde_ptr_enc" 
     "fde_lsda_ptr_enc" "personality_ptr_enc" "personality" "cie_index" 
     "initial_location" "address_range" "lsda_idx" "position" "length" 
-    "landing_pad" "has_action" "lpstart" "typeinfo_enc")
+    "landing_pad" "has_action" "lpstart" "typeinfo_enc" "first_action")
   
   "Dwarfscript Properties")
 
