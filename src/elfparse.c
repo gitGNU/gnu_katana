@@ -84,6 +84,23 @@ ElfInfo* openELFFile(char* fname)
     free(e);
     return NULL;
   }
+  int nbytes;
+  char* identBytes=elf_getident(e->e,&nbytes);
+  switch(identBytes[EI_CLASS])
+  {
+  case ELFCLASS32:
+    #ifdef KATANA_X86_64_ARCH
+    logprintf(ELL_WARN,ELS_MISC,"This is a 64-bit version of katana but you are trying to work with a 32-bit ELF file. No testing or attempt to ensure correctness has been made for this case. You will probably do better compiling a 32-bit version of katana. If this feature is important to you, contact the author of this software.");
+    #endif
+    break;
+  case ELFCLASS64:
+#ifdef KATANA_X86_ARCH
+    logprintf(ELL_WARN,ELS_MISC,"This is a 32-bit version of katana but you are trying to work with a 64-bit ELF file. No testing or attempt to ensure correctness has been made for this case. You will probably do better compiling a 32-bit version of katana. If this feature is important to you, contact the author of this software.");
+#endif
+    break;
+  default:
+    logprintf(ELL_WARN,ELS_MISC,"Unrecognized ELF class, results may not be what you want");
+  }
   findELFSections(e);
   return e;
 }
