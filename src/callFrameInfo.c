@@ -122,7 +122,16 @@ void parseFDEAugmentationData(FDE* fde,addr_t augDataAddress,byte* augmentationD
                       augDataAddress,
                       fde->cie->fdeLSDAPointerEncoding,NULL);
     fde->hasLSDAPointer=true;
-    //store the lsda pointer so the LSDA can be found later
+    //store the pointer so the LSDA can be found later
+    //first make sure the pointer hasn't already been found
+    for(int i=0;i<*numLSDAPointers;i++)
+    {
+      if(lsdaPointer==(*lsdaPointers)[i])
+      {
+        return;
+      }
+    }
+    //ok, we have to create a new one
     (*numLSDAPointers)++;
     *lsdaPointers=realloc(*lsdaPointers,*numLSDAPointers*sizeof(addr_t));
     (*lsdaPointers)[*numLSDAPointers-1]=lsdaPointer;
