@@ -808,6 +808,11 @@ void readAndApplyPatch(int pid,ElfInfo* targetBin_,ElfInfo* patch)
   getcwd(cwd,PATH_MAX);
   DwarfInfo* diPatch=readDWARFTypes(patch,cwd);
   Map* fdeMap=readDebugFrame(patch,false);//get mapping between fde offsets and fde structures
+  if(!fdeMap)
+  {
+    death("Unable to read frame info, can't apply patch\n");
+  }
+  
 
 
   //we need to know where malloc lives in the target because
