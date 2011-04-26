@@ -149,7 +149,7 @@ dwarfscriptcmd : T_DWARFSCRIPT T_COMPILE param
 }
 | T_DWARFSCRIPT T_EMIT param param
 {
-  ShellParam* section=new ShellParam(".eh_frame");
+  ShellParam* section=new ShellParam(strdup(".eh_frame"));
   $$.u.cmd=new DwarfscriptCommand(DWOP_EMIT,section,$3.u.param,$4.u.param);
   section->drop();
 }
