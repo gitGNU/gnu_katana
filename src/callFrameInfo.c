@@ -128,11 +128,12 @@ void parseFDEAugmentationData(FDE* fde,addr_t augDataAddress,byte* augmentationD
     {
       if(lsdaPointer==(*lsdaPointers)[i])
       {
+        fde->lsdaIdx=i;
         return;
       }
     }
     //ok, we have to create a new one
-    (*numLSDAPointers)++;
+    fde->lsdaIdx=(*numLSDAPointers)++;
     *lsdaPointers=realloc(*lsdaPointers,*numLSDAPointers*sizeof(addr_t));
     (*lsdaPointers)[*numLSDAPointers-1]=lsdaPointer;
     MALLOC_CHECK(*lsdaPointers);
