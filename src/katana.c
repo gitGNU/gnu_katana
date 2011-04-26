@@ -163,6 +163,10 @@ int main(int argc,char** argv)
   {
     ElfInfo* patch=openELFFile(config.objectName);
     Map* fdeMap=readDebugFrame(patch,isFlag(EKCF_EH_FRAME));
+    if(!fdeMap)
+    {
+      death("Unable to read frame info, can't print info\n");
+    }
     printf("*********Type and Function Info****************\n");
     printPatchDwarfInfo(patch,fdeMap);
 
