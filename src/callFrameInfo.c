@@ -816,7 +816,6 @@ ExceptTable parseExceptFrame(Elf_Scn* scn,addr_t* lsdaPointers,int numLSDAPointe
   ExceptTable result;
   memset(&result,0,sizeof(result));
   Elf_Data* data=elf_getdata(scn,NULL);
-  byte* bytes=data->d_buf;
   if(data->d_size == 0)
   {
     return result;
@@ -834,6 +833,8 @@ ExceptTable parseExceptFrame(Elf_Scn* scn,addr_t* lsdaPointers,int numLSDAPointe
     {
       death("Failed to parse except table, request for LSDA pointer outside allowable range\n");
     }
+    byte* bytes=data->d_buf+offset;
+    
     //increase the number of LSDAs
     result.numLSDAs++;
     result.lsdas=realloc(result.lsdas,result.numLSDAs*sizeof(LSDA));
