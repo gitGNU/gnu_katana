@@ -285,21 +285,66 @@ void buildExceptTableRawData(CallFrameInfo* cfi,GrowingBuffer* buf,
   
 }
 
-
-void readActionTable(LSDA* lsda,byte** bytesPtr,word_t* offsetPtr)
+word_t readCallSiteTable(LSDA* lsda,byte* bytes,word_t offset,word_t callSiteTableSize,byte callSiteFormat,Elf_Data* data,addr_t sectionAddress)
 {
-  byte* bytes=*bytesPtr;
-  word_t offset=*offsetPtr;
-  //read the action table and type table. Now here's the icky part:
-  //there is no really easy way to tell where the action table ends
-  //and the type table begins. The way gcc is designed, there's no
-  //need to ever parse this section directly. Access to the action
-  //table is made only based on information in the call site table,
-  //and access to the type table is made only based on information
-  //in the action table. Therefore, the most reasonable way for us
-  //to parse it is probably by following the same logic. Note that
-  //we do not optimize, so we may end up parsing the same entry more
-  //than once. Big deal.
+  word_t oldOffset=offset;
+  //read the call site table
+  CallSiteRecord* callSite=NULL;
+  int i=0;
+  while(i<callSiteTableSize)
+  {
+    if(offset+i > data->d_size)
+    {
+      death("Malformed gcc_except_table\n");
+    }
+    //set up the call site we're dealing with right now
+    lsda->numCallSites++;
+    lsda->callSiteTable=realloc(lsda->callSiteTable,lsda->numCallSites*sizeof(CallSiteRecord));
+    callSite=&(lsda->callSiteTable[lsda->numCallSites-1]);
+    usint numBytesOut;
+    callSite->position=decodeEHPointer(bytes+i,data->d_size-offset-i,
+                                       sectionAddress+offset+i,
+                                       callSiteFormat,&numBytesOut);
+    i+=numBytesOut;
+    callSite->length=decodeEHPointer(bytes+i,data->d_size-offset-i,
+                                     sectionAddress+offset+i,
+                                     callSiteFormat,&numBytesOut);
+    i+=numBytesOut;
+    callSite->landingPadPosition=decodeEHPointer(bytes+i,data->d_size-offset-i,
+                                                 sectionAddress+offset+i,
+                                                 callSiteFormat,&numBytesOut);
+    i+=numBytesOut;
+    callSite->firstAction=decodeEHPointer(bytes+i,data->d_size-offset-i,
+                                          sectionAddress+offset+i,
+                                          callSiteFormat,&numBytesOut);
+    i+=numBytesOut;
+    //firstAction is not at all in the form we want. It's one plus a
+    //byte offset into the action table. We want an index into the
+    //action table we'll read. At the moment, however, we have no
+    //way of calculating the index so we'll temporarily store the
+    //wrong value in firstAction.
+      
+    callSite->hasAction=(callSite->firstAction!=0);
+    callSite->firstAction-=1;//since it was biased by one so we
+    //could tell if it was empty
+
+    if(i>callSiteTableSize)
+    {
+      death("Call site table in .gcc_except_frame was not properly formatted\n");
+    }
+  }
+  bytes+=i;
+  offset+=i;
+  if(offset>data->d_size)
+  {
+    death("Malformed LSDA in .gcc_except_table, ran out of space while reading the call site table\n");
+  }
+  return offset-oldOffset;
+}
+
+word_t readActionTable(LSDA* lsda,byte* bytes,word_t offset)
+{
+  word_t oldOffset=offset;
 
   //Read the action table
   addr_t highestActionOffset=0;//try to find the end of the action table
@@ -402,15 +447,13 @@ void readActionTable(LSDA* lsda,byte** bytesPtr,word_t* offsetPtr)
   }
   bytes+=highestActionOffset;
   offset+=highestActionOffset;
-  *bytesPtr=bytes;
-  *offsetPtr=offset;
+  return offset-oldOffset;
 }
 
-void readTypeTable(LSDA* lsda,byte** bytesPtr,word_t* offsetPtr,addr_t ttBase,
+word_t readTypeTable(LSDA* lsda,byte* bytes,word_t offset,addr_t ttBase,
                    addr_t sectionAddress)
 {
-  byte* bytes=*bytesPtr;
-  word_t offset=*offsetPtr;
+  word_t oldOffset=offset;
   //Read the type table
   //remember the type table grows from larger offsets to smaller
   //offsets, i.e. the smallest index is at the end
@@ -442,8 +485,7 @@ void readTypeTable(LSDA* lsda,byte** bytesPtr,word_t* offsetPtr,addr_t ttBase,
     bytes+=ttBase-offset;
     offset=ttBase;
   }
-  *bytesPtr=bytes;
-  *offsetPtr=offset;
+  return offset-oldOffset;
 }
 
 //builds an ExceptTable object from the raw ELF section note that the
@@ -533,64 +575,32 @@ ExceptTable parseExceptFrame(Elf_Scn* scn,addr_t* lsdaPointers,int numLSDAPointe
       death("Malformed LSDA in .gcc_except_table, ran out of space while reading the header\n");
     }
     
-    //read the call site table
-    CallSiteRecord* callSite=NULL;
-    int i=0;
-    while(i<callSiteTableSize)
-    {
-      if(offset+i > data->d_size)
-      {
-        death("Malformed gcc_except_table\n");
-      }
-      //set up the call site we're dealing with right now
-      lsda->numCallSites++;
-      lsda->callSiteTable=realloc(lsda->callSiteTable,lsda->numCallSites*sizeof(CallSiteRecord));
-      callSite=&(lsda->callSiteTable[lsda->numCallSites-1]);
-      callSite->position=decodeEHPointer(bytes+i,data->d_size-offset-i,
-                                         sectionAddress+offset+i,
-                                         callSiteFormat,&numBytesOut);
-      i+=numBytesOut;
-      callSite->length=decodeEHPointer(bytes+i,data->d_size-offset-i,
-                                       sectionAddress+offset+i,
-                                       callSiteFormat,&numBytesOut);
-      i+=numBytesOut;
-      callSite->landingPadPosition=decodeEHPointer(bytes+i,data->d_size-offset-i,
-                                                   sectionAddress+offset+i,
-                                                   callSiteFormat,&numBytesOut);
-      i+=numBytesOut;
-      callSite->firstAction=decodeEHPointer(bytes+i,data->d_size-offset-i,
-                                            sectionAddress+offset+i,
-                                            callSiteFormat,&numBytesOut);
-      i+=numBytesOut;
-      //firstAction is not at all in the form we want. It's one plus a
-      //byte offset into the action table. We want an index into the
-      //action table we'll read. At the moment, however, we have no
-      //way of calculating the index so we'll temporarily store the
-      //wrong value in firstAction.
-      
-      callSite->hasAction=(callSite->firstAction!=0);
-      callSite->firstAction-=1;//since it was biased by one so we
-                               //could tell if it was empty
+    word_t bytesRead=readCallSiteTable(lsda,bytes,offset,callSiteTableSize,
+                                       callSiteFormat,data,sectionAddress);
+    bytes+=bytesRead;
+    offset+=bytesRead;
 
-      if(i>callSiteTableSize)
-      {
-        death("Call site table in .gcc_except_frame was not properly formatted\n");
-      }
-    }
-    bytes+=i;
-    offset+=i;
-    if(offset>data->d_size)
-    {
-      death("Malformed LSDA in .gcc_except_table, ran out of space while reading the call site table\n");
-    }
-
+    //read the action table and type table. Now here's the icky part:
+    //there is no really easy way to tell where the action table ends
+    //and the type table begins. The way gcc is designed, there's no
+    //need to ever parse this section directly. Access to the action
+    //table is made only based on information in the call site table,
+    //and access to the type table is made only based on information
+    //in the action table. Therefore, the most reasonable way for us
+    //to parse it is probably by following the same logic. Note that
+    //we do not optimize, so we may end up parsing the same entry more
+    //than once. Big deal.
     
-    readActionTable(lsda,&bytes,&offset);
+    bytesRead=readActionTable(lsda,bytes,offset);
+    bytes+=bytesRead;
+    offset+=bytesRead;
     if(offset>data->d_size)
     {
       death("Malformed LSDA in .gcc_except_table, ran out of space while reading the action table\n");
     }
-    readTypeTable(lsda,&bytes,&offset,ttBase,sectionAddress);
+    bytesRead=readTypeTable(lsda,bytes,offset,ttBase,sectionAddress);
+    bytes+=bytesRead;
+    offset+=bytesRead;
     if(offset>data->d_size)
     {
       death("Malformed LSDA in .gcc_except_table\n");
