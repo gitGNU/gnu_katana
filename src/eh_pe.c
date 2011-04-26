@@ -93,6 +93,11 @@ void printEHPointerEncoding(FILE* file,byte encoding)
   {
     buildDWPETables();
   }
+  if(encoding==DW_EH_PE_omit)
+  {
+    fprintf(file,"DW_EH_PE_omit");
+    return;
+  }
   int format=encoding & 0xF;
   int application=encoding & 0xF0;
   if(!dwpeFormatTable[format])
