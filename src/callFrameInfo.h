@@ -211,11 +211,11 @@ CallFrameSectionData buildCallFrameSectionData(CallFrameInfo* cfi);
 //http://refspecs.freestandards.org/LSB_4.0.0/LSB-Core-generic/LSB-Core-generic/ehframechpt.html
 //for augmentation data information
 void parseAugmentationStringAndData(CIE* cie,char* string,byte* data,int len,addr_t augdataAddress);
-void parseFDEAugmentationData(FDE* fde,addr_t augDataAddress,byte* augmentationData,int augmentationDataLen,addr_t* lsdaPointers,int numLSDAPointers);
+void parseFDEAugmentationData(FDE* fde,addr_t augDataAddress,byte* augmentationData,int augmentationDataLen,addr_t** lsdaPointers,int* numLSDAPointers);
 
 //builds an ExceptTable object from the raw ELF section
 //writes out mapping from lsda indices to addresses
-ExceptTable parseExceptFrame(Elf_Scn* scn,addr_t** lsdaPointers);
+ExceptTable parseExceptFrame(Elf_Scn* scn,addr_t* lsdaPointers,int numLSDAPointers);
 
 
 

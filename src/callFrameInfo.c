@@ -106,7 +106,7 @@ void parseAugmentationStringAndData(CIE* cie,char* augmentationString,byte* data
   }
 }
 
-void parseFDEAugmentationData(FDE* fde,addr_t augDataAddress,byte* augmentationData,int augmentationDataLen,addr_t* lsdaPointers,int numLSDAPointers)
+void parseFDEAugmentationData(FDE* fde,addr_t augDataAddress,byte* augmentationData,int augmentationDataLen,addr_t** lsdaPointers,int* numLSDAPointers)
 {
   //todo: are there any other types of augmentation we may encounter?
   if(fde->cie->augmentationFlags & CAF_FDE_LSDA)
@@ -122,16 +122,11 @@ void parseFDEAugmentationData(FDE* fde,addr_t augDataAddress,byte* augmentationD
                       augDataAddress,
                       fde->cie->fdeLSDAPointerEncoding,NULL);
     fde->hasLSDAPointer=true;
-    for(int i=0;i<numLSDAPointers;i++)
-    {
-      if(lsdaPointers[i]==lsdaPointer)
-      {
-        fde->lsdaIdx=i;
-        return;
-      }
-    }
-    death("FDE appears to have an invalid LSDA pointer\n");
-    
+    //store the lsda pointer so the LSDA can be found later
+    (*numLSDAPointers)++;
+    *lsdaPointers=realloc(*lsdaPointers,*numLSDAPointers*sizeof(addr_t));
+    (*lsdaPointers)[*numLSDAPointers-1]=lsdaPointer;
+    MALLOC_CHECK(*lsdaPointers);
   }
 }
 
@@ -803,8 +798,11 @@ CallFrameSectionData buildCallFrameSectionData(CallFrameInfo* cfi)
 //builds an ExceptTable object from the raw ELF section note that the
 //format of this section is not governed by any standard, so there is
 //no means to validate that what we are doing is correct or even that
-//it will work with all binaries emitted by gcc
-ExceptTable parseExceptFrame(Elf_Scn* scn,addr_t** lsdaPointers)
+//it will work with all binaries emitted by gcc.
+//We read all LSDAs specified in the lsdaPointers list and ignore all
+//other data in the section. This is in keeping with what
+//libstdc++/libgcc do.
+ExceptTable parseExceptFrame(Elf_Scn* scn,addr_t* lsdaPointers,int numLSDAPointers)
 {
   ExceptTable result;
   memset(&result,0,sizeof(result));
@@ -820,13 +818,15 @@ ExceptTable parseExceptFrame(Elf_Scn* scn,addr_t** lsdaPointers)
   addr_t sectionAddress=shdr.sh_addr;
   
   word_t offset=0;
-  while(offset < data->d_size)
+  for(int lsdaPtrIdx=0;lsdaPtrIdx<numLSDAPointers;lsdaPtrIdx++)
   {
+    offset=lsdaPointers[lsdaPtrIdx] - sectionAddress;
+    if(offset < 0 || offset > data->d_size)
+    {
+      death("Failed to parse except table, request for LSDA pointer outside allowable range\n");
+    }
     //increase the number of LSDAs
     result.numLSDAs++;
-    *lsdaPointers=realloc(*lsdaPointers,sizeof(addr_t)*result.numLSDAs);
-    MALLOC_CHECK(*lsdaPointers);
-    (*lsdaPointers)[result.numLSDAs-1]=sectionAddress+offset;
     result.lsdas=realloc(result.lsdas,result.numLSDAs*sizeof(LSDA));
     LSDA* lsda=&(result.lsdas[result.numLSDAs-1]);
     memset(lsda,0,sizeof(LSDA));
@@ -847,23 +847,26 @@ ExceptTable parseExceptFrame(Elf_Scn* scn,addr_t** lsdaPointers)
     offset++;
     usint numSeptets;
     addr_t ttBase=0;
-    byte* ttBaseBytes=decodeLEB128(bytes,false,&numBytesOut,&numSeptets);
-    assert(sizeof(ttBase) >= numBytesOut);
-    memcpy(&ttBase,ttBaseBytes,numBytesOut);
-    free(ttBaseBytes);
-    //remember ttBase is a self-relative offset to the end of the type
-    //table. For our purposes it's helpful if it is instead relative
-    //to the beginning of this section
-    ttBase+=offset;
-    //ttBase seems to be off by one in what gcc emits. I am not
-    //positive whether this is due to it pointing to the last byte of
-    //the table rather than being below the table or if it's because
-    //it's supposed to be relative to the end of ttBaseBytes. If the
-    //later, then this offset is wrong and we will notice a problem
-    //later. As before, there is no standard governing this section
-    ttBase+=1;
-    bytes+=numSeptets;
-    offset+=numSeptets;
+    if(lsda->ttEncoding!=DW_EH_PE_omit)
+    {
+      byte* ttBaseBytes=decodeLEB128(bytes,false,&numBytesOut,&numSeptets);
+      assert(sizeof(ttBase) >= numBytesOut);
+      memcpy(&ttBase,ttBaseBytes,numBytesOut);
+      free(ttBaseBytes);
+      //remember ttBase is a self-relative offset to the end of the type
+      //table. For our purposes it's helpful if it is instead relative
+      //to the beginning of this section
+      ttBase+=offset;
+      //ttBase seems to be off by one in what gcc emits. I am not
+      //positive whether this is due to it pointing to the last byte of
+      //the table rather than being below the table or if it's because
+      //it's supposed to be relative to the end of ttBaseBytes. If the
+      //later, then this offset is wrong and we will notice a problem
+      //later. As before, there is no standard governing this section
+      ttBase+=1;
+      bytes+=numSeptets;
+      offset+=numSeptets;
+    }
     byte callSiteFormat=bytes[0];
     bytes++;
     offset++;
@@ -1037,34 +1040,37 @@ ExceptTable parseExceptFrame(Elf_Scn* scn,addr_t** lsdaPointers)
     //Read the type table
     //remember the type table grows from larger offsets to smaller
     //offsets, i.e. the smallest index is at the end
-    
-    //todo: this won't work if LEB encoding used. If we start
-    //observing gcc emitting LEB values in the type table we'll need
-    //to switch to something else like only going through the type
-    //table entries at offsets given in the action table
-    int ttEntrySize=getPointerSizeFromEHPointerEncoding(lsda->ttEncoding);
 
-    idx_t ttIdx=0;
-    //printf("ttBase is 0x%zx\n",ttBase);
-    //printf("ttEntrySize is 0x%x\n",ttEntrySize);
-    //printf("offset is 0x%zx\n",offset);
-    for(sword_t ttOffset=ttBase-ttEntrySize-offset;
-        ttOffset >= 0;
-        ttOffset-=ttEntrySize,ttIdx++)
+    if(lsda->ttEncoding!=DW_EH_PE_omit)
     {
-      //printf("ttOffset is 0x%zx\n",ttOffset);
-      lsda->numTypeEntries++;
-      lsda->typeTable=realloc(lsda->typeTable,sizeof(word_t)*lsda->numTypeEntries);
-      usint numBytesOut;
-      lsda->typeTable[ttIdx]=decodeEHPointer(bytes+ttOffset,ttEntrySize,
-                                             sectionAddress+offset+ttOffset,
-                                             lsda->ttEncoding,&numBytesOut);
-    }
-    bytes+=ttBase-offset;
-    offset=ttBase;
-    if(offset>data->d_size)
-    {
-      death("Malformed LSDA in .gcc_except_table\n");
+      //todo: this won't work if LEB encoding used. If we start
+      //observing gcc emitting LEB values in the type table we'll need
+      //to switch to something else like only going through the type
+      //table entries at offsets given in the action table
+      int ttEntrySize=getPointerSizeFromEHPointerEncoding(lsda->ttEncoding);
+
+      idx_t ttIdx=0;
+      //printf("ttBase is 0x%zx\n",ttBase);
+      //printf("ttEntrySize is 0x%x\n",ttEntrySize);
+      //printf("offset is 0x%zx\n",offset);
+      for(sword_t ttOffset=ttBase-ttEntrySize-offset;
+          ttOffset >= 0;
+          ttOffset-=ttEntrySize,ttIdx++)
+      {
+        //printf("ttOffset is 0x%zx\n",ttOffset);
+        lsda->numTypeEntries++;
+        lsda->typeTable=realloc(lsda->typeTable,sizeof(word_t)*lsda->numTypeEntries);
+        usint numBytesOut;
+        lsda->typeTable[ttIdx]=decodeEHPointer(bytes+ttOffset,ttEntrySize,
+                                               sectionAddress+offset+ttOffset,
+                                               lsda->ttEncoding,&numBytesOut);
+      }
+      bytes+=ttBase-offset;
+      offset=ttBase;
+      if(offset>data->d_size)
+      {
+        death("Malformed LSDA in .gcc_except_table\n");
+      }
     }
   }
   return result;

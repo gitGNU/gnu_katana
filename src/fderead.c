@@ -490,6 +490,7 @@ int fdeCmp(const void* a,const void* b)
 //the DW_AT_MIPS_fde attribute of the relevant type) and the FDE
 //structure.  if ehInsteadOfDebug is true, then read information from
 //.eh_frame instead of .debug_frame.
+//return NULL on error
 Map* readDebugFrame(ElfInfo* elf,bool ehInsteadOfDebug)
 {
   Dwarf_Fde *fdeData = NULL;
@@ -501,6 +502,7 @@ Map* readDebugFrame(ElfInfo* elf,bool ehInsteadOfDebug)
   Dwarf_Error err;
   Dwarf_Debug dbg;
   addr_t* lsdaPointers=NULL;
+  int numLSDAPointers=0;
   if(DW_DLV_OK!=dwarf_elf_init(elf->e,DW_DLC_READ,&dwarfErrorHandler,NULL,&dbg,&err))
   {
     dwarfErrorHandler(err,NULL);
@@ -526,18 +528,14 @@ Map* readDebugFrame(ElfInfo* elf,bool ehInsteadOfDebug)
     }
     scn=getSectionByName(elf,".eh_frame");
     Elf_Scn* hdrScn=getSectionByName(elf,".eh_frame_hdr");
+    if(!hdrScn)
+    {
+      logprintf(ELL_WARN,ELS_DWARF_FRAME,"ELF has no .eh_frame_hdr section, unable to read frame\n");
+      return NULL;
+    }
     GElf_Shdr shdr;
     getShdr(hdrScn,&shdr);
     elf->callFrameInfo.ehHdrAddress=shdr.sh_addr;
-    Elf_Scn* exceptTableSection=getSectionByName(elf,".gcc_except_table");
-    if(exceptTableSection)
-    {
-      getShdr(exceptTableSection,&shdr);
-      elf->callFrameInfo.exceptTableAddress=shdr.sh_addr;
-      ExceptTable et=parseExceptFrame(exceptTableSection,&lsdaPointers);
-      elf->callFrameInfo.exceptTable=zmalloc(sizeof(ExceptTable));
-      memcpy(elf->callFrameInfo.exceptTable,&et,sizeof(et));
-    }
   }
   GElf_Shdr shdr;
   getShdr(scn,&shdr);
@@ -709,13 +707,26 @@ Map* readDebugFrame(ElfInfo* elf,bool ehInsteadOfDebug)
       //turn the offset into an address
       addr_t augDataAddr=elf->callFrameInfo.sectionAddress+augDataOffset;
       parseFDEAugmentationData(elf->callFrameInfo.fdes+i,augDataAddr,
-                               augdata,augdataLen,lsdaPointers,elf->callFrameInfo.exceptTable->numLSDAs);
+                               augdata,augdataLen,&lsdaPointers,&numLSDAPointers);
     }
     
     int* key=zmalloc(sizeof(int));
     *key=elf->callFrameInfo.fdes[i].offset;
     mapInsert(result,key,elf->callFrameInfo.fdes+i);
     dwarf_dealloc(dbg,dfde,DW_DLA_FDE);
+  }
+
+  if(ehInsteadOfDebug)
+  {
+    Elf_Scn* exceptTableSection=getSectionByName(elf,".gcc_except_table");
+    if(exceptTableSection)
+    {
+      getShdr(exceptTableSection,&shdr);
+      elf->callFrameInfo.exceptTableAddress=shdr.sh_addr;
+      ExceptTable et=parseExceptFrame(exceptTableSection,lsdaPointers,numLSDAPointers);
+      elf->callFrameInfo.exceptTable=zmalloc(sizeof(ExceptTable));
+      memcpy(elf->callFrameInfo.exceptTable,&et,sizeof(et));
+    }
   }
 
   //sort fdes by lowpc unless this is a patch object. This
