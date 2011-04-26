@@ -285,6 +285,167 @@ void buildExceptTableRawData(CallFrameInfo* cfi,GrowingBuffer* buf,
   
 }
 
+
+void readActionTable(LSDA* lsda,byte** bytesPtr,word_t* offsetPtr)
+{
+  byte* bytes=*bytesPtr;
+  word_t offset=*offsetPtr;
+  //read the action table and type table. Now here's the icky part:
+  //there is no really easy way to tell where the action table ends
+  //and the type table begins. The way gcc is designed, there's no
+  //need to ever parse this section directly. Access to the action
+  //table is made only based on information in the call site table,
+  //and access to the type table is made only based on information
+  //in the action table. Therefore, the most reasonable way for us
+  //to parse it is probably by following the same logic. Note that
+  //we do not optimize, so we may end up parsing the same entry more
+  //than once. Big deal.
+
+  //Read the action table
+  addr_t highestActionOffset=0;//try to find the end of the action table
+  for(int j=0;j<lsda->numCallSites;j++)
+  {
+    if(!lsda->callSiteTable[j].hasAction)
+    {
+      continue;
+    }
+    addr_t actionOffset=lsda->callSiteTable[j].firstAction;
+
+    idx_t previousActionIdx=-1;
+
+    //keep track so we don't set the call site for everything in the
+    //chain, which would be wrong
+    bool fixedFirstAction=false;
+
+    //follow the action chain for a single call site
+    while(true)
+    {
+      //printf("action offset is 0x%zx\n",actionOffset);
+      usint numBytesOut;
+      idx_t typeIdx=leb128ToUWord(bytes+actionOffset,&numBytesOut);
+      usint numBytesOut2;
+      sword_t nextRecordPtr=leb128ToSWord(bytes+actionOffset+numBytesOut,&numBytesOut2);
+      //printf("nextRecordPtr is %i\n",(int)nextRecordPtr);
+      if(nextRecordPtr != 0)
+      {
+        //add numBytesOut to make it relative to the start of the action record
+        nextRecordPtr+=numBytesOut;
+      }
+      highestActionOffset=max(highestActionOffset,actionOffset+numBytesOut+numBytesOut2);
+      //see whether we already read this action record
+      bool foundAction=false;
+      for(int k=0;k<lsda->numActionEntries;k++)
+      {
+        if(lsda->actionTable[k].typeFilterIndex==typeIdx &&
+           lsda->actionTable[k].nextAction==nextRecordPtr)
+        {
+          //we already read this action
+
+          if(!fixedFirstAction)
+          {
+            //make the first action field into the correct form
+            lsda->callSiteTable[j].firstAction=k;
+            foundAction=true;
+            break;
+          }
+        }
+      }
+      if(foundAction)
+      {
+        continue;
+      }
+      //create a new action record
+      lsda->numActionEntries++;
+      lsda->actionTable=realloc(lsda->actionTable,sizeof(ActionRecord)*lsda->numActionEntries);
+      idx_t actionIdx=lsda->numActionEntries-1;
+      memset(lsda->actionTable+actionIdx,0,sizeof(ActionRecord));
+
+      if(!fixedFirstAction)
+      {
+        //make the first action field into the correct form
+        lsda->callSiteTable[j].firstAction=actionIdx;
+        fixedFirstAction=true;//otherwise we keep setting it over
+        //again for everything in the chain,
+        //which is wrong
+      }
+        
+      //type indices seem to be 1-based, we make them 0-based here
+      //being 0 in the first place means match all types
+      if(typeIdx==0)
+      {
+        typeIdx=TYPE_IDX_MATCH_ALL;
+      }
+      else
+      {
+        assert(typeIdx >= 1);
+        lsda->actionTable[actionIdx].typeFilterIndex=typeIdx-1;
+      }
+      //can't set nextAction yet as we don't know the index of the
+      //next one. Can set the one for the last though
+      if(previousActionIdx!=-1)
+      {
+        lsda->actionTable[previousActionIdx].nextAction=actionIdx;
+      }
+      if(nextRecordPtr==0)
+      {
+        //reached the end of this chain
+        lsda->actionTable[actionIdx].hasNextAction=false;
+        break;
+      }
+      else
+      {
+        lsda->actionTable[actionIdx].hasNextAction=true;
+      }
+      actionOffset=(sword_t)actionOffset+nextRecordPtr;
+      previousActionIdx=actionIdx;
+    }//end following the action chain for a specific call stie
+  }
+  bytes+=highestActionOffset;
+  offset+=highestActionOffset;
+  *bytesPtr=bytes;
+  *offsetPtr=offset;
+}
+
+void readTypeTable(LSDA* lsda,byte** bytesPtr,word_t* offsetPtr,addr_t ttBase,
+                   addr_t sectionAddress)
+{
+  byte* bytes=*bytesPtr;
+  word_t offset=*offsetPtr;
+  //Read the type table
+  //remember the type table grows from larger offsets to smaller
+  //offsets, i.e. the smallest index is at the end
+
+  if(lsda->ttEncoding!=DW_EH_PE_omit)
+  {
+    //todo: this won't work if LEB encoding used. If we start
+    //observing gcc emitting LEB values in the type table we'll need
+    //to switch to something else like only going through the type
+    //table entries at offsets given in the action table
+    int ttEntrySize=getPointerSizeFromEHPointerEncoding(lsda->ttEncoding);
+
+    idx_t ttIdx=0;
+    //printf("ttBase is 0x%zx\n",ttBase);
+    //printf("ttEntrySize is 0x%x\n",ttEntrySize);
+    //printf("offset is 0x%zx\n",offset);
+    for(sword_t ttOffset=ttBase-ttEntrySize-offset;
+        ttOffset >= 0;
+        ttOffset-=ttEntrySize,ttIdx++)
+    {
+      //printf("ttOffset is 0x%zx\n",ttOffset);
+      lsda->numTypeEntries++;
+      lsda->typeTable=realloc(lsda->typeTable,sizeof(word_t)*lsda->numTypeEntries);
+      usint numBytesOut;
+      lsda->typeTable[ttIdx]=decodeEHPointer(bytes+ttOffset,ttEntrySize,
+                                             sectionAddress+offset+ttOffset,
+                                             lsda->ttEncoding,&numBytesOut);
+    }
+    bytes+=ttBase-offset;
+    offset=ttBase;
+  }
+  *bytesPtr=bytes;
+  *offsetPtr=offset;
+}
+
 //builds an ExceptTable object from the raw ELF section note that the
 //format of this section is not governed by any standard, so there is
 //no means to validate that what we are doing is correct or even that
@@ -422,156 +583,19 @@ ExceptTable parseExceptFrame(Elf_Scn* scn,addr_t* lsdaPointers,int numLSDAPointe
     {
       death("Malformed LSDA in .gcc_except_table, ran out of space while reading the call site table\n");
     }
+
     
-    //read the action table and type table. Now here's the icky part:
-    //there is no really easy way to tell where the action table ends
-    //and the type table begins. The way gcc is designed, there's no
-    //need to ever parse this section directly. Access to the action
-    //table is made only based on information in the call site table,
-    //and access to the type table is made only based on information
-    //in the action table. Therefore, the most reasonable way for us
-    //to parse it is probably by following the same logic. Note that
-    //we do not optimize, so we may end up parsing the same entry more
-    //than once. Big deal.
-
-    //Read the action table
-    addr_t highestActionOffset=0;//try to find the end of the action table
-    for(int j=0;j<lsda->numCallSites;j++)
-    {
-      if(!lsda->callSiteTable[j].hasAction)
-      {
-        continue;
-      }
-      addr_t actionOffset=lsda->callSiteTable[j].firstAction;
-
-      idx_t previousActionIdx=-1;
-
-      //keep track so we don't set the call site for everything in the
-      //chain, which would be wrong
-      bool fixedFirstAction=false;
-
-      //follow the action chain for a single call site
-      while(true)
-      {
-        //printf("action offset is 0x%zx\n",actionOffset);
-        idx_t typeIdx=leb128ToUWord(bytes+actionOffset,&numBytesOut);
-        usint numBytesOut2;
-        sword_t nextRecordPtr=leb128ToSWord(bytes+actionOffset+numBytesOut,&numBytesOut2);
-        //printf("nextRecordPtr is %i\n",(int)nextRecordPtr);
-        if(nextRecordPtr != 0)
-        {
-          //add numBytesOut to make it relative to the start of the action record
-          nextRecordPtr+=numBytesOut;
-        }
-        highestActionOffset=max(highestActionOffset,actionOffset+numBytesOut+numBytesOut2);
-        //see whether we already read this action record
-        bool foundAction=false;
-        for(int k=0;k<lsda->numActionEntries;k++)
-        {
-          if(lsda->actionTable[k].typeFilterIndex==typeIdx &&
-             lsda->actionTable[k].nextAction==nextRecordPtr)
-          {
-            //we already read this action
-
-            //make the first action field into the correct form
-            lsda->callSiteTable[j].firstAction=k;
-            foundAction=true;
-            break;
-          }
-        }
-        if(foundAction)
-        {
-          continue;
-        }
-        //create a new action record
-        lsda->numActionEntries++;
-        lsda->actionTable=realloc(lsda->actionTable,sizeof(ActionRecord)*lsda->numActionEntries);
-        idx_t actionIdx=lsda->numActionEntries-1;
-        memset(lsda->actionTable+actionIdx,0,sizeof(ActionRecord));
-
-        if(!fixedFirstAction)
-        {
-          //make the first action field into the correct form
-          lsda->callSiteTable[j].firstAction=actionIdx;
-          fixedFirstAction=true;//otherwise we keep setting it over
-                                //again for everything in the chain,
-                                //which is wrong
-        }
-        
-        //type indices seem to be 1-based, we make them 0-based here
-        //being 0 in the first place means match all types
-        if(typeIdx==0)
-        {
-          typeIdx=TYPE_IDX_MATCH_ALL;
-        }
-        else
-        {
-          assert(typeIdx >= 1);
-          lsda->actionTable[actionIdx].typeFilterIndex=typeIdx-1;
-        }
-        //can't set nextAction yet as we don't know the index of the
-        //next one. Can set the one for the last though
-        if(previousActionIdx!=-1)
-        {
-          lsda->actionTable[previousActionIdx].nextAction=actionIdx;
-        }
-        if(nextRecordPtr==0)
-        {
-          //reached the end of this chain
-          lsda->actionTable[actionIdx].hasNextAction=false;
-          break;
-        }
-        else
-        {
-          lsda->actionTable[actionIdx].hasNextAction=true;
-        }
-        actionOffset=(sword_t)actionOffset+nextRecordPtr;
-        previousActionIdx=actionIdx;
-      }//end following the action chain for a specific call stie
-    }
-    bytes+=highestActionOffset;
-    offset+=highestActionOffset;
+    readActionTable(lsda,&bytes,&offset);
     if(offset>data->d_size)
     {
       death("Malformed LSDA in .gcc_except_table, ran out of space while reading the action table\n");
     }
-
-
-    //Read the type table
-    //remember the type table grows from larger offsets to smaller
-    //offsets, i.e. the smallest index is at the end
-
-    if(lsda->ttEncoding!=DW_EH_PE_omit)
+    readTypeTable(lsda,&bytes,&offset,ttBase,sectionAddress);
+    if(offset>data->d_size)
     {
-      //todo: this won't work if LEB encoding used. If we start
-      //observing gcc emitting LEB values in the type table we'll need
-      //to switch to something else like only going through the type
-      //table entries at offsets given in the action table
-      int ttEntrySize=getPointerSizeFromEHPointerEncoding(lsda->ttEncoding);
-
-      idx_t ttIdx=0;
-      //printf("ttBase is 0x%zx\n",ttBase);
-      //printf("ttEntrySize is 0x%x\n",ttEntrySize);
-      //printf("offset is 0x%zx\n",offset);
-      for(sword_t ttOffset=ttBase-ttEntrySize-offset;
-          ttOffset >= 0;
-          ttOffset-=ttEntrySize,ttIdx++)
-      {
-        //printf("ttOffset is 0x%zx\n",ttOffset);
-        lsda->numTypeEntries++;
-        lsda->typeTable=realloc(lsda->typeTable,sizeof(word_t)*lsda->numTypeEntries);
-        usint numBytesOut;
-        lsda->typeTable[ttIdx]=decodeEHPointer(bytes+ttOffset,ttEntrySize,
-                                               sectionAddress+offset+ttOffset,
-                                               lsda->ttEncoding,&numBytesOut);
-      }
-      bytes+=ttBase-offset;
-      offset=ttBase;
-      if(offset>data->d_size)
-      {
-        death("Malformed LSDA in .gcc_except_table\n");
-      }
+      death("Malformed LSDA in .gcc_except_table\n");
     }
+
   }
   return result;
 }
