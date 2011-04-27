@@ -421,15 +421,12 @@ word_t readActionTable(LSDA* lsda,byte* bytes,word_t offset)
         actionOffsets=realloc(actionOffsets,sizeof(addr_t)*lsda->numActionEntries);
         MALLOC_CHECK(actionOffsets);
         actionOffsets[actionIdx]=actionOffset;
-
-        
-
         
         //type indices seem to be 1-based, we make them 0-based here
         //being 0 in the first place means match all types
         if(typeIdx==0)
         {
-          typeIdx=TYPE_IDX_MATCH_ALL;
+          lsda->actionTable[actionIdx].typeFilterIndex=TYPE_IDX_MATCH_ALL;
         }
         else
         {
@@ -447,7 +444,7 @@ word_t readActionTable(LSDA* lsda,byte* bytes,word_t offset)
           lsda->actionTable[actionIdx].hasNextAction=true;
         }
         actionOffset=(sword_t)actionOffset+nextRecordPtr;
-        previousActionIdx=actionIdx;
+
       }
       if(!fixedFirstAction)
       {
@@ -465,6 +462,7 @@ word_t readActionTable(LSDA* lsda,byte* bytes,word_t offset)
       {
         lsda->actionTable[previousActionIdx].nextAction=actionIdx;
       }
+      previousActionIdx=actionIdx;
     }//end following the action chain for a specific call stie
   }
   bytes+=highestActionOffset;
