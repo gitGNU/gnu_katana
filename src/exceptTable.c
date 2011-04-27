@@ -93,6 +93,7 @@ void buildExceptTableRawData(CallFrameInfo* cfi,GrowingBuffer* buf,
     //encoding used by entries in the type table
     addToGrowingBuffer(buf,&lsda->ttEncoding,1);
 
+
     //unfortunately we now run into a problem. We need to write out
     //the TType base offset as a uleb128. LEB values vary in length,
     //but we don't yet know what the offset is so we can't tell how
@@ -191,6 +192,8 @@ void buildExceptTableRawData(CallFrameInfo* cfi,GrowingBuffer* buf,
     //and that alignment depends on how many bytes are taken up by
     //writing the offset. We kludgily solve this by always making sure
     //we have extra space to move things around by a few bytes.
+    //todo: can avoid this calculation if we're not actually going to
+    //write the type table
 
 
     usint callSiteLengthLEBNumBytes;
@@ -251,8 +254,11 @@ void buildExceptTableRawData(CallFrameInfo* cfi,GrowingBuffer* buf,
       ttBaseOffsetLEB[ttBaseOffsetNumBytes]=0;
     }
 
-    //now we can actually write everything in
-    addToGrowingBuffer(buf,ttBaseOffsetLEB,ttBaseOffsetNumBytes);
+    if(lsda->ttEncoding!=DW_EH_PE_omit)
+    {
+      //now we can actually write everything in
+      addToGrowingBuffer(buf,ttBaseOffsetLEB,ttBaseOffsetNumBytes);
+    }
     byte callSiteFormat=DW_EH_PE_uleb128;
     addToGrowingBuffer(buf,&callSiteFormat,1);
     addToGrowingBuffer(buf,callSiteLengthLEB,callSiteLengthLEBNumBytes);
@@ -260,27 +266,31 @@ void buildExceptTableRawData(CallFrameInfo* cfi,GrowingBuffer* buf,
     free(callSiteBuf.data);
     addToGrowingBuffer(buf,actionBuf.data,actionBuf.len);
     free(actionBuf.data);
-    if(misalignment)
+    if(lsda->ttEncoding!=DW_EH_PE_omit)
     {
-      word_t zero=0;
-      addToGrowingBuffer(buf,&zero,misalignment);
-    }
-    //////////////////////////////
-    //write out the type table
-    for(int j=lsda->numTypeEntries-1;j>=0;j--)
-    {
-      //it appears empirically that this is the format the type table
-      //takes. Not really governed by any standard.
-      addr_t pointerLocation=cfi->exceptTableAddress+buf->len+j*ttEntrySize;
-      int numBytesOut;
-      addr_t typeinfo=encodeEHPointerFromEncoding(lsda->typeTable[j],
-                                                  lsda->ttEncoding,
-                                                  pointerLocation,
-                                                  &numBytesOut);
-      assert(numBytesOut==ttEntrySize);
-      addToGrowingBuffer(buf,&typeinfo,ttEntrySize);
+      if(misalignment)
+      {
+        word_t zero=0;
+        addToGrowingBuffer(buf,&zero,misalignment);
+      }
+      //////////////////////////////
+      //write out the type table
+      for(int j=lsda->numTypeEntries-1;j>=0;j--)
+      {
+        //it appears empirically that this is the format the type table
+        //takes. Not really governed by any standard.
+        addr_t pointerLocation=cfi->exceptTableAddress+buf->len+j*ttEntrySize;
+        int numBytesOut;
+        addr_t typeinfo=encodeEHPointerFromEncoding(lsda->typeTable[j],
+                                                    lsda->ttEncoding,
+                                                    pointerLocation,
+                                                    &numBytesOut);
+        assert(numBytesOut==ttEntrySize);
+        addToGrowingBuffer(buf,&typeinfo,ttEntrySize);
       
-    }
+      }
+    } //end if(lsda->ttEncoding!=DW_EH_PE_omit)
+    //todo: do we need more alignment at the end
   }//end loop over lsdas for writing
   
 }
