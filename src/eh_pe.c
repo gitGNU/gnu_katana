@@ -122,6 +122,10 @@ void printEHPointerEncoding(FILE* file,byte encoding)
 //http://refspecs.freestandards.org/LSB_3.1.0/LSB-Core-generic/LSB-Core-generic/dwarfext.html#DWARFEHENCODING
 int getPointerSizeFromEHPointerEncoding(byte encoding)
 {
+  if(encoding==DW_EH_PE_omit)
+  {
+    return 0;
+  }
   int format=encoding & 0xF;
   switch(format)
   {
