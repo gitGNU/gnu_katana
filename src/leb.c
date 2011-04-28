@@ -1,10 +1,59 @@
 /*
   File: leb.c
   Author: James Oakley
-  Project:  katana
-  Date: October 2010
-  Description: utility functions for dealing with LEB numbers
+  Copyright (C): 2010-2011 Dartmouth College
+  License: Katana is free software: you may redistribute it and/or
+  modify it under the terms of the GNU General Public License as
+  published by the Free Software Foundation, either version 2 of the
+  License, or (at your option) any later version. Regardless of
+  which version is chose, the following stipulation also applies:
+    
+  Any redistribution must include copyright notice attribution to
+  Dartmouth College as well as the Warranty Disclaimer below, as well as
+  this list of conditions in any related documentation and, if feasible,
+  on the redistributed software; Any redistribution must include the
+  acknowledgment, “This product includes software developed by Dartmouth
+  College,” in any related documentation and, if feasible, in the
+  redistributed software; and The names “Dartmouth” and “Dartmouth
+  College” may not be used to endorse or promote products derived from
+  this software.  
+
+  WARRANTY DISCLAIMER
+
+  PLEASE BE ADVISED THAT THERE IS NO WARRANTY PROVIDED WITH THIS
+  SOFTWARE, TO THE EXTENT PERMITTED BY APPLICABLE LAW. EXCEPT WHEN
+  OTHERWISE STATED IN WRITING, DARTMOUTH COLLEGE, ANY OTHER COPYRIGHT
+  HOLDERS, AND/OR OTHER PARTIES PROVIDING OR DISTRIBUTING THE SOFTWARE,
+  DO SO ON AN "AS IS" BASIS, WITHOUT WARRANTY OF ANY KIND, EITHER
+  EXPRESSED OR IMPLIED, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+  PURPOSE. THE ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF THE
+  SOFTWARE FALLS UPON THE USER OF THE SOFTWARE. SHOULD THE SOFTWARE
+  PROVE DEFECTIVE, YOU (AS THE USER OR REDISTRIBUTOR) ASSUME ALL COSTS
+  OF ALL NECESSARY SERVICING, REPAIR OR CORRECTIONS.
+
+  IN NO EVENT UNLESS REQUIRED BY APPLICABLE LAW OR AGREED TO IN WRITING
+  WILL DARTMOUTH COLLEGE OR ANY OTHER COPYRIGHT HOLDER, OR ANY OTHER
+  PARTY WHO MAY MODIFY AND/OR REDISTRIBUTE THE SOFTWARE AS PERMITTED
+  ABOVE, BE LIABLE TO YOU FOR DAMAGES, INCLUDING ANY GENERAL, SPECIAL,
+  INCIDENTAL OR CONSEQUENTIAL DAMAGES ARISING OUT OF THE USE OR
+  INABILITY TO USE THE SOFTWARE (INCLUDING BUT NOT LIMITED TO LOSS OF
+  DATA OR DATA BEING RENDERED INACCURATE OR LOSSES SUSTAINED BY YOU OR
+  THIRD PARTIES OR A FAILURE OF THE PROGRAM TO OPERATE WITH ANY OTHER
+  PROGRAMS), EVEN IF SUCH HOLDER OR OTHER PARTY HAS BEEN ADVISED OF THE
+  POSSIBILITY OF SUCH DAMAGES.
+
+  The complete text of the license may be found in the file COPYING
+  which should have been distributed with this software. The GNU
+  General Public License may be obtained at
+  http://www.gnu.org/licenses/gpl.html
+
+  Project: Katana
+  Date: April, 2011
+  Description: utility methods for working with LEB numbers
 */
+
+
 
 #include "types.h"
 #include "leb.h"
@@ -17,18 +66,27 @@
 //todo: clean this function up. It is not well-written
 byte* encodeAsLEB128(byte* bytes,int numBytes,bool signed_,usint* numBytesOut)
 {
-  byte* result=encodeAsLEB128NoOptimization(bytes,numBytes,signed_,numBytesOut);
+  usint numBytesOutInternal;
+  byte* result=encodeAsLEB128NoOptimization(bytes,numBytes,signed_,&numBytesOutInternal);
   if((!signed_))
   {
     //clear out zero bytes we don't need
-    while((*numBytesOut)>1 &&
-          ((result[(*numBytesOut)-1]&0x7f) == 0))
+    while((numBytesOutInternal)>1 &&
+          ((result[(numBytesOutInternal)-1]&0x7f) == 0))
     {
-      (*numBytesOut)-=1;
+      numBytesOutInternal-=1;
     }
-    result[(*numBytesOut)-1]&=0x7f;//clear the MSB of the new last septet
+    result[numBytesOutInternal-1]&=0x7f;//clear the MSB of the new last septet
   }
-  //todo: deal with signed as well;
+  else
+  {
+    //todo: deal with signed as well;
+    death("enocdeeAsLEB128 should not be used for SLEB right now, use enocdeAsLEB128NoOptimization for SLEB\n");
+  }
+  if(numBytesOut)
+  {
+    *numBytesOut=numBytesOutInternal;
+  }
   return result;
 }
 
@@ -105,8 +163,11 @@ byte* encodeAsLEB128NoOptimization(byte* bytes,int numBytes,bool signed_,usint* 
     }
     result[i]=val;
   }
-  
-  *numBytesOut=numSeptets;
+
+  if(numBytesOut)
+  {
+    *numBytesOut=numSeptets;
+  }
 
   #ifdef DEBUG
   logprintf(ELL_INFO_V4,ELS_LEB,"encoded into LEB as follows:\n");
@@ -125,95 +186,97 @@ byte* encodeAsLEB128NoOptimization(byte* bytes,int numBytes,bool signed_,usint* 
   return result;
 }
 
-//the returned memory should be freed
+//the retunred memory should be freed
+//this is a new version of the function. The old crappier version is below
 byte* decodeLEB128(byte* bytes,bool signed_,usint* numBytesOut,usint* numSeptetsRead)
 {
   //do a first pass to determine the number of septets
   int numSeptets=0;
-  while(bytes[numSeptets++]&(1<<7)){}
-  int numBytes=max(1,(int)floor(numSeptets*7.0/8.0));//floor because may have been sign extended. max because otherwise if only one septet this will give 0 bytes
-  //todo: not positive the above is correct
-  byte* result=zmalloc(numBytes);
-  int byteOffset=0;
-  int bitOffset=0;//offset into the current byte
+  while(bytes[numSeptets++]&(1<<7))
+  {}
+  
+  //calculate the most possible number of bytes in the result so that
+  //we can allocate memory
+  int numBytesMax=(int)ceil(((float)numSeptets)*7.0/8.0);
+  byte* result=zmalloc(numBytesMax);
+
+  //track the index of the byte in the result array we're currently
+  //filling
+  int byteIdx=0;
+
+  //track the number of bits left to fill in the current result byte
+  int bitsLeftInByte=8;
   for(int i=0;i<numSeptets;i++)
   {
-    //logprintf(ELL_INFO_V4,ELS_MISC,"byte offset is %i and bitOffset is %i\n",byteOffset,bitOffset);
-    //if there is a bit offset into the byte, will be filling
-    //starting above the LSB
-    //construct a mask as appropriate to mask out parts of LEB value we don't want
-    int mask=0;
-    int bitsRetrieved=min(7,8-bitOffset);
-    for(int i=0;i<bitsRetrieved;i++)
+    byte septetBits = bytes[i] & 0x7F;
+    int shift = 8-bitsLeftInByte;
+    byte val = septetBits<<shift;
+    result[byteIdx] |= val;
+    if(bitsLeftInByte == 8)
     {
-      mask|=1<<i;
+      //then there's still one more bit in this byte
+      bitsLeftInByte=1;
     }
-    byte val=bytes[i]&mask;
-    int shift=0==bitOffset?0:8-bitsRetrieved;
-    //logprintf(ELL_INFO_V4,ELS_MISC,"mask is %i and val is %i, and shift is %i\n",mask,(int)val,shift);
-    result[byteOffset]|=val<<shift;
-    byte currentOffset=byteOffset;
-    //logprintf(ELL_INFO_V4,ELS_MISC,"byte so far is %i\n",(int)result[byteOffset]);
-    if(bitsRetrieved<7 && byteOffset+1<numBytes)
+    else if(bitsLeftInByte==7)
     {
-      int bitsToGet=7-bitsRetrieved;
-      //logprintf(ELL_INFO_V4,ELS_MISC,"need to get %i additional bits from this septet with val %i(%i)\n",bitsToGet,(int)val,(int)bytes[i]&0x7F);
-      //need to construct mask so we don't read too much
-      byte mask=0;
-      for(int j=0;j<bitsToGet;j++)
-      {
-        mask|=1<<(bitsRetrieved+j);
-      }
-      //logprintf(ELL_INFO_V4,ELS_MISC,"mask for additional bytes is %u\n",(uint)mask);
-      currentOffset=byteOffset+1;
-      result[byteOffset+1]=(mask&bytes[i])>>bitsRetrieved;
-      //logprintf(ELL_INFO_V4,ELS_MISC,"after getting those bits, next byte is %i\n",result[byteOffset+1]);
+      //then we exactly filled the byte
+      byteIdx++;
+      bitsLeftInByte = 8;
     }
-
-
-    bitOffset+=7;
-    if(bitOffset>=8)
+    else
     {
-      bitOffset-=8;
-      byteOffset++;
+      //we filled up the byte but there's still more to write
+      byteIdx++;
+      //shift the other way to get the bits that were at the top of the septet
+      //8-shift is same as bitsLeftInByte, but this is clearer
+      val = septetBits>>(8-shift);
+      result[byteIdx]=val;
+      bitsLeftInByte++; //we use up 7 bits total and get 8 more from
+                        //the new byte, so +1
     }
-
-    if(i+1>=numSeptets && bitOffset!=0 && signed_)
-    {
-      //we need to do sign extensions, since this is the last iteration
-      if(result[currentOffset] & (1 << (bitOffset-1)))
-      {
-        //it's a negative number
-        for(int i=bitOffset;i<=7;i++)
-        {
-          result[currentOffset] |= (1 << i);
-        }
-      }
-    }
-
   }
-  *numBytesOut=numBytes;
+  if(signed_)
+  {
+    //we might have to sign-extend. By default we're extended with
+    //0's. See if we need to extend with 1's.
+    if(bitsLeftInByte < 8 &&
+       result[byteIdx] & (1<<(7-bitsLeftInByte)))
+    {
+      for(int i=8-bitsLeftInByte;i<=7;i++)
+      {
+        result[byteIdx] |= (1 << i);
+      }
+    }
+  }
+  else
+  {
+    if(bitsLeftInByte!=8 && result[byteIdx]==0 && byteIdx>0)
+    {
+      //unsigned so a 0 byte is meaningless.  Decrease byteIdx to our
+      //numBytes calculation will be correct note this makes
+      //bitsLeftInByte invalid, but we don't care about it any more
+      byteIdx--;
+    }
+  }
+  //now calculate the actual number of bytes
+  int numBytes = bitsLeftInByte==8 ? byteIdx : byteIdx+1;
+  if(numBytes < numBytesMax)
+  {
+    result=realloc(result,numBytes);
+    MALLOC_CHECK(result);
+  }
   if(numSeptetsRead)
   {
     *numSeptetsRead=numSeptets;
   }
-  /*logprintf(ELL_INFO_V4,ELS_MISC,"decoded from LEB as follows:\n");
-    /logprintf(ELL_INFO_V4,ELS_MISC,"leb bytes : {");
-    for(int i=0;i<numSeptets;i++)
-    {
-    logprintf(ELL_INFO_V4,ELS_MISC,"%i(%i)%s ",(int)bytes[i],(int)bytes[i]&0x7F,i+1<numSeptets?",":"");
-    }
-    logprintf(ELL_INFO_V4,ELS_MISC,"}\n become: {");
-    for(int i=0;i<numBytes;i++)
-    {
-    logprintf(ELL_INFO_V4,ELS_MISC,"%i%s ",(int)result[i],i+1<numBytes?",":"");
-    }
-    logprintf(ELL_INFO_V4,ELS_MISC,"}\n");*/
+  if(numBytesOut)
+  {
+    *numBytesOut=numBytes;
+  }
   return result;
 }
 
-
-byte* uintToLEB128(usint value,usint* numBytesOut)
+byte* uintToLEB128(uint value,usint* numBytesOut)
 {
   int bytesNeeded=1;
   if(value & 0xFF000000)
@@ -234,24 +297,25 @@ byte* uintToLEB128(usint value,usint* numBytesOut)
 
 byte* intToLEB128(int value,usint* numBytesOut)
 {
-  if(value > 0)
+  if(value >= 0)
   {
     return uintToLEB128(value,numBytesOut);
   }
   byte lower7Bits=0x7f;
   byte signExtensionBits=0x7f;
   byte signExtension6thBit=0x40;
-  byte* result=encodeAsLEB128((byte*)&value,sizeof(int),true,numBytesOut);
+  usint numBytes;
+  byte* result=encodeAsLEB128NoOptimization((byte*)&value,sizeof(int),true,&numBytes);
   byte sixthBitMask=0x40;//0b01000000
   //now we need to chop off all the bytes we don't need
-  for(int i=(*numBytesOut)-1;i>0;i--)
+  for(int i=numBytes-1;i>0;i--)
   {
     if((result[i]&lower7Bits)==signExtensionBits &&
        (result[i-1]&sixthBitMask)==signExtension6thBit)
     {
       //this byte is all sign extension bits and there's still one
       //sign extension bit left in the last bit
-      (*numBytesOut)--;
+      numBytes--;
     }
     else
     {
@@ -260,7 +324,11 @@ byte* intToLEB128(int value,usint* numBytesOut)
   }
   //since we may have removed bytes make sure the last one has its
   //continuation bit cleared properly
-  result[(*numBytesOut)-1]&=lower7Bits;
+  result[numBytes-1]&=lower7Bits;
+  if(numBytesOut)
+  {
+    *numBytesOut=numBytes;
+  }
   return result;
 }
 
@@ -274,6 +342,24 @@ uint leb128ToUInt(byte* bytes,usint* outLEBBytesRead)
   assert(resultBytes <= sizeof(uint));
   uint val=0;
   memcpy(&val,result,resultBytes);
+  free(result);
+  return val;
+}
+
+int leb128ToInt(byte* bytes,usint* outLEBBytesRead)
+{
+  usint resultBytes;
+  //valgrind gives this as a mem leak, but I can't figure out why,
+  //as I free the result below. . .
+  byte* result=decodeLEB128(bytes,true,&resultBytes,outLEBBytesRead);
+  //printf("result bytes is %i\n",resultBytes);
+  assert(resultBytes <= sizeof(int));
+  int val=0;
+  memcpy(&val,result,resultBytes);
+  if(resultBytes < sizeof(val))
+  {
+    val=sextend(val,resultBytes);
+  }
   free(result);
   return val;
 }

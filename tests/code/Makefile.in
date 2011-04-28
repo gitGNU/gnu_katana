@@ -35,7 +35,7 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 target_triplet = @target@
-bin_PROGRAMS = listsort$(EXEEXT)
+bin_PROGRAMS = listsort$(EXEEXT) lebtest$(EXEEXT)
 subdir = tests/code
 DIST_COMMON = README $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -48,6 +48,11 @@ CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
+am_lebtest_OBJECTS = lebtest.$(OBJEXT) leb.$(OBJEXT) util.$(OBJEXT)
+lebtest_OBJECTS = $(am_lebtest_OBJECTS)
+lebtest_LDADD = $(LDADD)
+lebtest_LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(lebtest_LDFLAGS) \
+	$(LDFLAGS) -o $@
 am_listsort_OBJECTS = listsort.$(OBJEXT) list.$(OBJEXT)
 listsort_OBJECTS = $(am_listsort_OBJECTS)
 listsort_LDADD = $(LDADD)
@@ -59,8 +64,8 @@ COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 CCLD = $(CC)
 LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
-SOURCES = $(listsort_SOURCES)
-DIST_SOURCES = $(listsort_SOURCES)
+SOURCES = $(lebtest_SOURCES) $(listsort_SOURCES)
+DIST_SOURCES = $(lebtest_SOURCES) $(listsort_SOURCES)
 ETAGS = etags
 CTAGS = ctags
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
@@ -167,6 +172,8 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 listsort_SOURCES = listsort.c ../../src/util/list.c
+lebtest_SOURCES = lebtest.c ../../src/leb.c ../../src/util/util.c
+lebtest_LDFLAGS = -lm
 all: all-am
 
 .SUFFIXES:
@@ -238,6 +245,9 @@ uninstall-binPROGRAMS:
 
 clean-binPROGRAMS:
 	-test -z "$(bin_PROGRAMS)" || rm -f $(bin_PROGRAMS)
+lebtest$(EXEEXT): $(lebtest_OBJECTS) $(lebtest_DEPENDENCIES) 
+	@rm -f lebtest$(EXEEXT)
+	$(lebtest_LINK) $(lebtest_OBJECTS) $(lebtest_LDADD) $(LIBS)
 listsort$(EXEEXT): $(listsort_OBJECTS) $(listsort_DEPENDENCIES) 
 	@rm -f listsort$(EXEEXT)
 	$(LINK) $(listsort_OBJECTS) $(listsort_LDADD) $(LIBS)
@@ -248,8 +258,11 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/leb.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lebtest.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/list.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/listsort.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/util.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
@@ -264,6 +277,34 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(COMPILE) -c `$(CYGPATH_W) '$<'`
+
+leb.o: ../../src/leb.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT leb.o -MD -MP -MF $(DEPDIR)/leb.Tpo -c -o leb.o `test -f '../../src/leb.c' || echo '$(srcdir)/'`../../src/leb.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/leb.Tpo $(DEPDIR)/leb.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='../../src/leb.c' object='leb.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o leb.o `test -f '../../src/leb.c' || echo '$(srcdir)/'`../../src/leb.c
+
+leb.obj: ../../src/leb.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT leb.obj -MD -MP -MF $(DEPDIR)/leb.Tpo -c -o leb.obj `if test -f '../../src/leb.c'; then $(CYGPATH_W) '../../src/leb.c'; else $(CYGPATH_W) '$(srcdir)/../../src/leb.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/leb.Tpo $(DEPDIR)/leb.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='../../src/leb.c' object='leb.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o leb.obj `if test -f '../../src/leb.c'; then $(CYGPATH_W) '../../src/leb.c'; else $(CYGPATH_W) '$(srcdir)/../../src/leb.c'; fi`
+
+util.o: ../../src/util/util.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT util.o -MD -MP -MF $(DEPDIR)/util.Tpo -c -o util.o `test -f '../../src/util/util.c' || echo '$(srcdir)/'`../../src/util/util.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/util.Tpo $(DEPDIR)/util.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='../../src/util/util.c' object='util.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o util.o `test -f '../../src/util/util.c' || echo '$(srcdir)/'`../../src/util/util.c
+
+util.obj: ../../src/util/util.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT util.obj -MD -MP -MF $(DEPDIR)/util.Tpo -c -o util.obj `if test -f '../../src/util/util.c'; then $(CYGPATH_W) '../../src/util/util.c'; else $(CYGPATH_W) '$(srcdir)/../../src/util/util.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/util.Tpo $(DEPDIR)/util.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='../../src/util/util.c' object='util.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o util.obj `if test -f '../../src/util/util.c'; then $(CYGPATH_W) '../../src/util/util.c'; else $(CYGPATH_W) '$(srcdir)/../../src/util/util.c'; fi`
 
 list.o: ../../src/util/list.c
 @am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT list.o -MD -MP -MF $(DEPDIR)/list.Tpo -c -o list.o `test -f '../../src/util/list.c' || echo '$(srcdir)/'`../../src/util/list.c

@@ -221,7 +221,7 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 SUBDIRS = src tests doc
 TESTS_ENVIRONMENT = PATH=$(PWD):$(PATH)
-TESTS = tests/code/listsort ./run_dwarf_tests.sh  ./patch_unit_tests
+TESTS = tests/code/listsort tests/code/lebtest ./run_dwarf_tests.sh  ./patch_unit_tests
 EXTRA_DIST = LICENSE $(TESTS) validator.py
 SIGFILES_GZ = $(DIST_ARCHIVES:.gz=.gz.sig)
 SIGFILES_BZ = $(SIGFILES_GZ:.bz2=.bz2.sig)
