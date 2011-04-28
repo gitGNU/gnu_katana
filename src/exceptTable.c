@@ -111,7 +111,7 @@ void buildExceptTableRawData(CallFrameInfo* cfi,GrowingBuffer* buf,
       if(actionIdxToOffset[j])
       {
         //we already wrote this action. Skip it now.
-        break;
+        continue;
       }
       int idx=j;
       while(true)
@@ -125,7 +125,7 @@ void buildExceptTableRawData(CallFrameInfo* cfi,GrowingBuffer* buf,
           if(actionIdxToOffset[action->nextAction] || action->nextAction==0)
           {
             //the next action is an action we've already written out. Construct a self-relative offset.
-            sword_t offset=(sword_t)actionIdxToOffset[action->nextAction] - (sword_t)buf->len;
+            sword_t offset=(sword_t)actionIdxToOffset[action->nextAction] - (sword_t)actionBuf.len;
             addSlebToGrowingBuffer(&actionBuf,offset);
             //don't need to follow the chain any further, it's already been written out.
             break;
