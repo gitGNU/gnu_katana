@@ -80,8 +80,35 @@ byte* encodeAsLEB128(byte* bytes,int numBytes,bool signed_,usint* numBytesOut)
   }
   else
   {
-    //todo: deal with signed as well;
-    death("enocdeeAsLEB128 should not be used for SLEB right now, use enocdeAsLEB128NoOptimization for SLEB\n");
+    byte lower7Bits=0x7f;
+    byte signExtensionBits=0x7f;
+    byte signExtension6thBit=0x40;
+    if(!(bytes[numBytes-1] & 0x80))
+    {
+      //number is positive, not negative
+      signExtension6thBit=0;
+      signExtensionBits=0;
+    }
+    byte sixthBitMask=0x40;//0b01000000
+    //now we need to chop off all the bytes we don't need
+    for(int i=numBytesOutInternal-1;i>0;i--)
+    {
+      if((result[i]&lower7Bits)==signExtensionBits &&
+         (result[i-1]&sixthBitMask)==signExtension6thBit)
+      {
+        //this byte is all sign extension bits and there's still one
+        //sign extension bit left in the last bit
+        numBytesOutInternal--;
+      }
+      else
+      {
+        break;
+      }
+    }
+    //since we may have removed bytes make sure the last one has its
+    //continuation bit cleared properly
+    result[numBytesOutInternal-1]&=lower7Bits;
+    
   }
   if(numBytesOut)
   {
@@ -301,30 +328,9 @@ byte* intToLEB128(int value,usint* numBytesOut)
   {
     return uintToLEB128(value,numBytesOut);
   }
-  byte lower7Bits=0x7f;
-  byte signExtensionBits=0x7f;
-  byte signExtension6thBit=0x40;
+  
   usint numBytes;
-  byte* result=encodeAsLEB128NoOptimization((byte*)&value,sizeof(int),true,&numBytes);
-  byte sixthBitMask=0x40;//0b01000000
-  //now we need to chop off all the bytes we don't need
-  for(int i=numBytes-1;i>0;i--)
-  {
-    if((result[i]&lower7Bits)==signExtensionBits &&
-       (result[i-1]&sixthBitMask)==signExtension6thBit)
-    {
-      //this byte is all sign extension bits and there's still one
-      //sign extension bit left in the last bit
-      numBytes--;
-    }
-    else
-    {
-      break;
-    }
-  }
-  //since we may have removed bytes make sure the last one has its
-  //continuation bit cleared properly
-  result[numBytes-1]&=lower7Bits;
+  byte* result=encodeAsLEB128((byte*)&value,sizeof(int),true,&numBytes);
   if(numBytesOut)
   {
     *numBytesOut=numBytes;
