@@ -206,8 +206,8 @@ void buildExceptTableRawData(CallFrameInfo* cfi,GrowingBuffer* buf,
     bool foundRoom=false;
     for(int idx=ttBaseOffsetNumBytes-1;idx>=0;idx--)
     {
-      if(((ttBaseOffsetLEB[idx] &0x7f)!=0x7f && idx>0) ||
-         ((ttBaseOffsetLEB[idx] &0x70)!=0x70))
+      if(((ttBaseOffsetLEB[idx] & 0x7f)!=0x7f && idx>0) ||
+         ((ttBaseOffsetLEB[idx] & 0x70)!=0x70))
       {
         foundRoom=true;
         break;
@@ -243,15 +243,15 @@ void buildExceptTableRawData(CallFrameInfo* cfi,GrowingBuffer* buf,
     usint ttBaseOffsetNumBytesNew;
     ttBaseOffsetLEB=encodeAsLEB128((byte*)&ttBaseOffset,sizeof(ttBaseOffset),false,
                                    &ttBaseOffsetNumBytesNew);
-    if(ttBaseOffsetNumBytesNew > ttBaseOffsetNumBytes)
+    if(ttBaseOffsetNumBytesNew < ttBaseOffsetNumBytes)
     {
       //we added in wiggle room but didn't actually have to use
       //it. We'll just waste a byte
-      assert(ttBaseOffsetNumBytesNew-ttBaseOffsetNumBytes==1);
+      assert(ttBaseOffsetNumBytes-ttBaseOffsetNumBytesNew==1);
       ttBaseOffsetLEB=realloc(ttBaseOffsetLEB,ttBaseOffsetNumBytes);
-      ttBaseOffsetLEB[ttBaseOffsetNumBytes-1] |= 0x80;//to show that it is no
+      ttBaseOffsetLEB[ttBaseOffsetNumBytes-2] |= 0x80;//to show that it is no
       //longer the MSB
-      ttBaseOffsetLEB[ttBaseOffsetNumBytes]=0;
+      ttBaseOffsetLEB[ttBaseOffsetNumBytes-1]=0;
     }
 
     if(lsda->ttEncoding!=DW_EH_PE_omit)
