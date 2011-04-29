@@ -71,6 +71,16 @@ void buildExceptTableRawData(CallFrameInfo* cfi,GrowingBuffer* buf,
   *lsdaPointers=zmalloc(table->numLSDAs*sizeof(addr_t));
   for(int i=0;i<table->numLSDAs;i++)
   {
+    //make sure we're starting from an aligned point
+    int misalignment=buf->len % 4;
+    if(misalignment)
+    {
+      word_t zero=0;
+      addToGrowingBuffer(buf,&zero,4-misalignment);
+    }
+
+    assert(buf->len % 4==0);
+    
     //update the map
     (*lsdaPointers)[i]=cfi->exceptTableAddress+buf->len;
     
@@ -230,16 +240,14 @@ void buildExceptTableRawData(CallFrameInfo* cfi,GrowingBuffer* buf,
       +1 //for call site format
       +callSiteLengthLEBNumBytes+callSiteBuf.len
       +actionBuf.len;
-    int misalignment=(offsetStartToTTTop%4)?(4-(offsetStartToTTTop%4)):0;
+    misalignment=(offsetStartToTTTop%4)?(4-(offsetStartToTTTop%4)):0;
     //type table must be 4-byte aligned
     offsetStartToTTTop+=misalignment;
     //to get ttBase, add the length of the type table buf and subtract
     //the number of bytes before the location we write the offset to
     //get a self-relative offset
     addr_t ttBaseOffset=offsetStartToTTTop+ttSize-
-      (buf->len-lsdaStartOffset)-1;//-1 because points to last entry
-                                   //-in table, not below it table it
-                                   //-appears (no standard to confirm)
+      (buf->len-lsdaStartOffset)-ttBaseOffsetNumBytes;
     usint ttBaseOffsetNumBytesNew;
     ttBaseOffsetLEB=encodeAsLEB128((byte*)&ttBaseOffset,sizeof(ttBaseOffset),false,
                                    &ttBaseOffsetNumBytesNew);
@@ -569,15 +577,8 @@ ExceptTable parseExceptFrame(Elf_Scn* scn,addr_t* lsdaPointers,int numLSDAPointe
       free(ttBaseBytes);
       //remember ttBase is a self-relative offset to the end of the type
       //table. For our purposes it's helpful if it is instead relative
-      //to the beginning of this section
-      ttBase+=offset;
-      //ttBase seems to be off by one in what gcc emits. I am not
-      //positive whether this is due to it pointing to the last byte of
-      //the table rather than being below the table or if it's because
-      //it's supposed to be relative to the end of ttBaseBytes. If the
-      //later, then this offset is wrong and we will notice a problem
-      //later. As before, there is no standard governing this section
-      ttBase+=1;
+      //to the beginning of this section (instead of self-relative)
+      ttBase+=offset+numSeptets;
       bytes+=numSeptets;
       offset+=numSeptets;
     }
