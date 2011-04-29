@@ -7,7 +7,7 @@ check()
   fi
 }
 
-katana recompile.ksh
+../../../katana recompile.ksh
 check
 ./test_mod > log
 check
