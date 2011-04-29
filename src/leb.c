@@ -166,8 +166,9 @@ byte* encodeAsLEB128NoOptimization(byte* bytes,int numBytes,bool signed_,usint* 
     }
     else
     {
-      if(signed_)
+      if(signed_ && bytes[numBytes-1] & 0x80)
       {
+        //number is signed and negative, so extend with 1's
         int signExtendBits=7-(numBytes*8)%7;
         signExtendBits=(7==signExtendBits)?0:signExtendBits;
         int mask=0;
