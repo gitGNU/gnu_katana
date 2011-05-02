@@ -4,6 +4,7 @@
 #include "commands/loadCommand.h"
 #include "commands/saveCommand.h"
 #include "commands/replaceCommand.h"
+#include "commands/extractCommand.h"
 #include "commands/shellCommand.h"
 #include "commands/dwarfscriptCommand.h"
 #include "commands/infoCommand.h"
@@ -45,6 +46,7 @@ extern "C"
 %expect 0
 //Token definitions
 %token T_LOAD T_SAVE T_TRANSLATE T_REPLACE T_SECTION T_VARIABLE T_STRING_LITERAL
+%token T_EXTRACT
 %token T_DATA T_DWARFSCRIPT T_COMPILE T_EMIT T_SHELL_COMMAND
 %token T_HASH T_ELF
 %token T_INFO T_EXCEPTION_HANDLING
@@ -111,6 +113,7 @@ commandline : loadcmd {$$=$1;$$.type=PNT_CMD;}
 | savecmd {$$=$1;$$.type=PNT_CMD;}
 | dwarfscriptcmd {$$=$1;$$.type=PNT_CMD;}
 | replacecmd {$$=$1;$$.type=PNT_CMD;}
+| extractcmd {$$=$1;$$.type=PNT_CMD;}
 | shellcmd {$$=$1;$$.type=PNT_CMD;}
 | infocmd {$$=$1;$$.type=PNT_CMD;}
 | hashcmd {$$=$1;$$.type=PNT_CMD;}
@@ -189,12 +192,48 @@ replacecmd : T_REPLACE T_SECTION param param param
   $4.u.param->drop();
   $5.u.param->drop();
 }
+| T_REPLACE T_SECTION error
+{
+  fprintf(stderr,"Usage: replace section ELF WHICH NEW\n");
+  YYERROR;
+}
 | T_REPLACE T_RAW param param param
 {
   $$.u.cmd=new ReplaceCommand(RT_RAW,$3.u.param,$4.u.param,$5.u.param);
   $3.u.param->drop();
   $4.u.param->drop();
   $5.u.param->drop();
+}
+| T_REPLACE T_RAW error
+{
+  fprintf(stderr,"Usage: replace raw ELF WHICH NEW\n");
+  YYERROR;
+}
+| T_REPLACE error
+{
+  fprintf(stderr,"Unrecognized replace usage\n");
+  fprintf(stderr,"Usage: replace TYPE ELF WHICH NEW\n");
+  fprintf(stderr,"Supported types are 'section' and 'raw'\n");
+  YYERROR;
+}
+
+extractcmd : T_EXTRACT T_SECTION param param
+{
+  $$.u.cmd=new ExtractCommand(ET_SECTION,$3.u.param,$4.u.param);
+  $3.u.param->drop();
+  $4.u.param->drop();
+}
+| T_EXTRACT T_SECTION error
+{
+  fprintf(stderr,"Usage: extract section ELF WHICH\n");
+  YYERROR;
+}
+| T_EXTRACT error
+{
+  fprintf(stderr,"Unrecognized extract usage\n");
+  fprintf(stderr,"Usage: extract TYPE ELF WHICH\n");
+  fprintf(stderr,"The only currently supported type is 'section'\n");
+  YYERROR;
 }
 
 shellcmd : T_SHELL_COMMAND param

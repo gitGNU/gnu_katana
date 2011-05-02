@@ -45,6 +45,7 @@ S_QUOTE_STRING  [\'][^\'\n][\']
 "save" return T_SAVE;
 "translate" return T_TRANSLATE;
 "replace" return T_REPLACE;
+"extract" return T_EXTRACT;
 "section" return T_SECTION;
 "raw" return T_RAW;
 "data"    return T_DATA;
