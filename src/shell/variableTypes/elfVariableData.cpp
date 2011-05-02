@@ -58,14 +58,11 @@
 ShellElfVariableData::ShellElfVariableData(ElfInfo* elf)
   :elf(elf)
 {
+  //todo: perhaps we need to make the ElfInfo object ref-counted
 }
 
 ShellElfVariableData::~ShellElfVariableData()
 {
-  if(elf)
-  {
-    endELF(elf);
-  }
 }
 
 //the returned pointer is valid until the next call to getData
