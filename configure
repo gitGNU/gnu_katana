@@ -4141,10 +4141,7 @@ fi
 
 
 
-if test x$HAVE_PYTHON != xyes; then
-   { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: \"No python on this system. Unit tests will not work\"" >&5
-$as_echo "$as_me: WARNING: \"No python on this system. Unit tests will not work\"" >&2;}
-fi
+
 
 #todo: if don't have flex and bison, build everything except the shell
 if test x$HAVE_BISON != xyes; then
@@ -5652,3 +5649,8 @@ $as_echo "$as_me: WARNING: unrecognized options: $ac_unrecognized_opts" >&2;}
 fi
 
 
+#we put this message at the bottom so it is more likely to be seen
+if test x$HAVE_PYTHON != xyes; then
+   { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: \"No python on this system. Unit tests will not work\"" >&5
+$as_echo "$as_me: WARNING: \"No python on this system. Unit tests will not work\"" >&2;}
+fi
