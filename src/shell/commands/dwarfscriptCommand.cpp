@@ -206,7 +206,7 @@ void DwarfscriptCommand::printExceptTableInfo(FILE* file,ElfInfo* elf,ExceptTabl
       }
       else
       {
-        fprintf(file,"type_idx: %zi\n",lsda->actionTable[j].typeFilterIndex);
+        fprintf(file,"type_idx: %i\n",lsda->actionTable[j].typeFilterIndex);
       }
       if(lsda->actionTable[j].hasNextAction)
       {
