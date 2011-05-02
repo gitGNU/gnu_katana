@@ -58,6 +58,7 @@
 
 #include "elfparse.h"
 
+//methods for getting pieces of raw data
 void* getTextDataAtAbs(ElfInfo* e,addr_t addr,ELF_STORAGE_TYPE type);
 word_t getTextAtAbs(ElfInfo* e,addr_t addr,ELF_STORAGE_TYPE type);
 void setTextAtAbs(ElfInfo* e,addr_t addr,word_t value,ELF_STORAGE_TYPE type);
@@ -66,6 +67,7 @@ word_t getWordAtAbs(Elf_Scn* scn,addr_t addr,ELF_STORAGE_TYPE type);
 void* getDataAtAbs(Elf_Scn* scn,addr_t addr,ELF_STORAGE_TYPE type);
 void* getTextDataAtRelOffset(ElfInfo* e,int offset);
 word_t getTextAtRelOffset(ElfInfo* e,int offset);
+
 void printSymTab(ElfInfo* e);
 
 //returns NULL if the section does not exist
