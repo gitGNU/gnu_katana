@@ -80,6 +80,10 @@ void modifyScnData(Elf_Data* dataDest,word_t offset,void* data,int size);
 
 //adds an entry to the string table, return its offset
 int addStrtabEntry(ElfInfo* e,char* str);
+
+//adds an entry to the section header string table, return its offset
+int addShdrStrtabEntry(ElfInfo* e,char* str);
+
 //return index of entry in symbol table
 int addSymtabEntry(ElfInfo* e,Elf_Data* data,ElfXX_Sym* sym);
 

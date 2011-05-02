@@ -130,6 +130,18 @@ int addStrtabEntry(ElfInfo* e,char* str)
   return strtab_data->d_size-len;
 }
 
+//adds an entry to the section header string table, return its offset
+int addShdrStrtabEntry(ElfInfo* e,char* str)
+{
+  Elf_Scn* scn=elf_getscn(e->e,e->sectionHdrStrTblIdx);
+  assert(scn);
+  Elf_Data* data=elf_getdata(scn,NULL);
+  int len=strlen(str)+1;
+  addDataToScn(data,str,len);
+  elf_flagdata(data,ELF_C_SET,ELF_F_DIRTY);
+  return data->d_size-len;
+}
+
 //return index of entry in symbol table
 int addSymtabEntry(ElfInfo* e,Elf_Data* data,ElfXX_Sym* sym)
 {
@@ -363,7 +375,9 @@ ElfInfo* startPatchElf(FILE* file,char* filename)
 
   createSections(patch);
   ehdr->e_shstrndx=elf_ndxscn(getSectionByERS(patch,ERS_STRTAB));//set strtab in elf header
-  //todo: perhaps the two string tables should be separate
+  //todo: perhaps the two string tables should be separate. ELF
+  //normally does this, but using only the one has worked ok for me so
+  //far. I should look into it.
   patch->strTblIdx=patch->sectionHdrStrTblIdx=ehdr->e_shstrndx;
   return patch;
 }
