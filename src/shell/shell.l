@@ -47,6 +47,7 @@ S_QUOTE_STRING  [\'][^\'\n][\']
 "replace" return T_REPLACE;
 "extract" return T_EXTRACT;
 "section" return T_SECTION;
+"section_data" return T_SECTION_DATA;
 "raw" return T_RAW;
 "data"    return T_DATA;
 "dwarfscript" return T_DWARFSCRIPT;

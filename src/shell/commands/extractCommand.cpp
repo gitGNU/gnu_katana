@@ -109,6 +109,7 @@ void ExtractCommand::execute()
   switch(type)
   {
   case ET_SECTION:
+  case ET_SECTION_DATA:
     char* whichSectionName=whichThingP->getString();
     Elf_Scn* scn=getSectionByName(e,whichSectionName);
     if(!scn)
@@ -117,9 +118,18 @@ void ExtractCommand::execute()
       throw "Cannot extract section";
     }
     Elf_Data* dataForSection=elf_getdata(scn,NULL);
-    GElf_Shdr shdr;
-    getShdr(scn,&shdr);
-    SectionHeaderData shd=gshdrToSectionHeaderData(e,shdr);
-    this->outputVariable->setValue((byte*)dataForSection->d_buf,dataForSection->d_size,&shd);
+    if(type==ET_SECTION)
+    {
+      GElf_Shdr shdr;
+      getShdr(scn,&shdr);
+      SectionHeaderData shd=gshdrToSectionHeaderData(e,shdr);
+      this->outputVariable->setValue((byte*)dataForSection->d_buf,dataForSection->d_size,&shd);
+    }
+    else
+    {
+      assert(type==ET_SECTION_DATA);
+      //just the data, no header info
+      this->outputVariable->setValue((byte*)dataForSection->d_buf,dataForSection->d_size);
+    }
   }
 }

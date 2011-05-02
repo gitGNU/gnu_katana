@@ -46,7 +46,7 @@ extern "C"
 %expect 0
 //Token definitions
 %token T_LOAD T_SAVE T_TRANSLATE T_REPLACE T_SECTION T_VARIABLE T_STRING_LITERAL
-%token T_EXTRACT
+%token T_EXTRACT T_SECTION_DATA
 %token T_DATA T_DWARFSCRIPT T_COMPILE T_EMIT T_SHELL_COMMAND
 %token T_HASH T_ELF
 %token T_INFO T_EXCEPTION_HANDLING
@@ -220,6 +220,12 @@ replacecmd : T_REPLACE T_SECTION param param param
 extractcmd : T_EXTRACT T_SECTION param param
 {
   $$.u.cmd=new ExtractCommand(ET_SECTION,$3.u.param,$4.u.param);
+  $3.u.param->drop();
+  $4.u.param->drop();
+}
+| T_EXTRACT T_SECTION_DATA param param
+{
+  $$.u.cmd=new ExtractCommand(ET_SECTION_DATA,$3.u.param,$4.u.param);
   $3.u.param->drop();
   $4.u.param->drop();
 }

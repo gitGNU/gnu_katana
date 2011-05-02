@@ -63,6 +63,8 @@
 typedef enum
 {
   ET_SECTION=1,
+  //like SECTION except don't preserve header information
+  ET_SECTION_DATA
 } ExtractType;
 
 class ExtractCommand : public ShellCommand
