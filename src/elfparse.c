@@ -209,6 +209,7 @@ ElfInfo* duplicateElf(ElfInfo* e,char* outfname,bool flushToDisk,bool keepLayout
   if (elf_update(outelf, flushToDisk?ELF_C_WRITE:ELF_C_NULL) <0)
   {
     fprintf(stdout,"Failed to write out elf file: %s\n",elf_errmsg (-1));
+    return NULL;
   }
   ElfInfo* newE=zmalloc(sizeof(ElfInfo));
   newE->dataAllocatedByKatana=true;
