@@ -416,7 +416,8 @@ void finalizeDataSizes(ElfInfo* e)
       int overlap=(lastShdr->sh_addr+lastShdr->sh_size)-shdr->sh_addr;
       if(overlap>1)
       {
-        death("When loaded into memory, sections '%s' and '%s' (at addressex 0x%x and 0x%x respectively) in ELF file %s overlap by %i bytes, presumably from the first section expanding. Katana should be capable of resizing appropriately (although with some difficulty when relocations are involved and the binary has not been linked with --emit-relocs) but this feature has not yet been implemented\n",getScnHdrString(e,lastShdr->sh_name),getScnHdrString(e,shdr->sh_name),lastShdr->sh_addr,shdr->sh_addr,e->fname,overlap);
+        death("When loaded into memory, sections '%s' and '%s' (at addressex 0x%x and 0x%x respectively) in ELF file %s overlap by %i bytes, presumably from the first section expanding to %#zx bytes. Katana should be capable of resizing appropriately (although with some difficulty when relocations are involved and the binary has not been linked with --emit-relocs) but this feature has not yet been implemented\n",getScnHdrString(e,lastShdr->sh_name),getScnHdrString(e,shdr->sh_name),
+              lastShdr->sh_addr,shdr->sh_addr,e->fname,overlap,lastShdr->sh_size);
       }
     }
     if(shdr->sh_flags & SHF_ALLOC)
