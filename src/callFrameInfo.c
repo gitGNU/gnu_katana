@@ -60,6 +60,7 @@
 #include "elfutil.h"
 #include "util/growingBuffer.h"
 #include "eh_pe.h"
+#include "arch.h"
 
 //implemented in exceptTable.c to make this file a little smaller
 void buildExceptTableRawData(CallFrameInfo* cfi,GrowingBuffer* buf,
@@ -485,6 +486,18 @@ CallFrameSectionData buildCallFrameSectionData(CallFrameInfo* cfi)
       buildExceptTableRawData(cfi,&exceptTableBuf,&lsdaPointers);
       result.gccExceptTableData=exceptTableBuf.data;
       result.gccExceptTableLen=exceptTableBuf.len;
+
+      strcpy(result.gccExceptTableShdr.name,".gcc_except_table");
+      result.gccExceptTableShdr.sh_type=SHT_PROGBITS;
+      result.gccExceptTableShdr.sh_flags=SHF_ALLOC;
+      result.gccExceptTableShdr.sh_addr=cfi->exceptTableAddress;
+      //sh_offset will be calculated by libelf when writing it out
+      result.gccExceptTableShdr.sh_offset=0;
+      result.gccExceptTableShdr.sh_size=exceptTableBuf.len;
+      result.gccExceptTableShdr.sh_link=0;
+      result.gccExceptTableShdr.sh_info=0;
+      result.gccExceptTableShdr.sh_addralign=4;
+      result.gccExceptTableShdr.sh_entsize=0;
     }
   }
   
@@ -509,6 +522,18 @@ CallFrameSectionData buildCallFrameSectionData(CallFrameInfo* cfi)
 
   result.ehData=buf.data;
   result.ehDataLen=buf.len;
+
+  strcpy(result.ehShdr.name,".eh_frame");
+  result.ehShdr.sh_type=SHT_PROGBITS;
+  result.ehShdr.sh_flags=SHF_ALLOC;
+  result.ehShdr.sh_addr=cfi->sectionAddress;
+  //sh_offset will be calculated by libelf when writing it out
+  result.ehShdr.sh_offset=0;
+  result.ehShdr.sh_size=buf.len;
+  result.ehShdr.sh_link=0;
+  result.ehShdr.sh_info=0;
+  result.ehShdr.sh_addralign=__WORDSIZE;
+  result.ehShdr.sh_entsize=0;
   
   if(cfi->isEHFrame)
   {
@@ -577,6 +602,19 @@ CallFrameSectionData buildCallFrameSectionData(CallFrameInfo* cfi)
         
     result.ehHdrData=hdrBuf.data;
     result.ehHdrDataLen=hdrBuf.len;
+
+    strcpy(result.ehHShdr.name,".eh_frame_hdr");
+    result.ehHShdr.sh_type=SHT_PROGBITS;
+    result.ehHShdr.sh_flags=SHF_ALLOC;
+    result.ehHShdr.sh_addr=cfi->ehHdrAddress;
+    //sh_offset will be calculated by libelf when writing it out
+    result.ehHShdr.sh_offset=0;
+    result.ehHShdr.sh_size=hdrBuf.len;
+    result.ehHShdr.sh_link=0;
+    result.ehHShdr.sh_info=0;
+    result.ehHShdr.sh_addralign=4;
+    result.ehHShdr.sh_entsize=0;
+
   }
   else
   {

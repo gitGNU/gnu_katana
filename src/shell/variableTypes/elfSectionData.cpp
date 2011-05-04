@@ -23,6 +23,7 @@
 ShellElfSectionVariableData::ShellElfSectionVariableData(byte* data,int len,SectionHeaderData* hdr)
 {
   SectionEntry entry;
+  memset(&entry,0,sizeof(entry));
   entry.data=(byte*)zmalloc(len);
   memcpy(entry.data,data,len);
   entry.len=len;

@@ -58,6 +58,7 @@
 #define callFrameInfo_h
 #include "dwarf_instr.h"
 #include <libelf.h>
+#include "elfutil.h"
 
 
 typedef struct CallFrameInfo
@@ -149,10 +150,13 @@ typedef struct
 {
   byte* ehData;
   int ehDataLen;
+  SectionHeaderData ehShdr;
   byte* ehHdrData;
   int ehHdrDataLen;
+  SectionHeaderData ehHShdr;
   byte* gccExceptTableData;
   int gccExceptTableLen;
+  SectionHeaderData gccExceptTableShdr;
 } CallFrameSectionData;
 
 //the info contained in a call-site table entry in a LSDA in

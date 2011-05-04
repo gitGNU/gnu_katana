@@ -57,6 +57,7 @@
 #include "util/logging.h"
 #include "symbol.h"
 #include "util/cxxutil.h"
+#include "elfwriter.h"
 
 
 void* getDataAtAbs(Elf_Scn* scn,addr_t addr,ELF_STORAGE_TYPE type)
@@ -288,3 +289,52 @@ char* getFunctionNameAtPC(ElfInfo* elf,addr_t pc)
   }
 }
 
+void updateShdrFromSectionHeaderData(ElfInfo* e,SectionHeaderData* shd,GElf_Shdr* shdr)
+{
+  
+  //we do not know if the string used by this section could
+  //theoretically be used in full or in part by another
+  //section. Therefore we have no choice but to create a new string in
+  //the string table if the strings differ
+  char* oldScnName=getScnHdrString(e,shdr->sh_name);
+  if(strcmp(oldScnName,shd->name))
+  {
+    shdr->sh_name=addShdrStrtabEntry(e,shd->name);
+  }
+  shdr->sh_type=shd->sh_type;
+  shdr->sh_flags=shd->sh_flags;
+  shdr->sh_addr=shd->sh_addr;
+  //generally we don't set the offset directly
+  if(shd->sh_offset)
+  {
+    shdr->sh_offset=shd->sh_offset;
+  }
+  shdr->sh_size=shd->sh_size;
+  shdr->sh_link=shd->sh_link;
+  shdr->sh_info=shd->sh_info;
+  shdr->sh_addralign=shd->sh_addralign;
+  shdr->sh_entsize=shd->sh_entsize;
+}
+
+
+SectionHeaderData gshdrToSectionHeaderData(ElfInfo* e,GElf_Shdr shdr)
+{
+  SectionHeaderData shd;
+  char* scnName=getScnHdrString(e,shdr.sh_name);
+  if(strlen(scnName)>sizeof(shd.name))
+  {
+    logprintf(ELL_WARN,ELS_SHELL,"Section name %s too long, will be truncated in extract command\n",scnName);
+  }
+  strncpy(shd.name,scnName,sizeof(shd.name)-1);
+
+  shd.sh_type=shdr.sh_type;
+  shd.sh_flags=shdr.sh_flags;
+  shd.sh_addr=shdr.sh_addr;
+  shd.sh_offset=shdr.sh_offset;
+  shd.sh_size=shdr.sh_size;
+  shd.sh_link=shdr.sh_link;
+  shd.sh_info=shdr.sh_info;
+  shd.sh_addralign=shdr.sh_addralign;
+  shd.sh_entsize=shdr.sh_entsize; 
+  return shd;
+}

@@ -59,7 +59,7 @@
 
 extern "C"
 {
-#include "elfparse.h"
+#include "elfutil.h"
 #include "util/logging.h"
 }
 
@@ -74,21 +74,6 @@ typedef enum
   SPC_VARIABLE_DATA,//for arrays
 } ShellParamCapability;
 
-
-//the data necessary to actually construct an ElfXX_Shdr
-struct SectionHeaderData
-{
-  char name[256];
-  word_t sh_type;
-  word_t sh_flags;
-  word_t sh_addr;
-  word_t sh_offset;
-  word_t sh_size;
-  word_t sh_link;
-  word_t sh_info;
-  word_t sh_addralign;
-  word_t sh_entsize;
-};
 
 class ShellVariableData;
 

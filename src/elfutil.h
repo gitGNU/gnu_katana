@@ -52,12 +52,67 @@
   Date: January 2011
   Description: Misc. routines for working with elf files
 */
-
+
 #ifndef elfutil_h
 #define elfutil_h
 
-#include "elfparse.h"
+#include <libelf.h>
+#include <gelf.h>
+#include "types.h"
 
+struct ElfInfo;
+typedef struct ElfInfo ElfInfo;
+
+typedef enum
+{
+  IN_MEM=1,
+  ON_DISK=2
+} ELF_STORAGE_TYPE;
+
+typedef enum
+{
+  ERS_TEXT=1,
+  ERS_RODATA,
+  ERS_DATA,
+  ERS_SYMTAB,
+  ERS_STRTAB,
+  ERS_HASHTABLE,
+  ERS_RELA_TEXT,
+  ERS_REL_TEXT,
+  ERS_GOT,
+  ERS_GOTPLT,
+  ERS_PLT,
+  ERS_RELX_PLT,
+  ERS_DYNSYM,
+  ERS_DYNSTR,
+  ERS_DYNAMIC,
+  ERS_UNSAFE_FUNCTIONS,
+  ERS_DEBUG_INFO,
+  ERS_EH_FRAME,
+  ERS_CNT,
+  ERS_INVALID
+} E_RECOGNIZED_SECTION;
+
+
+//the data necessary to actually construct an ElfXX_Shdr
+//the reason for this structures existence is that it stores an actualy name
+//field rather than a stringtable offset. This is important if the header
+//data is not yet connected to an actual ELF file
+typedef struct SectionHeaderData
+{
+  char name[256];
+  word_t sh_type;
+  word_t sh_flags;
+  word_t sh_addr;
+  word_t sh_offset;
+  word_t sh_size;
+  word_t sh_link;
+  word_t sh_info;
+  word_t sh_addralign;
+  word_t sh_entsize;
+} SectionHeaderData;
+
+////////////////////////////////////////
 //methods for getting pieces of raw data
 void* getTextDataAtAbs(ElfInfo* e,addr_t addr,ELF_STORAGE_TYPE type);
 word_t getTextAtAbs(ElfInfo* e,addr_t addr,ELF_STORAGE_TYPE type);
@@ -68,15 +123,25 @@ void* getDataAtAbs(Elf_Scn* scn,addr_t addr,ELF_STORAGE_TYPE type);
 void* getTextDataAtRelOffset(ElfInfo* e,int offset);
 word_t getTextAtRelOffset(ElfInfo* e,int offset);
 
-void printSymTab(ElfInfo* e);
 
+////////////////////////////////////////
+//methods for getting whole sections or data blocks
 //returns NULL if the section does not exist
 Elf_Scn* getSectionByName(ElfInfo* e,char* name);
 Elf_Scn* getSectionByERS(ElfInfo* e,E_RECOGNIZED_SECTION ers);
 Elf_Data* getDataByIdx(ElfInfo* e,idx_t idx);
 Elf_Data* getDataByERS(ElfInfo* e,E_RECOGNIZED_SECTION scn);
+
+
+////////////////////////////////////////
+//methods for working with section headers
 void getShdrByERS(ElfInfo* e,E_RECOGNIZED_SECTION ers,GElf_Shdr* shdr);
 void getShdr(Elf_Scn* scn,GElf_Shdr* shdr);
+void updateShdrFromSectionHeaderData(ElfInfo* e,SectionHeaderData* shd,GElf_Shdr* shdr);
+SectionHeaderData gshdrToSectionHeaderData(ElfInfo* e,GElf_Shdr shdr);
+
+//////////////////////////////////////////
+//misc
 char* getSectionNameFromIdx(ElfInfo* e,int idx);
 //idx should be the index in the section header string table, not the
 //section index
@@ -86,5 +151,7 @@ char* getDynString(ElfInfo* e,int idx);//get a string from the dynamic string ta
 bool hasERS(ElfInfo* e,E_RECOGNIZED_SECTION ers);
 //the returned string should be freed
 char* getFunctionNameAtPC(ElfInfo* elf,addr_t pc);
+void printSymTab(ElfInfo* e);
+
 
 #endif

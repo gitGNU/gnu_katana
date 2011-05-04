@@ -52,7 +52,7 @@
   Date: January 10
   Description: Read information from an ELF file
 */
-
+
 #ifndef elfparse_h
 #define elfparse_h
 #include <libelf.h>
@@ -61,37 +61,8 @@
 #include "types.h"
 #include <elf.h>
 #include "arch.h"
+
 #include "callFrameInfo.h"
-
-typedef enum
-{
-  IN_MEM=1,
-  ON_DISK=2
-} ELF_STORAGE_TYPE;
-
-typedef enum
-{
-  ERS_TEXT=1,
-  ERS_RODATA,
-  ERS_DATA,
-  ERS_SYMTAB,
-  ERS_STRTAB,
-  ERS_HASHTABLE,
-  ERS_RELA_TEXT,
-  ERS_REL_TEXT,
-  ERS_GOT,
-  ERS_GOTPLT,
-  ERS_PLT,
-  ERS_RELX_PLT,
-  ERS_DYNSYM,
-  ERS_DYNSTR,
-  ERS_DYNAMIC,
-  ERS_UNSAFE_FUNCTIONS,
-  ERS_DEBUG_INFO,
-  ERS_EH_FRAME,
-  ERS_CNT,
-  ERS_INVALID
-} E_RECOGNIZED_SECTION;
 
 typedef struct ElfInfo
 {

@@ -61,28 +61,6 @@ extern "C"
 }
 
 
-void updateShdrFromSectionHeaderData(ElfInfo* e,SectionHeaderData* shd,GElf_Shdr* shdr)
-{
-  //we do not know if the string used by this section could
-  //theoretically be used in full or in part by another
-  //section. Therefore we have no choice but to create a new string in
-  //the string table if the strings differ
-  char* oldScnName=getScnHdrString(e,shdr->sh_name);
-  if(strcmp(oldScnName,shd->name))
-  {
-    shdr->sh_name=addShdrStrtabEntry(e,shd->name);
-  }
-  shdr->sh_type=shd->sh_type;
-  shdr->sh_flags=shd->sh_flags;
-  shdr->sh_addr=shd->sh_addr;
-  shdr->sh_offset=shd->sh_offset;
-  shdr->sh_size=shd->sh_size;
-  shdr->sh_link=shd->sh_link;
-  shdr->sh_info=shd->sh_info;
-  shdr->sh_addralign=shd->sh_addralign;
-  shdr->sh_entsize=shd->sh_entsize; 
-}
-
 
 ReplaceCommand::ReplaceCommand(ReplacementType type,ShellParam* elfObject,ShellParam* which,ShellParam* newThing)
   :type(type),elfObjectP(elfObject),whichThingP(which),newThingP(newThing)
@@ -122,9 +100,10 @@ void ReplaceCommand::execute()
       {
         //the newThing is capable of giving us a new section header as well as new data
         GElf_Shdr shdr;
-        memset(&shdr,0,sizeof(shdr));
+        //first get the existing section header
+        getShdr(scn,&shdr);
+        //then update it
         SectionHeaderData* headerData=newThingP->getSectionHeader();
-        //build the shdr
         updateShdrFromSectionHeaderData(e,headerData,&shdr);
         gelf_update_shdr(scn,&shdr);
       }

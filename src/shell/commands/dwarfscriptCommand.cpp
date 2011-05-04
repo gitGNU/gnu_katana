@@ -54,7 +54,7 @@
 */
 
 #include "dwarfscriptCommand.h"
-#include "shell/variableTypes/rawVariableData.h"
+#include "shell/variableTypes/elfSectionData.h"
 extern "C"
 {
 #include "fderead.h"
@@ -354,9 +354,9 @@ void DwarfscriptCommand::compileDwarfscript()
   {
     //make an array with .eh_frame_hdr and .eh_frame items
     ShellVariableData** items=(ShellVariableData**)zmalloc(sizeof(ShellVariableData*)*3);
-    items[0]=new ShellRawVariableData(data.ehData,data.ehDataLen);
-    items[1]=new ShellRawVariableData(data.ehHdrData,data.ehHdrDataLen);
-    items[2]=new ShellRawVariableData(data.gccExceptTableData,data.gccExceptTableLen);
+    items[0]=new ShellElfSectionVariableData(data.ehData,data.ehDataLen,&data.ehShdr);
+    items[1]=new ShellElfSectionVariableData(data.ehHdrData,data.ehHdrDataLen,&data.ehHShdr);
+    items[2]=new ShellElfSectionVariableData(data.gccExceptTableData,data.gccExceptTableLen,&data.gccExceptTableShdr);
     this->outputVariable->makeArray(items,3);
     free(items);
   }

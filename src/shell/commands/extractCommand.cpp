@@ -61,28 +61,6 @@ extern "C"
 #include "elfutil.h"
 }
 
-SectionHeaderData gshdrToSectionHeaderData(ElfInfo* e,const GElf_Shdr& shdr)
-{
-  SectionHeaderData shd;
-  char* scnName=getScnHdrString(e,shdr.sh_name);
-  if(strlen(scnName)>sizeof(shd.name))
-  {
-    logprintf(ELL_WARN,ELS_SHELL,"Section name %s too long, will be truncated in extract command\n",scnName);
-  }
-  strncpy(shd.name,scnName,sizeof(shd.name)-1);
-
-  shd.sh_type=shdr.sh_type;
-  shd.sh_flags=shdr.sh_flags;
-  shd.sh_addr=shdr.sh_addr;
-  shd.sh_offset=shdr.sh_offset;
-  shd.sh_size=shdr.sh_size;
-  shd.sh_link=shdr.sh_link;
-  shd.sh_info=shdr.sh_info;
-  shd.sh_addralign=shdr.sh_addralign;
-  shd.sh_entsize=shdr.sh_entsize; 
-  return shd;
-}
-
 ExtractCommand::ExtractCommand(ExtractType type,ShellParam* elfObject,ShellParam* whichThing)
   :type(type),elfObjectP(elfObject),whichThingP(whichThing)
 {
