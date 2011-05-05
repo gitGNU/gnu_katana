@@ -106,6 +106,7 @@ void ReplaceCommand::execute()
         SectionHeaderData* headerData=newThingP->getSectionHeader();
         updateShdrFromSectionHeaderData(e,headerData,&shdr);
         gelf_update_shdr(scn,&shdr);
+        elf_flagshdr(scn,ELF_C_SET,ELF_F_DIRTY);
       }
     }
     break;
