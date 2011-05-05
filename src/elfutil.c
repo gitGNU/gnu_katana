@@ -303,12 +303,24 @@ void updateShdrFromSectionHeaderData(ElfInfo* e,SectionHeaderData* shd,GElf_Shdr
   }
   shdr->sh_type=shd->sh_type;
   shdr->sh_flags=shd->sh_flags;
-  shdr->sh_addr=shd->sh_addr;
-  //generally we don't set the offset directly
   if(shd->sh_offset)
   {
+    //there's an offset to set directly
     shdr->sh_offset=shd->sh_offset;
   }
+  else
+  {
+    //this is a really tricky situation. We don't let libelf
+    //recalculate all of the layout because for whatever reason it
+    //tends to screw it up. Therefore we have to change the offset
+    //ourselves. Really to be thorough we should calculate all offsets
+    //in a pass after we've set everything up. For the moment,
+    //however, we'll just adjust the offset by the same amount we did
+    //the address. We do have to keep them in sync because of segment loading.
+    shdr->sh_offset=shdr->sh_offset+(shd->sh_addr-shdr->sh_addr);
+  }
+  shdr->sh_addr=shd->sh_addr;
+
   shdr->sh_size=shd->sh_size;
   shdr->sh_link=shd->sh_link;
   shdr->sh_info=shd->sh_info;
