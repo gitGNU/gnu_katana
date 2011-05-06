@@ -315,6 +315,8 @@ void DwarfscriptCommand::compileDwarfscript()
   //yydwdebug=1;
   yydwin=infile;
   memset(parsedCallFrameInfo,0,sizeof(CallFrameInfo));
+  //set up defaults
+  parsedCallFrameInfo->hdrTableEncoding=DW_EH_PE_datarel | DW_EH_PE_sdata4;
   bool parseSuccess = (0==yydwparse());
   if(!parseSuccess)
   {
