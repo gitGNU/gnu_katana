@@ -271,11 +271,14 @@ void DwarfscriptCommand::emitDwarfscript()
   }
   CallFrameInfo* cfi=&elf->callFrameInfo;
   fprintf(file,"section_type: \"%s\"\n",cfi->isEHFrame?".eh_frame":".debug_frame");
-  fprintf(file,"section_addr: 0x%zx\n",cfi->sectionAddress);
+  fprintf(file,"section_addr: 0x%zx\n",cfi->ehAddress);
   if(cfi->isEHFrame)
   {
     fprintf(file,"eh_hdr_addr: 0x%zx\n",cfi->ehHdrAddress);
     fprintf(file,"except_table_addr: 0x%zx\n",cfi->exceptTableAddress);
+    fprintf(file,"eh_hdr_table_enc: ");
+    printEHPointerEncoding(file,cfi->hdrTableEncoding);
+    fprintf(file,"\n");
   }
   for(int i=0;i<cfi->numCIEs;i++)
   {

@@ -221,7 +221,7 @@ void buildCIERawData(CIE* cie,GrowingBuffer* buf,CallFrameInfo* cfi)
         cieAugmentationData[offset]=encoding;
         offset++;
         int numBytesOut;
-        addr_t pointerLocation=cfi->sectionAddress+buf->len+sizeof(header1)+strlen(augmentationString)+1+codeAlignLen+dataAlignLen+returnAddrRegLen+offset;
+        addr_t pointerLocation=cfi->ehAddress+buf->len+sizeof(header1)+strlen(augmentationString)+1+codeAlignLen+dataAlignLen+returnAddrRegLen+offset;
         addr_t personalityFunction=encodeEHPointerFromEncoding(cie->personalityFunction,encoding,pointerLocation,&numBytesOut);
         memcpy(cieAugmentationData+offset,&personalityFunction,numBytesOut);
         offset+=numBytesOut;
@@ -342,11 +342,11 @@ void buildFDERawData(CallFrameInfo* cfi,FDE* fde,uint* cieOffsets,addr_t* lsdaPo
 
   if(cfi->isEHFrame)
   {
-    if(!cfi->sectionAddress)
+    if(!cfi->ehAddress)
     {
-      logprintf(ELL_WARN,ELS_DWARF_FRAME,"While writing binary .eh_frame, it appears taht sectionAddress is not set. This means that all of the addresses within the FDE will be wrong. Relocations are not yet possible\n");
+      logprintf(ELL_WARN,ELS_DWARF_FRAME,"While writing binary .eh_frame, it appears taht ehAddress is not set. This means that all of the addresses within the FDE will be wrong. Relocations are not yet possible\n");
     }
-    addr_t pointerLocation=cfi->sectionAddress+buf->len+sizeof(header);
+    addr_t pointerLocation=cfi->ehAddress+buf->len+sizeof(header);
     initialLocation=
       encodeEHPointerFromEncoding(fde->lowpc,
                                   fde->cie->fdePointerEncoding,
@@ -389,7 +389,7 @@ void buildFDERawData(CallFrameInfo* cfi,FDE* fde,uint* cieOffsets,addr_t* lsdaPo
         //+1 is because it will take one byte to encode the
         //augmentation data length. We haven't computed it yet, which
         //is why we don't use +augmenationDataLengthLen
-        addr_t augmentationDataAddress=cfi->sectionAddress+buf->len+sizeof(header)+
+        addr_t augmentationDataAddress=cfi->ehAddress+buf->len+sizeof(header)+
           initialLocationByteLen+addressRangeByteLen + 1;
         addr_t encodedLSDAPointer=
           encodeEHPointerFromEncoding(lsdaPointers[fde->lsdaIdx],
@@ -526,7 +526,7 @@ CallFrameSectionData buildCallFrameSectionData(CallFrameInfo* cfi)
   strcpy(result.ehShdr.name,".eh_frame");
   result.ehShdr.sh_type=SHT_PROGBITS;
   result.ehShdr.sh_flags=SHF_ALLOC;
-  result.ehShdr.sh_addr=cfi->sectionAddress;
+  result.ehShdr.sh_addr=cfi->ehAddress;
   //sh_offset will be calculated by libelf when writing it out
   result.ehShdr.sh_offset=0;
   result.ehShdr.sh_size=buf.len;
@@ -562,7 +562,7 @@ CallFrameSectionData buildCallFrameSectionData(CallFrameInfo* cfi)
     hdrHeader.version=EH_FRAME_HDR_VERSION;
     hdrHeader.eh_frame_ptr_enc=DW_EH_PE_sdata4 | DW_EH_PE_pcrel;
     hdrHeader.fde_count_enc=DW_EH_PE_udata4;
-    hdrHeader.table_enc=DW_EH_PE_sdata4 | DW_EH_PE_datarel;
+    hdrHeader.table_enc=cfi->hdrTableEncoding;
     if(0==cfi->ehHdrAddress)
     {
       logprintf(ELL_WARN,ELS_DWARF_BUILD,"The .eh_frame_hdr address appears to be 0. This is almost certainly wrong\n");
@@ -570,7 +570,7 @@ CallFrameSectionData buildCallFrameSectionData(CallFrameInfo* cfi)
     addr_t addressToBeRelativeTo=cfi->ehHdrAddress+4;//4 bytes into it
     int numBytesOut;
     hdrHeader.eh_frame_ptr=
-      (int32)encodeEHPointerFromEncoding(cfi->sectionAddress,
+      (int32)encodeEHPointerFromEncoding(cfi->ehAddress,
                                          hdrHeader.eh_frame_ptr_enc,
                                          addressToBeRelativeTo,
                                          &numBytesOut);
@@ -588,7 +588,7 @@ CallFrameSectionData buildCallFrameSectionData(CallFrameInfo* cfi)
     {
       //remember, encoded as data-relative
       table[i].initialLocation=cfi->fdes[i].lowpc-cfi->ehHdrAddress;
-      table[i].fdeAddress=cfi->sectionAddress+fdeOffsets[i]-cfi->ehHdrAddress;
+      table[i].fdeAddress=cfi->ehAddress+fdeOffsets[i]-cfi->ehHdrAddress;
     }
     //sort them
     qsort(table,cfi->numFDEs,sizeof(EhFrameHdrTableEntry),compareEhFrameHdrTableEntries);

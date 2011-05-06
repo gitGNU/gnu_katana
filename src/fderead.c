@@ -536,10 +536,14 @@ Map* readDebugFrame(ElfInfo* elf,bool ehInsteadOfDebug)
     GElf_Shdr shdr;
     getShdr(hdrScn,&shdr);
     elf->callFrameInfo.ehHdrAddress=shdr.sh_addr;
+
+    //get the encoding value
+    Elf_Data* hdrData=elf_getdata(hdrScn,NULL);
+    elf->callFrameInfo.hdrTableEncoding=((byte*)hdrData->d_buf)[3];
   }
   GElf_Shdr shdr;
   getShdr(scn,&shdr);
-  elf->callFrameInfo.sectionAddress=shdr.sh_addr;
+  elf->callFrameInfo.ehAddress=shdr.sh_addr;
     
 
   //read the CIE
@@ -580,7 +584,7 @@ Map* readDebugFrame(ElfInfo* elf,bool ehInsteadOfDebug)
     //doing pc-relative pointer encodings) is a bit of a pain.
     Dwarf_Off cieOff;
     dwarf_cie_section_offset(dbg,cieData[i],&cieOff,&err);
-    addr_t cieAddress=elf->callFrameInfo.sectionAddress+cieOff;
+    addr_t cieAddress=elf->callFrameInfo.ehAddress+cieOff;
     //ok, now we have the address of the cie. We want the offset to
     //the augmentation todo: the below sizes are all for 32-bit DWARF
     //format, not 64-bit.  (32-bit DWARF format is still most
@@ -705,7 +709,7 @@ Map* readDebugFrame(ElfInfo* elf,bool ehInsteadOfDebug)
         }
       }
       //turn the offset into an address
-      addr_t augDataAddr=elf->callFrameInfo.sectionAddress+augDataOffset;
+      addr_t augDataAddr=elf->callFrameInfo.ehAddress+augDataOffset;
       parseFDEAugmentationData(elf->callFrameInfo.fdes+i,augDataAddr,
                                augdata,augdataLen,&lsdaPointers,&numLSDAPointers);
     }

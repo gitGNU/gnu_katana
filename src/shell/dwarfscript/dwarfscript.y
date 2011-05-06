@@ -67,6 +67,7 @@ void flowControlLabelReference(ParseNode* node);
 %token T_LPSTART T_POSITION T_LANDING_PAD T_HAS_ACTION T_FIRST_ACTION
 %token T_TYPE_IDX T_NEXT T_TYPEINFO T_TYPEINFO_ENC T_LSDA_IDX
 %token T_FDE_PTR_ENC T_FDE_LSDA_PTR_ENC T_PERSONALITY_PTR_ENC T_PERSONALITY
+%token T_EH_HDR_TABLE_ENC
 //special values
 %token T_MATCH_ALL
 //CFA instructions
@@ -283,6 +284,7 @@ top_property_stmt :
 section_type_prop {}
 | section_location_prop {}
 | eh_hdr_location_prop {}
+| eh_hdr_table_enc_prop {}
 | except_table_addr_prop {}
 
 cie_property_stmt :
@@ -496,12 +498,17 @@ section_type_prop : T_SECTION_TYPE ':' string_lit
 
 section_location_prop : T_SECTION_LOC ':' nonneg_int_lit
 {
-  cfi.sectionAddress=$3.u.intval;
+  cfi.ehAddress=$3.u.intval;
 }
 
 eh_hdr_location_prop : T_EH_HDR_LOC ':' nonneg_int_lit
 {
   cfi.ehHdrAddress=$3.u.intval;
+}
+
+eh_hdr_table_enc_prop :  T_EH_HDR_TABLE_ENC ':' dw_pe_lit
+{
+  cfi.hdrTableEncoding=$3.u.intval;
 }
 
 except_table_addr_prop : T_EXCEPT_TABLE_ADDR ':' nonneg_int_lit

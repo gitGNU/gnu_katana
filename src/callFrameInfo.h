@@ -71,9 +71,16 @@ typedef struct CallFrameInfo
   bool isEHFrame;
   //needed when encoding eh_frame because of pc-relative pointer encodings
   //todo: should really support relocations and then don't need to know this now
-  addr_t sectionAddress;
+  addr_t ehAddress;
   addr_t ehHdrAddress;//address of .eh_frame_hdr
   addr_t exceptTableAddress;//address of .gcc_except_table
+
+  //encoding for entries in the FDE table in .eh_frame_hdr
+  //note that current (gcc 4.5.2) libgcc only supports the following values
+  //1) DW_EH_PE_datarel | DW_EH_PE_sdata4
+  //2) DW_EH_PE_omit 
+  byte hdrTableEncoding;
+  
   //exception handling table, info that would be stored in
   //.gcc_except_frame
   struct ExceptTable* exceptTable;
