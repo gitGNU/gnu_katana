@@ -2,7 +2,8 @@
  ====================================================================
 
 Author: James Oakley <james.oakley@dartmouth.edu>
-Date: 2011-04-18 01:44:27 EDT
+Date: 2011-05-08 21:11:08 EDT
+
 
 
 Table of Contents
@@ -167,15 +168,28 @@ Table of Contents
                 0: raw data for .eh_frame 
                 1: raw data for .eh_frame_hdr
                 2: raw data for .gcc_except_table.
+* extract 
+  + extract section 
+    /Usage/: `extract section ELF SECTION_NAME'
+    /Params/: ELF must be an ELF object. SECTION_NAME must be a
+              string. 
+    /Function/: Returns the data and header information for the
+                specified section
+  + extract section_data 
+    /Usage/: `extract section ELF SECTION_NAME'
+    /Params/: ELF must be an ELF object. SECTION_NAME must be a
+              string. 
+    /Function/: Like extract section except extracts only the raw
+               data stored in the section and not any header information.
 * replace 
   + replace section 
     /Usage/: `replace section ELF SECTION_NAME NEW_SECTION'
     /Params/: ELF must be an ELF object. SECTION_NAME must be a
-              string. NEW_SECTION must be either an ELF section or raw data.
+    string. NEW_SECTION must be either an ELF section or raw data.
     /Function/: Replaces the section with the name SECTION_NAME in
-                the oject ELF with the data from
-                NEW_SECTION. Section headers are replaced if NEW_SECTION is
-                able to provide them, but not if it is only raw data.
+    the oject ELF with the data from NEW_SECTION. Section headers
+    are replaced if NEW_SECTION is able to provide them, but not if
+    it is only raw data.
                  
   + replace raw 
     /Usage/: `replace raw ELF OFFSET NEW_DATA'

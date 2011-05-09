@@ -7,7 +7,7 @@ lang="en" xml:lang="en">
 <title>Katana: An ELF/DWARF Manipulation Tool with Hotpatching Capabilities</title>
 <meta http-equiv="Content-Type" content="text/html;charset=iso-8859-1"/>
 <meta name="generator" content="Org-mode"/>
-<meta name="generated" content="2011-04-18 01:44:32 EDT"/>
+<meta name="generated" content="2011-05-08 21:11:15 EDT"/>
 <meta name="author" content="James Oakley"/>
 <meta name="description" content=""/>
 <meta name="keywords" content=""/>
@@ -201,7 +201,7 @@ semicolon (;) or a newline character. Each line may be either
 blank, contain exactly one COMMAND, or contain an ASSIGNMENT.
 </p>
 <p>
-A COMMAND is of the form COMMAND_IDENTIFIER PARAM PARAM PARAM &hellip;., where
+A COMMAND is of the form COMMAND<sub>IDENTIFIER</sub> PARAM PARAM PARAM &hellip;., where
 tokens are seperated by spaces and the number of PARAMs depends on
 the command.
 </p>
@@ -216,7 +216,7 @@ letter or underscore followed by any number of letters,
 underscores, or digits.
 </p>
 <p>
-A COMMAND_IDENTIFIER is one or more words which identify a
+A COMMAND<sub>IDENTIFIER</sub> is one or more words which identify a
 COMMAND. In many cases a command is identified by only one word,
 but sometimes similar commands are grouped by sharing the first
 word in their identifier.
@@ -282,7 +282,7 @@ literal or variable that can be interpreted as a string.<br/>
 <i>Usage</i>: <code>dwarfscript emit [SECTION] ELF OUTFILE</code><br/>
 <i>Params</i>: SECTION must be the name (string) of the section to write as
 Dwarfscript. If not specified it defaults to
-".eh_frame". ELF must be an ELF object. OUTFILE must
+".eh<sub>frame</sub>". ELF must be an ELF object. OUTFILE must
 be a string with the name of a file to write the resulting
 Dwarfscript to.<br/>
 <i>Function</i>: Writes the Dwarfscript representation of the given
@@ -294,37 +294,55 @@ SECTION from the given ELF to OUTFILE.
 <i>Function</i>: Interprets the contents of the file named by INFILE
 as Dwarfscript and compiles the Dwarfscript into
 beinary form. Returns an array with 3 items
-0: raw data for .eh_frame 
-1: raw data for .eh_frame_hdr
-2: raw data for .gcc_except_table.
+0: raw data for .eh<sub>frame</sub> 
+1: raw data for .eh<sub>frame</sub><sub>hdr</sub>
+2: raw data for .gcc<sub>except</sub><sub>table</sub>.
 </li>
 </ul>
 </li>
-<li id="sec-2.1.2.4">replace <br/>
+<li id="sec-2.1.2.4">extract <br/>
 <ul>
-<li id="sec-2.1.2.4.1">replace section <br/>
+<li id="sec-2.1.2.4.1">extract section <br/>
+<i>Usage</i>: <code>extract section ELF SECTION_NAME</code>
+<i>Params</i>: ELF must be an ELF object. SECTION<sub>NAME</sub> must be a
+string. 
+<i>Function</i>: Returns the data and header information for the
+specified section
+</li>
+<li id="sec-2.1.2.4.2">extract section<sub>data</sub> <br/>
+<i>Usage</i>: <code>extract section ELF SECTION_NAME</code>
+<i>Params</i>: ELF must be an ELF object. SECTION<sub>NAME</sub> must be a
+string. 
+<i>Function</i>: Like extract section except extracts only the raw
+data stored in the section and not any header information.
+</li>
+</ul>
+</li>
+<li id="sec-2.1.2.5">replace <br/>
+<ul>
+<li id="sec-2.1.2.5.1">replace section <br/>
 <i>Usage</i>: <code>replace section ELF SECTION_NAME NEW_SECTION</code>
-<i>Params</i>: ELF must be an ELF object. SECTION_NAME must be a
-string. NEW_SECTION must be either an ELF section or raw data.
-<i>Function</i>: Replaces the section with the name SECTION_NAME in
-the oject ELF with the data from
-NEW_SECTION. Section headers are replaced if NEW_SECTION is
-able to provide them, but not if it is only raw data.
+<i>Params</i>: ELF must be an ELF object. SECTION<sub>NAME</sub> must be a
+string. NEW<sub>SECTION</sub> must be either an ELF section or raw data.
+<i>Function</i>: Replaces the section with the name SECTION<sub>NAME</sub> in
+the oject ELF with the data from NEW<sub>SECTION</sub>. Section headers
+are replaced if NEW<sub>SECTION</sub> is able to provide them, but not if
+it is only raw data.
 
 </li>
-<li id="sec-2.1.2.4.2">replace raw <br/>
+<li id="sec-2.1.2.5.2">replace raw <br/>
 <i>Usage</i>: <code>replace raw ELF OFFSET NEW_DATA</code>
 <i>Params</i>: ELF must be an ELF object. ADDRESS must be an
-integer. NEW_DATA must be raw data.
+integer. NEW<sub>DATA</sub> must be raw data.
 <i>Function</i>: Replaces the raw data at OFFSET in the ELF object
-with NEW_DATA. OFFSET must refer to a location in an
+with NEW<sub>DATA</sub>. OFFSET must refer to a location in an
 existing section.
 </li>
 </ul>
 </li>
-<li id="sec-2.1.2.5">info <br/>
+<li id="sec-2.1.2.6">info <br/>
 <ul>
-<li id="sec-2.1.2.5.1">info eh <br/>
+<li id="sec-2.1.2.6.1">info eh <br/>
 <i>Usage</i>: <code>info eh ELF [OUTFILE]</code>
 <i>Params</i>: ELF must be an ELF object. OUTFILE, if present, must
 be the name of a writable file (which may or may not
@@ -335,20 +353,20 @@ information is written to it.
 </li>
 </ul>
 </li>
-<li id="sec-2.1.2.6">hash <br/>
+<li id="sec-2.1.2.7">hash <br/>
 <ul>
-<li id="sec-2.1.2.6.1">hash elf <br/>
+<li id="sec-2.1.2.7.1">hash elf <br/>
 <i>Usage</i>: <code>hash elf STR</code>
 <i>Params</i>: STR must be a string.
-<i>Function</i>: Prints the result of running elf_hash (from libelf)
+<i>Function</i>: Prints the result of running elf<sub>hash</sub> (from libelf)
 on the string.
 
 </li>
 </ul>
 </li>
-<li id="sec-2.1.2.7">patch <br/>
+<li id="sec-2.1.2.8">patch <br/>
 <ul>
-<li id="sec-2.1.2.7.1">gen <br/>
+<li id="sec-2.1.2.8.1">gen <br/>
 <i>Usage</i>: <code>patch gen OLD_OBJECTS_DIR NEW_OBJECTS_DIR EXECUTABLE</code>
 <i>Params</i>: All three params are strings. The first two are the
 old and new object file directories respectively. The
@@ -356,7 +374,7 @@ last is the name of the executable that can be found
 in both directories.
 <i>Function</i>: Generates (and returns) a patch object ELF.
 </li>
-<li id="sec-2.1.2.7.2">apply <br/>
+<li id="sec-2.1.2.8.2">apply <br/>
 <i>Usage</i>: <code>patch apply PO PID</code>
 <i>Params</i>: The PO parameter should be an ELF patch object. PID
 should be the (integer) pid of the process that PO is
@@ -366,7 +384,7 @@ described by PID.
 </li>
 </ul>
 </li>
-<li id="sec-2.1.2.8">! (shell command) <br/>
+<li id="sec-2.1.2.9">! (shell command) <br/>
 The rest of the line following by ! is executed in a shell.
 </li>
 </ul>
@@ -805,13 +823,13 @@ Contains new/modified functions
 new data
 </li>
 <li>
-.unsafe_functions
+.unsafe<sub>functions</sub>
 Contains a simple listing (of symbol indices) of the functions in
 the binary to be patched which should not have activation records
 on the stack when patching is taking place. 
 </li>
 <li>
-.debug_info
+.debug<sub>info</sub>
 Contains listings of the variables and functions which need to be
 patched using the DWARF data format. This section is standard and
 is used here with validly formatted data, but is used for
@@ -822,8 +840,8 @@ information. It can be, however, confusing and the name will
 likely change in the future.
 </li>
 <li>
-.debug_frame
-Like .debug_info a standard section used in a nonstandard way,
+.debug<sub>frame</sub>
+Like .debug<sub>info</sub> a standard section used in a nonstandard way,
 see notes above about the naming. Contains an extended version of
 DWARF Call Frame Information which describes how various data
 structures are to be patched. The details are not properly
@@ -1080,7 +1098,7 @@ Smith.
 <p class="author"> Author: James Oakley
 <a href="mailto:james.oakley@dartmouth.edu">&lt;james.oakley@dartmouth.edu&gt;</a>
 </p>
-<p class="date"> Date: 2011-04-18 01:44:32 EDT</p>
+<p class="date"> Date: 2011-05-08 21:11:15 EDT</p>
 <p class="creator">HTML generated by org-mode 6.33x in emacs 23</p>
 </div>
 </div>

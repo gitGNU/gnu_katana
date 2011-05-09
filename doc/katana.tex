@@ -1,4 +1,4 @@
-% Created 2011-04-18 Mon 01:44
+% Created 2011-05-08 Sun 21:11
 \documentclass[11pt]{article}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
@@ -13,7 +13,7 @@
 
 \title{Katana: An ELF/DWARF Manipulation Tool with Hotpatching Capabilities}
 \author{James Oakley}
-\date{18 April 2011}
+\date{08 May 2011}
 
 \begin{document}
 
@@ -83,7 +83,7 @@
     semicolon (;) or a newline character. Each line may be either
     blank, contain exactly one COMMAND, or contain an ASSIGNMENT.
 
-    A COMMAND is of the form COMMAND\_{}IDENTIFIER PARAM PARAM PARAM \ldots{}., where
+    A COMMAND is of the form COMMAND$_{\mathrm{IDENTIFIER}}$ PARAM PARAM PARAM \ldots{}., where
     tokens are seperated by spaces and the number of PARAMs depends on
     the command.
 
@@ -95,7 +95,7 @@
     letter or underscore followed by any number of letters,
     underscores, or digits.
 
-    A COMMAND\_{}IDENTIFIER is one or more words which identify a
+    A COMMAND$_{\mathrm{IDENTIFIER}}$ is one or more words which identify a
     COMMAND. In many cases a command is identified by only one word,
     but sometimes similar commands are grouped by sharing the first
     word in their identifier.
@@ -154,7 +154,7 @@
       \emph{Usage}: \texttt{dwarfscript emit [SECTION] ELF OUTFILE}\\
       \emph{Params}: SECTION must be the name (string) of the section to write as
                 Dwarfscript. If not specified it defaults to
-                ``.eh\_{}frame''. ELF must be an ELF object. OUTFILE must
+                ``.eh$_{\mathrm{frame}}$''. ELF must be an ELF object. OUTFILE must
                 be a string with the name of a file to write the resulting
                 Dwarfscript to.\\
       \emph{Function}: Writes the Dwarfscript representation of the given
@@ -168,46 +168,70 @@
       \emph{Function}: Interprets the contents of the file named by INFILE
                   as Dwarfscript and compiles the Dwarfscript into
                   beinary form. Returns an array with 3 items
-                  0: raw data for .eh\_{}frame 
-                  1: raw data for .eh\_{}frame\_{}hdr
-                  2: raw data for .gcc\_{}except\_{}table.
+                  0: raw data for .eh$_{\mathrm{frame}}$ 
+                  1: raw data for .eh$_{\mathrm{frame}}$$_{\mathrm{hdr}}$
+                  2: raw data for .gcc$_{\mathrm{except}}$$_{\mathrm{table}}$.
 \end{itemize} % ends low level
 
-\item replace\\
+\item extract\\
 \label{sec-2.1.2.4}
 
 \begin{itemize}
 
-\item replace section\\
+\item extract section\\
 \label{sec-2.1.2.4.1}
 
-      \emph{Usage}: \texttt{replace section ELF SECTION\_NAME NEW\_SECTION}
-      \emph{Params}: ELF must be an ELF object. SECTION\_{}NAME must be a
-                string. NEW\_{}SECTION must be either an ELF section or raw data.
-      \emph{Function}: Replaces the section with the name SECTION\_{}NAME in
-                  the oject ELF with the data from
-                  NEW\_{}SECTION. Section headers are replaced if NEW\_{}SECTION is
-                  able to provide them, but not if it is only raw data.
-                   
+      \emph{Usage}: \texttt{extract section ELF SECTION\_NAME}
+      \emph{Params}: ELF must be an ELF object. SECTION$_{\mathrm{NAME}}$ must be a
+                string. 
+      \emph{Function}: Returns the data and header information for the
+                  specified section
 
-\item replace raw\\
+\item extract section$_{\mathrm{data}}$\\
 \label{sec-2.1.2.4.2}
 
-      \emph{Usage}: \texttt{replace raw ELF OFFSET NEW\_DATA}
-      \emph{Params}: ELF must be an ELF object. ADDRESS must be an
-                integer. NEW\_{}DATA must be raw data.
-      \emph{Function}: Replaces the raw data at OFFSET in the ELF object
-                  with NEW\_{}DATA. OFFSET must refer to a location in an
-                  existing section.
+      \emph{Usage}: \texttt{extract section ELF SECTION\_NAME}
+      \emph{Params}: ELF must be an ELF object. SECTION$_{\mathrm{NAME}}$ must be a
+                string. 
+      \emph{Function}: Like extract section except extracts only the raw
+                 data stored in the section and not any header information.
 \end{itemize} % ends low level
 
-\item info\\
+\item replace\\
 \label{sec-2.1.2.5}
 
 \begin{itemize}
 
-\item info eh\\
+\item replace section\\
 \label{sec-2.1.2.5.1}
+
+      \emph{Usage}: \texttt{replace section ELF SECTION\_NAME NEW\_SECTION}
+      \emph{Params}: ELF must be an ELF object. SECTION$_{\mathrm{NAME}}$ must be a
+      string. NEW$_{\mathrm{SECTION}}$ must be either an ELF section or raw data.
+      \emph{Function}: Replaces the section with the name SECTION$_{\mathrm{NAME}}$ in
+      the oject ELF with the data from NEW$_{\mathrm{SECTION}}$. Section headers
+      are replaced if NEW$_{\mathrm{SECTION}}$ is able to provide them, but not if
+      it is only raw data.
+                   
+
+\item replace raw\\
+\label{sec-2.1.2.5.2}
+
+      \emph{Usage}: \texttt{replace raw ELF OFFSET NEW\_DATA}
+      \emph{Params}: ELF must be an ELF object. ADDRESS must be an
+                integer. NEW$_{\mathrm{DATA}}$ must be raw data.
+      \emph{Function}: Replaces the raw data at OFFSET in the ELF object
+                  with NEW$_{\mathrm{DATA}}$. OFFSET must refer to a location in an
+                  existing section.
+\end{itemize} % ends low level
+
+\item info\\
+\label{sec-2.1.2.6}
+
+\begin{itemize}
+
+\item info eh\\
+\label{sec-2.1.2.6.1}
 
       \emph{Usage}: \texttt{info eh ELF [OUTFILE]}
       \emph{Params}: ELF must be an ELF object. OUTFILE, if present, must
@@ -219,27 +243,27 @@
 \end{itemize} % ends low level
 
 \item hash\\
-\label{sec-2.1.2.6}
+\label{sec-2.1.2.7}
 
 \begin{itemize}
 
 \item hash elf\\
-\label{sec-2.1.2.6.1}
+\label{sec-2.1.2.7.1}
 
       \emph{Usage}: \texttt{hash elf STR}
       \emph{Params}: STR must be a string.
-      \emph{Function}: Prints the result of running elf\_{}hash (from libelf)
+      \emph{Function}: Prints the result of running elf$_{\mathrm{hash}}$ (from libelf)
                   on the string.
                   
 \end{itemize} % ends low level
 
 \item patch\\
-\label{sec-2.1.2.7}
+\label{sec-2.1.2.8}
 
 \begin{itemize}
 
 \item gen\\
-\label{sec-2.1.2.7.1}
+\label{sec-2.1.2.8.1}
 
       \emph{Usage}: \texttt{patch gen OLD\_OBJECTS\_DIR NEW\_OBJECTS\_DIR EXECUTABLE}
       \emph{Params}: All three params are strings. The first two are the
@@ -249,7 +273,7 @@
       \emph{Function}: Generates (and returns) a patch object ELF.
 
 \item apply\\
-\label{sec-2.1.2.7.2}
+\label{sec-2.1.2.8.2}
 
       \emph{Usage}: \texttt{patch apply PO PID}
       \emph{Params}: The PO parameter should be an ELF patch object. PID
@@ -260,7 +284,7 @@
 \end{itemize} % ends low level
 
 \item ! (shell command)\\
-\label{sec-2.1.2.8}
+\label{sec-2.1.2.9}
 
      The rest of the line following by ! is executed in a shell.
 \end{itemize} % ends low level
@@ -523,11 +547,11 @@
      Contains new/modified functions
 \item .rodata.new, .data.new
      new data
-\item .unsafe\_{}functions
+\item .unsafe$_{\mathrm{functions}}$
      Contains a simple listing (of symbol indices) of the functions in
      the binary to be patched which should not have activation records
      on the stack when patching is taking place.
-\item .debug\_{}info
+\item .debug$_{\mathrm{info}}$
      Contains listings of the variables and functions which need to be
      patched using the DWARF data format. This section is standard and
      is used here with validly formatted data, but is used for
@@ -536,8 +560,8 @@
      readelf, objdump, dwarfdump capable of listing DWARF
      information. It can be, however, confusing and the name will
      likely change in the future.
-\item .debug\_{}frame
-     Like .debug\_{}info a standard section used in a nonstandard way,
+\item .debug$_{\mathrm{frame}}$
+     Like .debug$_{\mathrm{info}}$ a standard section used in a nonstandard way,
      see notes above about the naming. Contains an extended version of
      DWARF Call Frame Information which describes how various data
      structures are to be patched. The details are not properly
