@@ -155,6 +155,16 @@ addr_t readAttributeAsAddr(Dwarf_Attribute attr,Dwarf_Debug dbg,addr_t startAddr
       dwarf_dealloc(dbg,block,DW_DLA_BLOCK);
     }
     break;
+  case DW_FORM_sdata:
+    {
+      //todo: does this even make sense for it to be signed? Is it
+      //offset from something? What's going on here? Adding this code
+      //experimentally because was encountering this in the wild.
+      Dwarf_Signed addr;
+      dwarf_formsdata(attr,&addr,&err);
+      result=addr;
+    }
+    break;
   default:
     fprintf(stderr,"readAttributeAsAddr cannot handle form type 0x%x yet\n",form);
     death(NULL);
