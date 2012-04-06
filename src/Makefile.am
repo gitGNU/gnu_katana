@@ -12,7 +12,7 @@ katana_CPPFLAGS=$(INCLUDEFLAGS) -g -Wall  $(DEFINEFLAGS)
 
 
 katana_LDFLAGS=-L /usr/local/lib -L ../external/
-katana_LDADD= -ldwarf -lelf -lm -lunwind-generic -lunwind-ptrace -lreadline
+katana_LDADD= -ldwarf -lelf -lm -lunwind  -lunwind-ptrace -lunwind-x86_64 -lreadline
 
 PATCHER_SRC=patcher/hotpatch.c patcher/target.c patcher/patchapply.c patcher/versioning.c patcher/linkmap.c patcher/safety.c patcher/pmap.c
 PATCHER_H=patcher/hotpatch.h patcher/target.h patcher/patchapply.h patcher/versioning.h patcher/linkmap.h patcher/safety.h patcher/pmap.h
