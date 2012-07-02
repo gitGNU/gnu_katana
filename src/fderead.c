@@ -334,6 +334,7 @@ RegInstruction* parseFDEInstructions(Dwarf_Debug dbg,unsigned char* bytes,
     int high = byte & 0xc0;
     int low = byte & 0x3f;
     short unsigned int uleblen;
+    uint exprBytesLen;
     result[*numInstrs].arg1Reg.type=ERT_NONE;//not using reg unless we set its type
     result[*numInstrs].arg2Reg.type=ERT_NONE;//not using reg unless we set its type
     switch(high)
@@ -457,7 +458,15 @@ RegInstruction* parseFDEInstructions(Dwarf_Debug dbg,unsigned char* bytes,
         result[*numInstrs].arg1Reg=readRegFromLEB128(bytes + 1,&uleblen);
         bytes+=uleblen;
         len-=uleblen;
-        uint exprBytesLen=leb128ToUInt(bytes + 1, &uleblen);
+        exprBytesLen=leb128ToUInt(bytes + 1, &uleblen);
+        bytes+=uleblen;
+        len-=uleblen;
+        result[*numInstrs].expr=parseDwarfExpression(bytes+1,exprBytesLen);
+        bytes+=exprBytesLen;
+        len-=exprBytesLen;
+        break;
+      case DW_CFA_def_cfa_expression:
+        exprBytesLen=leb128ToUInt(bytes + 1, &uleblen);
         bytes+=uleblen;
         len-=uleblen;
         result[*numInstrs].expr=parseDwarfExpression(bytes+1,exprBytesLen);

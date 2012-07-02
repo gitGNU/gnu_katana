@@ -351,6 +351,10 @@ void printInstruction(FILE* file,RegInstruction inst,int printFlags)
     fprintf(file,"\n");
     printExpr(file,"\t\t",inst.expr,printFlags);
     break;
+  case DW_CFA_def_cfa_expression:
+    fprintf(file,"DW_CFA_def_cfa_expression ");
+    printExpr(file,"\t\t",inst.expr,printFlags);
+    break;
   case DW_CFA_val_expression:
     fprintf(file,"DW_CFA_val_expression ");
     printReg(file,inst.arg1Reg,printFlags);
