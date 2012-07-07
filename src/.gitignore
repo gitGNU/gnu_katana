@@ -1,5 +1,9 @@
 /#*#
 /.deps
+/GPATH
+/GRTAGS
+/GTAGS
+/ID
 /Makefile
 /pullAll.sh
 /pushAll.sh
