@@ -214,6 +214,9 @@ int evaluateInstructionsToRules(CIE* cie,RegInstruction* instrs,int numInstrs,Di
         return loc;
       }
       break;
+    case DW_CFA_undefined:
+      rule->type=ERRT_UNDEF;
+      break;
     case DW_CFA_offset:
       rule->type=ERRT_OFFSET;
       rule->offset=inst.arg2*cie->dataAlign;
@@ -268,7 +271,7 @@ int evaluateInstructionsToRules(CIE* cie,RegInstruction* instrs,int numInstrs,Di
       //do nothing, nothing changed
       break;
     default:
-      death("unexpected instruction in dwarfvm evaluateInstructions");
+      death("unexpected instruction 0x%x in dwarfvm evaluateInstructions",inst.type);
     }
   }
   return loc;

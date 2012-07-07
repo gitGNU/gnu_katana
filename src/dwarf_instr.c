@@ -82,9 +82,8 @@ void addInstruction(DwarfInstructions* instrs,DwarfInstruction* instr)
   switch(instr->opcode)
   {
   case DW_CFA_nop:
-  case DW_CFA_undefined://treat as a nop
-  case DW_CFA_same_value://treat as a nop
-    b=DW_CFA_nop;
+  case DW_CFA_same_value:
+    b=instr->opcode;
     addBytes(instrs,&b,1);
     break;
   case DW_CFA_offset:
@@ -100,6 +99,7 @@ void addInstruction(DwarfInstructions* instrs,DwarfInstruction* instr)
   case DW_CFA_def_cfa_offset:
   case DW_CFA_def_cfa_offset_sf:
   case DW_CFA_def_cfa_expression:
+  case DW_CFA_undefined:
     bytes=zmalloc(1+instr->arg1NumBytes);
     bytes[0]=instr->opcode;
     memcpy(bytes+1,instr->arg1Bytes,instr->arg1NumBytes);
@@ -237,6 +237,9 @@ void printInstruction(FILE* file,RegInstruction inst,int printFlags)
     break;
   case DW_CFA_advance_loc4:
     fprintf(file,"DW_CFA_advance_loc4 %zi\n",inst.arg1);
+    break;
+  case DW_CFA_undefined:
+    fprintf(file, "DW_CFA_undefined r%zi\n", inst.arg1);
     break;
   case DW_CFA_offset:
     {

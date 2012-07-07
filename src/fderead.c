@@ -389,11 +389,11 @@ RegInstruction* parseFDEInstructions(Dwarf_Debug dbg,unsigned char* bytes,
           len -= 4;
         }
         break;
+      case DW_CFA_undefined:
       case DW_CFA_same_value:
-        result[*numInstrs].type=high;
-        result[*numInstrs].arg1=low;
-        result[*numInstrs].arg1Reg.type=ERT_BASIC;
-        result[*numInstrs].arg1Reg.u.index=low;
+        result[*numInstrs].arg1Reg=readRegFromLEB128(bytes + 1,&uleblen);
+        bytes+=uleblen;
+        len-=uleblen;
         break;
       case DW_CFA_register:
         result[*numInstrs].arg1Reg=readRegFromLEB128(bytes + 1,&uleblen);
