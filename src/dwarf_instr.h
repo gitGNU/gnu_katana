@@ -58,7 +58,7 @@
 
 #include <stdbool.h>
 #include "util/util.h"
-#include <libdwarf.h>
+#include "libdwarf_inc.h"
 #include <dwarf.h>
 #include "register.h"
 

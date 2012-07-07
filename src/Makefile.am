@@ -3,7 +3,7 @@
 SUBDIRS=shell
 bin_PROGRAMS=katana
 
-INCLUDEFLAGS=-I ../include -I /usr/local/include/libdwarf -I /usr/include/libdwarf
+INCLUDEFLAGS=-I ../include
 DEFINEFLAGS=-D_POSIX_SOURCE -D_BSD_SOURCE -D_XOPEN_SOURCE -D_GNU_SOURCE -DDEBUG -Doff64_t=__off64_t 
 
 katana_CFLAGS=$(INCLUDEFLAGS) -g -Wall -std=c99 $(DEFINEFLAGS)

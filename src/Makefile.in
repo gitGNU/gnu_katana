@@ -160,6 +160,7 @@ AWK = @AWK@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
+CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
 CXX = @CXX@
 CXXDEPMODE = @CXXDEPMODE@
@@ -170,7 +171,9 @@ DEPDIR = @DEPDIR@
 ECHO_C = @ECHO_C@
 ECHO_N = @ECHO_N@
 ECHO_T = @ECHO_T@
+EGREP = @EGREP@
 EXEEXT = @EXEEXT@
+GREP = @GREP@
 HAVE_BISON = @HAVE_BISON@
 HAVE_FLEX = @HAVE_FLEX@
 HAVE_PYTHON = @HAVE_PYTHON@
@@ -257,7 +260,7 @@ top_srcdir = @top_srcdir@
 #File: Makefile.am
 #Author: James Oakley
 SUBDIRS = shell
-INCLUDEFLAGS = -I ../include -I /usr/local/include/libdwarf -I /usr/include/libdwarf
+INCLUDEFLAGS = -I ../include
 DEFINEFLAGS = -D_POSIX_SOURCE -D_BSD_SOURCE -D_XOPEN_SOURCE -D_GNU_SOURCE -DDEBUG -Doff64_t=__off64_t 
 katana_CFLAGS = $(INCLUDEFLAGS) -g -Wall -std=c99 $(DEFINEFLAGS)
 katana_CPPFLAGS = $(INCLUDEFLAGS) -g -Wall  $(DEFINEFLAGS)

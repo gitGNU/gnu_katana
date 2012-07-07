@@ -7,6 +7,19 @@ AC_DEFUN([doMissingLibrary],[
   AC_MSG_ERROR([A required library is missing, abort])
 ])
 
+AC_DEFUN([doMissingHeader],[
+  AC_MSG_ERROR([A required header is missing, abort])
+])
+
+AC_DEFUN([libdwarfPrefixHeader],[
+  AC_DEFINE([LIBDWARF_HEADER_NEEDS_PREFIX], ["1"], ["Use libdwarf/libdwarf.h instead of libdwarf.h"])
+])
+
+AC_DEFUN([libdwarfCheckHeaderNoPrefix],[
+  AC_CHECK_HEADER(libdwarf.h, ,[doMissingHeader])
+])
+
+
 
 #we don't really want to do anything on successfully finding a library
 #but autoconf is very strange and seems to automatically add the library to libs
@@ -36,6 +49,9 @@ AC_CONFIG_FILES([Makefile  src/Makefile tests/Makefile tests/code/Makefile tests
 
 #set up variables for use in Makefile.am
 AC_CHECK_LIB(elf,elf_begin,[fndlibPlaceholder],[doMissingLibrary])
+AC_CHECK_HEADER(dwarf.h, ,[doMissingHeader])
+AC_CHECK_HEADER(libdwarf/libdwarf.h, [libdwarfPrefixHeader],[libdwarfCheckHeaderNoPrefix])
+AC_CHECK_HEADER(libunwind.h, ,[doMissingHeader])
 #todo: should check for libdwarf but I was having issues finding the correct symbol to do so
 #AC_CHECK_LIB(dwarf,dwarf_dealloc,[fndlibPlaceholder],[doMissingLibrary])
 #todo: should include check for libunwind-generic, but it seems to compile
