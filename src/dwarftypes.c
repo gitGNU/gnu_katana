@@ -162,9 +162,30 @@ addr_t readAttributeAsAddr(Dwarf_Attribute attr,Dwarf_Debug dbg,addr_t startAddr
       //experimentally because was encountering this in the wild.
       Dwarf_Signed addr;
       dwarf_formsdata(attr,&addr,&err);
+      //todo: should be be offsetting startAddress by this amount
       result=addr;
     }
     break;
+  case DW_FORM_data1:
+  case DW_FORM_data2:
+  case DW_FORM_data4:
+  case DW_FORM_data8:
+    {
+      //todo: do we expect this to be signed or unsigned
+      Dwarf_Unsigned value;
+      dwarf_formudata(attr, &value, &err);
+      Dwarf_Half attrID;
+      dwarf_whatattr(attr,&attrID,&err);
+      if(DW_AT_data_member_location==attrID)
+      {
+        //todo: is this right?
+        result = startAddress + value;
+      }
+      else
+      {
+        result = value;
+      }
+    }
   default:
     fprintf(stderr,"readAttributeAsAddr cannot handle form type 0x%x yet\n",form);
     death(NULL);
