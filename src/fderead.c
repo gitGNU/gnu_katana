@@ -309,7 +309,6 @@ DwarfExpr parseDwarfExpression(byte* data,uint len)
     default:
       death("Unsupported DW_OP with code 0x%x\n",instr->type);
     }
-    printExprInstruction(stdout,"adding instruction ",*instr,0);
   }
 
   result.instructions=realloc(result.instructions,sizeof(DwarfExprInstr)*result.numInstructions);
