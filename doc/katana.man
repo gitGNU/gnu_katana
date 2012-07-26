@@ -9,7 +9,7 @@ general-purpose ELF and DWARF manipulation shell.
 .\ disable filling
 .nf
 Run the Katana shell interactively:
-n\fBkatana\fP
+\fBkatana\fP
 
 Run a Katana shell script:
 \fBkatana\fP SCRIPT_FILENAME

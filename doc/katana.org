@@ -10,7 +10,7 @@
 #+OPTIONS _:nil
 #+LATEX_HEADER:  \usepackage{graphicx}
 
-       Katana: An ELF/DWARF Manipulation Tool with Hotpatching Capabilities
+       Katana User Guide
 
 * Introduction
   Katana is a research system for ELF/DWARF manipulation. It was
