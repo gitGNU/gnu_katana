@@ -18,6 +18,7 @@ release : dist
 	gpg -b $(DIST_ARCHIVES)
 	git tag $(PACKAGE_VERSION)
 	scp $(DIST_ARCHIVES) $(SIGFILES) electron@dl.sv.nongnu.org:/releases/katana/
+	scp $(DIST_ARCHIVES) $SIGFILES) electron100@frs.sourceforge.net:/home/frs/project/katana-patcher/
 #TODO: if anyone else ever gains admin rights on the project the
 #name above will not always be electron
 
