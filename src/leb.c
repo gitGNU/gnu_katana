@@ -214,8 +214,7 @@ byte* encodeAsLEB128NoOptimization(byte* bytes,int numBytes,bool signed_,usint* 
   return result;
 }
 
-//the retunred memory should be freed
-//this is a new version of the function. The old crappier version is below
+//the returned memory should be freed
 byte* decodeLEB128(byte* bytes,bool signed_,usint* numBytesOut,usint* numSeptetsRead)
 {
   //do a first pass to determine the number of septets

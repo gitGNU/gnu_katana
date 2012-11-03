@@ -441,6 +441,11 @@ int getSymtabIdx(ElfInfo* e,char* symbolName,int flags)
 //todo: this is slow. Could do smth much faster with interval tress or something
 idx_t findSymbolContainingAddress(ElfInfo* e,addr_t addr,byte type,idx_t scnIdx)
 {
+  if(!hasERS(e, ERS_SYMTAB))
+  {
+    //we don't have a .symtab, can't guess a function
+    return STN_UNDEF;
+  }
   Elf_Data* symTabData=getDataByERS(e,ERS_SYMTAB);
   for (int i = 1; i < e->symTabCount; ++i)
   {

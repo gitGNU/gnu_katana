@@ -108,9 +108,7 @@ void addInstruction(DwarfInstructions* instrs,DwarfInstruction* instr)
     //we can take care of all instructions taking either two operands both of which
     //are either LEB128 or DW_FORM_block
   case DW_CFA_offset_extended:
-#ifdef DW_CFA_offset_extended_sf //only available in Dwarf3
   case DW_CFA_offset_extended_sf:
-#endif
   case DW_CFA_val_offset:
   case DW_CFA_val_offset_sf:
   case DW_CFA_register:
@@ -209,8 +207,8 @@ void addInstruction(DwarfInstructions* instrs,DwarfInstruction* instr)
     break;
   default:
     {
-      char buf[32];
-      snprintf(buf,32,"Dwarf instruction with opcode %i not supported\n",instr->opcode);
+      char buf[64];
+      snprintf(buf,64,"Dwarf instruction with opcode %i not supported\n",instr->opcode);
       death(buf);
     }
     break;
@@ -245,7 +243,21 @@ void printInstruction(FILE* file,RegInstruction inst,int printFlags)
     {
       word_t tmp;
       memcpy(&tmp,&inst.arg2,sizeof(inst.arg2));
-      fprintf(file,"DW_CFA_offset r%zi %zi\n",inst.arg1,tmp);
+      fprintf(file,"DW_CFA_offset r%zi %zu\n",inst.arg1,tmp);
+    }
+    break;
+  case DW_CFA_offset_extended:
+    {
+      fprintf(file, "DW_CFA_offset_extended ");
+      printReg(file, inst.arg1Reg, printFlags);
+      fprintf(file, " %zu\n", inst.arg2);
+    }
+    break;
+  case DW_CFA_offset_extended_sf:
+    {
+      fprintf(file, "DW_CFA_offset_extended_sf ");
+      printReg(file, inst.arg1Reg, printFlags);
+      fprintf(file, " %zi\n", (sword_t)inst.arg2);
     }
     break;
   case DW_CFA_restore:
@@ -417,6 +429,10 @@ DwarfInstruction regInstructionToRawDwarfInstruction(RegInstruction* inst)
   case DW_CFA_def_cfa:
     result.arg1Bytes=encodeRegAsLEB128(inst->arg1Reg,false,&result.arg1NumBytes);
     result.arg2Bytes=encodeAsLEB128((byte*)&inst->arg2,sizeof(inst->arg2),false,&result.arg2NumBytes);
+    break;
+  case DW_CFA_offset_extended_sf:
+    result.arg1Bytes=encodeRegAsLEB128(inst->arg1Reg,false,&result.arg1NumBytes);
+    result.arg2Bytes=encodeAsLEB128((byte*)&inst->arg2,sizeof(inst->arg2),true,&result.arg2NumBytes);
     break;
   case DW_CFA_def_cfa_register:
   case DW_CFA_restore_extended:

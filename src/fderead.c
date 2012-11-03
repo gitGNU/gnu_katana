@@ -388,6 +388,18 @@ RegInstruction* parseFDEInstructions(Dwarf_Debug dbg,unsigned char* bytes,
           len -= 4;
         }
         break;
+      case DW_CFA_offset_extended:
+        result[*numInstrs].arg1Reg=readRegFromLEB128(bytes + 1, &uleblen);
+        bytes+=uleblen;
+        len-=uleblen;
+        result[*numInstrs].arg2=leb128ToUWord(bytes + 1, &uleblen);
+        break;
+      case DW_CFA_offset_extended_sf:
+        result[*numInstrs].arg1Reg=readRegFromLEB128(bytes + 1, &uleblen);
+        bytes+=uleblen;
+        len-=uleblen;
+        result[*numInstrs].arg2=leb128ToSWord(bytes + 1, &uleblen);
+        break;
       case DW_CFA_undefined:
       case DW_CFA_same_value:
         result[*numInstrs].arg1Reg=readRegFromLEB128(bytes + 1,&uleblen);
