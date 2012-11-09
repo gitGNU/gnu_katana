@@ -176,6 +176,7 @@ IDENTIFIER [a-zA-Z_][a-zA-Z_0-9]*
 "DW_CFA_val_offset"         return T_DW_CFA_val_offset;
 "DW_CFA_val_offset_sf"      return T_DW_CFA_val_offset_sf;
 "DW_CFA_val_expression"     return T_DW_CFA_val_expression;
+"DW_CFA_GNU_args_size"     return T_DW_CFA_GNU_args_size;
 
  /*dwarf expression stuff*/
 "EXPRESSION" return T_DWARF_EXPR;

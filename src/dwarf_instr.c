@@ -99,6 +99,7 @@ void addInstruction(DwarfInstructions* instrs,DwarfInstruction* instr)
   case DW_CFA_def_cfa_offset:
   case DW_CFA_def_cfa_offset_sf:
   case DW_CFA_def_cfa_expression:
+  case DW_CFA_GNU_args_size:
   case DW_CFA_undefined:
     bytes=zmalloc(1+instr->arg1NumBytes);
     bytes[0]=instr->opcode;
@@ -349,6 +350,9 @@ void printInstruction(FILE* file,RegInstruction inst,int printFlags)
     }
     break;
   case DW_CFA_def_cfa_offset:
+    fprintf(file,"DW_CFA_def_cfa_offset %zu\n",inst.arg1);
+    break;
+  case DW_CFA_def_cfa_offset_sf:
     fprintf(file,"DW_CFA_def_cfa_offset %zi\n",inst.arg1);
     break;
   case DW_CFA_remember_state:
@@ -375,6 +379,9 @@ void printInstruction(FILE* file,RegInstruction inst,int printFlags)
     printReg(file,inst.arg1Reg,printFlags);
     fprintf(file,"\n");
     printExpr(file,"\t\t",inst.expr,printFlags);
+    break;
+  case DW_CFA_GNU_args_size:
+    fprintf(file,"DW_CFA_GNU_args_size %zi\n",inst.arg1);
     break;
   default:
     death("unsupported DWARF instruction 0x%x in printInstruction",inst.type);
@@ -441,7 +448,11 @@ DwarfInstruction regInstructionToRawDwarfInstruction(RegInstruction* inst)
     result.arg1Bytes=encodeRegAsLEB128(inst->arg1Reg,false,&result.arg1NumBytes);
     break;
   case DW_CFA_def_cfa_offset:
+  case DW_CFA_GNU_args_size:
     result.arg1Bytes=encodeAsLEB128((byte*)&inst->arg1,sizeof(inst->arg1),false,&result.arg1NumBytes);
+    break;
+  case DW_CFA_def_cfa_offset_sf:
+    result.arg1Bytes=encodeAsLEB128((byte*)&inst->arg1,sizeof(inst->arg1),true,&result.arg1NumBytes);
     break;
   case DW_CFA_restore:
     result.arg1=inst->arg1;

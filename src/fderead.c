@@ -456,7 +456,13 @@ RegInstruction* parseFDEInstructions(Dwarf_Debug dbg,unsigned char* bytes,
         len-=uleblen;
         break;
       case DW_CFA_def_cfa_offset:
+      case DW_CFA_GNU_args_size:
         result[*numInstrs].arg1=leb128ToUInt(bytes + 1, &uleblen);
+        bytes+=uleblen;
+        len-=uleblen;
+        break;
+      case DW_CFA_def_cfa_offset_sf:
+        result[*numInstrs].arg1=leb128ToInt(bytes + 1, &uleblen);
         bytes+=uleblen;
         len-=uleblen;
         break;

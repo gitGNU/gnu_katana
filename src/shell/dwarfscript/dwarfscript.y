@@ -79,7 +79,7 @@ void flowControlLabelReference(ParseNode* node);
 %token T_DW_CFA_def_cfa_register T_DW_CFA_def_cfa_offset
 %token T_DW_CFA_def_cfa_expression T_DW_CFA_expression T_DW_CFA_offset_extended_sf
 %token T_DW_CFA_def_cfa_sf  T_DW_CFA_def_cfa_offset_sf T_DW_CFA_val_offset
-%token T_DW_CFA_val_offset_sf T_DW_CFA_val_expression
+%token T_DW_CFA_val_offset_sf T_DW_CFA_val_expression T_DW_CFA_GNU_args_size
 // DWARF expression instructions
 %token T_DWARF_EXPR
 %token T_DW_OP_addr T_DW_OP_deref T_DW_OP_const1u T_DW_OP_const1s T_DW_OP_const2u
@@ -731,6 +731,7 @@ instruction_stmt : dw_cfa_set_loc {$$=$1;}
 |dw_cfa_val_offset {$$=$1;}
 |dw_cfa_val_offset_sf {$$=$1;}
 |dw_cfa_val_expression {$$=$1;}
+|dw_cfa_gnu_args_size {$$=$1;}
 
 
 dw_cfa_set_loc : T_DW_CFA_set_loc nonneg_int_lit
@@ -914,6 +915,12 @@ dw_cfa_val_expression : T_DW_CFA_val_expression register_lit expression_section
   $$.u.regInstr.expr=$3.u.expr;
 }
 
+dw_cfa_gnu_args_size : T_DW_CFA_GNU_args_size nonneg_int_lit
+{
+  $$.u.regInstr.type=DW_CFA_GNU_args_size;
+  $$.u.regInstr.arg1=$2.u.intval;
+}
+
 
 //DWARF expression instructions
 
@@ -1085,15 +1092,15 @@ dw_op_consts : T_DW_OP_consts int_lit
 
 dw_op_dup : T_DW_OP_dup
 {
-  $$.u.opInstr.type=DW_OP_dup
+  $$.u.opInstr.type=DW_OP_dup;
 }
 dw_op_drop : T_DW_OP_drop
 {
-$$.u.opInstr.type=DW_OP_drop
+  $$.u.opInstr.type=DW_OP_drop;
 }
 dw_op_over : T_DW_OP_over
 {
-$$.u.opInstr.type=DW_OP_over
+  $$.u.opInstr.type=DW_OP_over;
 }
 dw_op_pick : T_DW_OP_pick nonneg_int_lit
 {
@@ -1102,15 +1109,15 @@ dw_op_pick : T_DW_OP_pick nonneg_int_lit
 }
 dw_op_swap : T_DW_OP_swap
 {
-$$.u.opInstr.type=DW_OP_swap
+  $$.u.opInstr.type=DW_OP_swap;
 }
 dw_op_rot : T_DW_OP_rot
 {
-$$.u.opInstr.type=DW_OP_rot
+  $$.u.opInstr.type=DW_OP_rot;
 }
 dw_op_xderef : T_DW_OP_xderef
 {
-$$.u.opInstr.type=DW_OP_xderef
+  $$.u.opInstr.type=DW_OP_xderef;
 }
 dw_op_abs : T_DW_OP_abs
 {
@@ -1260,7 +1267,7 @@ dw_op_bregx : T_DW_OP_bregx nonneg_int_lit int_lit
 }
 dw_op_piece : T_DW_OP_piece
 {
-  $$.u.opInstr.type=DW_OP_piece
+  $$.u.opInstr.type=DW_OP_piece;
   
 }
 dw_op_deref_size : T_DW_OP_deref_size nonneg_int_lit
@@ -1281,11 +1288,11 @@ dw_op_xderef_size : T_DW_OP_xderef_size nonneg_int_lit
 }
 dw_op_nop : T_DW_OP_nop
 {
-$$.u.opInstr.type=DW_OP_nop
+  $$.u.opInstr.type=DW_OP_nop;
 }
 dw_op_push_object_address : T_DW_OP_push_object_address
 {
-$$.u.opInstr.type=DW_OP_push_object_address
+  $$.u.opInstr.type=DW_OP_push_object_address;
 }
 dw_op_call2 : T_DW_OP_call2
 {
@@ -1304,23 +1311,23 @@ dw_op_call_ref : T_DW_OP_call_ref
 }
 dw_op_form_tls_address : T_DW_OP_form_tls_address
 {
-$$.u.opInstr.type=DW_OP_form_tls_address
+  $$.u.opInstr.type=DW_OP_form_tls_address;
 }
 dw_op_call_frame_cfa : T_DW_OP_call_frame_cfa
 {
-$$.u.opInstr.type=DW_OP_call_frame_cfa
+  $$.u.opInstr.type=DW_OP_call_frame_cfa;
 }
 dw_op_bit_piece : T_DW_OP_bit_piece
 {
-$$.u.opInstr.type=DW_OP_bit_piece
+  $$.u.opInstr.type=DW_OP_bit_piece;
 }
 dw_op_implicit_value : T_DW_OP_implicit_value
 {
-$$.u.opInstr.type=DW_OP_implicit_value
+  $$.u.opInstr.type=DW_OP_implicit_value;
 }
 dw_op_stack_value : T_DW_OP_stack_value
 {
-$$.u.opInstr.type=DW_OP_stack_value
+  $$.u.opInstr.type=DW_OP_stack_value;
 }
 
 %%
