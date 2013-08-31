@@ -10,16 +10,16 @@
   :type 'integer
   :group 'dws)
 
-(defvar dws-keywords
+(defconst dws-keywords
   '("begin" "end" "false")
   "Dwarfscript Keywords")
 
-(defvar dws-types
+(defconst dws-types
   '("CIE" "cie" "FDE" "fde" "EXPRESSION" "expression" "INSTRUCTIONS" 
     "instructions" "LSDA" "lsda" "CALL_SITE" "call_site" "ACTION" "action")
   "Dwarfscript Types")
 
-(defvar dws-builtins
+(defconst dws-builtins
   '("DW_EH_PE_sdata4" "DW_EH_PE_udata4" "DW_EH_PE_sdata4" "DW_EH_PE_udata4" 
     "DW_EH_PE_sdata8" "DW_EH_PE_udata8" "DW_EH_PE_pcrel" "DW_EH_PE_textrel"
     "DW_EH_PE_datarel" "DW_EH_PE_funcrel" "DW_EH_PE_aligned" "DW_EH_PE_omit"
@@ -27,7 +27,7 @@
   "Dwarfscript Symbolic Constants")
 
 ;;these are property names
-(defvar dws-variables
+(defconst dws-variables
   '("section_type" "eh_hdr_addr" "section_addr" "except_table_addr" "index"
     "version" "data_align" "code_align" "return_addr_rule" "fde_ptr_enc" 
     "fde_lsda_ptr_enc" "personality_ptr_enc" "personality" "cie_index" 
@@ -40,7 +40,6 @@
 
 
 (defconst dws-font-lock-keywords
-  (eval-when-compile
     (list
      (cons (regexp-opt dws-keywords 'words) 'font-lock-keyword-face)
      (cons (regexp-opt dws-types 'words) 'font-lock-type-face)
@@ -48,12 +47,8 @@
      (cons (regexp-opt dws-variables 'words) 'font-lock-variable-name-face)
      ;;symbolic constants
      (cons (regexp-opt dws-builtins 'words) 'font-lock-builtin-face)
-     ; DWARF instruction names
-     (cons "\\(?:DW_CFA\\|DW_OP\\)_[a-zA-Z0-9_]*" 'font-lock-function-name-face)
-     ;identifiers. Not preprocessor, but it's a handy predefined face
-     ;todo: use something that makes more sense. Do I even need to highlight these?
-     ;(cons "[ \t]*[a-zA-Z_][a-zA-Z_0-9]*:" 'font-lock-preprocessor-face)
-     )))
+                                        ; DWARF instruction names
+     (cons "\\(?:DW_CFA\\|DW_OP\\)_[a-zA-Z0-9_]*" 'font-lock-function-name-face)))
 
 (define-derived-mode dws-mode fundamental-mode "DWS"
   "Major mode for editing Katana dwarfscript files"

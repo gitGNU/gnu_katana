@@ -1,6 +1,7 @@
 #File: Makefile.am
 #Author: James Oakley
 SUBDIRS=shell
+AUTOMAKE_OPTIONS = subdir-objects
 bin_PROGRAMS=katana
 
 INCLUDEFLAGS=-I ../include
