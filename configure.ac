@@ -34,7 +34,7 @@ AC_INIT([katana],[0.3.0b],[electron100@gmail.com])
 
 
 AC_CANONICAL_TARGET
-AM_INIT_AUTOMAKE([color-tests -Wall -Werror foreign])
+AM_INIT_AUTOMAKE([color-tests -Wall foreign])
 SAVED_CFLAGS="$CFLAGS"
 SAVED_CPPFLAGS="$CPPFLAGS"
 SAVED_CXXFLAGS="$CXXFLAGS"

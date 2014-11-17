@@ -44,3 +44,5 @@ test.po
 testdump
 time
 typepatch
+.dirstamp
+.deps

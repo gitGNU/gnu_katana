@@ -1,4 +1,5 @@
 /#*#
+/.deps
 /Makefile
 /dwarfscript.output
 /dwarfscript.tab.c
