@@ -75,7 +75,7 @@
 #include <unistd.h>
 #include "pmap.h"
 #include "patchapply.h"
-#include "config.h"
+#include "katana_config.h"
 
 ElfInfo* patchedBin=NULL;
 ElfInfo* targetBin=NULL;

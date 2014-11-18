@@ -1,17 +1,17 @@
 %{
 #define BISON_Y_FILE  
 #include <cstdlib>
-#include "commands/loadCommand.h"
-#include "commands/saveCommand.h"
-#include "commands/replaceCommand.h"
-#include "commands/extractCommand.h"
-#include "commands/shellCommand.h"
-#include "commands/dwarfscriptCommand.h"
-#include "commands/infoCommand.h"
-#include "commands/hashCommand.h"
-#include "commands/patchCommand.h"
-#include "arrayAccessParam.h"  
-#include "parse_helper.h"
+#include "shell/commands/loadCommand.h"
+#include "shell/commands/saveCommand.h"
+#include "shell/commands/replaceCommand.h"
+#include "shell/commands/extractCommand.h"
+#include "shell/commands/shellCommand.h"
+#include "shell/commands/dwarfscriptCommand.h"
+#include "shell/commands/infoCommand.h"
+#include "shell/commands/hashCommand.h"
+#include "shell/commands/patchCommand.h"
+#include "shell/arrayAccessParam.h"  
+#include "shell/parse_helper.h"
   
 
 

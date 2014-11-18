@@ -66,7 +66,7 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include "safety.h"
-#include "config.h"
+#include "katana_config.h"
 #include "elfutil.h"
 
 FDE* getFDEForPC(ElfInfo* elf,addr_t pc)

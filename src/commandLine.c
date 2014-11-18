@@ -53,7 +53,7 @@
   Description: Parsing of the command line
 */
 
-#include "config.h"
+#include "katana_config.h"
 #include <unistd.h>
 #include "util/util.h"
 #include "util/logging.h"

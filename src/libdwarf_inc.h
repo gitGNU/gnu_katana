@@ -47,7 +47,7 @@
 //in which libdwarf.h is not placed in a libdwarf directory. Therefore, this hacky conditional
 //is needed to support both situations
 
-#include "../config.h"
+#include "config.h"
 #ifdef LIBDWARF_HEADER_NEEDS_PREFIX
 #include <libdwarf/libdwarf.h>
 #else

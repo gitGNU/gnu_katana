@@ -82,7 +82,7 @@ ElfInfo* oldBinElfInfo=NULL;
 #include "info/dwinfo_dump.h"
 #include "info/unsafe_funcs_dump.h"
 #include "util/path.h"
-#include "config.h"
+#include "katana_config.h"
 #include "rewriter/rewrite.h"
 #include "shell/shell.h"
 

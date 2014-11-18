@@ -1,5 +1,5 @@
 %{
-#include "parse_helper.h"
+#include "shell/dwarfscript/parse_helper.h"
 #include "callFrameInfo.h"
 #include "util/logging.h"
 CallFrameInfo cfi;

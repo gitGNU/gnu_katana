@@ -4,8 +4,8 @@ SUBDIRS=shell
 AUTOMAKE_OPTIONS = subdir-objects
 bin_PROGRAMS=katana
 
-INCLUDEFLAGS=-I ../include
-DEFINEFLAGS=-D_POSIX_SOURCE -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_XOPEN_SOURCE -D_GNU_SOURCE -DDEBUG -Doff64_t=__off64_t 
+INCLUDEFLAGS=-I ../include -I $(srcdir)/
+DEFINEFLAGS=-D_POSIX_SOURCE -D_BSD_SOURCE -D_XOPEN_SOURCE -D_GNU_SOURCE -DDEBUG -Doff64_t=__off64_t 
 
 katana_CFLAGS=$(INCLUDEFLAGS) -g -Wall -std=c99 $(DEFINEFLAGS)
 
@@ -38,7 +38,7 @@ H_FILES=dwarftypes.h elfparse.h elfutil.h types.h dwarf_instr.h register.h reloc
 
 EXTRA_DIST=$(H_FILES)
 
-katana_SOURCES=katana.c dwarftypes.c   elfparse.c elfutil.c  types.c  dwarf_instr.c register.c relocation.c symbol.c fderead.c dwarfvm.c config.c leb.c callFrameInfo.c exceptTable.c commandLine.c  elfwriter.c eh_pe.c $(PATCHWRITE_SRC) $(PATCHER_SRC) $(UTIL_SRC) $(INFO_SRC) $(REWRITER_SRC) $(SHELL_SRC)
+katana_SOURCES=katana.c dwarftypes.c   elfparse.c elfutil.c  types.c  dwarf_instr.c register.c relocation.c symbol.c fderead.c dwarfvm.c katana_config.c leb.c callFrameInfo.c exceptTable.c commandLine.c  elfwriter.c eh_pe.c $(PATCHWRITE_SRC) $(PATCHER_SRC) $(UTIL_SRC) $(INFO_SRC) $(REWRITER_SRC) $(SHELL_SRC)
 
 BFLAGS=-d -v
 

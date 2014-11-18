@@ -64,7 +64,7 @@
 #include <sys/types.h>
 #include <sys/user.h>
 #include <unistd.h>
-#include "config.h"
+#include "katana_config.h"
 #include "util/logging.h"
 #include "util/map.h"
 
