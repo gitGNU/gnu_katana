@@ -80,7 +80,7 @@ static ScnInProgress scnInfo[ERS_CNT];
 
 
 //returns the offset into the section that the data was added at
-addr_t addDataToScn(Elf_Data* dataDest,void* data,int size)
+addr_t addDataToScn(Elf_Data* dataDest, const void* data,int size)
 {
   dataDest->d_buf=realloc(dataDest->d_buf,dataDest->d_size+size);
   MALLOC_CHECK(dataDest->d_buf);
@@ -121,7 +121,7 @@ void modifyScnData(Elf_Data* dataDest,word_t offset,void* data,int size)
 }
 
 //adds an entry to the string table, return its offset
-int addStrtabEntry(ElfInfo* e,char* str)
+int addStrtabEntry(ElfInfo* e, const char* str)
 {
   Elf_Data* strtab_data=getDataByERS(e,ERS_STRTAB);
   int len=strlen(str)+1;
@@ -503,9 +503,10 @@ int reindexSectionForPatch(ElfInfo* e,int scnIdx,ElfInfo* patch)
   return STN_UNDEF;
 }
 
-int dwarfWriteSectionCallback(char* name,int size,Dwarf_Unsigned type,
+int dwarfWriteSectionCallback(const char* name,int size,Dwarf_Unsigned type,
                               Dwarf_Unsigned flags,Dwarf_Unsigned link,
-                              Dwarf_Unsigned info,int* sectNameIdx,int* error)
+                              Dwarf_Unsigned info,int* sectNameIdx,
+                              void* user_data, int* error)
 {
   ElfInfo* e=patch;
   //look through all the sections for one which matches to

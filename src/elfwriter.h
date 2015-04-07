@@ -68,7 +68,7 @@ ElfInfo* startPatchElf(FILE* file,char* filename);
 
 //adds data to a section and returns the offset of that
 //data in the section
-addr_t addDataToScn(Elf_Data* dataDest,void* data,int size);
+addr_t addDataToScn(Elf_Data* dataDest, const void* data,int size);
 
 //wipes out the existing information in dataDest and replaces it with data
 void replaceScnData(Elf_Data* dataDest,void* data,int size);
@@ -79,7 +79,7 @@ void replaceScnData(Elf_Data* dataDest,void* data,int size);
 void modifyScnData(Elf_Data* dataDest,word_t offset,void* data,int size);
 
 //adds an entry to the string table, return its offset
-int addStrtabEntry(ElfInfo* e,char* str);
+int addStrtabEntry(ElfInfo* e, const char* str);
 
 //adds an entry to the section header string table, return its offset
 int addShdrStrtabEntry(ElfInfo* e,char* str);
@@ -89,9 +89,10 @@ int addSymtabEntry(ElfInfo* e,Elf_Data* data,ElfXX_Sym* sym);
 
 int reindexSectionForPatch(ElfInfo* e,int scnIdx,ElfInfo* patch);
 
-int dwarfWriteSectionCallback(char* name,int size,Dwarf_Unsigned type,
+int dwarfWriteSectionCallback(const char* name,int size,Dwarf_Unsigned type,
                               Dwarf_Unsigned flags,Dwarf_Unsigned link,
-                              Dwarf_Unsigned info,int* sectNameIdx,int* error);
+                              Dwarf_Unsigned info,int* sectNameIdx,
+                              void* user_data, int* error);
 
 //prepare a modified elf object for writing
 void finalizeModifiedElf(ElfInfo* e);
