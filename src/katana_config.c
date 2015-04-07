@@ -59,6 +59,7 @@
 #include <strings.h>
 #include "util/logging.h"
 #include "util/util.h"
+#include "katana_config.h"
 
 bool flags[EKCF_COUNT];
 const char* flagNames[]={"checkPtraceWrites","invalid"};

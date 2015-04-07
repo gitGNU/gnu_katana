@@ -84,7 +84,7 @@ typedef enum
 } E_KATANA_MODE;
 
 
-struct Config
+typedef struct Config
 {
   // The maximum number of seconds to wait for the target to enter a safe state.
   int maxWaitForPatching;
@@ -99,7 +99,7 @@ struct Config
                    //tree. for patch application, the patch file to load
   int pid;         //for patch application, the process to attach to
   
-};
+} Config;
 
 //for global access to the configuration
 extern struct Config config;
