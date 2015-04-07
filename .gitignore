@@ -13,7 +13,6 @@
 *~
 .#*
 /Makefile
-/aclocal.m4
 /apache_info.ksh
 /autom4te.cache
 /config.h
