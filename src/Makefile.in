@@ -396,7 +396,7 @@ INCLUDEFLAGS = -I ../include -I $(srcdir)/
 DEFINEFLAGS = -D_POSIX_SOURCE -D_BSD_SOURCE -D_XOPEN_SOURCE -D_GNU_SOURCE -DDEBUG -Doff64_t=__off64_t 
 katana_CFLAGS = $(INCLUDEFLAGS) -g -Wall -std=c99 $(DEFINEFLAGS)
 katana_CPPFLAGS = $(INCLUDEFLAGS) -g -Wall  $(DEFINEFLAGS)
-katana_LDFLAGS = -L /usr/local/lib -L ../external/
+katana_LDFLAGS = -L ../external/
 katana_LDADD = -ldwarf -lelf -lm -lunwind  -lunwind-ptrace -l$(LIBUNWIND) -lreadline
 PATCHER_SRC = patcher/hotpatch.c patcher/target.c patcher/patchapply.c patcher/versioning.c patcher/linkmap.c patcher/safety.c patcher/pmap.c
 PATCHER_H = patcher/hotpatch.h patcher/target.h patcher/patchapply.h patcher/versioning.h patcher/linkmap.h patcher/safety.h patcher/pmap.h
