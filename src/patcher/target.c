@@ -456,6 +456,8 @@ addr_t mmapTarget(word_t size,int prot,addr_t desiredAddress)
   modifyTarget(REG_SP(newRegs)-=sizeof(addr_t),returnAddr);
   REG_BX(newRegs)=REG_SP(newRegs)+sizeof(addr_t);//syscall, takes arguments in registers,
                             //this is a pointer to the arguments on the stack
+  REG_AX(newRegs)=SYS_mmap;//syscall number to identify that this is an mmap call
+  printf("%lx\n",REG_AX(newRegs));
 #elif defined(KATANA_X86_64_ARCH)
   printf("64-bit arch\n");
   REG_DI(newRegs)=(word_t)desiredAddress;
@@ -466,13 +468,14 @@ addr_t mmapTarget(word_t size,int prot,addr_t desiredAddress)
   REG_9(newRegs)=0;
   REG_10(newRegs)=REG_CX(newRegs);
   modifyTarget(REG_SP(newRegs)-=sizeof(addr_t),returnAddr);
+  REG_AX(newRegs)=SYS_mmap;//syscall number to identify that this is an mmap call
+  printf("%llx\n",REG_AX(newRegs));
 #else
 #error Unsupported architecture
 #endif
 
   
-  REG_AX(newRegs)=SYS_mmap;//syscall number to identify that this is an mmap call
-  printf("%lx\n",REG_AX(newRegs));
+
   
   //now actually tell the process about these registers
   setTargetRegs(&newRegs);

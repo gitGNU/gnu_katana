@@ -91,7 +91,7 @@ int reindexSectionForPatch(ElfInfo* e,int scnIdx,ElfInfo* patch);
 
 int dwarfWriteSectionCallback(const char* name,int size,Dwarf_Unsigned type,
                               Dwarf_Unsigned flags,Dwarf_Unsigned link,
-                              Dwarf_Unsigned info,int* sectNameIdx,
+                              Dwarf_Unsigned info,Dwarf_Unsigned* sectNameIdx,
                               void* user_data, int* error);
 
 //prepare a modified elf object for writing

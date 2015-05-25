@@ -284,7 +284,7 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = subdir-objects
-COMMON_CFLAGS = -Wall -g -std=c99 -D_POSIX_SOURCE -D_BSD_SOURCE -D_XOPEN_SOURCE -D_GNU_SOURCE -I $(abs_top_srcdir)/src/
+COMMON_CFLAGS = -Wall -g -std=c99 -D_POSIX_SOURCE -D_BSD_SOURCE -D_XOPEN_SOURCE -D_GNU_SOURCE -D_DEFAULT_SOURCE -I $(abs_top_srcdir)/src/
 listsort_CFLAGS = $(COMMON_CFLAGS)
 lebtest_CFLAGS = $(COMMON_CFLAGS)
 listsort_SOURCES = listsort.c ../../src/util/list.c

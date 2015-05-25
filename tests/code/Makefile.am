@@ -1,6 +1,6 @@
 AUTOMAKE_OPTIONS = subdir-objects
 bin_PROGRAMS=listsort lebtest
-COMMON_CFLAGS=-Wall -g -std=c99 -D_POSIX_SOURCE -D_BSD_SOURCE -D_XOPEN_SOURCE -D_GNU_SOURCE -I $(abs_top_srcdir)/src/
+COMMON_CFLAGS=-Wall -g -std=c99 -D_POSIX_SOURCE -D_BSD_SOURCE -D_XOPEN_SOURCE -D_GNU_SOURCE -D_DEFAULT_SOURCE -I $(abs_top_srcdir)/src/
 listsort_CFLAGS=$(COMMON_CFLAGS)
 lebtest_CFLAGS=$(COMMON_CFLAGS)
 
