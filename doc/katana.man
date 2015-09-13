@@ -97,6 +97,13 @@ optional -s flag tells Katana to stop the target program after
 patching it and detaching from it. This is mostly of use for debugging
 Katana.
 
+Katana requires permission to ptrace the target process. This can
+always be performed by running Katana as root. When that is not
+desirable but ptrace is limited (e.g. by Yama LSM), Katana can be
+granted CAP_PTRACE by running
+
+setcap cap_sys_ptrace=eip /path/to/katana
+
 .SH VIEWING A PATCH
 One of the goals of Katana and its Patch Object (PO) format is to
 increase the transparency of patches: a user about to apply a patch
@@ -126,10 +133,11 @@ documentation.
 Katana was written by James Oakley (<james.oakley@dartmouth.edu> or
 <electron100@gmail.com>). It was designed by Sergey Bratus, James
 Oakley, Ashwin Ramaswamy, Michael E. Locasto, and Sean
-W. Smith. Katana is Copyright (C) 2010-2011 Dartmouth College.
+W. Smith. Portions of Katana are Copyright (C) 2010-2011 Dartmouth
+College.
 
-This document is Copyright 2010-2011 Dartmouth College and may be
-distributed under the terms of the GNU Free Documentation License as
-found in the file FDL which should have been distributed with this
-documentation. If it was not, it may be found at
+Portions of this document are Copyright 2010-2011 Dartmouth College.
+This document may be distributed under the terms of the GNU Free
+Documentation License as found in the file FDL which should have been
+distributed with this software. If it was not, it may be found at
 http://www.gnu.org/licenses/fdl.txt.
