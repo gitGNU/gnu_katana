@@ -95,7 +95,7 @@ void startPtrace(int pid_)
   pid=pid_;
   if(ptrace(PTRACE_ATTACH,pid,NULL,NULL)<0)
   {
-    fprintf(stderr,"ptrace failed to attach to process\n");
+    fprintf(stderr,"ptrace failed to attach to process with errno %d\n", errno);
     death(NULL);
   }
   //kill(pid,SIGSTOP);
@@ -166,6 +166,7 @@ void modifyTarget(addr_t addr,word_t value)
     word_t val=ptrace(PTRACE_PEEKDATA,pid,addr);
     if(errno)
     {
+      logprintf(ELL_ERR, ELS_HOTPATCH, "Failed to peek data at 0x%x. Errno %d\n", (word_t)addr, errno);
       perror("ptrace PEEKDATA failed\n");
       death(NULL);
     }
@@ -250,6 +251,7 @@ bool memcpyFromTargetNoDeath(byte* data,long addr,int numBytes)
     uint val=ptrace(PTRACE_PEEKDATA,pid,addr+i);
     if(errno)
     {
+      logprintf(ELL_ERR, ELS_HOTPATCH, "Failed to peek data at 0x%x. Errno %d\n", (word_t)(addr  + i), errno);
       return false;
     }
     if(i+PTRACE_WORD_SIZE<=numBytes)
@@ -271,7 +273,7 @@ void memcpyFromTarget(byte* data,long addr,int numBytes)
 {
   if(!memcpyFromTargetNoDeath(data,addr,numBytes))
   {
-    perror("ptrace PEEKDATA failed ");
+    perror("ptrace PEEKDATA failed");
     death(NULL);
   }      
 }
