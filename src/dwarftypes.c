@@ -111,6 +111,9 @@ int readAttributeAsInt(Dwarf_Attribute attr)
       result=b?1:0;
     }
     break;
+  case DW_FORM_flag_present:
+    result = 1;
+    break;
   default:
     fprintf(stderr,"readAttributeAsInt cannot handle form type 0x%x yet\n",form);
     death(NULL);
@@ -186,6 +189,7 @@ addr_t readAttributeAsAddr(Dwarf_Attribute attr,Dwarf_Debug dbg,addr_t startAddr
         result = value;
       }
     }
+    break;
   default:
     fprintf(stderr,"readAttributeAsAddr cannot handle form type 0x%x yet\n",form);
     death(NULL);
