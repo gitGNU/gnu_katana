@@ -45,3 +45,4 @@ time
 typepatch
 .dirstamp
 .deps
+/test-suite.log
