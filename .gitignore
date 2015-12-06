@@ -46,3 +46,5 @@ typepatch
 .dirstamp
 .deps
 /test-suite.log
+*.log
+*.trs
