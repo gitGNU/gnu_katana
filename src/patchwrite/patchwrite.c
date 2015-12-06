@@ -600,6 +600,57 @@ void writeFuncTransformationInfoForCU(CompilationUnit* cuOld,CompilationUnit* cu
   free(funcs1);
 }
 
+static void writeUnsafety(CompilationUnit* cuNew, List* varTransformsList)
+{
+  //go through the variables that have changed and find
+  //all functions that use those variables and mark them for possible unsafety
+  for(List* li=varTransformsList;li;li=li->next)
+  {
+    VarInfo* var=((VarTransformation*)li->value)->var;
+    idx_t symIdx=getSymtabIdx(cuNew->elf,var->name,0);
+    if(STN_UNDEF==symIdx)
+    {
+      death("Could not find symbol for variable %s\n",var->name);
+    }
+    List* relocations=getRelocationItemsFor(cuNew->elf,symIdx);
+    for(List* liR=relocations;liR;liR=liR->next)
+    {
+      RelocInfo* reloc=liR->value;
+      GElf_Shdr shdr;
+      if(!gelf_getshdr(elf_getscn(reloc->e->e,reloc->scnIdx),&shdr))
+      {
+        death("gelf_getshdr failed\n");
+      }
+      char* scnName=getScnHdrString(reloc->e,shdr.sh_name);
+      if(!strncmp(".text",scnName,5))
+      {
+        idx_t funcSymIdx=findSymbolContainingAddress(cuNew->elf,reloc->r_offset,STT_FUNC,reloc->scnIdx);
+        if(STN_UNDEF==funcSymIdx)
+        {
+          logprintf(ELL_WARN,ELS_PATCHWRITE,"Could not find any function containing one of the relocations for variable %s\n",var->name);
+          continue;
+        }
+        GElf_Sym funcSym;
+        getSymbol(cuNew->elf,funcSymIdx,&funcSym);
+        char* funcName=getString(cuNew->elf,funcSym.st_name);
+        SubprogramInfo* subprogram=dictGet(cuNew->subprograms,funcName);
+        if(!subprogram)
+        {
+          death("Function %s expected in compilation unit %s but its info structure was not found\n",funcName,cuNew->name);
+        }
+        //todo: if the SubprogramInfo struct had a flag bool unsafe
+        //or something like that, we could just set that
+        //since we actually know this type will make things unsafe
+        List* typeLi=zmalloc(sizeof(List));
+        typeLi->value=var->type;
+        listAppend(&subprogram->typesHead,&subprogram->typesTail,typeLi);
+        logprintf(ELL_INFO_V2,ELS_SAFETY,"Added type %s to types used by function %s which would make it unsafe\n",var->type->name,subprogram->name);
+      }
+    }
+    deleteList(relocations,free);
+  }
+}
+
   
 void writeTypeAndFuncTransformationInfo(ElfInfo* patchee,ElfInfo* patched)
 {
@@ -650,54 +701,7 @@ void writeTypeAndFuncTransformationInfo(ElfInfo* patchee,ElfInfo* patched)
     cuOld->presentInOtherVersion=true;
     cuNew->presentInOtherVersion=true;
     List* varTransformsList=getTypeTransformationInfoForCU(cuOld,cuNew);
-    //go through the variables that have changed and find
-    //all functions that use those variables and mark them for possible unsafety
-    for(List* li=varTransformsList;li;li=li->next)
-    {
-      VarInfo* var=((VarTransformation*)li->value)->var;
-      idx_t symIdx=getSymtabIdx(cuNew->elf,var->name,0);
-      if(STN_UNDEF==symIdx)
-      {
-        death("Could not find symbol for variable %s\n",var->name);
-      }
-      List* relocations=getRelocationItemsFor(cuNew->elf,symIdx);
-      for(List* liR=relocations;liR;liR=liR->next)
-      {
-        RelocInfo* reloc=liR->value;
-        GElf_Shdr shdr;
-        if(!gelf_getshdr(elf_getscn(reloc->e->e,reloc->scnIdx),&shdr))
-        {
-          death("gelf_getshdr failed\n");
-        }
-        char* scnName=getScnHdrString(reloc->e,shdr.sh_name);
-        if(!strncmp(".text",scnName,5))
-        {
-          idx_t funcSymIdx=findSymbolContainingAddress(cuNew->elf,reloc->r_offset,STT_FUNC,reloc->scnIdx);
-          if(STN_UNDEF==funcSymIdx)
-          {
-            printf("reloc in section %i\n",reloc->scnIdx);
-            logprintf(ELL_WARN,ELS_PATCHWRITE,"Could not find any function containing one of the relocations for variable %s\n",var->name);
-            continue;
-          }
-          GElf_Sym funcSym;
-          getSymbol(cuNew->elf,funcSymIdx,&funcSym);
-          char* funcName=getString(cuNew->elf,funcSym.st_name);
-          SubprogramInfo* subprogram=dictGet(cuNew->subprograms,funcName);
-          if(!subprogram)
-          {
-            death("Function %s expected in compilation unit %s but its info structure was not found\n",funcName,cuNew->name);
-          }
-          //todo: if the SubprogramInfo struct had a flag bool unsafe
-          //or something like that, we could just set that
-          //since we actually know this type will make things unsafe
-          List* typeLi=zmalloc(sizeof(List));
-          typeLi->value=var->type;
-          listAppend(&subprogram->typesHead,&subprogram->typesTail,typeLi);
-          logprintf(ELL_INFO_V2,ELS_SAFETY,"Added type %s to types used by function %s which would make it unsafe\n",var->type->name,subprogram->name);
-        }
-      }
-      deleteList(relocations,free);
-    }
+    writeUnsafety(cuNew, varTransformsList);
     writeNewVarsForCU(cuOld,cuNew);
     writeVarTransforms(varTransformsList);
     deleteList(varTransformsList,free);
