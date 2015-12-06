@@ -3,4 +3,6 @@
 #start fresh with a new log file
 rm -f validator_log 
 
+echo "WARNING: katana must have cap_sys_ptrace for these tests to pass. If these tests fail, grant cap_sys_ptrace to the katana executable or re-run as root"
 ./run_tests.py -d tests/hotpatch
+
