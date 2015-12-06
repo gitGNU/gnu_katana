@@ -69,6 +69,8 @@
 #include "katana_config.h"
 #include "elfutil.h"
 
+static const int MAX_WAIT_SECONDS_BEFORE_TRY_CURRENT_FRAME = 2;
+
 FDE* getFDEForPC(ElfInfo* elf,addr_t pc)
 {
   assert(elf->callFrameInfo.fdes);
@@ -418,7 +420,8 @@ DList* findActivationFrames(ElfInfo* elf,int pid)
 }
 
 //find a location in the target where nothing that's being patched is being used.
-addr_t findSafeBreakpointForPatch(ElfInfo* targetBin,ElfInfo* patch,int pid)
+addr_t findSafeBreakpointForPatch(ElfInfo* targetBin,ElfInfo* patch,int pid,
+                                  bool avoidCurrentFrame)
 {
   DList* activationFrames=findActivationFrames(targetBin,pid);
   Elf_Data* unsafeFunctionsData=getDataByERS(patch,ERS_UNSAFE_FUNCTIONS);
@@ -476,18 +479,21 @@ addr_t findSafeBreakpointForPatch(ElfInfo* targetBin,ElfInfo* patch,int pid)
     printBacktrace(targetBin,pid);
     death("All functions with activation frames on the stack require patching. The application will never be in a patchable state!");
   }
-  if(deepestGoodFrameLi->prev)
+
+  if(deepestGoodFrameLi->prev && avoidCurrentFrame)
   {
     //never break in the current function if possible
     deepestGoodFrameLi = deepestGoodFrameLi->prev;
   }
+  
   return ((ActivationFrame*)deepestGoodFrameLi->value)->pc;
 }
 
 
 void bringTargetToSafeState(ElfInfo* targetBin,ElfInfo* patch,int pid)
 {
-  addr_t safeBreakpointSpot=findSafeBreakpointForPatch(targetBin,patch,pid);
+  bool avoidCurrentFrame = true;
+  addr_t safeBreakpointSpot=findSafeBreakpointForPatch(targetBin,patch,pid, avoidCurrentFrame);
   logprintf(ELL_INFO_V2,ELS_PATCHAPPLY,"Setting breakpoint to apply patch at 0x%x\n",
             safeBreakpointSpot);
   setBreakpoint(safeBreakpointSpot);
@@ -497,6 +503,19 @@ void bringTargetToSafeState(ElfInfo* targetBin,ElfInfo* patch,int pid)
   int numIterations = config.maxWaitForPatching*1e6/WAIT_FOR_SAFE_PATCHING_USLEEP;
   for(int i=0;i<numIterations;i++)
   {
+    if(avoidCurrentFrame &&
+       i * WAIT_FOR_SAFE_PATCHING_USLEEP > (MAX_WAIT_SECONDS_BEFORE_TRY_CURRENT_FRAME*1e6))
+    {
+      logprintf(ELL_INFO_V2, ELS_PATCHAPPLY,
+                "Program still waiting for breakpoint, relaxing restriction on current function\n");
+      kill(pid,SIGSTOP);
+      waitpid(pid, NULL, WUNTRACED);
+      removeBreakpoint(safeBreakpointSpot);
+      avoidCurrentFrame = false;
+      safeBreakpointSpot = findSafeBreakpointForPatch(targetBin, patch, pid, avoidCurrentFrame);
+      setBreakpoint(safeBreakpointSpot);
+      continuePtrace();
+    }
     logprintf(ELL_INFO_V3,ELS_PATCHAPPLY,"Iterating waiting for breakpoint to be hit\n");
     if(0!=waitpid(-1,NULL,WNOHANG))
     {

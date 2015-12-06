@@ -94,6 +94,7 @@ time.sleep(0.5)
 #now start the hotpatcher
 args=["./katana","-p",patchOut,str(proc.pid)]
 vlogf.write("running\n " + " ".join(args) + "\n")
+vlogf.flush();
 kproc=subprocess.Popen(args,stdout=hotlogf,stderr=hotlogerrf)
 
 if 0!=kproc.wait():
