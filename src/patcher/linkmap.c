@@ -110,7 +110,17 @@ bool locateSymbolInLinkMap(struct link_map* lm,addr_t* result,char* symName,int 
   //todo: this is unsafe, need to check pages mapped into target
   //to make sure this access will be ok
   char nameBuf[256];
-  memcpyFromTarget((byte*)nameBuf,(addr_t)lm->l_name,256);
+  memset(nameBuf, 0, 256);
+
+  //Start out trying to copy a small amount, as trying to copy 256
+  //bytes could extend past mapped memory
+  int maxName = 32;
+  do
+  {
+    memcpyFromTarget((byte*)nameBuf, (addr_t)lm->l_name, maxName);
+  }
+  while(nameBuf[maxName] != '\0' && (maxName += 32) <= 256);
+  
   nameBuf[255]=0;
   if(!strlen(nameBuf))
   {
