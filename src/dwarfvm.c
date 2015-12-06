@@ -91,11 +91,11 @@ static Stack* stateStack;
 //outInstrsCnt, if non-NULL, is used to store the number of instructions read
 int evaluateInstructionsToRules(CIE* cie,RegInstruction* instrs,int numInstrs,Dictionary* rules,int startLocation, int stopLocation,int* outInstrsCnt)
 {
-  PoRegRule* rule=NULL;
   int loc=startLocation;
   for(int i=0;i<numInstrs;i++)
   {
     RegInstruction inst=instrs[i];
+    PoRegRule* rule=NULL;
 
     //deal first with the location-advancing instructions and other
     //instructions (remember/restore state) that don't do the ordinary
