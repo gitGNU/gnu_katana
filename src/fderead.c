@@ -342,6 +342,8 @@ RegInstruction* parseFDEInstructions(Dwarf_Debug dbg,unsigned char* bytes,
     case DW_CFA_restore:
       result[*numInstrs].type=high;
       result[*numInstrs].arg1=low;
+      result[*numInstrs].arg1Reg.type=ERT_BASIC;
+      result[*numInstrs].arg1Reg.u.index=low;
       break;
     case DW_CFA_offset:
       result[*numInstrs].type=DW_CFA_offset;
