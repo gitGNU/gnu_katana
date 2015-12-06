@@ -771,14 +771,17 @@ ElfInfo* createPatch(char* oldSourceTree,char* newSourceTree,char* oldBinName,ch
   //recommends never having 64-bit Dwarf as the default, even on
   //x86_64. We should have some way of recognizing when we want 64-bit
   //though, if things are really huge.
+  int flags = DW_DLC_WRITE;
 #if defined(__i386__)
   const char* isa_name = "x86";
+  flags |= DW_DLC_SIZE_32;
 #elif defined(__x86_64__)
   const char* isa_name = "x86_64";
+  flags |= DW_DLC_SIZE_64;
 #else
 #error "Unsupported architecture"
 #endif    
-  int res = dwarf_producer_init(DW_DLC_WRITE|DW_DLC_SIZE_32,
+  int res = dwarf_producer_init(flags,
                                 dwarfWriteSectionCallback,
                                 dwarfErrorHandler, NULL, NULL, isa_name,
                                 "V4", NULL, &dbg, &err);
