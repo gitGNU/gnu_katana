@@ -87,13 +87,13 @@ procCmd.extend([os.path.join(oldTree,execName)])
 if(len(programArguments)):
   procCmd.extend(programArguments)
 
-
+vlogf.write("running\n " + " ".join(procCmd) + "\n")
 proc=subprocess.Popen(procCmd,stdout=logf)
 #sleep for a moment to let the process run
 time.sleep(0.5)
 #now start the hotpatcher
 args=["./katana","-p",patchOut,str(proc.pid)]
-vlogf.write("running "+" ".join(args)+"\n")
+vlogf.write("running\n " + " ".join(args) + "\n")
 kproc=subprocess.Popen(args,stdout=hotlogf,stderr=hotlogerrf)
 
 if 0!=kproc.wait():
