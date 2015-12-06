@@ -251,7 +251,8 @@ bool memcpyFromTargetNoDeath(byte* data,long addr,int numBytes)
     uint val=ptrace(PTRACE_PEEKDATA,pid,addr+i);
     if(errno)
     {
-      logprintf(ELL_ERR, ELS_HOTPATCH, "Failed to peek data at 0x%x. Errno %d\n", (word_t)(addr  + i), errno);
+      //Do not log as error because this function is NoDeath
+      logprintf(ELL_INFO_V1, ELS_HOTPATCH, "Failed to peek data at 0x%llx. Errno %d\n", (word_t)(addr  + i), errno);
       return false;
     }
     if(i+PTRACE_WORD_SIZE<=numBytes)
