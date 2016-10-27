@@ -73,9 +73,11 @@ void* zmalloc(size_t size);
 
 void death(const char* reason,...);
 
+#ifndef __cplusplus
 #define min(x,y)   ((x)>(y))?(y):(x)
 
 #define max(x,y)   ((x)<(y))?(y):(x)
+#endif
 
 //! \brief Check whether \a s is NULL or not on a memory allocation. Quit this program if it is NULL.
 #define MALLOC_CHECK(s)  if ((s) == NULL)   {                     \
